@@ -7,11 +7,18 @@ export async function initializeUserData(userId: string) {
   console.log('Initializing user data for:', userId)
 
   // Check if user already has projects
-  const { data: existingProjects } = await supabase
+  const { data: existingProjects, error: checkError } = await supabase
     .from('projects')
     .select('id')
     .eq('user_id', userId)
     .limit(1)
+
+  if (checkError) {
+    console.error('Error checking existing projects:', checkError)
+    throw checkError
+  }
+
+  console.log('Existing projects check result:', existingProjects)
 
   if (existingProjects && existingProjects.length > 0) {
     // User already initialized
@@ -22,6 +29,7 @@ export async function initializeUserData(userId: string) {
   console.log('Creating default project and area...')
 
   // Create default project
+  console.log('Creating project...')
   const { data: project, error: projectError } = await supabase
     .from('projects')
     .insert({
@@ -32,9 +40,14 @@ export async function initializeUserData(userId: string) {
     .select()
     .single()
 
-  if (projectError) throw projectError
+  if (projectError) {
+    console.error('Error creating project:', projectError)
+    throw projectError
+  }
+  console.log('Project created:', project.id)
 
   // Create default area
+  console.log('Creating area...')
   const { error: areaError } = await supabase
     .from('areas')
     .insert({
@@ -43,9 +56,14 @@ export async function initializeUserData(userId: string) {
       sort_order: 0,
     })
 
-  if (areaError) throw areaError
+  if (areaError) {
+    console.error('Error creating area:', areaError)
+    throw areaError
+  }
+  console.log('Area created')
 
   // Create default team members (from current hardcoded list)
+  console.log('Creating team members...')
   const teamMembers = [
     { name: 'Daniel', initials: 'DB', color: 'bg-blue-500' },
     { name: 'Casper', initials: 'C', color: 'bg-green-500' },
@@ -54,10 +72,13 @@ export async function initializeUserData(userId: string) {
   ]
 
   for (const member of teamMembers) {
-    await supabase.from('team_members').insert({
+    const { error } = await supabase.from('team_members').insert({
       user_id: userId,
       ...member,
     })
+    if (error) {
+      console.error('Error creating team member:', member.name, error)
+    }
   }
 
   console.log('User initialization complete!')
