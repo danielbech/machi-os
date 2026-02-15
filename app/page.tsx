@@ -155,43 +155,23 @@ export default function Home() {
   const [googleCalendarConnected, setGoogleCalendarConnected] = useState(false);
   const [calendarEvents, setCalendarEvents] = useState<Record<string, CalendarEvent[]>>({});
 
-  // Auth check
+  // Auth check - only set user state, no async DB work here
   useEffect(() => {
     const supabase = createClient();
-    
-    // Just listen for auth state - let Supabase handle the session restoration
+
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
+      (event, session) => {
         console.log('Auth state change:', event, session?.user?.id);
-        
         setUser(session?.user ?? null);
-        
-        if (session?.user) {
-          try {
-            await initializeUserData(session.user.id);
-            const tasks = await loadTasksByDay(session.user.id);
-            setColumns(tasks);
-          } catch (error) {
-            console.error('Error loading user data:', error);
-          }
-        } else {
-          setColumns({
-            monday: [], tuesday: [], wednesday: [], thursday: [], friday: []
-          });
-        }
-        
         setLoading(false);
       }
     );
 
     // Trigger initial check
     supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session) {
-        // Auth listener will handle it
-        console.log('Session found on mount');
-      } else {
-        setLoading(false);
-      }
+      console.log('Session check:', session ? 'found' : 'none');
+      setUser(session?.user ?? null);
+      setLoading(false);
     }).catch((err) => {
       console.error('Session check error:', err);
       setLoading(false);
@@ -201,6 +181,36 @@ export default function Home() {
       subscription.unsubscribe();
     };
   }, []);
+
+  // Load user data when user changes - runs outside the auth lock
+  useEffect(() => {
+    if (!user) {
+      setColumns({
+        monday: [], tuesday: [], wednesday: [], thursday: [], friday: []
+      });
+      return;
+    }
+
+    let cancelled = false;
+
+    async function loadData() {
+      try {
+        await initializeUserData(user!.id);
+        const tasks = await loadTasksByDay(user!.id);
+        if (!cancelled) {
+          setColumns(tasks);
+        }
+      } catch (error) {
+        console.error('Error loading user data:', error);
+      }
+    }
+
+    loadData();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [user]);
 
   // Check if Google Calendar is connected on mount
   useEffect(() => {
