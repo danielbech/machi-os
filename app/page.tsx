@@ -313,8 +313,7 @@ export default function Home() {
     return days[today.getDay()];
   };
 
-  // Force Friday for testing (TODO: remove)
-  const todayName = 'friday'; // getTodayName();
+  const todayName = getTodayName();
 
   const handleAddCard = async (columnId: string, index?: number) => {
     if (!newCardTitle.trim() || !user) return;
