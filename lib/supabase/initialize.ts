@@ -4,6 +4,8 @@ import { createClient } from './client'
 export async function initializeUserData(userId: string) {
   const supabase = createClient()
 
+  console.log('Initializing user data for:', userId)
+
   // Check if user already has projects
   const { data: existingProjects } = await supabase
     .from('projects')
@@ -13,8 +15,11 @@ export async function initializeUserData(userId: string) {
 
   if (existingProjects && existingProjects.length > 0) {
     // User already initialized
+    console.log('User already has projects, skipping initialization')
     return
   }
+
+  console.log('Creating default project and area...')
 
   // Create default project
   const { data: project, error: projectError } = await supabase
@@ -54,27 +59,52 @@ export async function initializeUserData(userId: string) {
       ...member,
     })
   }
+
+  console.log('User initialization complete!')
 }
 
 // Get user's default area ID
 export async function getDefaultAreaId(userId: string) {
   const supabase = createClient()
 
-  const { data: projects } = await supabase
+  console.log('Getting default area for user:', userId)
+
+  const { data: projects, error: projectError } = await supabase
     .from('projects')
     .select('id')
     .eq('user_id', userId)
     .limit(1)
-    .single()
+    .maybeSingle()
 
-  if (!projects) return null
+  if (projectError) {
+    console.error('Error fetching project:', projectError)
+    return null
+  }
 
-  const { data: area } = await supabase
+  if (!projects) {
+    console.warn('No project found for user:', userId)
+    return null
+  }
+
+  console.log('Found project:', projects.id)
+
+  const { data: area, error: areaError } = await supabase
     .from('areas')
     .select('id')
     .eq('project_id', projects.id)
     .limit(1)
-    .single()
+    .maybeSingle()
 
-  return area?.id || null
+  if (areaError) {
+    console.error('Error fetching area:', areaError)
+    return null
+  }
+
+  if (!area) {
+    console.warn('No area found for project:', projects.id)
+    return null
+  }
+
+  console.log('Found area:', area.id)
+  return area.id
 }

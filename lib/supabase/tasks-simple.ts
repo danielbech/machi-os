@@ -81,7 +81,12 @@ export async function saveTask(userId: string, task: Task) {
   const supabase = createClient()
   const areaId = await getDefaultAreaId(userId)
   
-  if (!areaId) throw new Error('No default area found')
+  console.log('saveTask called:', { userId, taskId: task.id, areaId })
+  
+  if (!areaId) {
+    console.error('No default area found for user:', userId)
+    throw new Error('No default area found')
+  }
 
   // Encode metadata in description
   const metadata = {
@@ -105,15 +110,27 @@ export async function saveTask(userId: string, task: Task) {
 
   if (task.id) {
     // Update existing
-    await supabase
+    const { error } = await supabase
       .from('tasks')
       .update(taskData)
       .eq('id', task.id)
+    
+    if (error) {
+      console.error('Error updating task:', error)
+      throw error
+    }
+    console.log('Task updated successfully:', task.id)
   } else {
     // Create new
-    await supabase
+    const { error } = await supabase
       .from('tasks')
       .insert(taskData)
+    
+    if (error) {
+      console.error('Error creating task:', error)
+      throw error
+    }
+    console.log('Task created successfully')
   }
 }
 
