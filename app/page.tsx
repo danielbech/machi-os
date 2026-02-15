@@ -158,17 +158,43 @@ export default function Home() {
   // Auth check
   useEffect(() => {
     const supabase = createClient();
+    let mounted = true;
+    
+    // Timeout safety net
+    const timeout = setTimeout(() => {
+      if (mounted) {
+        console.warn('Auth check timeout - forcing end of loading state');
+        setLoading(false);
+      }
+    }, 5000);
     
     // Check current user
     supabase.auth.getUser().then(async ({ data: { user } }) => {
+      if (!mounted) return;
+      clearTimeout(timeout);
+      
       setUser(user);
       if (user) {
-        await initializeUserData(user.id);
-        // Load tasks from Supabase
-        const tasks = await loadTasksByDay(user.id);
-        setColumns(tasks);
+        try {
+          await initializeUserData(user.id);
+          // Load tasks from Supabase
+          const tasks = await loadTasksByDay(user.id);
+          if (mounted) {
+            setColumns(tasks);
+          }
+        } catch (error) {
+          console.error('Error loading user data:', error);
+        }
       }
-      setLoading(false);
+      if (mounted) {
+        setLoading(false);
+      }
+    }).catch((error) => {
+      console.error('Error checking auth:', error);
+      clearTimeout(timeout);
+      if (mounted) {
+        setLoading(false);
+      }
     });
 
     // Listen for auth changes
@@ -187,7 +213,11 @@ export default function Home() {
       }
     );
 
-    return () => subscription.unsubscribe();
+    return () => {
+      mounted = false;
+      clearTimeout(timeout);
+      subscription.unsubscribe();
+    };
   }, []);
 
   // Check if Google Calendar is connected on mount
