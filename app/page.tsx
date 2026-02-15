@@ -158,6 +158,7 @@ export default function Home() {
   const [workspaceMembers, setWorkspaceMembers] = useState<WorkspaceMember[]>([]);
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteRole, setInviteRole] = useState<"admin" | "member">("member");
+  const [currentWeekStart, setCurrentWeekStart] = useState<string>("");
 
   // Auth check - only set user state, no async DB work here
   useEffect(() => {
@@ -285,6 +286,47 @@ export default function Home() {
 
     return () => clearInterval(interval);
   }, [googleCalendarConnected]);
+
+  // Check if week changed and re-sync calendar events
+  useEffect(() => {
+    if (!googleCalendarConnected) return;
+
+    // Calculate Monday of current week
+    const today = new Date();
+    const currentDay = today.getDay();
+    const monday = new Date(today);
+    const offset = currentDay === 0 ? -6 : 1 - currentDay;
+    monday.setDate(today.getDate() + offset);
+    monday.setHours(0, 0, 0, 0);
+    const weekStart = monday.toISOString();
+
+    // If week changed, re-sync
+    if (currentWeekStart && currentWeekStart !== weekStart) {
+      console.log('Week changed, re-syncing calendar events');
+      syncCalendarEvents();
+    }
+
+    setCurrentWeekStart(weekStart);
+
+    // Check every hour if the week has changed
+    const interval = setInterval(() => {
+      const now = new Date();
+      const nowDay = now.getDay();
+      const nowMonday = new Date(now);
+      const nowOffset = nowDay === 0 ? -6 : 1 - nowDay;
+      nowMonday.setDate(now.getDate() + nowOffset);
+      nowMonday.setHours(0, 0, 0, 0);
+      const newWeekStart = nowMonday.toISOString();
+
+      if (newWeekStart !== weekStart) {
+        console.log('Week changed, re-syncing calendar events');
+        setCurrentWeekStart(newWeekStart);
+        syncCalendarEvents();
+      }
+    }, 60 * 60 * 1000); // Check every hour
+
+    return () => clearInterval(interval);
+  }, [googleCalendarConnected, currentWeekStart]);
 
   // Load workspace members when settings opens
   useEffect(() => {
