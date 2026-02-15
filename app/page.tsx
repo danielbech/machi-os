@@ -319,8 +319,9 @@ export default function Home() {
   const handleAddCard = async (columnId: string, index?: number) => {
     if (!newCardTitle.trim() || !user) return;
 
+    const tempId = `task-${Date.now()}`;
     const newCard: Task = {
-      id: `task-${Date.now()}`,
+      id: tempId,
       title: newCardTitle.trim(),
       priority: "medium",
       day: columnId,
@@ -338,13 +339,22 @@ export default function Home() {
       [columnId]: columnItems,
     });
 
-    // Save to Supabase
-    await saveTask(user.id, newCard);
+    // Save to Supabase and get the real UUID
+    const realId = await saveTask(user.id, newCard);
+
+    // Update the task in state with the real ID
+    const updatedItems = columnItems.map(item => 
+      item.id === tempId ? { ...item, id: realId } : item
+    );
+    setColumns({
+      ...columns,
+      [columnId]: updatedItems,
+    });
 
     setNewCardTitle("");
     setAddingToColumn(null);
     setAddingAtIndex(null);
-    setNewlyCreatedCardId(newCard.id);
+    setNewlyCreatedCardId(realId);
   };
 
   const handleKeyDown = (e: KeyboardEvent<HTMLInputElement>, columnId: string, index?: number) => {

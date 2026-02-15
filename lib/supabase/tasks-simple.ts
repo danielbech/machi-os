@@ -77,7 +77,8 @@ export async function loadTasksByDay(userId: string): Promise<Record<string, Tas
 }
 
 // Save a task (create or update)
-export async function saveTask(userId: string, task: Task) {
+// Returns the task ID (either existing or newly created UUID)
+export async function saveTask(userId: string, task: Task): Promise<string> {
   const supabase = createClient()
   const areaId = await getDefaultAreaId(userId)
   
@@ -108,7 +109,10 @@ export async function saveTask(userId: string, task: Task) {
     sort_order: 0,
   }
 
-  if (task.id) {
+  // Check if task.id looks like a UUID (existing task) or temp ID (new task)
+  const isExistingTask = task.id && task.id.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)
+
+  if (isExistingTask) {
     // Update existing
     const { error } = await supabase
       .from('tasks')
@@ -120,17 +124,21 @@ export async function saveTask(userId: string, task: Task) {
       throw error
     }
     console.log('Task updated successfully:', task.id)
+    return task.id
   } else {
-    // Create new
-    const { error } = await supabase
+    // Create new - let Supabase generate the UUID
+    const { data, error } = await supabase
       .from('tasks')
       .insert(taskData)
+      .select()
+      .single()
     
     if (error) {
       console.error('Error creating task:', error)
       throw error
     }
-    console.log('Task created successfully')
+    console.log('Task created successfully:', data.id)
+    return data.id
   }
 }
 
