@@ -974,9 +974,22 @@ export default function Home() {
                 </div>
                 <button
                   onClick={async () => {
-                    const supabase = createClient();
-                    await supabase.auth.signOut();
-                    setShowSettings(false);
+                    try {
+                      const supabase = createClient();
+                      const { error } = await supabase.auth.signOut();
+                      if (error) {
+                        console.error('Sign out error:', error);
+                      } else {
+                        // Clear local state
+                        setUser(null);
+                        setColumns({
+                          monday: [], tuesday: [], wednesday: [], thursday: [], friday: []
+                        });
+                        setShowSettings(false);
+                      }
+                    } catch (err) {
+                      console.error('Sign out failed:', err);
+                    }
                   }}
                   className="px-3 py-1.5 rounded-md text-xs font-medium bg-red-500/20 text-red-400 hover:bg-red-500/30 transition-colors"
                 >
