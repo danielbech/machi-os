@@ -66,10 +66,11 @@ const TEAM_MEMBERS: Member[] = [
 ];
 
 const CLIENTS: Client[] = [
-  { id: "acme", name: "Acme", key: "a", className: "bg-blue-50 text-blue-700 dark:bg-blue-950 dark:text-blue-300" },
-  { id: "techstart", name: "TechStart", key: "t", className: "bg-green-50 text-green-700 dark:bg-green-950 dark:text-green-300" },
-  { id: "designco", name: "DesignCo", key: "d", className: "bg-purple-50 text-purple-700 dark:bg-purple-950 dark:text-purple-300" },
-  { id: "innovate", name: "Innovate", key: "i", className: "bg-sky-50 text-sky-700 dark:bg-sky-950 dark:text-sky-300" },
+  { id: "bookspot", name: "BookSpot", key: "b", className: "bg-blue-50 text-blue-700 dark:bg-blue-950 dark:text-blue-300" },
+  { id: "evooq", name: "Evooq", key: "e", className: "bg-green-50 text-green-700 dark:bg-green-950 dark:text-green-300" },
+  { id: "tandem", name: "Tandem", key: "t", className: "bg-purple-50 text-purple-700 dark:bg-purple-950 dark:text-purple-300" },
+  { id: "anthill", name: "Anthill", key: "a", className: "bg-orange-50 text-orange-700 dark:bg-orange-950 dark:text-orange-300" },
+  { id: "mazed", name: "Mazed", key: "m", className: "bg-pink-50 text-pink-700 dark:bg-pink-950 dark:text-pink-300" },
 ];
 
 const initialData: Record<string, Task[]> = {
