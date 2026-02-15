@@ -960,6 +960,30 @@ export default function Home() {
                 </button>
               </div>
             </div>
+
+            {/* Account Section */}
+            <div className="space-y-3">
+              <h3 className="text-sm font-medium">Account</h3>
+              
+              <div className="flex items-center justify-between p-3 rounded-lg border border-white/5 bg-white/[0.02]">
+                <div>
+                  <div className="text-sm font-medium">Sign Out</div>
+                  <div className="text-xs text-white/40">
+                    {user?.email || 'Not signed in'}
+                  </div>
+                </div>
+                <button
+                  onClick={async () => {
+                    const supabase = createClient();
+                    await supabase.auth.signOut();
+                    setShowSettings(false);
+                  }}
+                  className="px-3 py-1.5 rounded-md text-xs font-medium bg-red-500/20 text-red-400 hover:bg-red-500/30 transition-colors"
+                >
+                  Sign Out
+                </button>
+              </div>
+            </div>
           </div>
         </DialogContent>
       </Dialog>
