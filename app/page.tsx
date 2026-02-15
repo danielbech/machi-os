@@ -10,8 +10,9 @@ import {
   type CalendarEvent,
 } from "@/lib/google-calendar";
 import { createClient } from "@/lib/supabase/client";
-import { initializeUserData } from "@/lib/supabase/initialize";
+import { initializeUserData, getDefaultProjectId } from "@/lib/supabase/initialize";
 import { loadTasksByDay, saveTask, deleteTask, updateDayTasks } from "@/lib/supabase/tasks-simple";
+import { getWorkspaceMembers, removeUserFromWorkspace, updateMemberRole, type WorkspaceMember } from "@/lib/supabase/workspace";
 import { AuthForm } from "@/components/auth-form";
 import type { User } from "@supabase/supabase-js";
 import {
@@ -29,7 +30,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Check, GripVertical, Plus, X, Settings, Calendar } from "lucide-react";
+import { Check, GripVertical, Plus, X, Settings, Calendar, Users } from "lucide-react";
 
 interface Member {
   id: string;
@@ -154,6 +155,9 @@ export default function Home() {
   const [showSettings, setShowSettings] = useState(false);
   const [googleCalendarConnected, setGoogleCalendarConnected] = useState(false);
   const [calendarEvents, setCalendarEvents] = useState<Record<string, CalendarEvent[]>>({});
+  const [workspaceMembers, setWorkspaceMembers] = useState<WorkspaceMember[]>([]);
+  const [inviteEmail, setInviteEmail] = useState("");
+  const [inviteRole, setInviteRole] = useState<"admin" | "member">("member");
 
   // Auth check - only set user state, no async DB work here
   useEffect(() => {
@@ -281,6 +285,25 @@ export default function Home() {
 
     return () => clearInterval(interval);
   }, [googleCalendarConnected]);
+
+  // Load workspace members when settings opens
+  useEffect(() => {
+    if (!showSettings || !user) return;
+
+    async function loadMembers() {
+      try {
+        const projectId = await getDefaultProjectId();
+        if (projectId) {
+          const members = await getWorkspaceMembers(projectId);
+          setWorkspaceMembers(members);
+        }
+      } catch (error) {
+        console.error('Failed to load workspace members:', error);
+      }
+    }
+
+    loadMembers();
+  }, [showSettings, user]);
 
   // Get current week's dates (Monday - Friday)
   const getWeekDates = () => {
@@ -959,6 +982,92 @@ export default function Home() {
                 >
                   {googleCalendarConnected ? 'Disconnect' : 'Connect'}
                 </button>
+              </div>
+            </div>
+
+            {/* Team Section */}
+            <div className="space-y-3">
+              <h3 className="text-sm font-medium">Team</h3>
+              
+              {/* Invite form */}
+              <div className="p-3 rounded-lg border border-white/5 bg-white/[0.02] space-y-3">
+                <div className="text-xs text-white/40">
+                  Invite members to collaborate on this workspace
+                </div>
+                <div className="flex gap-2">
+                  <input
+                    type="email"
+                    placeholder="email@example.com"
+                    value={inviteEmail}
+                    onChange={(e) => setInviteEmail(e.target.value)}
+                    className="flex-1 px-3 py-1.5 rounded-md border border-white/10 bg-white/[0.02] text-sm outline-none focus:border-white/30 focus:ring-1 focus:ring-white/20"
+                  />
+                  <select
+                    value={inviteRole}
+                    onChange={(e) => setInviteRole(e.target.value as "admin" | "member")}
+                    className="px-3 py-1.5 rounded-md border border-white/10 bg-white/[0.02] text-sm outline-none focus:border-white/30 focus:ring-1 focus:ring-white/20"
+                  >
+                    <option value="member">Member</option>
+                    <option value="admin">Admin</option>
+                  </select>
+                  <button
+                    onClick={() => {
+                      // TODO: Implement invite logic
+                      alert('Invite feature coming soon! For now, users need to sign up with the same workspace.');
+                      setInviteEmail('');
+                    }}
+                    className="px-3 py-1.5 rounded-md text-xs font-medium bg-white text-black hover:bg-white/90 transition-colors"
+                  >
+                    Invite
+                  </button>
+                </div>
+              </div>
+
+              {/* Members list */}
+              <div className="space-y-2">
+                {workspaceMembers.map((member) => (
+                  <div
+                    key={member.id}
+                    className="flex items-center justify-between p-3 rounded-lg border border-white/5 bg-white/[0.02]"
+                  >
+                    <div>
+                      <div className="text-sm font-medium">
+                        {member.user_id}
+                        {member.role === 'owner' && (
+                          <span className="ml-2 text-xs px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-400">
+                            Owner
+                          </span>
+                        )}
+                        {member.role === 'admin' && (
+                          <span className="ml-2 text-xs px-1.5 py-0.5 rounded bg-purple-500/20 text-purple-400">
+                            Admin
+                          </span>
+                        )}
+                      </div>
+                      <div className="text-xs text-white/40">
+                        Joined {new Date(member.created_at).toLocaleDateString()}
+                      </div>
+                    </div>
+                    {member.role !== 'owner' && (
+                      <button
+                        onClick={async () => {
+                          if (confirm('Remove this member from the workspace?')) {
+                            try {
+                              await removeUserFromWorkspace(member.id);
+                              setWorkspaceMembers(workspaceMembers.filter(m => m.id !== member.id));
+                            } catch (error) {
+                              console.error('Failed to remove member:', error);
+                              alert('Failed to remove member');
+                            }
+                          }
+                        }}
+                        className="px-3 py-1.5 rounded-md text-xs font-medium text-red-400 hover:bg-red-500/10 transition-colors"
+                      >
+                        Remove
+                      </button>
+                    )}
+                  </div>
+                ))}
               </div>
             </div>
 

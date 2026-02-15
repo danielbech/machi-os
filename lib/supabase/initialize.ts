@@ -34,7 +34,7 @@ export async function initializeUserData(userId: string) {
     .from('projects')
     .insert({
       user_id: userId,
-      name: 'My Projects',
+      name: 'My Workspace',
       color: '#3b82f6', // blue
     })
     .select()
@@ -45,6 +45,22 @@ export async function initializeUserData(userId: string) {
     throw projectError
   }
   console.log('Project created:', project.id)
+
+  // Create workspace membership (owner)
+  console.log('Creating workspace membership...')
+  const { error: membershipError } = await supabase
+    .from('workspace_memberships')
+    .insert({
+      project_id: project.id,
+      user_id: userId,
+      role: 'owner',
+    })
+
+  if (membershipError) {
+    console.error('Error creating membership:', membershipError)
+    throw membershipError
+  }
+  console.log('Membership created')
 
   // Create default area
   console.log('Creating area...')
@@ -85,15 +101,16 @@ export async function initializeUserData(userId: string) {
 }
 
 // Get user's default area ID
+// Now works with workspace memberships via RLS
 export async function getDefaultAreaId(userId: string) {
   const supabase = createClient()
 
   console.log('Getting default area for user:', userId)
 
+  // RLS will automatically filter to projects the user has membership in
   const { data: projects, error: projectError } = await supabase
     .from('projects')
     .select('id')
-    .eq('user_id', userId)
     .limit(1)
     .maybeSingle()
 
@@ -128,4 +145,22 @@ export async function getDefaultAreaId(userId: string) {
 
   console.log('Found area:', area.id)
   return area.id
+}
+
+// Get user's default project ID
+export async function getDefaultProjectId(): Promise<string | null> {
+  const supabase = createClient()
+
+  const { data: projects, error } = await supabase
+    .from('projects')
+    .select('id')
+    .limit(1)
+    .maybeSingle()
+
+  if (error) {
+    console.error('Error fetching project:', error)
+    return null
+  }
+
+  return projects?.id || null
 }
