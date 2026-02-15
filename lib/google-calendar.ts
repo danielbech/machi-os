@@ -25,6 +25,7 @@ export function initiateGoogleAuth() {
   authUrl.searchParams.set('response_type', 'token');
   authUrl.searchParams.set('scope', SCOPES);
   authUrl.searchParams.set('include_granted_scopes', 'true');
+  authUrl.searchParams.set('prompt', 'select_account'); // Force account selection
   
   // Open OAuth popup
   const width = 500;
@@ -77,7 +78,7 @@ export function isGoogleCalendarConnected(): boolean {
 export async function fetchCalendarEvents(
   startDate: Date,
   endDate: Date,
-  calendarId: string = 'hello@oimachi.co'
+  calendarId: string = 'primary'
 ): Promise<CalendarEvent[]> {
   const token = getAccessToken();
   if (!token) {
