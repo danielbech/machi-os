@@ -37,6 +37,7 @@ interface Member {
   name: string;
   initials: string;
   color: string;
+  avatar?: string;
 }
 
 interface Client {
@@ -58,7 +59,7 @@ interface Task {
 }
 
 const TEAM_MEMBERS: Member[] = [
-  { id: "1", name: "Daniel", initials: "DB", color: "bg-blue-500" },
+  { id: "1", name: "Daniel", initials: "DB", color: "bg-blue-500", avatar: "/avatars/daniel.jpg" },
   { id: "2", name: "Casper", initials: "C", color: "bg-green-500" },
   { id: "3", name: "Jens", initials: "J", color: "bg-purple-500" },
   { id: "4", name: "Emil", initials: "E", color: "bg-orange-500" },
@@ -741,10 +742,14 @@ export default function Home() {
                                     return member ? (
                                       <div
                                         key={member.id}
-                                        className={`flex items-center justify-center w-5 h-5 rounded-full ${member.color} text-[10px] font-semibold text-white`}
+                                        className={`flex items-center justify-center w-5 h-5 rounded-full ${!member.avatar ? member.color : 'bg-white/5'} text-[10px] font-semibold text-white overflow-hidden`}
                                         title={member.name}
                                       >
-                                        {member.initials}
+                                        {member.avatar ? (
+                                          <img src={member.avatar} alt={member.name} className="w-full h-full object-cover" />
+                                        ) : (
+                                          member.initials
+                                        )}
                                       </div>
                                     ) : null;
                                   })}
@@ -947,8 +952,12 @@ export default function Home() {
                             : 'bg-white/5 text-white/40 hover:bg-white/10 hover:text-white/60'
                         }`}
                       >
-                        <div className={`flex items-center justify-center w-4 h-4 rounded-full ${member.color} text-[9px] font-semibold text-white`}>
-                          {member.initials}
+                        <div className={`flex items-center justify-center w-4 h-4 rounded-full ${!member.avatar ? member.color : 'bg-white/5'} text-[9px] font-semibold text-white overflow-hidden`}>
+                          {member.avatar ? (
+                            <img src={member.avatar} alt={member.name} className="w-full h-full object-cover" />
+                          ) : (
+                            member.initials
+                          )}
                         </div>
                         {member.name}
                       </button>
