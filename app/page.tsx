@@ -158,58 +158,46 @@ export default function Home() {
   // Auth check
   useEffect(() => {
     const supabase = createClient();
-    let mounted = true;
     
-    const initAuth = async () => {
-      try {
-        // Use getSession which is faster and doesn't make network requests
-        const { data: { session } } = await supabase.auth.getSession();
+    // Just listen for auth state - let Supabase handle the session restoration
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        console.log('Auth state change:', event, session?.user?.id);
         
-        if (!mounted) return;
+        setUser(session?.user ?? null);
         
-        const currentUser = session?.user ?? null;
-        setUser(currentUser);
-        
-        if (currentUser) {
+        if (session?.user) {
           try {
-            await initializeUserData(currentUser.id);
-            const tasks = await loadTasksByDay(currentUser.id);
-            if (mounted) {
-              setColumns(tasks);
-            }
+            await initializeUserData(session.user.id);
+            const tasks = await loadTasksByDay(session.user.id);
+            setColumns(tasks);
           } catch (error) {
             console.error('Error loading user data:', error);
           }
-        }
-      } catch (error) {
-        console.error('Error checking auth:', error);
-      } finally {
-        if (mounted) {
-          setLoading(false);
-        }
-      }
-    };
-    
-    initAuth();
-
-    // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (_event, session) => {
-        setUser(session?.user ?? null);
-        if (session?.user) {
-          await initializeUserData(session.user.id);
-          const tasks = await loadTasksByDay(session.user.id);
-          setColumns(tasks);
         } else {
           setColumns({
             monday: [], tuesday: [], wednesday: [], thursday: [], friday: []
           });
         }
+        
+        setLoading(false);
       }
     );
 
+    // Trigger initial check
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session) {
+        // Auth listener will handle it
+        console.log('Session found on mount');
+      } else {
+        setLoading(false);
+      }
+    }).catch((err) => {
+      console.error('Session check error:', err);
+      setLoading(false);
+    });
+
     return () => {
-      mounted = false;
       subscription.unsubscribe();
     };
   }, []);
