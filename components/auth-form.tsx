@@ -44,13 +44,13 @@ export function AuthForm() {
 
   return (
     <div className="flex min-h-screen items-center justify-center p-4 bg-black/50">
-      <Card className="w-full max-w-md">
+      <Card className="w-full max-w-md border-white/5 bg-white/[0.02]">
         <CardHeader>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 mb-2">
             <img src="/logo.svg" alt="Machi OS" className="w-10 h-10" />
             <div>
               <CardTitle className="text-2xl">Machi OS</CardTitle>
-              <CardDescription>
+              <CardDescription className="text-white/40">
                 {isSignUp ? 'Create your account' : 'Sign in to your account'}
               </CardDescription>
             </div>
@@ -59,37 +59,39 @@ export function AuthForm() {
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="email" className="text-sm font-medium text-white/80">Email</Label>
               <Input
                 id="email"
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
+                className="border-white/10 bg-white/[0.02] focus:border-white/30 focus:ring-white/20"
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
+              <Label htmlFor="password" className="text-sm font-medium text-white/80">Password</Label>
               <Input
                 id="password"
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
+                className="border-white/10 bg-white/[0.02] focus:border-white/30 focus:ring-white/20"
               />
             </div>
             {message && (
-              <div className={`text-sm ${message.includes('error') || message.includes('Invalid') ? 'text-red-500' : 'text-green-500'}`}>
+              <div className={`text-sm ${message.includes('error') || message.includes('Invalid') ? 'text-red-400' : 'text-green-400'}`}>
                 {message}
               </div>
             )}
-            <Button type="submit" className="w-full" disabled={loading}>
+            <Button type="submit" className="w-full bg-white text-black hover:bg-white/90" disabled={loading}>
               {loading ? 'Loading...' : isSignUp ? 'Sign Up' : 'Sign In'}
             </Button>
             <Button
               type="button"
               variant="ghost"
-              className="w-full"
+              className="w-full text-white/60 hover:text-white hover:bg-white/5"
               onClick={() => {
                 setIsSignUp(!isSignUp)
                 setMessage('')
