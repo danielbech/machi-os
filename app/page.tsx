@@ -160,42 +160,37 @@ export default function Home() {
     const supabase = createClient();
     let mounted = true;
     
-    // Timeout safety net
-    const timeout = setTimeout(() => {
-      if (mounted) {
-        console.warn('Auth check timeout - forcing end of loading state');
-        setLoading(false);
-      }
-    }, 5000);
-    
-    // Check current user
-    supabase.auth.getUser().then(async ({ data: { user } }) => {
-      if (!mounted) return;
-      clearTimeout(timeout);
-      
-      setUser(user);
-      if (user) {
-        try {
-          await initializeUserData(user.id);
-          // Load tasks from Supabase
-          const tasks = await loadTasksByDay(user.id);
-          if (mounted) {
-            setColumns(tasks);
+    const initAuth = async () => {
+      try {
+        // Use getSession which is faster and doesn't make network requests
+        const { data: { session } } = await supabase.auth.getSession();
+        
+        if (!mounted) return;
+        
+        const currentUser = session?.user ?? null;
+        setUser(currentUser);
+        
+        if (currentUser) {
+          try {
+            await initializeUserData(currentUser.id);
+            const tasks = await loadTasksByDay(currentUser.id);
+            if (mounted) {
+              setColumns(tasks);
+            }
+          } catch (error) {
+            console.error('Error loading user data:', error);
           }
-        } catch (error) {
-          console.error('Error loading user data:', error);
+        }
+      } catch (error) {
+        console.error('Error checking auth:', error);
+      } finally {
+        if (mounted) {
+          setLoading(false);
         }
       }
-      if (mounted) {
-        setLoading(false);
-      }
-    }).catch((error) => {
-      console.error('Error checking auth:', error);
-      clearTimeout(timeout);
-      if (mounted) {
-        setLoading(false);
-      }
-    });
+    };
+    
+    initAuth();
 
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
@@ -215,7 +210,6 @@ export default function Home() {
 
     return () => {
       mounted = false;
-      clearTimeout(timeout);
       subscription.unsubscribe();
     };
   }, []);
