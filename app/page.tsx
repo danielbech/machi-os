@@ -9,6 +9,11 @@ import {
   getEventsGroupedByDay,
   type CalendarEvent,
 } from "@/lib/google-calendar";
+import { createClient } from "@/lib/supabase/client";
+import { initializeUserData } from "@/lib/supabase/initialize";
+import { loadTasksByDay, saveTask, deleteTask, updateDayTasks } from "@/lib/supabase/tasks-simple";
+import { AuthForm } from "@/components/auth-form";
+import type { User } from "@supabase/supabase-js";
 import {
   Kanban,
   KanbanBoard,
@@ -48,6 +53,7 @@ interface Task {
   completed?: boolean;
   assignees?: string[]; // array of member ids
   client?: string; // client id
+  day?: string; // monday, tuesday, etc.
 }
 
 const TEAM_MEMBERS: Member[] = [
@@ -134,7 +140,11 @@ const columnTitles: Record<string, string> = {
 };
 
 export default function Home() {
-  const [columns, setColumns] = useState(initialData);
+  const [user, setUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [columns, setColumns] = useState<Record<string, Task[]>>({
+    monday: [], tuesday: [], wednesday: [], thursday: [], friday: []
+  });
   const [addingToColumn, setAddingToColumn] = useState<string | null>(null);
   const [addingAtIndex, setAddingAtIndex] = useState<number | null>(null);
   const [newCardTitle, setNewCardTitle] = useState("");
@@ -144,6 +154,41 @@ export default function Home() {
   const [showSettings, setShowSettings] = useState(false);
   const [googleCalendarConnected, setGoogleCalendarConnected] = useState(false);
   const [calendarEvents, setCalendarEvents] = useState<Record<string, CalendarEvent[]>>({});
+
+  // Auth check
+  useEffect(() => {
+    const supabase = createClient();
+    
+    // Check current user
+    supabase.auth.getUser().then(async ({ data: { user } }) => {
+      setUser(user);
+      if (user) {
+        await initializeUserData(user.id);
+        // Load tasks from Supabase
+        const tasks = await loadTasksByDay(user.id);
+        setColumns(tasks);
+      }
+      setLoading(false);
+    });
+
+    // Listen for auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (_event, session) => {
+        setUser(session?.user ?? null);
+        if (session?.user) {
+          await initializeUserData(session.user.id);
+          const tasks = await loadTasksByDay(session.user.id);
+          setColumns(tasks);
+        } else {
+          setColumns({
+            monday: [], tuesday: [], wednesday: [], thursday: [], friday: []
+          });
+        }
+      }
+    );
+
+    return () => subscription.unsubscribe();
+  }, []);
 
   // Check if Google Calendar is connected on mount
   useEffect(() => {
@@ -249,13 +294,14 @@ export default function Home() {
   // Force Friday for testing (TODO: remove)
   const todayName = 'friday'; // getTodayName();
 
-  const handleAddCard = (columnId: string, index?: number) => {
-    if (!newCardTitle.trim()) return;
+  const handleAddCard = async (columnId: string, index?: number) => {
+    if (!newCardTitle.trim() || !user) return;
 
     const newCard: Task = {
       id: `task-${Date.now()}`,
       title: newCardTitle.trim(),
       priority: "medium",
+      day: columnId,
     };
 
     const columnItems = [...columns[columnId]];
@@ -269,6 +315,9 @@ export default function Home() {
       ...columns,
       [columnId]: columnItems,
     });
+
+    // Save to Supabase
+    await saveTask(user.id, newCard);
 
     setNewCardTitle("");
     setAddingToColumn(null);
@@ -286,21 +335,36 @@ export default function Home() {
     }
   };
 
-  const toggleComplete = (taskId: string) => {
+  const toggleComplete = async (taskId: string) => {
+    if (!user) return;
+
     const updated = { ...columns };
+    let updatedTask: Task | null = null;
+
     for (const col of Object.keys(updated)) {
       const idx = updated[col].findIndex((t) => t.id === taskId);
       if (idx !== -1) {
         updated[col] = [...updated[col]];
-        updated[col][idx] = { ...updated[col][idx], completed: !updated[col][idx].completed };
+        updated[col][idx] = { ...updated[col][idx], completed: !updated[col][idx].completed, day: col };
+        updatedTask = updated[col][idx];
         break;
       }
     }
+    
     setColumns(updated);
+    
+    // Save to Supabase
+    if (updatedTask) {
+      await saveTask(user.id, updatedTask);
+    }
   };
 
-  const toggleAssignee = (taskId: string, memberId: string) => {
+  const toggleAssignee = async (taskId: string, memberId: string) => {
+    if (!user) return;
+
     const updated = { ...columns };
+    let updatedTask: Task | null = null;
+
     for (const col of Object.keys(updated)) {
       const idx = updated[col].findIndex((t) => t.id === taskId);
       if (idx !== -1) {
@@ -313,16 +377,28 @@ export default function Home() {
           ...task,
           assignees: isAssigned
             ? assignees.filter(id => id !== memberId)
-            : [...assignees, memberId]
+            : [...assignees, memberId],
+          day: col
         };
+        updatedTask = updated[col][idx];
         break;
       }
     }
+    
     setColumns(updated);
+
+    // Save to Supabase
+    if (updatedTask) {
+      await saveTask(user.id, updatedTask);
+    }
   };
 
-  const toggleClient = (taskId: string, clientId: string) => {
+  const toggleClient = async (taskId: string, clientId: string) => {
+    if (!user) return;
+
     const updated = { ...columns };
+    let updatedTask: Task | null = null;
+
     for (const col of Object.keys(updated)) {
       const idx = updated[col].findIndex((t) => t.id === taskId);
       if (idx !== -1) {
@@ -331,28 +407,53 @@ export default function Home() {
         
         updated[col][idx] = {
           ...task,
-          client: task.client === clientId ? undefined : clientId
+          client: task.client === clientId ? undefined : clientId,
+          day: col
         };
+        updatedTask = updated[col][idx];
         break;
       }
     }
+    
     setColumns(updated);
+
+    // Save to Supabase
+    if (updatedTask) {
+      await saveTask(user.id, updatedTask);
+    }
   };
 
-  const saveEditedTask = (updatedTask: Task) => {
-    if (!editingColumn) return;
+  const saveEditedTask = async (updatedTask: Task) => {
+    if (!editingColumn || !user) return;
     
     const updated = { ...columns };
     const idx = updated[editingColumn].findIndex((t) => t.id === updatedTask.id);
     if (idx !== -1) {
       updated[editingColumn] = [...updated[editingColumn]];
-      updated[editingColumn][idx] = updatedTask;
+      updated[editingColumn][idx] = { ...updatedTask, day: editingColumn };
       setColumns(updated);
+      
+      // Save to Supabase
+      await saveTask(user.id, { ...updatedTask, day: editingColumn });
     }
     
     setEditingTask(null);
     setEditingColumn(null);
   };
+
+  // Show loading spinner while checking auth
+  if (loading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-black/50">
+        <div className="text-white/60">Loading...</div>
+      </div>
+    );
+  }
+
+  // Show auth form if not logged in
+  if (!user) {
+    return <AuthForm />;
+  }
 
   return (
     <main className="flex min-h-screen flex-col p-4 md:p-8 bg-black/50">
@@ -372,7 +473,17 @@ export default function Home() {
       <div className="flex-1 overflow-hidden">
         <Kanban
           value={columns}
-          onValueChange={setColumns}
+          onValueChange={async (newColumns) => {
+            setColumns(newColumns);
+            
+            // Save reordered tasks to Supabase
+            if (user) {
+              // Update all changed columns
+              for (const [day, tasks] of Object.entries(newColumns)) {
+                await updateDayTasks(user.id, day, tasks);
+              }
+            }
+          }}
           getItemValue={(item) => item.id}
         >
           <KanbanBoard className="h-[calc(100vh-12rem)] overflow-x-auto p-1 [&::-webkit-scrollbar]:h-2 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-white/10 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:hover:bg-white/20">
