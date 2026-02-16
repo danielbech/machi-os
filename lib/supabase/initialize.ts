@@ -65,21 +65,15 @@ export async function initializeUserData(userId: string) {
   }
 
   // Create default team members
-  const teamMembers = [
-    { name: 'Daniel', initials: 'DB', color: 'bg-blue-500' },
-    { name: 'Casper', initials: 'C', color: 'bg-green-500' },
-    { name: 'Jens', initials: 'J', color: 'bg-purple-500' },
-    { name: 'Emil', initials: 'E', color: 'bg-orange-500' },
-  ]
+  const { error: teamError } = await supabase.from('team_members').insert([
+    { user_id: userId, name: 'Daniel', initials: 'DB', color: 'bg-blue-500' },
+    { user_id: userId, name: 'Casper', initials: 'C', color: 'bg-green-500' },
+    { user_id: userId, name: 'Jens', initials: 'J', color: 'bg-purple-500' },
+    { user_id: userId, name: 'Emil', initials: 'E', color: 'bg-orange-500' },
+  ])
 
-  for (const member of teamMembers) {
-    const { error } = await supabase.from('team_members').insert({
-      user_id: userId,
-      ...member,
-    })
-    if (error) {
-      console.error('Error creating team member:', member.name, error)
-    }
+  if (teamError) {
+    console.error('Error creating team members:', teamError)
   }
 }
 

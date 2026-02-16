@@ -100,10 +100,33 @@ export async function deleteTask(taskId: string) {
 
 // Update all tasks for a specific day (batch update for reordering)
 export async function updateDayTasks(userId: string, day: string, tasks: Task[]) {
-  for (let i = 0; i < tasks.length; i++) {
-    const task = tasks[i]
-    if (task) {
-      await saveTask(userId, { ...task, day })
-    }
+  const supabase = createClient()
+  const areaId = await getDefaultAreaId(userId)
+  if (!areaId) return
+
+  const updates = tasks
+    .filter(task => task.id.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i))
+    .map((task, i) => ({
+      id: task.id,
+      area_id: areaId,
+      title: task.title,
+      description: task.description || null,
+      day,
+      completed: task.completed || false,
+      sort_order: i,
+      assignees: task.assignees || [],
+      client: task.client || null,
+      priority: task.priority || null,
+    }))
+
+  if (updates.length === 0) return
+
+  const { error } = await supabase
+    .from('tasks')
+    .upsert(updates)
+
+  if (error) {
+    console.error('Error batch updating tasks:', error)
+    throw error
   }
 }
