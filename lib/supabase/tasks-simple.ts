@@ -82,10 +82,7 @@ export async function saveTask(userId: string, task: Task): Promise<string> {
   const supabase = createClient()
   const areaId = await getDefaultAreaId(userId)
   
-  console.log('saveTask called:', { userId, taskId: task.id, areaId })
-  
   if (!areaId) {
-    console.error('No default area found for user:', userId)
     throw new Error('No default area found')
   }
 
@@ -123,7 +120,6 @@ export async function saveTask(userId: string, task: Task): Promise<string> {
       console.error('Error updating task:', error)
       throw error
     }
-    console.log('Task updated successfully:', task.id)
     return task.id
   } else {
     // Create new - let Supabase generate the UUID
@@ -137,7 +133,6 @@ export async function saveTask(userId: string, task: Task): Promise<string> {
       console.error('Error creating task:', error)
       throw error
     }
-    console.log('Task created successfully:', data.id)
     return data.id
   }
 }

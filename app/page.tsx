@@ -168,7 +168,6 @@ export default function Home() {
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
-        console.log('Auth state change:', event, session?.user?.id);
         setUser(session?.user ?? null);
         setLoading(false);
       }
@@ -176,7 +175,6 @@ export default function Home() {
 
     // Trigger initial check
     supabase.auth.getSession().then(({ data: { session } }) => {
-      console.log('Session check:', session ? 'found' : 'none');
       setUser(session?.user ?? null);
       setLoading(false);
     }).catch((err) => {
@@ -304,7 +302,6 @@ export default function Home() {
 
     // If week changed, re-sync
     if (currentWeekStart && currentWeekStart !== weekStart) {
-      console.log('Week changed, re-syncing calendar events');
       syncCalendarEvents();
     }
 
@@ -321,7 +318,6 @@ export default function Home() {
       const newWeekStart = nowMonday.toISOString();
 
       if (newWeekStart !== weekStart) {
-        console.log('Week changed, re-syncing calendar events');
         setCurrentWeekStart(newWeekStart);
         syncCalendarEvents();
       }
@@ -701,7 +697,10 @@ export default function Home() {
                           }, 100);
                         }
                       }}
-                      onMouseEnter={(e: any) => e.currentTarget.focus()}
+                      onMouseEnter={(e: any) => {
+                        // Don't steal focus from the add-card input
+                        if (!addingToColumn) e.currentTarget.focus();
+                      }}
                       onKeyDown={(e: any) => {
                         const key = e.key;
                         if (key === ' ') {

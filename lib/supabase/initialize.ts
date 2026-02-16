@@ -4,8 +4,6 @@ import { createClient } from './client'
 export async function initializeUserData(userId: string) {
   const supabase = createClient()
 
-  console.log('Initializing user data for:', userId)
-
   // Check if user already has projects
   const { data: existingProjects, error: checkError } = await supabase
     .from('projects')
@@ -18,18 +16,11 @@ export async function initializeUserData(userId: string) {
     throw checkError
   }
 
-  console.log('Existing projects check result:', existingProjects)
-
   if (existingProjects && existingProjects.length > 0) {
-    // User already initialized
-    console.log('User already has projects, skipping initialization')
     return
   }
 
-  console.log('Creating default project and area...')
-
   // Create default project
-  console.log('Creating project...')
   const { data: project, error: projectError } = await supabase
     .from('projects')
     .insert({
@@ -44,10 +35,8 @@ export async function initializeUserData(userId: string) {
     console.error('Error creating project:', projectError)
     throw projectError
   }
-  console.log('Project created:', project.id)
 
   // Create workspace membership (owner)
-  console.log('Creating workspace membership...')
   const { error: membershipError } = await supabase
     .from('workspace_memberships')
     .insert({
@@ -60,10 +49,8 @@ export async function initializeUserData(userId: string) {
     console.error('Error creating membership:', membershipError)
     throw membershipError
   }
-  console.log('Membership created')
 
   // Create default area
-  console.log('Creating area...')
   const { error: areaError } = await supabase
     .from('areas')
     .insert({
@@ -76,10 +63,8 @@ export async function initializeUserData(userId: string) {
     console.error('Error creating area:', areaError)
     throw areaError
   }
-  console.log('Area created')
 
-  // Create default team members (from current hardcoded list)
-  console.log('Creating team members...')
+  // Create default team members
   const teamMembers = [
     { name: 'Daniel', initials: 'DB', color: 'bg-blue-500' },
     { name: 'Casper', initials: 'C', color: 'bg-green-500' },
@@ -96,16 +81,12 @@ export async function initializeUserData(userId: string) {
       console.error('Error creating team member:', member.name, error)
     }
   }
-
-  console.log('User initialization complete!')
 }
 
 // Get user's default area ID
 // Now works with workspace memberships via RLS
 export async function getDefaultAreaId(userId: string) {
   const supabase = createClient()
-
-  console.log('Getting default area for user:', userId)
 
   // RLS will automatically filter to projects the user has membership in
   const { data: projects, error: projectError } = await supabase
@@ -120,11 +101,8 @@ export async function getDefaultAreaId(userId: string) {
   }
 
   if (!projects) {
-    console.warn('No project found for user:', userId)
     return null
   }
-
-  console.log('Found project:', projects.id)
 
   const { data: area, error: areaError } = await supabase
     .from('areas')
@@ -139,11 +117,9 @@ export async function getDefaultAreaId(userId: string) {
   }
 
   if (!area) {
-    console.warn('No area found for project:', projects.id)
     return null
   }
 
-  console.log('Found area:', area.id)
   return area.id
 }
 
