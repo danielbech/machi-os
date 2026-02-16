@@ -10,7 +10,7 @@ The operating system for Oimachi — a 2-person digital design & development age
 - **Styling:** Tailwind CSS 4, shadcn/ui components
 - **Drag & Drop:** dnd-kit
 - **Calendar:** Google Calendar API (OAuth, client-side)
-- **Deployment:** Vercel (auto-deploys on push to main). Always push to main after completing work — no PRs needed.
+- **Deployment:** Vercel (auto-deploys on push to main). Use `dev` branch for bigger features (Vercel creates preview URLs automatically), push small fixes directly to `main`.
 - **Package manager:** npm
 
 ## Project Structure
