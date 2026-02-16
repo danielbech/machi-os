@@ -19,17 +19,17 @@ ALTER TABLE clients ENABLE ROW LEVEL SECURITY;
 
 -- Members can read clients in their workspaces
 CREATE POLICY "clients_select" ON clients
-  FOR SELECT USING (project_id IN (SELECT get_user_project_ids()));
+  FOR SELECT USING (project_id IN (SELECT get_user_project_ids(auth.uid())));
 
 -- Admins/owners can insert/update/delete clients
 CREATE POLICY "clients_insert" ON clients
-  FOR INSERT WITH CHECK (project_id IN (SELECT get_user_admin_project_ids()));
+  FOR INSERT WITH CHECK (project_id IN (SELECT get_user_admin_project_ids(auth.uid())));
 
 CREATE POLICY "clients_update" ON clients
-  FOR UPDATE USING (project_id IN (SELECT get_user_admin_project_ids()));
+  FOR UPDATE USING (project_id IN (SELECT get_user_admin_project_ids(auth.uid())));
 
 CREATE POLICY "clients_delete" ON clients
-  FOR DELETE USING (project_id IN (SELECT get_user_admin_project_ids()));
+  FOR DELETE USING (project_id IN (SELECT get_user_admin_project_ids(auth.uid())));
 
 -- Seed existing clients into all projects
 INSERT INTO clients (project_id, name, slug, color, sort_order)
