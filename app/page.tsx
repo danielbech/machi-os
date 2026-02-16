@@ -383,12 +383,18 @@ export default function Home() {
   const todayName = getTodayName();
 
   const handleAddCard = async (columnId: string, index?: number) => {
-    if (!newCardTitle.trim() || !user) return;
+    const title = newCardTitle.trim();
+    if (!title || !user) return;
+
+    // Clear input state immediately to prevent double-fire from Enter + onBlur
+    setNewCardTitle("");
+    setAddingToColumn(null);
+    setAddingAtIndex(null);
 
     const tempId = `task-${Date.now()}`;
     const newCard: Task = {
       id: tempId,
-      title: newCardTitle.trim(),
+      title,
       priority: "medium",
       day: columnId,
     };
@@ -409,7 +415,7 @@ export default function Home() {
     const realId = await saveTask(user.id, newCard);
 
     // Update the task in state with the real ID
-    const updatedItems = columnItems.map(item => 
+    const updatedItems = columnItems.map(item =>
       item.id === tempId ? { ...item, id: realId } : item
     );
     setColumns({
@@ -417,9 +423,6 @@ export default function Home() {
       [columnId]: updatedItems,
     });
 
-    setNewCardTitle("");
-    setAddingToColumn(null);
-    setAddingAtIndex(null);
     setNewlyCreatedCardId(realId);
   };
 

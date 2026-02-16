@@ -14,6 +14,29 @@ SELECT id, user_id, 'owner'
 FROM projects
 ON CONFLICT (project_id, user_id) DO NOTHING;
 
+-- Security definer functions to avoid infinite recursion in RLS policies.
+-- These bypass RLS so workspace_memberships policies can check membership
+-- without triggering themselves.
+CREATE OR REPLACE FUNCTION public.get_user_project_ids(uid UUID)
+RETURNS SETOF UUID
+LANGUAGE sql
+SECURITY DEFINER
+SET search_path = public
+STABLE
+AS $$
+  SELECT project_id FROM workspace_memberships WHERE user_id = uid;
+$$;
+
+CREATE OR REPLACE FUNCTION public.get_user_admin_project_ids(uid UUID)
+RETURNS SETOF UUID
+LANGUAGE sql
+SECURITY DEFINER
+SET search_path = public
+STABLE
+AS $$
+  SELECT project_id FROM workspace_memberships WHERE user_id = uid AND role IN ('owner', 'admin');
+$$;
+
 -- Enable RLS on all tables
 ALTER TABLE projects ENABLE ROW LEVEL SECURITY;
 ALTER TABLE areas ENABLE ROW LEVEL SECURITY;
@@ -104,10 +127,7 @@ CREATE POLICY "Users can view workspace team members"
   USING (
     user_id IN (
       SELECT wm.user_id FROM workspace_memberships wm
-      WHERE wm.project_id IN (
-        SELECT project_id FROM workspace_memberships
-        WHERE user_id = auth.uid()
-      )
+      WHERE wm.project_id IN (SELECT public.get_user_project_ids(auth.uid()))
     )
   );
 
@@ -117,10 +137,7 @@ CREATE POLICY "Users can manage workspace team members"
   USING (
     user_id IN (
       SELECT wm.user_id FROM workspace_memberships wm
-      WHERE wm.project_id IN (
-        SELECT project_id FROM workspace_memberships
-        WHERE user_id = auth.uid()
-      )
+      WHERE wm.project_id IN (SELECT public.get_user_project_ids(auth.uid()))
     )
   );
 
@@ -128,30 +145,21 @@ CREATE POLICY "Users can manage workspace team members"
 CREATE POLICY "Users can view workspace memberships"
   ON workspace_memberships FOR SELECT
   USING (
-    project_id IN (
-      SELECT project_id FROM workspace_memberships
-      WHERE user_id = auth.uid()
-    )
+    project_id IN (SELECT public.get_user_project_ids(auth.uid()))
   );
 
 -- RLS Policy: Owners and admins can invite users
 CREATE POLICY "Owners and admins can invite users"
   ON workspace_memberships FOR INSERT
   WITH CHECK (
-    project_id IN (
-      SELECT project_id FROM workspace_memberships
-      WHERE user_id = auth.uid() AND role IN ('owner', 'admin')
-    )
+    project_id IN (SELECT public.get_user_admin_project_ids(auth.uid()))
   );
 
 -- RLS Policy: Owners and admins can remove members
 CREATE POLICY "Owners and admins can remove members"
   ON workspace_memberships FOR DELETE
   USING (
-    project_id IN (
-      SELECT project_id FROM workspace_memberships
-      WHERE user_id = auth.uid() AND role IN ('owner', 'admin')
-    )
+    project_id IN (SELECT public.get_user_admin_project_ids(auth.uid()))
   );
 
 -- Create index for faster membership lookups
