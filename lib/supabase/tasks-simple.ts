@@ -1,11 +1,11 @@
 import { createClient } from './client'
-import { getDefaultAreaId } from './initialize'
+import { getAreaIdForProject } from './initialize'
 import type { Task } from '../types'
 
-// Load all tasks for current user, grouped by day
-export async function loadTasksByDay(userId: string): Promise<Record<string, Task[]>> {
+// Load all tasks for a project, grouped by day
+export async function loadTasksByDay(projectId: string): Promise<Record<string, Task[]>> {
   const supabase = createClient()
-  const areaId = await getDefaultAreaId(userId)
+  const areaId = await getAreaIdForProject(projectId)
 
   if (!areaId) return {}
 
@@ -44,12 +44,12 @@ export async function loadTasksByDay(userId: string): Promise<Record<string, Tas
 }
 
 // Save a task (create or update)
-export async function saveTask(userId: string, task: Task): Promise<string> {
+export async function saveTask(projectId: string, task: Task): Promise<string> {
   const supabase = createClient()
-  const areaId = await getDefaultAreaId(userId)
+  const areaId = await getAreaIdForProject(projectId)
 
   if (!areaId) {
-    throw new Error('No default area found')
+    throw new Error('No area found for project')
   }
 
   const taskData = {
@@ -99,9 +99,9 @@ export async function deleteTask(taskId: string) {
 }
 
 // Update all tasks for a specific day (batch update for reordering)
-export async function updateDayTasks(userId: string, day: string, tasks: Task[]) {
+export async function updateDayTasks(projectId: string, day: string, tasks: Task[]) {
   const supabase = createClient()
-  const areaId = await getDefaultAreaId(userId)
+  const areaId = await getAreaIdForProject(projectId)
   if (!areaId) return
 
   const updates = tasks

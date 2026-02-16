@@ -9,14 +9,14 @@ import {
   type CalendarEvent,
 } from "@/lib/google-calendar";
 import { createClient } from "@/lib/supabase/client";
-import { initializeUserData, getDefaultProjectId } from "@/lib/supabase/initialize";
+import { initializeUserData } from "@/lib/supabase/initialize";
 import { loadTasksByDay, saveTask, deleteTask, updateDayTasks } from "@/lib/supabase/tasks-simple";
-import { getWorkspaceMembers, type WorkspaceMember } from "@/lib/supabase/workspace";
+import { getUserWorkspaces, getWorkspaceMembers, type WorkspaceMember } from "@/lib/supabase/workspace";
 import { AuthForm } from "@/components/auth-form";
 import { TaskEditDialog } from "@/components/task-edit-dialog";
 import { SettingsDialog } from "@/components/settings-dialog";
 import type { User } from "@supabase/supabase-js";
-import type { Task } from "@/lib/types";
+import type { Task, Project } from "@/lib/types";
 import { TEAM_MEMBERS, CLIENTS, COLUMN_TITLES, EMPTY_COLUMNS } from "@/lib/constants";
 import {
   Kanban,
@@ -26,8 +26,14 @@ import {
   KanbanItemHandle,
   KanbanOverlay,
 } from "@/components/ui/kanban";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
-import { Check, GripVertical, Plus, Settings, Calendar } from "lucide-react";
+import { Check, GripVertical, Plus, Settings, Calendar, ChevronDown } from "lucide-react";
 
 export default function Home() {
   const [user, setUser] = useState<User | null>(null);
@@ -44,6 +50,8 @@ export default function Home() {
   const [calendarEvents, setCalendarEvents] = useState<Record<string, CalendarEvent[]>>({});
   const [workspaceMembers, setWorkspaceMembers] = useState<WorkspaceMember[]>([]);
   const [currentWeekStart, setCurrentWeekStart] = useState<string>("");
+  const [userProjects, setUserProjects] = useState<Project[]>([]);
+  const [activeProjectId, setActiveProjectId] = useState<string | null>(null);
 
   // Auth check
   useEffect(() => {
@@ -67,30 +75,64 @@ export default function Home() {
     return () => { subscription.unsubscribe(); };
   }, []);
 
-  // Load user data when user changes
+  // Initialize user data and load workspaces when user changes
   useEffect(() => {
     if (!user) {
+      setColumns({ ...EMPTY_COLUMNS });
+      setUserProjects([]);
+      setActiveProjectId(null);
+      return;
+    }
+
+    let cancelled = false;
+
+    async function loadWorkspaces() {
+      try {
+        await initializeUserData(user!.id);
+        const projects = await getUserWorkspaces();
+        if (cancelled) return;
+
+        setUserProjects(projects);
+
+        // Restore active project from localStorage, or pick first
+        const stored = localStorage.getItem('machi-active-project');
+        const validStored = projects.find(p => p.id === stored);
+        const projectId = validStored?.id || projects[0]?.id || null;
+        setActiveProjectId(projectId);
+      } catch (error) {
+        console.error('Error loading workspaces:', error);
+      }
+    }
+
+    loadWorkspaces();
+    return () => { cancelled = true; };
+  }, [user]);
+
+  // Load tasks when active project changes
+  useEffect(() => {
+    if (!activeProjectId) {
       setColumns({ ...EMPTY_COLUMNS });
       return;
     }
 
     let cancelled = false;
 
-    async function loadData() {
+    async function loadTasks() {
       try {
-        await initializeUserData(user!.id);
-        const tasks = await loadTasksByDay(user!.id);
+        const tasks = await loadTasksByDay(activeProjectId!);
         if (!cancelled) {
           setColumns(tasks);
         }
       } catch (error) {
-        console.error('Error loading user data:', error);
+        console.error('Error loading tasks:', error);
       }
     }
 
-    loadData();
+    // Persist selection
+    localStorage.setItem('machi-active-project', activeProjectId);
+    loadTasks();
     return () => { cancelled = true; };
-  }, [user]);
+  }, [activeProjectId]);
 
   // Check if Google Calendar is connected on mount
   useEffect(() => {
@@ -192,22 +234,19 @@ export default function Home() {
 
   // Load workspace members when settings opens
   useEffect(() => {
-    if (!showSettings || !user) return;
+    if (!showSettings || !activeProjectId) return;
 
     async function loadMembers() {
       try {
-        const projectId = await getDefaultProjectId();
-        if (projectId) {
-          const members = await getWorkspaceMembers(projectId);
-          setWorkspaceMembers(members);
-        }
+        const members = await getWorkspaceMembers(activeProjectId!);
+        setWorkspaceMembers(members);
       } catch (error) {
         console.error('Failed to load workspace members:', error);
       }
     }
 
     loadMembers();
-  }, [showSettings, user]);
+  }, [showSettings, activeProjectId]);
 
   // Week dates
   const getWeekDates = () => {
@@ -241,7 +280,7 @@ export default function Home() {
   // Task actions
   const handleAddCard = async (columnId: string, index?: number) => {
     const title = newCardTitle.trim();
-    if (!title || !user) return;
+    if (!title || !activeProjectId) return;
 
     setNewCardTitle("");
     setAddingToColumn(null);
@@ -259,7 +298,7 @@ export default function Home() {
 
     setColumns({ ...columns, [columnId]: columnItems });
 
-    const realId = await saveTask(user.id, newCard);
+    const realId = await saveTask(activeProjectId, newCard);
 
     const updatedItems = columnItems.map(item =>
       item.id === tempId ? { ...item, id: realId } : item
@@ -279,7 +318,7 @@ export default function Home() {
   };
 
   const toggleComplete = async (taskId: string) => {
-    if (!user) return;
+    if (!activeProjectId) return;
     const updated = { ...columns };
     let updatedTask: Task | null = null;
 
@@ -294,11 +333,11 @@ export default function Home() {
     }
 
     setColumns(updated);
-    if (updatedTask) await saveTask(user.id, updatedTask);
+    if (updatedTask) await saveTask(activeProjectId, updatedTask);
   };
 
   const toggleAssignee = async (taskId: string, memberId: string) => {
-    if (!user) return;
+    if (!activeProjectId) return;
     const updated = { ...columns };
     let updatedTask: Task | null = null;
 
@@ -323,11 +362,11 @@ export default function Home() {
     }
 
     setColumns(updated);
-    if (updatedTask) await saveTask(user.id, updatedTask);
+    if (updatedTask) await saveTask(activeProjectId, updatedTask);
   };
 
   const toggleClient = async (taskId: string, clientId: string) => {
-    if (!user) return;
+    if (!activeProjectId) return;
     const updated = { ...columns };
     let updatedTask: Task | null = null;
 
@@ -348,11 +387,11 @@ export default function Home() {
     }
 
     setColumns(updated);
-    if (updatedTask) await saveTask(user.id, updatedTask);
+    if (updatedTask) await saveTask(activeProjectId, updatedTask);
   };
 
   const saveEditedTask = async (updatedTask: Task) => {
-    if (!editingColumn || !user) return;
+    if (!editingColumn || !activeProjectId) return;
 
     const updated = { ...columns };
     const idx = updated[editingColumn].findIndex((t) => t.id === updatedTask.id);
@@ -360,12 +399,14 @@ export default function Home() {
       updated[editingColumn] = [...updated[editingColumn]];
       updated[editingColumn][idx] = { ...updatedTask, day: editingColumn };
       setColumns(updated);
-      await saveTask(user.id, { ...updatedTask, day: editingColumn });
+      await saveTask(activeProjectId, { ...updatedTask, day: editingColumn });
     }
 
     setEditingTask(null);
     setEditingColumn(null);
   };
+
+  const activeProject = userProjects.find(p => p.id === activeProjectId);
 
   // Loading state
   if (loading) {
@@ -386,7 +427,42 @@ export default function Home() {
       <div className="mb-6 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <img src="/logo.svg" alt="Machi OS" className="w-10 h-10" />
-          <h1 className="text-3xl font-bold">Machi OS</h1>
+          {userProjects.length > 1 ? (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button className="flex items-center gap-2 text-3xl font-bold hover:opacity-80 transition-opacity outline-none">
+                  <span
+                    className="inline-block w-3 h-3 rounded-full shrink-0"
+                    style={{ backgroundColor: activeProject?.color || '#3b82f6' }}
+                  />
+                  {activeProject?.name || 'Machi OS'}
+                  <ChevronDown className="size-5 text-white/40" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start" className="min-w-[200px]">
+                {userProjects.map((project) => (
+                  <DropdownMenuItem
+                    key={project.id}
+                    onClick={() => setActiveProjectId(project.id)}
+                    className="flex items-center gap-2"
+                  >
+                    <span
+                      className="inline-block w-2.5 h-2.5 rounded-full shrink-0"
+                      style={{ backgroundColor: project.color }}
+                    />
+                    <span className={project.id === activeProjectId ? 'font-semibold' : ''}>
+                      {project.name}
+                    </span>
+                    {project.id === activeProjectId && (
+                      <Check className="size-4 ml-auto text-white/60" />
+                    )}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          ) : (
+            <h1 className="text-3xl font-bold">Machi OS</h1>
+          )}
         </div>
         <button
           onClick={() => setShowSettings(true)}
@@ -401,9 +477,9 @@ export default function Home() {
           value={columns}
           onValueChange={async (newColumns) => {
             setColumns(newColumns);
-            if (user) {
+            if (activeProjectId) {
               for (const [day, tasks] of Object.entries(newColumns)) {
-                await updateDayTasks(user.id, day, tasks);
+                await updateDayTasks(activeProjectId, day, tasks);
               }
             }
           }}
@@ -703,6 +779,7 @@ export default function Home() {
         open={showSettings}
         onOpenChange={setShowSettings}
         user={user}
+        activeProjectId={activeProjectId}
         googleCalendarConnected={googleCalendarConnected}
         onGoogleCalendarConnect={() => {}}
         onGoogleCalendarDisconnect={() => {

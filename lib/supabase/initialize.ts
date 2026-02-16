@@ -4,19 +4,19 @@ import { createClient } from './client'
 export async function initializeUserData(userId: string) {
   const supabase = createClient()
 
-  // Check if user already has projects
-  const { data: existingProjects, error: checkError } = await supabase
-    .from('projects')
+  // Accept any pending invites for this user
+  await supabase.rpc('accept_pending_invites').then(({ error }) => {
+    if (error) console.error('Error accepting pending invites:', error)
+  })
+
+  // Check if user already has any projects (via membership)
+  const { data: existingMemberships } = await supabase
+    .from('workspace_memberships')
     .select('id')
     .eq('user_id', userId)
     .limit(1)
 
-  if (checkError) {
-    console.error('Error checking existing projects:', checkError)
-    throw checkError
-  }
-
-  if (existingProjects && existingProjects.length > 0) {
+  if (existingMemberships && existingMemberships.length > 0) {
     return
   }
 
@@ -77,12 +77,29 @@ export async function initializeUserData(userId: string) {
   }
 }
 
-// Get user's default area ID
-// Now works with workspace memberships via RLS
+// Get area ID for a specific project
+export async function getAreaIdForProject(projectId: string) {
+  const supabase = createClient()
+
+  const { data: area, error } = await supabase
+    .from('areas')
+    .select('id')
+    .eq('project_id', projectId)
+    .limit(1)
+    .maybeSingle()
+
+  if (error) {
+    console.error('Error fetching area:', error)
+    return null
+  }
+
+  return area?.id || null
+}
+
+// Get user's default area ID (legacy — prefer getAreaIdForProject)
 export async function getDefaultAreaId(userId: string) {
   const supabase = createClient()
 
-  // RLS will automatically filter to projects the user has membership in
   const { data: projects, error: projectError } = await supabase
     .from('projects')
     .select('id')
@@ -94,27 +111,9 @@ export async function getDefaultAreaId(userId: string) {
     return null
   }
 
-  if (!projects) {
-    return null
-  }
+  if (!projects) return null
 
-  const { data: area, error: areaError } = await supabase
-    .from('areas')
-    .select('id')
-    .eq('project_id', projects.id)
-    .limit(1)
-    .maybeSingle()
-
-  if (areaError) {
-    console.error('Error fetching area:', areaError)
-    return null
-  }
-
-  if (!area) {
-    return null
-  }
-
-  return area.id
+  return getAreaIdForProject(projects.id)
 }
 
 // Get user's default project ID

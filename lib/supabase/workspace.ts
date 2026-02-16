@@ -1,4 +1,5 @@
 import { createClient } from './client'
+import type { Project, PendingInvite } from '../types'
 
 export interface WorkspaceMember {
   id: string
@@ -8,10 +9,45 @@ export interface WorkspaceMember {
   email?: string
 }
 
-// Get all members of the current workspace
+// Get all workspaces the current user is a member of
+export async function getUserWorkspaces(): Promise<Project[]> {
+  const supabase = createClient()
+
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return []
+
+  const { data, error } = await supabase
+    .from('workspace_memberships')
+    .select(`
+      role,
+      projects:project_id (
+        id,
+        name,
+        color
+      )
+    `)
+    .eq('user_id', user.id)
+    .order('created_at')
+
+  if (error) {
+    console.error('Error fetching workspaces:', error)
+    return []
+  }
+
+  return (data || [])
+    .filter((d: any) => d.projects)
+    .map((d: any) => ({
+      id: d.projects.id,
+      name: d.projects.name,
+      color: d.projects.color,
+      role: d.role,
+    }))
+}
+
+// Get all members of a workspace
 export async function getWorkspaceMembers(projectId: string): Promise<WorkspaceMember[]> {
   const supabase = createClient()
-  
+
   const { data, error } = await supabase
     .from('workspace_memberships')
     .select(`
@@ -28,37 +64,38 @@ export async function getWorkspaceMembers(projectId: string): Promise<WorkspaceM
     throw error
   }
 
-  // Fetch user emails separately (they're in auth.users, not exposed via RLS)
-  // For now, we'll just return the basic membership data
   return data || []
 }
 
-// Invite a user to the workspace by email
-export async function inviteUserToWorkspace(
-  projectId: string,
-  email: string,
-  role: 'admin' | 'member' = 'member'
-): Promise<void> {
+// Get pending invites for a project
+export async function getPendingInvites(projectId: string): Promise<PendingInvite[]> {
   const supabase = createClient()
 
-  // First, check if user exists by email
-  // Note: This requires a server-side function or admin API
-  // For now, we'll create a simplified version that requires the user to exist
-
-  // Get user ID from email (requires auth.users access - may need Edge Function)
-  // Simplified: Just create an invite record and handle on user's next login
-  
-  const { error } = await supabase
-    .from('workspace_memberships')
-    .insert({
-      project_id: projectId,
-      // This won't work without getting user_id from email
-      // We need to build this as an Edge Function or pending_invites table
-      role,
-    })
+  const { data, error } = await supabase
+    .from('pending_invites')
+    .select('id, email, role, created_at')
+    .eq('project_id', projectId)
+    .order('created_at')
 
   if (error) {
-    console.error('Error inviting user:', error)
+    console.error('Error fetching pending invites:', error)
+    return []
+  }
+
+  return data || []
+}
+
+// Cancel a pending invite
+export async function cancelInvite(inviteId: string): Promise<void> {
+  const supabase = createClient()
+
+  const { error } = await supabase
+    .from('pending_invites')
+    .delete()
+    .eq('id', inviteId)
+
+  if (error) {
+    console.error('Error canceling invite:', error)
     throw error
   }
 }
@@ -99,7 +136,7 @@ export async function updateMemberRole(
 // Get current user's role in a workspace
 export async function getCurrentUserRole(projectId: string): Promise<string | null> {
   const supabase = createClient()
-  
+
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return null
 

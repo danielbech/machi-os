@@ -23,3 +23,17 @@ export interface Task {
   client?: string;
   day?: string;
 }
+
+export interface Project {
+  id: string;
+  name: string;
+  color: string;
+  role: 'owner' | 'admin' | 'member';
+}
+
+export interface PendingInvite {
+  id: string;
+  email: string;
+  role: string;
+  created_at: string;
+}
