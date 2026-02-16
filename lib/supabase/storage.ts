@@ -29,11 +29,25 @@ export async function uploadClientLogo(file: File, clientId: string): Promise<st
 export async function deleteClientLogo(logoUrl: string): Promise<void> {
   const supabase = createClient()
 
-  // Extract the path from the public URL
-  const parts = logoUrl.split(`/storage/v1/object/public/${BUCKET}/`)
-  if (parts.length < 2) return
+  // Extract the file path from the public URL
+  // URL may contain URL-encoded bucket name (e.g. "Project%20Logos")
+  const encodedBucket = encodeURIComponent(BUCKET).replace(/%20/g, '%20')
+  const marker = `/storage/v1/object/public/`
+  const markerIdx = logoUrl.indexOf(marker)
+  if (markerIdx === -1) return
 
-  const path = parts[1]
+  const afterMarker = logoUrl.slice(markerIdx + marker.length)
+  // afterMarker is "Project%20Logos/filename.png" or "Project Logos/filename.png"
+  // Try both encoded and non-encoded forms
+  let path: string | null = null
+  const decodedAfter = decodeURIComponent(afterMarker)
+
+  if (decodedAfter.startsWith(BUCKET + '/')) {
+    path = decodedAfter.slice(BUCKET.length + 1)
+  }
+
+  if (!path) return
+
   const { error } = await supabase.storage
     .from(BUCKET)
     .remove([path])

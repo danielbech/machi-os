@@ -32,7 +32,10 @@ const NAV_ITEMS = [
 
 export function AppSidebar() {
   const pathname = usePathname();
-  const { userProjects, activeProjectId, setActiveProjectId, activeProject, user } = useWorkspace();
+  const {
+    userProjects, activeProjectId, setActiveProjectId, activeProject, user,
+    googleCalendarConnected, disconnectGoogleCalendar,
+  } = useWorkspace();
   const [showSettings, setShowSettings] = useState(false);
   const [workspaceMembers, setWorkspaceMembers] = useState<WorkspaceMember[]>([]);
 
@@ -147,9 +150,9 @@ export function AppSidebar() {
           onOpenChange={setShowSettings}
           user={user}
           activeProjectId={activeProjectId}
-          googleCalendarConnected={false}
+          googleCalendarConnected={googleCalendarConnected}
           onGoogleCalendarConnect={() => {}}
-          onGoogleCalendarDisconnect={() => {}}
+          onGoogleCalendarDisconnect={disconnectGoogleCalendar}
           workspaceMembers={workspaceMembers}
           onMembersChange={setWorkspaceMembers}
         />

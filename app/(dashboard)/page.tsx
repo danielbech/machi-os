@@ -1,13 +1,6 @@
 "use client";
 
 import { useState, KeyboardEvent, useEffect } from "react";
-import {
-  isGoogleCalendarConnected,
-  storeAccessToken,
-  clearAccessToken,
-  getEventsGroupedByDay,
-  type CalendarEvent,
-} from "@/lib/google-calendar";
 import { loadTasksByDay, saveTask, updateDayTasks } from "@/lib/supabase/tasks-simple";
 import { useWorkspace } from "@/lib/workspace-context";
 import { TaskEditDialog } from "@/components/task-edit-dialog";
@@ -26,7 +19,7 @@ import { Badge } from "@/components/ui/badge";
 import { Check, GripVertical, Plus, Calendar } from "lucide-react";
 
 export default function BoardPage() {
-  const { activeProjectId, clients } = useWorkspace();
+  const { activeProjectId, clients, calendarEvents } = useWorkspace();
 
   const [columns, setColumns] = useState<Record<string, Task[]>>({ ...EMPTY_COLUMNS });
   const [addingToColumn, setAddingToColumn] = useState<string | null>(null);
@@ -35,9 +28,6 @@ export default function BoardPage() {
   const [newlyCreatedCardId, setNewlyCreatedCardId] = useState<string | null>(null);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [editingColumn, setEditingColumn] = useState<string | null>(null);
-  const [googleCalendarConnected, setGoogleCalendarConnected] = useState(false);
-  const [calendarEvents, setCalendarEvents] = useState<Record<string, CalendarEvent[]>>({});
-  const [currentWeekStart, setCurrentWeekStart] = useState<string>("");
 
   // Load tasks when active project changes
   useEffect(() => {
@@ -60,86 +50,6 @@ export default function BoardPage() {
     loadTasks();
     return () => { cancelled = true; };
   }, [activeProjectId]);
-
-  // Google Calendar setup
-  useEffect(() => {
-    setGoogleCalendarConnected(isGoogleCalendarConnected());
-  }, []);
-
-  useEffect(() => {
-    const handleMessage = (event: MessageEvent) => {
-      if (event.origin !== window.location.origin) return;
-      if (event.data.type === "GOOGLE_AUTH_SUCCESS") {
-        storeAccessToken(event.data.accessToken, event.data.expiresIn);
-        setGoogleCalendarConnected(true);
-        syncCalendarEvents();
-      } else if (event.data.type === "GOOGLE_AUTH_FAILED") {
-        alert("Failed to connect Google Calendar");
-      }
-    };
-    window.addEventListener("message", handleMessage);
-    return () => window.removeEventListener("message", handleMessage);
-  }, []);
-
-  const syncCalendarEvents = async () => {
-    if (!isGoogleCalendarConnected()) return;
-    try {
-      const today = new Date();
-      const currentDay = today.getDay();
-      const monday = new Date(today);
-      const offset = currentDay === 0 ? -6 : 1 - currentDay;
-      monday.setDate(today.getDate() + offset);
-      monday.setHours(0, 0, 0, 0);
-      const friday = new Date(monday);
-      friday.setDate(monday.getDate() + 4);
-      friday.setHours(23, 59, 59, 999);
-      const events = await getEventsGroupedByDay(monday, friday);
-      setCalendarEvents(events);
-    } catch (error) {
-      console.error("Failed to sync calendar events:", error);
-      if (error instanceof Error && error.message === "Authentication expired") {
-        setGoogleCalendarConnected(false);
-        setCalendarEvents({});
-      }
-    }
-  };
-
-  useEffect(() => {
-    if (googleCalendarConnected) syncCalendarEvents();
-  }, [googleCalendarConnected]);
-
-  useEffect(() => {
-    if (!googleCalendarConnected) return;
-    const interval = setInterval(syncCalendarEvents, 30 * 60 * 1000);
-    return () => clearInterval(interval);
-  }, [googleCalendarConnected]);
-
-  useEffect(() => {
-    if (!googleCalendarConnected) return;
-    const today = new Date();
-    const currentDay = today.getDay();
-    const monday = new Date(today);
-    const offset = currentDay === 0 ? -6 : 1 - currentDay;
-    monday.setDate(today.getDate() + offset);
-    monday.setHours(0, 0, 0, 0);
-    const weekStart = monday.toISOString();
-    if (currentWeekStart && currentWeekStart !== weekStart) syncCalendarEvents();
-    setCurrentWeekStart(weekStart);
-    const interval = setInterval(() => {
-      const now = new Date();
-      const nowDay = now.getDay();
-      const nowMonday = new Date(now);
-      const nowOffset = nowDay === 0 ? -6 : 1 - nowDay;
-      nowMonday.setDate(now.getDate() + nowOffset);
-      nowMonday.setHours(0, 0, 0, 0);
-      const newWeekStart = nowMonday.toISOString();
-      if (newWeekStart !== weekStart) {
-        setCurrentWeekStart(newWeekStart);
-        syncCalendarEvents();
-      }
-    }, 60 * 60 * 1000);
-    return () => clearInterval(interval);
-  }, [googleCalendarConnected, currentWeekStart]);
 
   // Week dates
   const getWeekDates = () => {
