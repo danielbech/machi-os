@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useWorkspace } from "@/lib/workspace-context";
 import { createClientRecord, updateClientRecord, deleteClientRecord } from "@/lib/supabase/clients";
+import { uploadClientLogo, deleteClientLogo } from "@/lib/supabase/storage";
 import { getClientClassName, CLIENT_DOT_COLORS, COLOR_NAMES } from "@/lib/colors";
 import type { Client } from "@/lib/types";
 import {
@@ -12,7 +13,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Pencil, Trash2 } from "lucide-react";
+import { Plus, Pencil, Trash2, Upload, X } from "lucide-react";
 
 function generateSlug(name: string, existingSlugs: string[]): string {
   const first = name.charAt(0).toLowerCase();
@@ -37,8 +38,11 @@ export default function ClientsPage() {
   const [formSlug, setFormSlug] = useState("");
   const [formColor, setFormColor] = useState("blue");
   const [formLogoUrl, setFormLogoUrl] = useState("");
+  const [formLogoFile, setFormLogoFile] = useState<File | null>(null);
+  const [formLogoPreview, setFormLogoPreview] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const openAdd = () => {
     setEditingClient(null);
@@ -46,6 +50,8 @@ export default function ClientsPage() {
     setFormSlug("");
     setFormColor("blue");
     setFormLogoUrl("");
+    setFormLogoFile(null);
+    setFormLogoPreview(null);
     setDialogOpen(true);
   };
 
@@ -55,7 +61,23 @@ export default function ClientsPage() {
     setFormSlug(client.slug);
     setFormColor(client.color);
     setFormLogoUrl(client.logo_url || "");
+    setFormLogoFile(null);
+    setFormLogoPreview(client.logo_url || null);
     setDialogOpen(true);
+  };
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setFormLogoFile(file);
+    setFormLogoPreview(URL.createObjectURL(file));
+  };
+
+  const clearLogo = () => {
+    setFormLogoFile(null);
+    setFormLogoPreview(null);
+    setFormLogoUrl("");
+    if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
   const handleNameChange = (name: string) => {
@@ -71,21 +93,35 @@ export default function ClientsPage() {
     if (!formName.trim() || !formSlug.trim() || !activeProjectId) return;
     setSaving(true);
     try {
+      let logoUrl = formLogoUrl.trim() || null;
+
       if (editingClient) {
+        // Upload new logo if a file was selected
+        if (formLogoFile) {
+          logoUrl = await uploadClientLogo(formLogoFile, editingClient.id);
+        }
+        // If logo was cleared and there was an old one, delete it
+        if (!logoUrl && editingClient.logo_url) {
+          await deleteClientLogo(editingClient.logo_url);
+        }
         await updateClientRecord(editingClient.id, {
           name: formName.trim(),
           slug: formSlug.trim().toLowerCase(),
           color: formColor,
-          logo_url: formLogoUrl.trim() || null,
+          logo_url: logoUrl,
         });
       } else {
-        await createClientRecord(activeProjectId, {
+        // Create first to get the ID, then upload logo
+        const newClient = await createClientRecord(activeProjectId, {
           name: formName.trim(),
           slug: formSlug.trim().toLowerCase(),
           color: formColor,
-          logo_url: formLogoUrl.trim() || undefined,
           sort_order: clients.length,
         });
+        if (formLogoFile) {
+          logoUrl = await uploadClientLogo(formLogoFile, newClient.id);
+          await updateClientRecord(newClient.id, { logo_url: logoUrl });
+        }
       }
       await refreshClients();
       setDialogOpen(false);
@@ -233,14 +269,40 @@ export default function ClientsPage() {
             </div>
 
             <div className="space-y-2">
-              <label className="text-sm font-medium">Logo URL <span className="text-white/30 font-normal">(optional)</span></label>
+              <label className="text-sm font-medium">Logo <span className="text-white/30 font-normal">(optional)</span></label>
               <input
-                type="url"
-                value={formLogoUrl}
-                onChange={(e) => setFormLogoUrl(e.target.value)}
-                placeholder="https://..."
-                className="w-full rounded-md border border-white/10 bg-white/[0.02] px-3 py-2 text-sm outline-none focus:border-white/30 focus:ring-1 focus:ring-white/20"
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                onChange={handleFileSelect}
+                className="hidden"
               />
+              {formLogoPreview ? (
+                <div className="flex items-center gap-3">
+                  <img
+                    src={formLogoPreview}
+                    alt="Logo preview"
+                    className="size-12 rounded-lg object-cover bg-white/5"
+                  />
+                  <button
+                    type="button"
+                    onClick={clearLogo}
+                    className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs text-white/40 hover:text-red-400 hover:bg-red-500/10 transition-colors"
+                  >
+                    <X className="size-3" />
+                    Remove
+                  </button>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="flex items-center gap-2 w-full rounded-md border border-dashed border-white/10 bg-white/[0.02] px-3 py-3 text-sm text-white/40 hover:text-white/60 hover:border-white/20 transition-colors"
+                >
+                  <Upload className="size-4" />
+                  Upload logo
+                </button>
+              )}
             </div>
 
             {/* Preview */}
