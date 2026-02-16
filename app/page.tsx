@@ -1,8 +1,7 @@
 "use client";
 
-import { useState, KeyboardEvent, useEffect, useRef } from "react";
+import { useState, KeyboardEvent, useEffect } from "react";
 import {
-  initiateGoogleAuth,
   isGoogleCalendarConnected,
   storeAccessToken,
   clearAccessToken,
@@ -12,9 +11,13 @@ import {
 import { createClient } from "@/lib/supabase/client";
 import { initializeUserData, getDefaultProjectId } from "@/lib/supabase/initialize";
 import { loadTasksByDay, saveTask, deleteTask, updateDayTasks } from "@/lib/supabase/tasks-simple";
-import { getWorkspaceMembers, removeUserFromWorkspace, type WorkspaceMember } from "@/lib/supabase/workspace";
+import { getWorkspaceMembers, type WorkspaceMember } from "@/lib/supabase/workspace";
 import { AuthForm } from "@/components/auth-form";
+import { TaskEditDialog } from "@/components/task-edit-dialog";
+import { SettingsDialog } from "@/components/settings-dialog";
 import type { User } from "@supabase/supabase-js";
+import type { Task } from "@/lib/types";
+import { TEAM_MEMBERS, CLIENTS, COLUMN_TITLES, EMPTY_COLUMNS } from "@/lib/constants";
 import {
   Kanban,
   KanbanBoard,
@@ -24,130 +27,12 @@ import {
   KanbanOverlay,
 } from "@/components/ui/kanban";
 import { Badge } from "@/components/ui/badge";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { Check, GripVertical, Plus, X, Settings, Calendar, Users } from "lucide-react";
-
-interface Member {
-  id: string;
-  name: string;
-  initials: string;
-  color: string;
-  avatar?: string;
-}
-
-interface Client {
-  id: string;
-  name: string;
-  key: string;
-  className: string;
-}
-
-interface Task {
-  id: string;
-  title: string;
-  description?: string;
-  priority?: "low" | "medium" | "high";
-  completed?: boolean;
-  assignees?: string[]; // array of member ids
-  client?: string; // client id
-  day?: string; // monday, tuesday, etc.
-}
-
-const TEAM_MEMBERS: Member[] = [
-  { id: "1", name: "Daniel", initials: "DB", color: "bg-blue-500", avatar: "/avatars/daniel.jpg" },
-  { id: "2", name: "Casper", initials: "C", color: "bg-green-500", avatar: "/avatars/casper.png" },
-  { id: "3", name: "Jens", initials: "J", color: "bg-purple-500" },
-  { id: "4", name: "Emil", initials: "E", color: "bg-orange-500" },
-];
-
-const CLIENTS: Client[] = [
-  { id: "bookspot", name: "BookSpot", key: "b", className: "bg-blue-50 text-blue-700 dark:bg-blue-950 dark:text-blue-300" },
-  { id: "evooq", name: "Evooq", key: "e", className: "bg-green-50 text-green-700 dark:bg-green-950 dark:text-green-300" },
-  { id: "tandem", name: "Tandem", key: "t", className: "bg-purple-50 text-purple-700 dark:bg-purple-950 dark:text-purple-300" },
-  { id: "anthill", name: "Anthill", key: "a", className: "bg-orange-50 text-orange-700 dark:bg-orange-950 dark:text-orange-300" },
-  { id: "mazed", name: "Mazed", key: "m", className: "bg-pink-50 text-pink-700 dark:bg-pink-950 dark:text-pink-300" },
-];
-
-const initialData: Record<string, Task[]> = {
-  monday: [
-    { 
-      id: "1", 
-      title: "Team standup",
-      description: "9:00 AM - Weekly planning",
-      priority: "high"
-    },
-    { 
-      id: "2", 
-      title: "Design review",
-      description: "Review board interface mockups",
-      priority: "medium"
-    },
-  ],
-  tuesday: [
-    { 
-      id: "3", 
-      title: "Database setup",
-      description: "Configure Supabase tables and RLS",
-      priority: "high"
-    },
-    { 
-      id: "4", 
-      title: "Client meeting",
-      description: "2:00 PM - Project kickoff",
-      priority: "high"
-    },
-  ],
-  wednesday: [
-    { 
-      id: "5", 
-      title: "Build Kanban component",
-      description: "Implement drag and drop",
-      priority: "high"
-    },
-  ],
-  thursday: [
-    { 
-      id: "6", 
-      title: "Author management",
-      description: "User/group assignment system",
-      priority: "medium"
-    },
-    { 
-      id: "7", 
-      title: "Code review",
-      description: "Review pull requests",
-      priority: "low"
-    },
-  ],
-  friday: [
-    { 
-      id: "8", 
-      title: "Weekly demo",
-      description: "Show progress to stakeholders",
-      priority: "high"
-    },
-  ],
-};
-
-const columnTitles: Record<string, string> = {
-  monday: "Monday",
-  tuesday: "Tuesday",
-  wednesday: "Wednesday",
-  thursday: "Thursday",
-  friday: "Friday",
-};
+import { Check, GripVertical, Plus, Settings, Calendar } from "lucide-react";
 
 export default function Home() {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
-  const [columns, setColumns] = useState<Record<string, Task[]>>({
-    monday: [], tuesday: [], wednesday: [], thursday: [], friday: []
-  });
+  const [columns, setColumns] = useState<Record<string, Task[]>>({ ...EMPTY_COLUMNS });
   const [addingToColumn, setAddingToColumn] = useState<string | null>(null);
   const [addingAtIndex, setAddingAtIndex] = useState<number | null>(null);
   const [newCardTitle, setNewCardTitle] = useState("");
@@ -158,11 +43,9 @@ export default function Home() {
   const [googleCalendarConnected, setGoogleCalendarConnected] = useState(false);
   const [calendarEvents, setCalendarEvents] = useState<Record<string, CalendarEvent[]>>({});
   const [workspaceMembers, setWorkspaceMembers] = useState<WorkspaceMember[]>([]);
-  const [inviteEmail, setInviteEmail] = useState("");
-  const [inviteRole, setInviteRole] = useState<"admin" | "member">("member");
   const [currentWeekStart, setCurrentWeekStart] = useState<string>("");
 
-  // Auth check - only set user state, no async DB work here
+  // Auth check
   useEffect(() => {
     const supabase = createClient();
 
@@ -173,7 +56,6 @@ export default function Home() {
       }
     );
 
-    // Trigger initial check
     supabase.auth.getSession().then(({ data: { session } }) => {
       setUser(session?.user ?? null);
       setLoading(false);
@@ -182,17 +64,13 @@ export default function Home() {
       setLoading(false);
     });
 
-    return () => {
-      subscription.unsubscribe();
-    };
+    return () => { subscription.unsubscribe(); };
   }, []);
 
-  // Load user data when user changes - runs outside the auth lock
+  // Load user data when user changes
   useEffect(() => {
     if (!user) {
-      setColumns({
-        monday: [], tuesday: [], wednesday: [], thursday: [], friday: []
-      });
+      setColumns({ ...EMPTY_COLUMNS });
       return;
     }
 
@@ -211,10 +89,7 @@ export default function Home() {
     }
 
     loadData();
-
-    return () => {
-      cancelled = true;
-    };
+    return () => { cancelled = true; };
   }, [user]);
 
   // Check if Google Calendar is connected on mount
@@ -226,7 +101,7 @@ export default function Home() {
   useEffect(() => {
     const handleMessage = (event: MessageEvent) => {
       if (event.origin !== window.location.origin) return;
-      
+
       if (event.data.type === 'GOOGLE_AUTH_SUCCESS') {
         storeAccessToken(event.data.accessToken, event.data.expiresIn);
         setGoogleCalendarConnected(true);
@@ -245,7 +120,6 @@ export default function Home() {
     if (!isGoogleCalendarConnected()) return;
 
     try {
-      // Get Monday of current week
       const today = new Date();
       const currentDay = today.getDay();
       const monday = new Date(today);
@@ -253,7 +127,6 @@ export default function Home() {
       monday.setDate(today.getDate() + offset);
       monday.setHours(0, 0, 0, 0);
 
-      // Get Friday of current week
       const friday = new Date(monday);
       friday.setDate(monday.getDate() + 4);
       friday.setHours(23, 59, 59, 999);
@@ -271,27 +144,20 @@ export default function Home() {
 
   // Initial sync when connected
   useEffect(() => {
-    if (googleCalendarConnected) {
-      syncCalendarEvents();
-    }
+    if (googleCalendarConnected) syncCalendarEvents();
   }, [googleCalendarConnected]);
 
   // Auto-sync every 30 minutes
   useEffect(() => {
     if (!googleCalendarConnected) return;
-
-    const interval = setInterval(() => {
-      syncCalendarEvents();
-    }, 30 * 60 * 1000); // 30 minutes
-
+    const interval = setInterval(syncCalendarEvents, 30 * 60 * 1000);
     return () => clearInterval(interval);
   }, [googleCalendarConnected]);
 
-  // Check if week changed and re-sync calendar events
+  // Check if week changed and re-sync
   useEffect(() => {
     if (!googleCalendarConnected) return;
 
-    // Calculate Monday of current week
     const today = new Date();
     const currentDay = today.getDay();
     const monday = new Date(today);
@@ -300,14 +166,12 @@ export default function Home() {
     monday.setHours(0, 0, 0, 0);
     const weekStart = monday.toISOString();
 
-    // If week changed, re-sync
     if (currentWeekStart && currentWeekStart !== weekStart) {
       syncCalendarEvents();
     }
 
     setCurrentWeekStart(weekStart);
 
-    // Check every hour if the week has changed
     const interval = setInterval(() => {
       const now = new Date();
       const nowDay = now.getDay();
@@ -321,7 +185,7 @@ export default function Home() {
         setCurrentWeekStart(newWeekStart);
         syncCalendarEvents();
       }
-    }, 60 * 60 * 1000); // Check every hour
+    }, 60 * 60 * 1000);
 
     return () => clearInterval(interval);
   }, [googleCalendarConnected, currentWeekStart]);
@@ -345,19 +209,17 @@ export default function Home() {
     loadMembers();
   }, [showSettings, user]);
 
-  // Get current week's dates (Monday - Friday)
+  // Week dates
   const getWeekDates = () => {
     const today = new Date();
-    const currentDay = today.getDay(); // 0 = Sunday, 1 = Monday, etc.
+    const currentDay = today.getDay();
     const monday = new Date(today);
-    
-    // Calculate offset to get to Monday (if today is Sunday, go back 6 days)
     const offset = currentDay === 0 ? -6 : 1 - currentDay;
     monday.setDate(today.getDate() + offset);
 
     const weekDates: Record<string, string> = {};
     const days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday'];
-    
+
     days.forEach((day, index) => {
       const date = new Date(monday);
       date.setDate(monday.getDate() + index);
@@ -369,31 +231,24 @@ export default function Home() {
 
   const weekDates = getWeekDates();
 
-  // Get current day name
   const getTodayName = () => {
-    const today = new Date();
     const days = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
-    return days[today.getDay()];
+    return days[new Date().getDay()];
   };
 
   const todayName = getTodayName();
 
+  // Task actions
   const handleAddCard = async (columnId: string, index?: number) => {
     const title = newCardTitle.trim();
     if (!title || !user) return;
 
-    // Clear input state immediately to prevent double-fire from Enter + onBlur
     setNewCardTitle("");
     setAddingToColumn(null);
     setAddingAtIndex(null);
 
     const tempId = `task-${Date.now()}`;
-    const newCard: Task = {
-      id: tempId,
-      title,
-      priority: "medium",
-      day: columnId,
-    };
+    const newCard: Task = { id: tempId, title, priority: "medium", day: columnId };
 
     const columnItems = [...columns[columnId]];
     if (index !== undefined && index !== null) {
@@ -402,23 +257,14 @@ export default function Home() {
       columnItems.push(newCard);
     }
 
-    setColumns({
-      ...columns,
-      [columnId]: columnItems,
-    });
+    setColumns({ ...columns, [columnId]: columnItems });
 
-    // Save to Supabase and get the real UUID
     const realId = await saveTask(user.id, newCard);
 
-    // Update the task in state with the real ID
     const updatedItems = columnItems.map(item =>
       item.id === tempId ? { ...item, id: realId } : item
     );
-    setColumns({
-      ...columns,
-      [columnId]: updatedItems,
-    });
-
+    setColumns({ ...columns, [columnId]: updatedItems });
     setNewlyCreatedCardId(realId);
   };
 
@@ -434,7 +280,6 @@ export default function Home() {
 
   const toggleComplete = async (taskId: string) => {
     if (!user) return;
-
     const updated = { ...columns };
     let updatedTask: Task | null = null;
 
@@ -447,18 +292,13 @@ export default function Home() {
         break;
       }
     }
-    
+
     setColumns(updated);
-    
-    // Save to Supabase
-    if (updatedTask) {
-      await saveTask(user.id, updatedTask);
-    }
+    if (updatedTask) await saveTask(user.id, updatedTask);
   };
 
   const toggleAssignee = async (taskId: string, memberId: string) => {
     if (!user) return;
-
     const updated = { ...columns };
     let updatedTask: Task | null = null;
 
@@ -469,7 +309,7 @@ export default function Home() {
         const task = updated[col][idx];
         const assignees = task.assignees || [];
         const isAssigned = assignees.includes(memberId);
-        
+
         updated[col][idx] = {
           ...task,
           assignees: isAssigned
@@ -481,18 +321,13 @@ export default function Home() {
         break;
       }
     }
-    
-    setColumns(updated);
 
-    // Save to Supabase
-    if (updatedTask) {
-      await saveTask(user.id, updatedTask);
-    }
+    setColumns(updated);
+    if (updatedTask) await saveTask(user.id, updatedTask);
   };
 
   const toggleClient = async (taskId: string, clientId: string) => {
     if (!user) return;
-
     const updated = { ...columns };
     let updatedTask: Task | null = null;
 
@@ -501,7 +336,7 @@ export default function Home() {
       if (idx !== -1) {
         updated[col] = [...updated[col]];
         const task = updated[col][idx];
-        
+
         updated[col][idx] = {
           ...task,
           client: task.client === clientId ? undefined : clientId,
@@ -511,34 +346,28 @@ export default function Home() {
         break;
       }
     }
-    
-    setColumns(updated);
 
-    // Save to Supabase
-    if (updatedTask) {
-      await saveTask(user.id, updatedTask);
-    }
+    setColumns(updated);
+    if (updatedTask) await saveTask(user.id, updatedTask);
   };
 
   const saveEditedTask = async (updatedTask: Task) => {
     if (!editingColumn || !user) return;
-    
+
     const updated = { ...columns };
     const idx = updated[editingColumn].findIndex((t) => t.id === updatedTask.id);
     if (idx !== -1) {
       updated[editingColumn] = [...updated[editingColumn]];
       updated[editingColumn][idx] = { ...updatedTask, day: editingColumn };
       setColumns(updated);
-      
-      // Save to Supabase
       await saveTask(user.id, { ...updatedTask, day: editingColumn });
     }
-    
+
     setEditingTask(null);
     setEditingColumn(null);
   };
 
-  // Show loading spinner while checking auth
+  // Loading state
   if (loading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-black/50">
@@ -547,7 +376,7 @@ export default function Home() {
     );
   }
 
-  // Show auth form if not logged in
+  // Auth gate
   if (!user) {
     return <AuthForm />;
   }
@@ -572,10 +401,7 @@ export default function Home() {
           value={columns}
           onValueChange={async (newColumns) => {
             setColumns(newColumns);
-            
-            // Save reordered tasks to Supabase
             if (user) {
-              // Update all changed columns
               for (const [day, tasks] of Object.entries(newColumns)) {
                 await updateDayTasks(user.id, day, tasks);
               }
@@ -593,7 +419,7 @@ export default function Home() {
                 <div className="mb-3 px-1">
                   <div className="flex items-baseline gap-2">
                     <h2 className={`font-semibold ${columnId === todayName ? 'text-white' : ''}`}>
-                      {columnTitles[columnId] || columnId}
+                      {COLUMN_TITLES[columnId] || columnId}
                     </h2>
                     <span className="text-xs text-white/40">
                       {weekDates[columnId]}
@@ -632,14 +458,13 @@ export default function Home() {
                     </div>
                   ))}
 
-                  {/* Divider between calendar events and tasks */}
                   {calendarEvents[columnId]?.length > 0 && (
                     <div className="my-1 border-t border-dotted border-white/10" />
                   )}
 
                   {items.map((item, index) => (
                     <div key={item.id}>
-                      {/* Inline add card divider between items */}
+                      {/* Inline add card divider */}
                       {addingToColumn === columnId && addingAtIndex === index ? (
                         <div className="rounded-lg border border-white/10 bg-white/[0.03] p-3 mb-1">
                           <input
@@ -679,112 +504,110 @@ export default function Home() {
                       )}
 
                       <KanbanItem
-                      value={item.id}
-                      className="group rounded-lg border border-white/5 bg-white/[0.02] p-2 text-card-foreground shadow-[0_1px_3px_rgba(0,0,0,0.3)] hover:bg-white/[0.04] hover:border-white/10 hover:shadow-[0_2px_6px_rgba(0,0,0,0.4)] transition-all duration-200 focus:outline-none cursor-pointer"
-                      tabIndex={0}
-                      onClick={(e: any) => {
-                        // Only open dialog if clicking on the card itself, not drag handle or checkbox
-                        if (e.target === e.currentTarget || e.target.closest('[data-card-content]')) {
-                          setEditingTask(item);
-                          setEditingColumn(columnId);
-                        }
-                      }}
-                      ref={(el: HTMLDivElement | null) => {
-                        if (el && item.id === newlyCreatedCardId) {
-                          setTimeout(() => {
-                            el.focus();
-                            setNewlyCreatedCardId(null);
-                          }, 100);
-                        }
-                      }}
-                      onMouseEnter={(e: any) => {
-                        // Don't steal focus from the add-card input
-                        if (!addingToColumn) e.currentTarget.focus();
-                      }}
-                      onKeyDown={(e: any) => {
-                        const key = e.key;
-                        if (key === ' ') {
-                          e.preventDefault();
-                          toggleComplete(item.id);
-                        } else if (key >= '1' && key <= '9') {
-                          const memberIndex = parseInt(key) - 1;
-                          if (memberIndex < TEAM_MEMBERS.length) {
-                            e.preventDefault();
-                            toggleAssignee(item.id, TEAM_MEMBERS[memberIndex].id);
+                        value={item.id}
+                        className="group rounded-lg border border-white/5 bg-white/[0.02] p-2 text-card-foreground shadow-[0_1px_3px_rgba(0,0,0,0.3)] hover:bg-white/[0.04] hover:border-white/10 hover:shadow-[0_2px_6px_rgba(0,0,0,0.4)] transition-all duration-200 focus:outline-none cursor-pointer"
+                        tabIndex={0}
+                        onClick={(e: any) => {
+                          if (e.target === e.currentTarget || e.target.closest('[data-card-content]')) {
+                            setEditingTask(item);
+                            setEditingColumn(columnId);
                           }
-                        } else {
-                          const client = CLIENTS.find(c => c.key === key.toLowerCase());
-                          if (client) {
-                            e.preventDefault();
-                            toggleClient(item.id, client.id);
+                        }}
+                        ref={(el: HTMLDivElement | null) => {
+                          if (el && item.id === newlyCreatedCardId) {
+                            setTimeout(() => {
+                              el.focus();
+                              setNewlyCreatedCardId(null);
+                            }, 100);
                           }
-                        }
-                      }}
-                    >
-                      <div className="relative flex gap-2">
-                        <KanbanItemHandle className="shrink-0 opacity-50 hover:opacity-100 transition-opacity">
-                          <GripVertical className="size-3.5 text-muted-foreground" />
-                        </KanbanItemHandle>
-
-                        <div data-card-content className={`flex-1 transition-opacity ${item.completed ? "opacity-50" : ""}`}>
-                          <div className={`text-sm pr-6 ${item.completed ? "line-through" : ""}`}>{item.title}</div>
-                          {(item.client || (item.assignees && item.assignees.length > 0)) && (
-                            <div className="flex gap-1.5 mt-1.5 items-center flex-wrap">
-                              {item.client && (() => {
-                                const client = CLIENTS.find(c => c.id === item.client);
-                                return client ? (
-                                  <Badge key={client.id} className={client.className}>
-                                    {client.name}
-                                  </Badge>
-                                ) : null;
-                              })()}
-                              {item.assignees && item.assignees.length > 0 && (
-                                <>
-                                  {item.assignees.map(assigneeId => {
-                                    const member = TEAM_MEMBERS.find(m => m.id === assigneeId);
-                                    return member ? (
-                                      <div
-                                        key={member.id}
-                                        className={`flex items-center justify-center w-5 h-5 rounded-full ${!member.avatar ? member.color : 'bg-white/5'} text-[10px] font-semibold text-white overflow-hidden`}
-                                        title={member.name}
-                                      >
-                                        {member.avatar ? (
-                                          <img src={member.avatar} alt={member.name} className="w-full h-full object-cover" />
-                                        ) : (
-                                          member.initials
-                                        )}
-                                      </div>
-                                    ) : null;
-                                  })}
-                                </>
-                              )}
-                            </div>
-                          )}
-                        </div>
-
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
+                        }}
+                        onMouseEnter={(e: any) => {
+                          if (!addingToColumn) e.currentTarget.focus();
+                        }}
+                        onKeyDown={(e: any) => {
+                          const key = e.key;
+                          if (key === ' ') {
+                            e.preventDefault();
                             toggleComplete(item.id);
-                          }}
-                          onMouseDown={(e) => e.stopPropagation()}
-                          className="absolute top-0.5 right-0 shrink-0"
-                        >
-                          <div
-                            className={`flex size-4 items-center justify-center rounded-full border transition-all ${
-                              item.completed
-                                ? "border-green-500/80 bg-green-500/80"
-                                : "border-white/20 hover:border-white/40"
-                            }`}
-                          >
-                            {item.completed && (
-                              <Check className="size-3 text-white" strokeWidth={3} />
+                          } else if (key >= '1' && key <= '9') {
+                            const memberIndex = parseInt(key) - 1;
+                            if (memberIndex < TEAM_MEMBERS.length) {
+                              e.preventDefault();
+                              toggleAssignee(item.id, TEAM_MEMBERS[memberIndex].id);
+                            }
+                          } else {
+                            const client = CLIENTS.find(c => c.key === key.toLowerCase());
+                            if (client) {
+                              e.preventDefault();
+                              toggleClient(item.id, client.id);
+                            }
+                          }
+                        }}
+                      >
+                        <div className="relative flex gap-2">
+                          <KanbanItemHandle className="shrink-0 opacity-50 hover:opacity-100 transition-opacity">
+                            <GripVertical className="size-3.5 text-muted-foreground" />
+                          </KanbanItemHandle>
+
+                          <div data-card-content className={`flex-1 transition-opacity ${item.completed ? "opacity-50" : ""}`}>
+                            <div className={`text-sm pr-6 ${item.completed ? "line-through" : ""}`}>{item.title}</div>
+                            {(item.client || (item.assignees && item.assignees.length > 0)) && (
+                              <div className="flex gap-1.5 mt-1.5 items-center flex-wrap">
+                                {item.client && (() => {
+                                  const client = CLIENTS.find(c => c.id === item.client);
+                                  return client ? (
+                                    <Badge key={client.id} className={client.className}>
+                                      {client.name}
+                                    </Badge>
+                                  ) : null;
+                                })()}
+                                {item.assignees && item.assignees.length > 0 && (
+                                  <>
+                                    {item.assignees.map(assigneeId => {
+                                      const member = TEAM_MEMBERS.find(m => m.id === assigneeId);
+                                      return member ? (
+                                        <div
+                                          key={member.id}
+                                          className={`flex items-center justify-center w-5 h-5 rounded-full ${!member.avatar ? member.color : 'bg-white/5'} text-[10px] font-semibold text-white overflow-hidden`}
+                                          title={member.name}
+                                        >
+                                          {member.avatar ? (
+                                            <img src={member.avatar} alt={member.name} className="w-full h-full object-cover" />
+                                          ) : (
+                                            member.initials
+                                          )}
+                                        </div>
+                                      ) : null;
+                                    })}
+                                  </>
+                                )}
+                              </div>
                             )}
                           </div>
-                        </button>
-                      </div>
-                    </KanbanItem>
+
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              toggleComplete(item.id);
+                            }}
+                            onMouseDown={(e) => e.stopPropagation()}
+                            className="absolute top-0.5 right-0 shrink-0"
+                          >
+                            <div
+                              className={`flex size-4 items-center justify-center rounded-full border transition-all ${
+                                item.completed
+                                  ? "border-green-500/80 bg-green-500/80"
+                                  : "border-white/20 hover:border-white/40"
+                              }`}
+                            >
+                              {item.completed && (
+                                <Check className="size-3 text-white" strokeWidth={3} />
+                              )}
+                            </div>
+                          </button>
+                        </div>
+                      </KanbanItem>
                     </div>
                   ))}
 
@@ -869,301 +692,26 @@ export default function Home() {
         </Kanban>
       </div>
 
-      <Dialog open={editingTask !== null} onOpenChange={(open) => {
-        if (!open) {
-          setEditingTask(null);
-          setEditingColumn(null);
-        }
-      }}>
-        <DialogContent className="sm:max-w-[500px]">
-          <DialogHeader>
-            <DialogTitle>Edit Task</DialogTitle>
-          </DialogHeader>
-          {editingTask && (
-            <div className="space-y-4 py-4">
-              {/* Title */}
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Title</label>
-                <input
-                  type="text"
-                  value={editingTask.title}
-                  onChange={(e) => setEditingTask({ ...editingTask, title: e.target.value })}
-                  className="w-full rounded-md border border-white/10 bg-white/[0.02] px-3 py-2 text-sm outline-none focus:border-white/30 focus:ring-1 focus:ring-white/20"
-                />
-              </div>
+      <TaskEditDialog
+        task={editingTask}
+        onClose={() => { setEditingTask(null); setEditingColumn(null); }}
+        onSave={saveEditedTask}
+        onTaskChange={setEditingTask}
+      />
 
-              {/* Description */}
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Description</label>
-                <textarea
-                  value={editingTask.description || ""}
-                  onChange={(e) => setEditingTask({ ...editingTask, description: e.target.value })}
-                  placeholder="Optional description..."
-                  rows={3}
-                  className="w-full rounded-md border border-white/10 bg-white/[0.02] px-3 py-2 text-sm outline-none focus:border-white/30 focus:ring-1 focus:ring-white/20 resize-none"
-                />
-              </div>
-
-              {/* Client */}
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Client</label>
-                <div className="flex flex-wrap gap-2">
-                  {CLIENTS.map((client) => (
-                    <button
-                      key={client.id}
-                      type="button"
-                      onClick={() => {
-                        setEditingTask({
-                          ...editingTask,
-                          client: editingTask.client === client.id ? undefined : client.id
-                        });
-                      }}
-                      className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
-                        editingTask.client === client.id
-                          ? client.className
-                          : 'bg-white/5 text-white/40 hover:bg-white/10 hover:text-white/60'
-                      }`}
-                    >
-                      {client.name}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Team Members */}
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Team Members</label>
-                <div className="flex flex-wrap gap-2">
-                  {TEAM_MEMBERS.map((member) => {
-                    const isAssigned = editingTask.assignees?.includes(member.id);
-                    return (
-                      <button
-                        key={member.id}
-                        type="button"
-                        onClick={() => {
-                          const assignees = editingTask.assignees || [];
-                          setEditingTask({
-                            ...editingTask,
-                            assignees: isAssigned
-                              ? assignees.filter(id => id !== member.id)
-                              : [...assignees, member.id]
-                          });
-                        }}
-                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
-                          isAssigned
-                            ? 'bg-white/10 text-white'
-                            : 'bg-white/5 text-white/40 hover:bg-white/10 hover:text-white/60'
-                        }`}
-                      >
-                        <div className={`flex items-center justify-center w-4 h-4 rounded-full ${!member.avatar ? member.color : 'bg-white/5'} text-[9px] font-semibold text-white overflow-hidden`}>
-                          {member.avatar ? (
-                            <img src={member.avatar} alt={member.name} className="w-full h-full object-cover" />
-                          ) : (
-                            member.initials
-                          )}
-                        </div>
-                        {member.name}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {/* Actions */}
-              <div className="flex justify-end gap-2 pt-4">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setEditingTask(null);
-                    setEditingColumn(null);
-                  }}
-                  className="px-4 py-2 rounded-md text-sm font-medium text-white/60 hover:text-white hover:bg-white/5 transition-colors"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="button"
-                  onClick={() => saveEditedTask(editingTask)}
-                  className="px-4 py-2 rounded-md text-sm font-medium bg-white text-black hover:bg-white/90 transition-colors"
-                >
-                  Save
-                </button>
-              </div>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
-
-      {/* Settings Dialog */}
-      <Dialog open={showSettings} onOpenChange={setShowSettings}>
-        <DialogContent className="sm:max-w-[500px]">
-          <DialogHeader>
-            <DialogTitle>Settings</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-6 py-4">
-            {/* Integrations Section */}
-            <div className="space-y-3">
-              <h3 className="text-sm font-medium">Integrations</h3>
-              
-              {/* Google Calendar */}
-              <div className="flex items-center justify-between p-3 rounded-lg border border-white/5 bg-white/[0.02]">
-                <div className="flex items-center gap-3">
-                  <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-white/5">
-                    <Calendar className="size-4" />
-                  </div>
-                  <div>
-                    <div className="text-sm font-medium">Google Calendar</div>
-                    <div className="text-xs text-white/40">
-                      {googleCalendarConnected ? 'Connected' : 'Sync your calendar events'}
-                    </div>
-                  </div>
-                </div>
-                <button
-                  onClick={() => {
-                    if (googleCalendarConnected) {
-                      clearAccessToken();
-                      setGoogleCalendarConnected(false);
-                      setCalendarEvents({});
-                    } else {
-                      initiateGoogleAuth();
-                    }
-                  }}
-                  className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
-                    googleCalendarConnected
-                      ? 'bg-red-500/20 text-red-400 hover:bg-red-500/30'
-                      : 'bg-white text-black hover:bg-white/90'
-                  }`}
-                >
-                  {googleCalendarConnected ? 'Disconnect' : 'Connect'}
-                </button>
-              </div>
-            </div>
-
-            {/* Team Section */}
-            <div className="space-y-3">
-              <h3 className="text-sm font-medium">Team</h3>
-              
-              {/* Invite form */}
-              <div className="p-3 rounded-lg border border-white/5 bg-white/[0.02] space-y-3">
-                <div className="text-xs text-white/40">
-                  Invite members to collaborate on this workspace
-                </div>
-                <div className="flex gap-2">
-                  <input
-                    type="email"
-                    placeholder="email@example.com"
-                    value={inviteEmail}
-                    onChange={(e) => setInviteEmail(e.target.value)}
-                    className="flex-1 px-3 py-1.5 rounded-md border border-white/10 bg-white/[0.02] text-sm outline-none focus:border-white/30 focus:ring-1 focus:ring-white/20"
-                  />
-                  <select
-                    value={inviteRole}
-                    onChange={(e) => setInviteRole(e.target.value as "admin" | "member")}
-                    className="px-3 py-1.5 rounded-md border border-white/10 bg-white/[0.02] text-sm outline-none focus:border-white/30 focus:ring-1 focus:ring-white/20"
-                  >
-                    <option value="member">Member</option>
-                    <option value="admin">Admin</option>
-                  </select>
-                  <button
-                    onClick={() => {
-                      // TODO: Implement invite logic
-                      alert('Invite feature coming soon! For now, users need to sign up with the same workspace.');
-                      setInviteEmail('');
-                    }}
-                    className="px-3 py-1.5 rounded-md text-xs font-medium bg-white text-black hover:bg-white/90 transition-colors"
-                  >
-                    Invite
-                  </button>
-                </div>
-              </div>
-
-              {/* Members list */}
-              <div className="space-y-2">
-                {workspaceMembers.map((member) => (
-                  <div
-                    key={member.id}
-                    className="flex items-center justify-between p-3 rounded-lg border border-white/5 bg-white/[0.02]"
-                  >
-                    <div>
-                      <div className="text-sm font-medium">
-                        {member.user_id}
-                        {member.role === 'owner' && (
-                          <span className="ml-2 text-xs px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-400">
-                            Owner
-                          </span>
-                        )}
-                        {member.role === 'admin' && (
-                          <span className="ml-2 text-xs px-1.5 py-0.5 rounded bg-purple-500/20 text-purple-400">
-                            Admin
-                          </span>
-                        )}
-                      </div>
-                      <div className="text-xs text-white/40">
-                        Joined {new Date(member.created_at).toLocaleDateString()}
-                      </div>
-                    </div>
-                    {member.role !== 'owner' && (
-                      <button
-                        onClick={async () => {
-                          if (confirm('Remove this member from the workspace?')) {
-                            try {
-                              await removeUserFromWorkspace(member.id);
-                              setWorkspaceMembers(workspaceMembers.filter(m => m.id !== member.id));
-                            } catch (error) {
-                              console.error('Failed to remove member:', error);
-                              alert('Failed to remove member');
-                            }
-                          }
-                        }}
-                        className="px-3 py-1.5 rounded-md text-xs font-medium text-red-400 hover:bg-red-500/10 transition-colors"
-                      >
-                        Remove
-                      </button>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Account Section */}
-            <div className="space-y-3">
-              <h3 className="text-sm font-medium">Account</h3>
-              
-              <div className="flex items-center justify-between p-3 rounded-lg border border-white/5 bg-white/[0.02]">
-                <div>
-                  <div className="text-sm font-medium">Sign Out</div>
-                  <div className="text-xs text-white/40">
-                    {user?.email || 'Not signed in'}
-                  </div>
-                </div>
-                <button
-                  onClick={async () => {
-                    try {
-                      const supabase = createClient();
-                      const { error } = await supabase.auth.signOut();
-                      if (error) {
-                        console.error('Sign out error:', error);
-                      } else {
-                        // Clear local state
-                        setUser(null);
-                        setColumns({
-                          monday: [], tuesday: [], wednesday: [], thursday: [], friday: []
-                        });
-                        setShowSettings(false);
-                      }
-                    } catch (err) {
-                      console.error('Sign out failed:', err);
-                    }
-                  }}
-                  className="px-3 py-1.5 rounded-md text-xs font-medium bg-red-500/20 text-red-400 hover:bg-red-500/30 transition-colors"
-                >
-                  Sign Out
-                </button>
-              </div>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
+      <SettingsDialog
+        open={showSettings}
+        onOpenChange={setShowSettings}
+        user={user}
+        googleCalendarConnected={googleCalendarConnected}
+        onGoogleCalendarConnect={() => {}}
+        onGoogleCalendarDisconnect={() => {
+          setGoogleCalendarConnected(false);
+          setCalendarEvents({});
+        }}
+        workspaceMembers={workspaceMembers}
+        onMembersChange={setWorkspaceMembers}
+      />
     </main>
   );
 }

@@ -1,19 +1,6 @@
-// Simplified task management for quick Supabase migration
-// Maps current Task structure to Supabase
-
 import { createClient } from './client'
 import { getDefaultAreaId } from './initialize'
-
-export interface Task {
-  id: string
-  title: string
-  description?: string
-  priority?: "low" | "medium" | "high"
-  completed?: boolean
-  assignees?: string[] // stored as JSON in description field for now
-  client?: string // stored in description field for now
-  day?: string // monday, tuesday, etc.
-}
+import type { Task } from '../types'
 
 // Load all tasks for current user, grouped by day
 export async function loadTasksByDay(userId: string): Promise<Record<string, Task[]>> {
