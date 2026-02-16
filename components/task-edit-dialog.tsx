@@ -66,12 +66,15 @@ export function TaskEditDialog({ task, onClose, onSave, onTaskChange }: TaskEdit
                         client: task.client === client.id ? undefined : client.id
                       });
                     }}
-                    className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
                       task.client === client.id
                         ? getClientClassName(client.color)
                         : 'bg-white/5 text-white/40 hover:bg-white/10 hover:text-white/60'
                     }`}
                   >
+                    {client.logo_url && (
+                      <img src={client.logo_url} alt="" className="size-3.5 rounded-sm object-cover" />
+                    )}
                     {client.name}
                   </button>
                 ))}

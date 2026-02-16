@@ -431,7 +431,10 @@ export default function BoardPage() {
                                   (() => {
                                     const client = clients.find((c) => c.id === item.client);
                                     return client ? (
-                                      <Badge key={client.id} className={getClientClassName(client.color)}>
+                                      <Badge key={client.id} className={`${getClientClassName(client.color)} flex items-center gap-1`}>
+                                        {client.logo_url && (
+                                          <img src={client.logo_url} alt="" className="size-3 rounded-sm object-cover" />
+                                        )}
                                         {client.name}
                                       </Badge>
                                     ) : null;
