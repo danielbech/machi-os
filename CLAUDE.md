@@ -49,7 +49,7 @@ team_members     — id, user_id, name, initials, color
 workspace_memberships — id, project_id, user_id, role (owner/admin/member)
 ```
 
-**Known tech debt:** Task metadata (assignees, client, priority) is encoded as `__META__:{json}__END__` inside the `description` field rather than having proper columns. This should eventually be migrated to dedicated columns.
+Task metadata (assignees, client, priority) is stored in dedicated columns on the tasks table (`assignees jsonb`, `client text`, `priority text`).
 
 ## Key Patterns
 
