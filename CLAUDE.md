@@ -17,27 +17,35 @@ The operating system for Oimachi — a 2-person digital design & development age
 
 ```
 app/
-  page.tsx              # Main app — kanban board, workspace switcher, all core state
-  layout.tsx            # Root layout (dark theme, Geist fonts)
-  api/invite/route.ts   # POST — invite user by email (service role for auth.users lookup)
-  auth/callback/        # Google OAuth popup callback
+  layout.tsx              # Root layout (dark theme, Geist fonts)
+  (dashboard)/
+    layout.tsx            # Dashboard layout — WorkspaceProvider + SidebarProvider + auth gate
+    page.tsx              # Kanban board
+    clients/page.tsx      # Clients management (add/edit/delete with colors + logos)
+  api/invite/route.ts     # POST — invite user by email (service role for auth.users lookup)
+  auth/callback/          # Google OAuth popup callback
 components/
-  auth-form.tsx         # Login/signup form (Supabase Auth)
-  settings-dialog.tsx   # Settings — integrations, invite members, pending invites
-  ui/                   # shadcn/ui components (kanban, dialog, badge, dropdown-menu, etc.)
+  app-sidebar.tsx         # Collapsible sidebar (icon-only, expands on hover) — nav + workspace switcher
+  auth-form.tsx           # Login/signup form (Supabase Auth)
+  task-edit-dialog.tsx    # Task edit dialog — uses workspace context for clients
+  settings-dialog.tsx     # Settings — integrations, invite members, pending invites
+  ui/                     # shadcn/ui components (kanban, sidebar, dialog, badge, dropdown-menu, etc.)
 lib/
-  types.ts              # Shared TypeScript types (Task, Member, Client, Project, PendingInvite)
-  constants.ts          # Team members, clients, column config
-  google-calendar.ts    # Google Calendar OAuth + API helpers
+  types.ts                # Shared TypeScript types (Task, Member, Client, Project, PendingInvite)
+  constants.ts            # Team members, column config
+  colors.ts               # Client color name → Tailwind class mapping
+  workspace-context.tsx   # React context: auth, workspace, clients (consumed by dashboard pages)
+  google-calendar.ts      # Google Calendar OAuth + API helpers
   supabase/
-    client.ts           # Browser Supabase client
-    server.ts           # Admin Supabase client (service role key, server-side only)
-    initialize.ts       # First-login setup, getAreaIdForProject, accept pending invites
-    tasks-simple.ts     # Task CRUD — load, save, delete, reorder (by projectId)
-    workspace.ts        # Workspace list, members, pending invites, roles
-    database.types.ts   # Auto-generated Supabase types
+    client.ts             # Browser Supabase client
+    server.ts             # Admin Supabase client (service role key, server-side only)
+    clients.ts            # Client CRUD — load, create, update, delete
+    initialize.ts         # First-login setup, getAreaIdForProject, accept pending invites
+    tasks-simple.ts       # Task CRUD — load, save, delete, reorder (by projectId)
+    workspace.ts          # Workspace list, members, pending invites, roles
+    database.types.ts     # Auto-generated Supabase types
 supabase/
-  migrations/           # SQL migrations (run manually in Supabase SQL Editor)
+  migrations/             # SQL migrations (run manually in Supabase SQL Editor)
 ```
 
 ## Database Schema
@@ -49,18 +57,21 @@ projects         — id, user_id, name, color
 areas            — id, project_id, name, sort_order
 tasks            — id, area_id, title, description, day, completed, sort_order
 team_members     — id, user_id, name, initials, color
+clients          — id, project_id, name, slug, color, logo_url, sort_order
 workspace_memberships — id, project_id, user_id, role (owner/admin/member)
 pending_invites  — id, project_id, email, role, invited_by, created_at
 ```
 
-Task metadata (assignees, client, priority) is stored in dedicated columns on the tasks table (`assignees jsonb`, `client text`, `priority text`).
+Task metadata (assignees, client, priority) is stored in dedicated columns on the tasks table (`assignees jsonb`, `client text`, `priority text`). The `client` column stores the UUID of the client from the `clients` table.
 
 ## Key Patterns
 
 - **Optimistic updates:** Tasks are added to local state with a temp ID (`task-{timestamp}`), saved to Supabase, then the temp ID is swapped for the real UUID.
 - **Day-based kanban:** Tasks are grouped by weekday (monday–friday). The `day` column in the DB maps to kanban columns.
 - **RLS via workspace_memberships:** All data access goes through Supabase RLS policies. Two `SECURITY DEFINER` helper functions (`get_user_project_ids`, `get_user_admin_project_ids`) prevent infinite recursion in self-referencing policies.
-- **Multi-workspace:** Users can belong to multiple workspaces. The UI shows a workspace switcher (dropdown) when 2+ workspaces exist. Active project is persisted in localStorage.
+- **Multi-workspace:** Users can belong to multiple workspaces. The UI shows a workspace switcher in the sidebar when 2+ workspaces exist. Active project is persisted in localStorage.
+- **Workspace context:** `WorkspaceProvider` in the dashboard layout manages auth, workspace, and client state. Pages consume via `useWorkspace()`.
+- **Sidebar navigation:** Collapsible sidebar (icon-only by default, expands on hover) with Board and Clients tabs.
 - **Invite system:** Admins/owners invite by email via `/api/invite`. If user exists, they're added directly. Otherwise a `pending_invite` is created and auto-accepted on next login via `accept_pending_invites()` RPC.
 - **Google Calendar:** OAuth tokens stored in localStorage. Events are fetched client-side and displayed as read-only cards above tasks in each day column.
 

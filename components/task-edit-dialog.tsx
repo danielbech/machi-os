@@ -1,7 +1,9 @@
 "use client";
 
 import type { Task } from "@/lib/types";
-import { TEAM_MEMBERS, CLIENTS } from "@/lib/constants";
+import { useWorkspace } from "@/lib/workspace-context";
+import { getClientClassName } from "@/lib/colors";
+import { TEAM_MEMBERS } from "@/lib/constants";
 import {
   Dialog,
   DialogContent,
@@ -17,6 +19,8 @@ interface TaskEditDialogProps {
 }
 
 export function TaskEditDialog({ task, onClose, onSave, onTaskChange }: TaskEditDialogProps) {
+  const { clients } = useWorkspace();
+
   return (
     <Dialog open={task !== null} onOpenChange={(open) => { if (!open) onClose(); }}>
       <DialogContent className="sm:max-w-[500px]">
@@ -52,7 +56,7 @@ export function TaskEditDialog({ task, onClose, onSave, onTaskChange }: TaskEdit
             <div className="space-y-2">
               <label className="text-sm font-medium">Client</label>
               <div className="flex flex-wrap gap-2">
-                {CLIENTS.map((client) => (
+                {clients.map((client) => (
                   <button
                     key={client.id}
                     type="button"
@@ -64,7 +68,7 @@ export function TaskEditDialog({ task, onClose, onSave, onTaskChange }: TaskEdit
                     }}
                     className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
                       task.client === client.id
-                        ? client.className
+                        ? getClientClassName(client.color)
                         : 'bg-white/5 text-white/40 hover:bg-white/10 hover:text-white/60'
                     }`}
                   >

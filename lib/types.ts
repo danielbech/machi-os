@@ -8,9 +8,12 @@ export interface Member {
 
 export interface Client {
   id: string;
+  project_id: string;
   name: string;
-  key: string;
-  className: string;
+  slug: string;
+  color: string;
+  logo_url?: string;
+  sort_order: number;
 }
 
 export interface Task {

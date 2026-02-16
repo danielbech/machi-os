@@ -8,16 +8,12 @@ import {
   getEventsGroupedByDay,
   type CalendarEvent,
 } from "@/lib/google-calendar";
-import { createClient } from "@/lib/supabase/client";
-import { initializeUserData } from "@/lib/supabase/initialize";
-import { loadTasksByDay, saveTask, deleteTask, updateDayTasks } from "@/lib/supabase/tasks-simple";
-import { getUserWorkspaces, getWorkspaceMembers, type WorkspaceMember } from "@/lib/supabase/workspace";
-import { AuthForm } from "@/components/auth-form";
+import { loadTasksByDay, saveTask, updateDayTasks } from "@/lib/supabase/tasks-simple";
+import { useWorkspace } from "@/lib/workspace-context";
 import { TaskEditDialog } from "@/components/task-edit-dialog";
-import { SettingsDialog } from "@/components/settings-dialog";
-import type { User } from "@supabase/supabase-js";
-import type { Task, Project } from "@/lib/types";
-import { TEAM_MEMBERS, CLIENTS, COLUMN_TITLES, EMPTY_COLUMNS } from "@/lib/constants";
+import type { Task } from "@/lib/types";
+import { TEAM_MEMBERS, COLUMN_TITLES, EMPTY_COLUMNS } from "@/lib/constants";
+import { getClientClassName } from "@/lib/colors";
 import {
   Kanban,
   KanbanBoard,
@@ -26,18 +22,12 @@ import {
   KanbanItemHandle,
   KanbanOverlay,
 } from "@/components/ui/kanban";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
-import { Check, GripVertical, Plus, Settings, Calendar, ChevronDown } from "lucide-react";
+import { Check, GripVertical, Plus, Calendar } from "lucide-react";
 
-export default function Home() {
-  const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
+export default function BoardPage() {
+  const { activeProjectId, clients } = useWorkspace();
+
   const [columns, setColumns] = useState<Record<string, Task[]>>({ ...EMPTY_COLUMNS });
   const [addingToColumn, setAddingToColumn] = useState<string | null>(null);
   const [addingAtIndex, setAddingAtIndex] = useState<number | null>(null);
@@ -45,68 +35,9 @@ export default function Home() {
   const [newlyCreatedCardId, setNewlyCreatedCardId] = useState<string | null>(null);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [editingColumn, setEditingColumn] = useState<string | null>(null);
-  const [showSettings, setShowSettings] = useState(false);
   const [googleCalendarConnected, setGoogleCalendarConnected] = useState(false);
   const [calendarEvents, setCalendarEvents] = useState<Record<string, CalendarEvent[]>>({});
-  const [workspaceMembers, setWorkspaceMembers] = useState<WorkspaceMember[]>([]);
   const [currentWeekStart, setCurrentWeekStart] = useState<string>("");
-  const [userProjects, setUserProjects] = useState<Project[]>([]);
-  const [activeProjectId, setActiveProjectId] = useState<string | null>(null);
-
-  // Auth check
-  useEffect(() => {
-    const supabase = createClient();
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
-        setUser(session?.user ?? null);
-        setLoading(false);
-      }
-    );
-
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setUser(session?.user ?? null);
-      setLoading(false);
-    }).catch((err) => {
-      console.error('Session check error:', err);
-      setLoading(false);
-    });
-
-    return () => { subscription.unsubscribe(); };
-  }, []);
-
-  // Initialize user data and load workspaces when user changes
-  useEffect(() => {
-    if (!user) {
-      setColumns({ ...EMPTY_COLUMNS });
-      setUserProjects([]);
-      setActiveProjectId(null);
-      return;
-    }
-
-    let cancelled = false;
-
-    async function loadWorkspaces() {
-      try {
-        await initializeUserData(user!.id);
-        const projects = await getUserWorkspaces();
-        if (cancelled) return;
-
-        setUserProjects(projects);
-
-        // Restore active project from localStorage, or pick first
-        const stored = localStorage.getItem('machi-active-project');
-        const validStored = projects.find(p => p.id === stored);
-        const projectId = validStored?.id || projects[0]?.id || null;
-        setActiveProjectId(projectId);
-      } catch (error) {
-        console.error('Error loading workspaces:', error);
-      }
-    }
-
-    loadWorkspaces();
-    return () => { cancelled = true; };
-  }, [user]);
 
   // Load tasks when active project changes
   useEffect(() => {
@@ -120,47 +51,38 @@ export default function Home() {
     async function loadTasks() {
       try {
         const tasks = await loadTasksByDay(activeProjectId!);
-        if (!cancelled) {
-          setColumns(tasks);
-        }
+        if (!cancelled) setColumns(tasks);
       } catch (error) {
-        console.error('Error loading tasks:', error);
+        console.error("Error loading tasks:", error);
       }
     }
 
-    // Persist selection
-    localStorage.setItem('machi-active-project', activeProjectId);
     loadTasks();
     return () => { cancelled = true; };
   }, [activeProjectId]);
 
-  // Check if Google Calendar is connected on mount
+  // Google Calendar setup
   useEffect(() => {
     setGoogleCalendarConnected(isGoogleCalendarConnected());
   }, []);
 
-  // Handle OAuth callback messages
   useEffect(() => {
     const handleMessage = (event: MessageEvent) => {
       if (event.origin !== window.location.origin) return;
-
-      if (event.data.type === 'GOOGLE_AUTH_SUCCESS') {
+      if (event.data.type === "GOOGLE_AUTH_SUCCESS") {
         storeAccessToken(event.data.accessToken, event.data.expiresIn);
         setGoogleCalendarConnected(true);
         syncCalendarEvents();
-      } else if (event.data.type === 'GOOGLE_AUTH_FAILED') {
-        alert('Failed to connect Google Calendar');
+      } else if (event.data.type === "GOOGLE_AUTH_FAILED") {
+        alert("Failed to connect Google Calendar");
       }
     };
-
-    window.addEventListener('message', handleMessage);
-    return () => window.removeEventListener('message', handleMessage);
+    window.addEventListener("message", handleMessage);
+    return () => window.removeEventListener("message", handleMessage);
   }, []);
 
-  // Sync calendar events
   const syncCalendarEvents = async () => {
     if (!isGoogleCalendarConnected()) return;
-
     try {
       const today = new Date();
       const currentDay = today.getDay();
@@ -168,38 +90,32 @@ export default function Home() {
       const offset = currentDay === 0 ? -6 : 1 - currentDay;
       monday.setDate(today.getDate() + offset);
       monday.setHours(0, 0, 0, 0);
-
       const friday = new Date(monday);
       friday.setDate(monday.getDate() + 4);
       friday.setHours(23, 59, 59, 999);
-
       const events = await getEventsGroupedByDay(monday, friday);
       setCalendarEvents(events);
     } catch (error) {
-      console.error('Failed to sync calendar events:', error);
-      if (error instanceof Error && error.message === 'Authentication expired') {
+      console.error("Failed to sync calendar events:", error);
+      if (error instanceof Error && error.message === "Authentication expired") {
         setGoogleCalendarConnected(false);
         setCalendarEvents({});
       }
     }
   };
 
-  // Initial sync when connected
   useEffect(() => {
     if (googleCalendarConnected) syncCalendarEvents();
   }, [googleCalendarConnected]);
 
-  // Auto-sync every 30 minutes
   useEffect(() => {
     if (!googleCalendarConnected) return;
     const interval = setInterval(syncCalendarEvents, 30 * 60 * 1000);
     return () => clearInterval(interval);
   }, [googleCalendarConnected]);
 
-  // Check if week changed and re-sync
   useEffect(() => {
     if (!googleCalendarConnected) return;
-
     const today = new Date();
     const currentDay = today.getDay();
     const monday = new Date(today);
@@ -207,13 +123,8 @@ export default function Home() {
     monday.setDate(today.getDate() + offset);
     monday.setHours(0, 0, 0, 0);
     const weekStart = monday.toISOString();
-
-    if (currentWeekStart && currentWeekStart !== weekStart) {
-      syncCalendarEvents();
-    }
-
+    if (currentWeekStart && currentWeekStart !== weekStart) syncCalendarEvents();
     setCurrentWeekStart(weekStart);
-
     const interval = setInterval(() => {
       const now = new Date();
       const nowDay = now.getDay();
@@ -222,31 +133,13 @@ export default function Home() {
       nowMonday.setDate(now.getDate() + nowOffset);
       nowMonday.setHours(0, 0, 0, 0);
       const newWeekStart = nowMonday.toISOString();
-
       if (newWeekStart !== weekStart) {
         setCurrentWeekStart(newWeekStart);
         syncCalendarEvents();
       }
     }, 60 * 60 * 1000);
-
     return () => clearInterval(interval);
   }, [googleCalendarConnected, currentWeekStart]);
-
-  // Load workspace members when settings opens
-  useEffect(() => {
-    if (!showSettings || !activeProjectId) return;
-
-    async function loadMembers() {
-      try {
-        const members = await getWorkspaceMembers(activeProjectId!);
-        setWorkspaceMembers(members);
-      } catch (error) {
-        console.error('Failed to load workspace members:', error);
-      }
-    }
-
-    loadMembers();
-  }, [showSettings, activeProjectId]);
 
   // Week dates
   const getWeekDates = () => {
@@ -255,23 +148,20 @@ export default function Home() {
     const monday = new Date(today);
     const offset = currentDay === 0 ? -6 : 1 - currentDay;
     monday.setDate(today.getDate() + offset);
-
     const weekDates: Record<string, string> = {};
-    const days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday'];
-
+    const days = ["monday", "tuesday", "wednesday", "thursday", "friday"];
     days.forEach((day, index) => {
       const date = new Date(monday);
       date.setDate(monday.getDate() + index);
-      weekDates[day] = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+      weekDates[day] = date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
     });
-
     return weekDates;
   };
 
   const weekDates = getWeekDates();
 
   const getTodayName = () => {
-    const days = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+    const days = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"];
     return days[new Date().getDay()];
   };
 
@@ -281,26 +171,20 @@ export default function Home() {
   const handleAddCard = async (columnId: string, index?: number) => {
     const title = newCardTitle.trim();
     if (!title || !activeProjectId) return;
-
     setNewCardTitle("");
     setAddingToColumn(null);
     setAddingAtIndex(null);
-
     const tempId = `task-${Date.now()}`;
     const newCard: Task = { id: tempId, title, priority: "medium", day: columnId };
-
     const columnItems = [...columns[columnId]];
     if (index !== undefined && index !== null) {
       columnItems.splice(index, 0, newCard);
     } else {
       columnItems.push(newCard);
     }
-
     setColumns({ ...columns, [columnId]: columnItems });
-
     const realId = await saveTask(activeProjectId, newCard);
-
-    const updatedItems = columnItems.map(item =>
+    const updatedItems = columnItems.map((item) =>
       item.id === tempId ? { ...item, id: realId } : item
     );
     setColumns({ ...columns, [columnId]: updatedItems });
@@ -321,7 +205,6 @@ export default function Home() {
     if (!activeProjectId) return;
     const updated = { ...columns };
     let updatedTask: Task | null = null;
-
     for (const col of Object.keys(updated)) {
       const idx = updated[col].findIndex((t) => t.id === taskId);
       if (idx !== -1) {
@@ -331,7 +214,6 @@ export default function Home() {
         break;
       }
     }
-
     setColumns(updated);
     if (updatedTask) await saveTask(activeProjectId, updatedTask);
   };
@@ -340,7 +222,6 @@ export default function Home() {
     if (!activeProjectId) return;
     const updated = { ...columns };
     let updatedTask: Task | null = null;
-
     for (const col of Object.keys(updated)) {
       const idx = updated[col].findIndex((t) => t.id === taskId);
       if (idx !== -1) {
@@ -348,19 +229,15 @@ export default function Home() {
         const task = updated[col][idx];
         const assignees = task.assignees || [];
         const isAssigned = assignees.includes(memberId);
-
         updated[col][idx] = {
           ...task,
-          assignees: isAssigned
-            ? assignees.filter(id => id !== memberId)
-            : [...assignees, memberId],
-          day: col
+          assignees: isAssigned ? assignees.filter((id) => id !== memberId) : [...assignees, memberId],
+          day: col,
         };
         updatedTask = updated[col][idx];
         break;
       }
     }
-
     setColumns(updated);
     if (updatedTask) await saveTask(activeProjectId, updatedTask);
   };
@@ -369,30 +246,26 @@ export default function Home() {
     if (!activeProjectId) return;
     const updated = { ...columns };
     let updatedTask: Task | null = null;
-
     for (const col of Object.keys(updated)) {
       const idx = updated[col].findIndex((t) => t.id === taskId);
       if (idx !== -1) {
         updated[col] = [...updated[col]];
         const task = updated[col][idx];
-
         updated[col][idx] = {
           ...task,
           client: task.client === clientId ? undefined : clientId,
-          day: col
+          day: col,
         };
         updatedTask = updated[col][idx];
         break;
       }
     }
-
     setColumns(updated);
     if (updatedTask) await saveTask(activeProjectId, updatedTask);
   };
 
   const saveEditedTask = async (updatedTask: Task) => {
     if (!editingColumn || !activeProjectId) return;
-
     const updated = { ...columns };
     const idx = updated[editingColumn].findIndex((t) => t.id === updatedTask.id);
     if (idx !== -1) {
@@ -401,77 +274,12 @@ export default function Home() {
       setColumns(updated);
       await saveTask(activeProjectId, { ...updatedTask, day: editingColumn });
     }
-
     setEditingTask(null);
     setEditingColumn(null);
   };
 
-  const activeProject = userProjects.find(p => p.id === activeProjectId);
-
-  // Loading state
-  if (loading) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-black/50">
-        <div className="text-white/60">Loading...</div>
-      </div>
-    );
-  }
-
-  // Auth gate
-  if (!user) {
-    return <AuthForm />;
-  }
-
   return (
     <main className="flex min-h-screen flex-col p-4 md:p-8 bg-black/50">
-      <div className="mb-6 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <img src="/logo.svg" alt="Machi OS" className="w-10 h-10" />
-          {userProjects.length > 1 ? (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <button className="flex items-center gap-2 text-3xl font-bold hover:opacity-80 transition-opacity outline-none">
-                  <span
-                    className="inline-block w-3 h-3 rounded-full shrink-0"
-                    style={{ backgroundColor: activeProject?.color || '#3b82f6' }}
-                  />
-                  {activeProject?.name || 'Machi OS'}
-                  <ChevronDown className="size-5 text-white/40" />
-                </button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="start" className="min-w-[200px]">
-                {userProjects.map((project) => (
-                  <DropdownMenuItem
-                    key={project.id}
-                    onClick={() => setActiveProjectId(project.id)}
-                    className="flex items-center gap-2"
-                  >
-                    <span
-                      className="inline-block w-2.5 h-2.5 rounded-full shrink-0"
-                      style={{ backgroundColor: project.color }}
-                    />
-                    <span className={project.id === activeProjectId ? 'font-semibold' : ''}>
-                      {project.name}
-                    </span>
-                    {project.id === activeProjectId && (
-                      <Check className="size-4 ml-auto text-white/60" />
-                    )}
-                  </DropdownMenuItem>
-                ))}
-              </DropdownMenuContent>
-            </DropdownMenu>
-          ) : (
-            <h1 className="text-3xl font-bold">Machi OS</h1>
-          )}
-        </div>
-        <button
-          onClick={() => setShowSettings(true)}
-          className="p-2 rounded-lg text-white/60 hover:text-white hover:bg-white/5 transition-colors"
-        >
-          <Settings className="size-5" />
-        </button>
-      </div>
-
       <div className="flex-1 overflow-hidden">
         <Kanban
           value={columns}
@@ -485,25 +293,21 @@ export default function Home() {
           }}
           getItemValue={(item) => item.id}
         >
-          <KanbanBoard className="h-[calc(100vh-12rem)] overflow-x-auto p-1 [&::-webkit-scrollbar]:h-2 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-white/10 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:hover:bg-white/20">
+          <KanbanBoard className="h-[calc(100vh-8rem)] overflow-x-auto p-1 [&::-webkit-scrollbar]:h-2 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-white/10 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:hover:bg-white/20">
             {Object.entries(columns).map(([columnId, items]) => (
               <KanbanColumn
                 key={columnId}
                 value={columnId}
-                className={`w-[280px] shrink-0 ${columnId === todayName ? 'ring-2 ring-white/20 rounded-lg' : ''}`}
+                className={`w-[280px] shrink-0 ${columnId === todayName ? "ring-2 ring-white/20 rounded-lg" : ""}`}
               >
                 <div className="mb-3 px-1">
                   <div className="flex items-baseline gap-2">
-                    <h2 className={`font-semibold ${columnId === todayName ? 'text-white' : ''}`}>
+                    <h2 className={`font-semibold ${columnId === todayName ? "text-white" : ""}`}>
                       {COLUMN_TITLES[columnId] || columnId}
                     </h2>
-                    <span className="text-xs text-white/40">
-                      {weekDates[columnId]}
-                    </span>
+                    <span className="text-xs text-white/40">{weekDates[columnId]}</span>
                     {columnId === todayName && (
-                      <span className="text-xs px-1.5 py-0.5 rounded bg-orange-500/20 text-orange-400">
-                        Today
-                      </span>
+                      <span className="text-xs px-1.5 py-0.5 rounded bg-orange-500/20 text-orange-400">Today</span>
                     )}
                   </div>
                 </div>
@@ -511,21 +315,16 @@ export default function Home() {
                 <div className="flex flex-col gap-1 overflow-y-auto">
                   {/* Calendar Events */}
                   {calendarEvents[columnId]?.map((event) => (
-                    <div
-                      key={event.id}
-                      className="rounded-lg border border-blue-500/20 bg-blue-500/5 p-2 cursor-default"
-                    >
+                    <div key={event.id} className="rounded-lg border border-blue-500/20 bg-blue-500/5 p-2 cursor-default">
                       <div className="flex items-start gap-2">
                         <Calendar className="size-3.5 text-blue-400 mt-0.5 shrink-0" />
                         <div className="flex-1 min-w-0">
-                          <div className="text-sm font-medium text-blue-100">
-                            {event.summary}
-                          </div>
+                          <div className="text-sm font-medium text-blue-100">{event.summary}</div>
                           <div className="text-xs text-blue-300/60 mt-0.5">
-                            {new Date(event.start).toLocaleTimeString('en-US', {
-                              hour: 'numeric',
-                              minute: '2-digit',
-                              hour12: true
+                            {new Date(event.start).toLocaleTimeString("en-US", {
+                              hour: "numeric",
+                              minute: "2-digit",
+                              hour12: true,
                             })}
                             {event.location && ` • ${event.location}`}
                           </div>
@@ -540,7 +339,6 @@ export default function Home() {
 
                   {items.map((item, index) => (
                     <div key={item.id}>
-                      {/* Inline add card divider */}
                       {addingToColumn === columnId && addingAtIndex === index ? (
                         <div className="rounded-lg border border-white/10 bg-white/[0.03] p-3 mb-1">
                           <input
@@ -584,7 +382,7 @@ export default function Home() {
                         className="group rounded-lg border border-white/5 bg-white/[0.02] p-2 text-card-foreground shadow-[0_1px_3px_rgba(0,0,0,0.3)] hover:bg-white/[0.04] hover:border-white/10 hover:shadow-[0_2px_6px_rgba(0,0,0,0.4)] transition-all duration-200 focus:outline-none cursor-pointer"
                         tabIndex={0}
                         onClick={(e: any) => {
-                          if (e.target === e.currentTarget || e.target.closest('[data-card-content]')) {
+                          if (e.target === e.currentTarget || e.target.closest("[data-card-content]")) {
                             setEditingTask(item);
                             setEditingColumn(columnId);
                           }
@@ -602,17 +400,17 @@ export default function Home() {
                         }}
                         onKeyDown={(e: any) => {
                           const key = e.key;
-                          if (key === ' ') {
+                          if (key === " ") {
                             e.preventDefault();
                             toggleComplete(item.id);
-                          } else if (key >= '1' && key <= '9') {
+                          } else if (key >= "1" && key <= "9") {
                             const memberIndex = parseInt(key) - 1;
                             if (memberIndex < TEAM_MEMBERS.length) {
                               e.preventDefault();
                               toggleAssignee(item.id, TEAM_MEMBERS[memberIndex].id);
                             }
                           } else {
-                            const client = CLIENTS.find(c => c.key === key.toLowerCase());
+                            const client = clients.find((c) => c.slug === key.toLowerCase());
                             if (client) {
                               e.preventDefault();
                               toggleClient(item.id, client.id);
@@ -629,34 +427,36 @@ export default function Home() {
                             <div className={`text-sm pr-6 ${item.completed ? "line-through" : ""}`}>{item.title}</div>
                             {(item.client || (item.assignees && item.assignees.length > 0)) && (
                               <div className="flex gap-1.5 mt-1.5 items-center flex-wrap">
-                                {item.client && (() => {
-                                  const client = CLIENTS.find(c => c.id === item.client);
-                                  return client ? (
-                                    <Badge key={client.id} className={client.className}>
-                                      {client.name}
-                                    </Badge>
-                                  ) : null;
-                                })()}
-                                {item.assignees && item.assignees.length > 0 && (
-                                  <>
-                                    {item.assignees.map(assigneeId => {
-                                      const member = TEAM_MEMBERS.find(m => m.id === assigneeId);
-                                      return member ? (
-                                        <div
-                                          key={member.id}
-                                          className={`flex items-center justify-center w-5 h-5 rounded-full ${!member.avatar ? member.color : 'bg-white/5'} text-[10px] font-semibold text-white overflow-hidden`}
-                                          title={member.name}
-                                        >
-                                          {member.avatar ? (
-                                            <img src={member.avatar} alt={member.name} className="w-full h-full object-cover" />
-                                          ) : (
-                                            member.initials
-                                          )}
-                                        </div>
-                                      ) : null;
-                                    })}
-                                  </>
-                                )}
+                                {item.client &&
+                                  (() => {
+                                    const client = clients.find((c) => c.id === item.client);
+                                    return client ? (
+                                      <Badge key={client.id} className={getClientClassName(client.color)}>
+                                        {client.name}
+                                      </Badge>
+                                    ) : null;
+                                  })()}
+                                {item.assignees &&
+                                  item.assignees.length > 0 && (
+                                    <>
+                                      {item.assignees.map((assigneeId) => {
+                                        const member = TEAM_MEMBERS.find((m) => m.id === assigneeId);
+                                        return member ? (
+                                          <div
+                                            key={member.id}
+                                            className={`flex items-center justify-center w-5 h-5 rounded-full ${!member.avatar ? member.color : "bg-white/5"} text-[10px] font-semibold text-white overflow-hidden`}
+                                            title={member.name}
+                                          >
+                                            {member.avatar ? (
+                                              <img src={member.avatar} alt={member.name} className="w-full h-full object-cover" />
+                                            ) : (
+                                              member.initials
+                                            )}
+                                          </div>
+                                        ) : null;
+                                      })}
+                                    </>
+                                  )}
                               </div>
                             )}
                           </div>
@@ -677,9 +477,7 @@ export default function Home() {
                                   : "border-white/20 hover:border-white/40"
                               }`}
                             >
-                              {item.completed && (
-                                <Check className="size-3 text-white" strokeWidth={3} />
-                              )}
+                              {item.completed && <Check className="size-3 text-white" strokeWidth={3} />}
                             </div>
                           </button>
                         </div>
@@ -734,22 +532,16 @@ export default function Home() {
               const task = Object.values(columns)
                 .flat()
                 .find((item) => item.id === value);
-
               if (!task) return null;
-
               return (
                 <div className="w-80 rounded-lg border border-white/5 bg-card p-3 shadow-lg">
                   <div className="flex gap-2">
                     <div
                       className={`mt-1 flex size-4 shrink-0 items-center justify-center rounded-full border ${
-                        task.completed
-                          ? "border-green-500/80 bg-green-500/80"
-                          : "border-white/20"
+                        task.completed ? "border-green-500/80 bg-green-500/80" : "border-white/20"
                       }`}
                     >
-                      {task.completed && (
-                        <Check className="size-3 text-white" strokeWidth={3} />
-                      )}
+                      {task.completed && <Check className="size-3 text-white" strokeWidth={3} />}
                     </div>
                     <GripVertical className="mt-1 size-4 shrink-0 text-muted-foreground opacity-50" />
                     <div className={`flex-1 space-y-2 ${task.completed ? "opacity-50" : ""}`}>
@@ -770,24 +562,12 @@ export default function Home() {
 
       <TaskEditDialog
         task={editingTask}
-        onClose={() => { setEditingTask(null); setEditingColumn(null); }}
+        onClose={() => {
+          setEditingTask(null);
+          setEditingColumn(null);
+        }}
         onSave={saveEditedTask}
         onTaskChange={setEditingTask}
-      />
-
-      <SettingsDialog
-        open={showSettings}
-        onOpenChange={setShowSettings}
-        user={user}
-        activeProjectId={activeProjectId}
-        googleCalendarConnected={googleCalendarConnected}
-        onGoogleCalendarConnect={() => {}}
-        onGoogleCalendarDisconnect={() => {
-          setGoogleCalendarConnected(false);
-          setCalendarEvents({});
-        }}
-        workspaceMembers={workspaceMembers}
-        onMembersChange={setWorkspaceMembers}
       />
     </main>
   );
