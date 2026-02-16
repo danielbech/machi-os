@@ -12,7 +12,7 @@ import {
 import { createClient } from "@/lib/supabase/client";
 import { initializeUserData, getDefaultProjectId } from "@/lib/supabase/initialize";
 import { loadTasksByDay, saveTask, deleteTask, updateDayTasks } from "@/lib/supabase/tasks-simple";
-import { getWorkspaceMembers, removeUserFromWorkspace, updateMemberRole, type WorkspaceMember } from "@/lib/supabase/workspace";
+import { getWorkspaceMembers, removeUserFromWorkspace, type WorkspaceMember } from "@/lib/supabase/workspace";
 import { AuthForm } from "@/components/auth-form";
 import type { User } from "@supabase/supabase-js";
 import {
