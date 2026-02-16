@@ -15,6 +15,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import { Calendar } from "lucide-react";
 
 interface SettingsDialogProps {
@@ -130,7 +132,9 @@ export function SettingsDialog({
                   </div>
                 </div>
               </div>
-              <button
+              <Button
+                size="sm"
+                variant={googleCalendarConnected ? "destructive" : "default"}
                 onClick={() => {
                   if (googleCalendarConnected) {
                     clearAccessToken();
@@ -140,14 +144,9 @@ export function SettingsDialog({
                     onGoogleCalendarConnect();
                   }
                 }}
-                className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
-                  googleCalendarConnected
-                    ? 'bg-red-500/20 text-red-400 hover:bg-red-500/30'
-                    : 'bg-white text-black hover:bg-white/90'
-                }`}
               >
                 {googleCalendarConnected ? 'Disconnect' : 'Connect'}
-              </button>
+              </Button>
             </div>
           </div>
 
@@ -161,13 +160,13 @@ export function SettingsDialog({
                 Invite members to collaborate on this workspace
               </div>
               <div className="flex gap-2">
-                <input
+                <Input
                   type="email"
                   placeholder="email@example.com"
                   value={inviteEmail}
                   onChange={(e) => setInviteEmail(e.target.value)}
                   onKeyDown={(e) => { if (e.key === 'Enter') handleInvite(); }}
-                  className="flex-1 px-3 py-1.5 rounded-md border border-white/10 bg-white/[0.02] text-sm outline-none focus:border-white/30 focus:ring-1 focus:ring-white/20"
+                  className="flex-1"
                 />
                 <select
                   value={inviteRole}
@@ -177,13 +176,13 @@ export function SettingsDialog({
                   <option value="member">Member</option>
                   <option value="admin">Admin</option>
                 </select>
-                <button
+                <Button
+                  size="sm"
                   onClick={handleInvite}
                   disabled={inviteLoading || !inviteEmail.trim()}
-                  className="px-3 py-1.5 rounded-md text-xs font-medium bg-white text-black hover:bg-white/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {inviteLoading ? '...' : 'Invite'}
-                </button>
+                </Button>
               </div>
               {inviteMessage && (
                 <div className={`text-xs ${inviteMessage.type === 'success' ? 'text-green-400' : 'text-red-400'}`}>
@@ -218,7 +217,9 @@ export function SettingsDialog({
                     </div>
                   </div>
                   {member.role !== 'owner' && (
-                    <button
+                    <Button
+                      size="sm"
+                      variant="destructive-ghost"
                       onClick={async () => {
                         if (confirm('Remove this member from the workspace?')) {
                           try {
@@ -230,10 +231,9 @@ export function SettingsDialog({
                           }
                         }
                       }}
-                      className="px-3 py-1.5 rounded-md text-xs font-medium text-red-400 hover:bg-red-500/10 transition-colors"
                     >
                       Remove
-                    </button>
+                    </Button>
                   )}
                 </div>
               ))}
@@ -254,12 +254,14 @@ export function SettingsDialog({
                         {invite.role} &middot; invited {new Date(invite.created_at).toLocaleDateString()}
                       </div>
                     </div>
-                    <button
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="text-white/40 hover:text-red-400 hover:bg-red-500/10"
                       onClick={() => handleCancelInvite(invite.id)}
-                      className="px-3 py-1.5 rounded-md text-xs font-medium text-white/40 hover:text-red-400 hover:bg-red-500/10 transition-colors"
                     >
                       Cancel
-                    </button>
+                    </Button>
                   </div>
                 ))}
               </div>
@@ -277,7 +279,9 @@ export function SettingsDialog({
                   {user?.email || 'Not signed in'}
                 </div>
               </div>
-              <button
+              <Button
+                size="sm"
+                variant="destructive"
                 onClick={async () => {
                   try {
                     const supabase = createClient();
@@ -291,10 +295,9 @@ export function SettingsDialog({
                     console.error('Sign out failed:', err);
                   }
                 }}
-                className="px-3 py-1.5 rounded-md text-xs font-medium bg-red-500/20 text-red-400 hover:bg-red-500/30 transition-colors"
               >
                 Sign Out
-              </button>
+              </Button>
             </div>
           </div>
         </div>

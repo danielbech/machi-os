@@ -77,7 +77,9 @@ Task metadata (assignees, client, priority) is stored in dedicated columns on th
 
 ## Conventions
 
-- Use shadcn/ui components from `components/ui/` — don't build custom UI primitives
+- **shadcn/ui first:** Always use shadcn/ui components and blocks as the default before building custom solutions. Use `<Button>` from `components/ui/button`, `<Input>` / `<Textarea>` from `components/ui/input`, `<Dialog>`, `<Badge>`, etc. Only write custom elements when shadcn doesn't cover the use case (e.g., toggle-select buttons, color swatches).
+- **Button variants:** `default` = white primary, `ghost` = cancel/subtle, `destructive` = soft red bg, `destructive-ghost` = text-only red. Sizes: `default`, `sm`, `xs`, `icon`, `icon-xs`, `icon-sm`.
+- **Accessibility:** Add `aria-label` to all icon-only buttons.
 - Keep it simple — minimal abstractions, no over-engineering
 - Dark theme throughout (bg-black/50, white/opacity text)
 - Import shared types from `@/lib/types`, constants from `@/lib/constants`

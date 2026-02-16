@@ -13,6 +13,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import { Plus, Pencil, Trash2, Upload, X } from "lucide-react";
 
 function generateSlug(name: string, existingSlugs: string[]): string {
@@ -146,25 +148,19 @@ export default function ClientsPage() {
     <main className="flex min-h-screen flex-col p-4 md:p-8 bg-black/50">
       <div className="mb-6 flex items-center justify-between">
         <h1 className="text-2xl font-bold">Clients</h1>
-        <button
-          onClick={openAdd}
-          className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium bg-white text-black hover:bg-white/90 transition-colors"
-        >
+        <Button onClick={openAdd}>
           <Plus className="size-4" />
           Add Client
-        </button>
+        </Button>
       </div>
 
       {clients.length === 0 ? (
         <div className="flex-1 flex items-center justify-center">
           <div className="text-center space-y-3">
             <div className="text-white/40 text-sm">No clients yet</div>
-            <button
-              onClick={openAdd}
-              className="text-sm text-white/60 hover:text-white underline underline-offset-4 transition-colors"
-            >
+            <Button variant="link" onClick={openAdd} className="text-white/60 hover:text-white">
               Add your first client
-            </button>
+            </Button>
           </div>
         </div>
       ) : (
@@ -199,18 +195,24 @@ export default function ClientsPage() {
 
               {/* Action buttons */}
               <div className="absolute top-3 right-3 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                <button
+                <Button
+                  variant="ghost"
+                  size="icon-xs"
+                  className="text-white/40 hover:text-white hover:bg-white/10"
                   onClick={() => openEdit(client)}
-                  className="p-1.5 rounded-md text-white/40 hover:text-white hover:bg-white/10 transition-colors"
+                  aria-label={`Edit ${client.name}`}
                 >
                   <Pencil className="size-3.5" />
-                </button>
-                <button
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon-xs"
+                  className="text-white/40 hover:text-red-400 hover:bg-red-500/10"
                   onClick={() => setDeleteConfirm(client.id)}
-                  className="p-1.5 rounded-md text-white/40 hover:text-red-400 hover:bg-red-500/10 transition-colors"
+                  aria-label={`Delete ${client.name}`}
                 >
                   <Trash2 className="size-3.5" />
-                </button>
+                </Button>
               </div>
             </div>
           ))}
@@ -226,25 +228,24 @@ export default function ClientsPage() {
           <div className="space-y-4 py-4">
             <div className="space-y-2">
               <label className="text-sm font-medium">Name</label>
-              <input
+              <Input
                 type="text"
                 value={formName}
                 onChange={(e) => handleNameChange(e.target.value)}
                 placeholder="Client name"
                 autoFocus
-                className="w-full rounded-md border border-white/10 bg-white/[0.02] px-3 py-2 text-sm outline-none focus:border-white/30 focus:ring-1 focus:ring-white/20"
               />
             </div>
 
             <div className="space-y-2">
               <label className="text-sm font-medium">Keyboard Shortcut</label>
-              <input
+              <Input
                 type="text"
                 value={formSlug}
                 onChange={(e) => setFormSlug(e.target.value.slice(0, 3))}
                 placeholder="e.g. b"
                 maxLength={3}
-                className="w-20 rounded-md border border-white/10 bg-white/[0.02] px-3 py-2 text-sm font-mono outline-none focus:border-white/30 focus:ring-1 focus:ring-white/20"
+                className="w-20 font-mono"
               />
               <div className="text-xs text-white/30">Press this key on a task card to assign this client</div>
             </div>
@@ -263,6 +264,7 @@ export default function ClientsPage() {
                         : "opacity-60 hover:opacity-100"
                     }`}
                     title={color}
+                    aria-label={`Select ${color} color`}
                   />
                 ))}
               </div>
@@ -284,14 +286,15 @@ export default function ClientsPage() {
                     alt="Logo preview"
                     className="size-12 rounded-lg object-cover bg-white/5"
                   />
-                  <button
-                    type="button"
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="text-white/40 hover:text-red-400 hover:bg-red-500/10"
                     onClick={clearLogo}
-                    className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs text-white/40 hover:text-red-400 hover:bg-red-500/10 transition-colors"
                   >
                     <X className="size-3" />
                     Remove
-                  </button>
+                  </Button>
                 </div>
               ) : (
                 <button
@@ -314,21 +317,15 @@ export default function ClientsPage() {
             )}
 
             <div className="flex justify-end gap-2 pt-4">
-              <button
-                type="button"
-                onClick={() => setDialogOpen(false)}
-                className="px-4 py-2 rounded-md text-sm font-medium text-white/60 hover:text-white hover:bg-white/5 transition-colors"
-              >
+              <Button variant="ghost" onClick={() => setDialogOpen(false)}>
                 Cancel
-              </button>
-              <button
-                type="button"
+              </Button>
+              <Button
                 onClick={handleSave}
                 disabled={saving || !formName.trim() || !formSlug.trim()}
-                className="px-4 py-2 rounded-md text-sm font-medium bg-white text-black hover:bg-white/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {saving ? "Saving..." : editingClient ? "Save" : "Add Client"}
-              </button>
+              </Button>
             </div>
           </div>
         </DialogContent>
@@ -345,20 +342,15 @@ export default function ClientsPage() {
               Are you sure you want to delete this client? Tasks assigned to this client will keep their assignment but it won&apos;t be visible.
             </p>
             <div className="flex justify-end gap-2">
-              <button
-                type="button"
-                onClick={() => setDeleteConfirm(null)}
-                className="px-4 py-2 rounded-md text-sm font-medium text-white/60 hover:text-white hover:bg-white/5 transition-colors"
-              >
+              <Button variant="ghost" onClick={() => setDeleteConfirm(null)}>
                 Cancel
-              </button>
-              <button
-                type="button"
+              </Button>
+              <Button
+                variant="destructive"
                 onClick={() => deleteConfirm && handleDelete(deleteConfirm)}
-                className="px-4 py-2 rounded-md text-sm font-medium bg-red-500/20 text-red-400 hover:bg-red-500/30 transition-colors"
               >
                 Delete
-              </button>
+              </Button>
             </div>
           </div>
         </DialogContent>

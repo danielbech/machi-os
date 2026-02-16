@@ -382,6 +382,7 @@ export default function BoardPage() {
                             }}
                             onMouseDown={(e) => e.stopPropagation()}
                             className="absolute top-0.5 right-0 shrink-0"
+                            aria-label={item.completed ? "Mark as incomplete" : "Mark as complete"}
                           >
                             <div
                               className={`flex size-4 items-center justify-center rounded-full border transition-all ${

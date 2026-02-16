@@ -10,6 +10,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Input, Textarea } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 
 interface TaskEditDialogProps {
   task: Task | null;
@@ -32,23 +34,21 @@ export function TaskEditDialog({ task, onClose, onSave, onTaskChange }: TaskEdit
             {/* Title */}
             <div className="space-y-2">
               <label className="text-sm font-medium">Title</label>
-              <input
+              <Input
                 type="text"
                 value={task.title}
                 onChange={(e) => onTaskChange({ ...task, title: e.target.value })}
-                className="w-full rounded-md border border-white/10 bg-white/[0.02] px-3 py-2 text-sm outline-none focus:border-white/30 focus:ring-1 focus:ring-white/20"
               />
             </div>
 
             {/* Description */}
             <div className="space-y-2">
               <label className="text-sm font-medium">Description</label>
-              <textarea
+              <Textarea
                 value={task.description || ""}
                 onChange={(e) => onTaskChange({ ...task, description: e.target.value })}
                 placeholder="Optional description..."
                 rows={3}
-                className="w-full rounded-md border border-white/10 bg-white/[0.02] px-3 py-2 text-sm outline-none focus:border-white/30 focus:ring-1 focus:ring-white/20 resize-none"
               />
             </div>
 
@@ -122,20 +122,12 @@ export function TaskEditDialog({ task, onClose, onSave, onTaskChange }: TaskEdit
 
             {/* Actions */}
             <div className="flex justify-end gap-2 pt-4">
-              <button
-                type="button"
-                onClick={onClose}
-                className="px-4 py-2 rounded-md text-sm font-medium text-white/60 hover:text-white hover:bg-white/5 transition-colors"
-              >
+              <Button variant="ghost" onClick={onClose}>
                 Cancel
-              </button>
-              <button
-                type="button"
-                onClick={() => onSave(task)}
-                className="px-4 py-2 rounded-md text-sm font-medium bg-white text-black hover:bg-white/90 transition-colors"
-              >
+              </Button>
+              <Button onClick={() => onSave(task)}>
                 Save
-              </button>
+              </Button>
             </div>
           </div>
         )}
