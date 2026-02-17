@@ -294,10 +294,8 @@ export default function BoardPage() {
                             setAddingAtIndex(index);
                             setNewCardTitle("");
                           }}
-                          className="group/add flex h-1 w-full items-center justify-center rounded transition-all hover:h-8 hover:bg-white/[0.02]"
-                        >
-                          <div className="w-full h-px bg-transparent group-hover/add:bg-white/20 transition-colors" />
-                        </button>
+                          className="flex h-1 w-full rounded"
+                        />
                       )}
 
                       <KanbanItem
