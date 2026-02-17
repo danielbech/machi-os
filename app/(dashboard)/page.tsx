@@ -334,10 +334,20 @@ export default function BoardPage() {
                               toggleAssignee(item.id, TEAM_MEMBERS[memberIndex].id);
                             }
                           } else {
-                            const client = clients.find((c) => c.slug === key.toLowerCase() && c.active);
-                            if (client) {
+                            const matches = clients.filter((c) => c.slug === key.toLowerCase() && c.active);
+                            if (matches.length > 0) {
                               e.preventDefault();
-                              toggleClient(item.id, client.id);
+                              const currentIdx = matches.findIndex((c) => c.id === item.client);
+                              if (currentIdx === -1) {
+                                // No matching client assigned — assign first
+                                toggleClient(item.id, matches[0].id);
+                              } else if (currentIdx < matches.length - 1) {
+                                // Cycle to next matching client
+                                toggleClient(item.id, matches[currentIdx + 1].id);
+                              } else {
+                                // Last match — unassign
+                                toggleClient(item.id, matches[currentIdx].id);
+                              }
                             }
                           }
                         }}
