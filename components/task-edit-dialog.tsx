@@ -20,7 +20,7 @@ import {
   DropdownMenuCheckboxItem,
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
-import { ChevronDown, Circle } from "lucide-react";
+import { ChevronDown, Circle, StickyNote, ListTodo } from "lucide-react";
 
 interface TaskEditDialogProps {
   task: Task | null;
@@ -43,6 +43,34 @@ export function TaskEditDialog({ task, onClose, onSave, onTaskChange }: TaskEdit
         </DialogHeader>
         {task && (
           <form onSubmit={(e) => { e.preventDefault(); onSave(task); }} className="space-y-4 py-4">
+            {/* Type toggle */}
+            <div className="flex gap-1">
+              <button
+                type="button"
+                onClick={() => onTaskChange({ ...task, type: "task" })}
+                className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium transition-colors ${
+                  task.type !== "note"
+                    ? "bg-white/10 text-white"
+                    : "text-white/30 hover:text-white/50"
+                }`}
+              >
+                <ListTodo className="size-3" />
+                Task
+              </button>
+              <button
+                type="button"
+                onClick={() => onTaskChange({ ...task, type: "note" })}
+                className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium transition-colors ${
+                  task.type === "note"
+                    ? "bg-amber-500/20 text-amber-400"
+                    : "text-white/30 hover:text-white/50"
+                }`}
+              >
+                <StickyNote className="size-3" />
+                Note
+              </button>
+            </div>
+
             {/* Title */}
             <div className="space-y-3">
               <label className="text-sm font-medium">Title</label>
