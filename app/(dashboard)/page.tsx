@@ -12,11 +12,10 @@ import {
   KanbanBoard,
   KanbanColumn,
   KanbanItem,
-  KanbanItemHandle,
   KanbanOverlay,
 } from "@/components/ui/kanban";
 import { Badge } from "@/components/ui/badge";
-import { Check, GripVertical, Plus, Calendar } from "lucide-react";
+import { Check, Plus, Calendar } from "lucide-react";
 
 export default function BoardPage() {
   const { activeProjectId, clients, calendarEvents } = useWorkspace();
@@ -288,14 +287,14 @@ export default function BoardPage() {
                       )}
 
                       <KanbanItem
+                        asHandle
                         value={item.id}
-                        className="group rounded-lg border border-white/5 bg-white/[0.02] p-2 text-card-foreground shadow-[0_1px_3px_rgba(0,0,0,0.3)] hover:bg-white/[0.04] hover:border-white/10 hover:shadow-[0_2px_6px_rgba(0,0,0,0.4)] transition-all duration-200 focus:outline-none cursor-pointer"
+                        className="group rounded-lg border border-white/5 bg-white/[0.02] p-2 text-card-foreground shadow-[0_1px_3px_rgba(0,0,0,0.3)] hover:bg-white/[0.04] hover:border-white/10 hover:shadow-[0_2px_6px_rgba(0,0,0,0.4)] transition-all duration-200 focus:outline-none !cursor-pointer"
                         tabIndex={0}
                         onClick={(e: any) => {
-                          if (e.target === e.currentTarget || e.target.closest("[data-card-content]")) {
-                            setEditingTask(item);
-                            setEditingColumn(columnId);
-                          }
+                          if (e.target.closest("button")) return;
+                          setEditingTask(item);
+                          setEditingColumn(columnId);
                         }}
                         ref={(el: HTMLDivElement | null) => {
                           if (el && item.id === newlyCreatedCardId) {
@@ -328,12 +327,8 @@ export default function BoardPage() {
                           }
                         }}
                       >
-                        <div className="relative flex gap-2">
-                          <KanbanItemHandle className="shrink-0 opacity-50 hover:opacity-100 transition-opacity">
-                            <GripVertical className="size-3.5 text-muted-foreground" />
-                          </KanbanItemHandle>
-
-                          <div data-card-content className={`flex-1 transition-opacity ${item.completed ? "opacity-50" : ""}`}>
+                        <div className="relative">
+                          <div className={`transition-opacity ${item.completed ? "opacity-50" : ""}`}>
                             <div className={`text-sm pr-6 ${item.completed ? "line-through" : ""}`}>{item.title}</div>
                             {(item.client || (item.assignees && item.assignees.length > 0)) && (
                               <div className="flex gap-1.5 mt-1.5 items-center flex-wrap">
@@ -448,23 +443,22 @@ export default function BoardPage() {
                 .find((item) => item.id === value);
               if (!task) return null;
               return (
-                <div className="w-80 rounded-lg border border-white/5 bg-card p-3 shadow-lg">
-                  <div className="flex gap-2">
-                    <div
-                      className={`mt-1 flex size-4 shrink-0 items-center justify-center rounded-full border ${
-                        task.completed ? "border-green-500/80 bg-green-500/80" : "border-white/20"
-                      }`}
-                    >
-                      {task.completed && <Check className="size-3 text-white" strokeWidth={3} />}
-                    </div>
-                    <GripVertical className="mt-1 size-4 shrink-0 text-muted-foreground opacity-50" />
-                    <div className={`flex-1 space-y-2 ${task.completed ? "opacity-50" : ""}`}>
-                      <div className={`font-medium ${task.completed ? "line-through" : ""}`}>{task.title}</div>
+                <div className="w-80 rounded-lg border border-white/10 bg-card p-3 shadow-lg">
+                  <div className="relative">
+                    <div className={`space-y-2 ${task.completed ? "opacity-50" : ""}`}>
+                      <div className={`text-sm pr-6 ${task.completed ? "line-through" : ""}`}>{task.title}</div>
                       {task.description && (
                         <p className={`text-sm text-muted-foreground ${task.completed ? "line-through" : ""}`}>
                           {task.description}
                         </p>
                       )}
+                    </div>
+                    <div
+                      className={`absolute top-0 right-0 flex size-4 items-center justify-center rounded-full border ${
+                        task.completed ? "border-green-500/80 bg-green-500/80" : "border-white/20"
+                      }`}
+                    >
+                      {task.completed && <Check className="size-3 text-white" strokeWidth={3} />}
                     </div>
                   </div>
                 </div>
