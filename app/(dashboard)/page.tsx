@@ -123,6 +123,8 @@ export default function BoardPage() {
     );
     setColumns({ ...columns, [columnId]: updatedItems });
     setNewlyCreatedCardId(realId);
+    // Persist correct sort order for the whole column
+    await updateDayTasks(activeProjectId, columnId, updatedItems);
   };
 
   const handleKeyDown = (e: KeyboardEvent<HTMLInputElement>, columnId: string, index?: number) => {
