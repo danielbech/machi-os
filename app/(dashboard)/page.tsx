@@ -30,6 +30,7 @@ export default function BoardPage() {
   const [editingColumn, setEditingColumn] = useState<string | null>(null);
   const [showShortcuts, setShowShortcuts] = useState(false);
   const [clipboard, setClipboard] = useState<{ task: Task; column: string } | null>(null);
+  const [hoveredColumn, setHoveredColumn] = useState<string | null>(null);
 
   // Load tasks
   const refreshTasks = useCallback(async () => {
@@ -224,6 +225,25 @@ export default function BoardPage() {
     await updateDayTasks(activeProjectId, columnId, updatedItems);
   };
 
+  // Global paste shortcut — paste into whichever column is hovered
+  const clipboardRef = useRef(clipboard);
+  clipboardRef.current = clipboard;
+  const hoveredColumnRef = useRef(hoveredColumn);
+  hoveredColumnRef.current = hoveredColumn;
+  const pasteTaskRef = useRef(pasteTask);
+  pasteTaskRef.current = pasteTask;
+
+  useEffect(() => {
+    const handleGlobalKeyDown = (e: globalThis.KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === "v" && clipboardRef.current && hoveredColumnRef.current) {
+        e.preventDefault();
+        pasteTaskRef.current(hoveredColumnRef.current);
+      }
+    };
+    window.addEventListener("keydown", handleGlobalKeyDown);
+    return () => window.removeEventListener("keydown", handleGlobalKeyDown);
+  }, []);
+
   const removeTask = async (taskId: string) => {
     if (!activeProjectId) return;
     const updated = { ...columns };
@@ -273,6 +293,7 @@ export default function BoardPage() {
                 key={columnId}
                 value={columnId}
                 className={`w-[280px] shrink-0 ${columnId === todayName ? "ring-2 ring-white/20 rounded-lg" : ""}`}
+                onMouseEnter={() => setHoveredColumn(columnId)}
               >
                 <div className="mb-3 px-1">
                   <div className="flex items-baseline gap-2">
@@ -375,9 +396,6 @@ export default function BoardPage() {
                           if ((e.metaKey || e.ctrlKey) && key === "c") {
                             e.preventDefault();
                             setClipboard({ task: item, column: columnId });
-                          } else if ((e.metaKey || e.ctrlKey) && key === "v") {
-                            e.preventDefault();
-                            pasteTask(columnId);
                           } else if (key === "Backspace") {
                             e.preventDefault();
                             removeTask(item.id);
