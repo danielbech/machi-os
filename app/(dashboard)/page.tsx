@@ -222,6 +222,7 @@ export default function BoardPage() {
       assignees: clipboard.task.assignees ? [...clipboard.task.assignees] : undefined,
       client: clipboard.task.client,
       priority: clipboard.task.priority,
+      type: clipboard.task.type,
       day: columnId,
     };
     const columnItems = [...columns[columnId], newCard];
@@ -374,8 +375,8 @@ export default function BoardPage() {
                               <StickyNote className="size-3" />
                               {newCardType === "note" ? "Note" : "Task"}
                             </button>
-                            <span className="ml-auto">↵ Save</span>
-                            <span>⎋ Cancel</span>
+                            <span className="ml-auto text-muted-foreground/30">↵ Save</span>
+                            <span className="text-muted-foreground/30">⎋ Cancel</span>
                           </div>
                         </div>
                       ) : (
