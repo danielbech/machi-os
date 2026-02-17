@@ -321,7 +321,7 @@ export default function ClientsPage() {
               <input
                 ref={fileInputRef}
                 type="file"
-                accept="image/*"
+                accept="image/*,.svg"
                 onChange={handleFileSelect}
                 className="hidden"
               />
