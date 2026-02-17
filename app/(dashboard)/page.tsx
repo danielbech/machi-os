@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, KeyboardEvent, useEffect } from "react";
+import { useState, useCallback, useRef, KeyboardEvent, useEffect } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { loadTasksByDay, saveTask, updateDayTasks, deleteTask } from "@/lib/supabase/tasks-simple";
 import { useWorkspace } from "@/lib/workspace-context";
@@ -50,7 +50,8 @@ export default function BoardPage() {
     refreshTasks();
   }, [activeProjectId, refreshTasks]);
 
-  // Realtime: reload when another user changes tasks
+  // Realtime: reload when another user changes tasks (debounced)
+  const realtimeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => {
     if (!activeProjectId) return;
 
@@ -60,11 +61,18 @@ export default function BoardPage() {
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "tasks" },
-        () => { refreshTasks(); }
+        () => {
+          // Debounce — wait 500ms after the last change before reloading
+          if (realtimeTimer.current) clearTimeout(realtimeTimer.current);
+          realtimeTimer.current = setTimeout(() => { refreshTasks(); }, 500);
+        }
       )
       .subscribe();
 
-    return () => { supabase.removeChannel(channel); };
+    return () => {
+      if (realtimeTimer.current) clearTimeout(realtimeTimer.current);
+      supabase.removeChannel(channel);
+    };
   }, [activeProjectId, refreshTasks]);
 
   // Week dates

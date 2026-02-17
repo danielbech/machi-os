@@ -52,24 +52,21 @@ export async function saveTask(projectId: string, task: Task): Promise<string> {
     throw new Error('No area found for project')
   }
 
-  const taskData = {
-    area_id: areaId,
-    title: task.title,
-    description: task.description || null,
-    day: task.day || null,
-    completed: task.completed || false,
-    sort_order: 0,
-    assignees: task.assignees || [],
-    client: task.client || null,
-    priority: task.priority || null,
-  }
-
   const isExistingTask = task.id && task.id.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)
 
   if (isExistingTask) {
+    // Only update fields that the UI changes — never touch sort_order
     const { error } = await supabase
       .from('tasks')
-      .update(taskData)
+      .update({
+        title: task.title,
+        description: task.description || null,
+        day: task.day || null,
+        completed: task.completed || false,
+        assignees: task.assignees || [],
+        client: task.client || null,
+        priority: task.priority || null,
+      })
       .eq('id', task.id)
 
     if (error) {
@@ -80,7 +77,17 @@ export async function saveTask(projectId: string, task: Task): Promise<string> {
   } else {
     const { data, error } = await supabase
       .from('tasks')
-      .insert(taskData)
+      .insert({
+        area_id: areaId,
+        title: task.title,
+        description: task.description || null,
+        day: task.day || null,
+        completed: task.completed || false,
+        sort_order: 0,
+        assignees: task.assignees || [],
+        client: task.client || null,
+        priority: task.priority || null,
+      })
       .select()
       .single()
 
