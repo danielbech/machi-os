@@ -2,7 +2,6 @@
 
 import type { Task } from "@/lib/types";
 import { useWorkspace } from "@/lib/workspace-context";
-import { getClientClassName } from "@/lib/colors";
 import { CLIENT_DOT_COLORS } from "@/lib/colors";
 import { TEAM_MEMBERS } from "@/lib/constants";
 import {
@@ -20,15 +19,8 @@ import {
   DropdownMenuItem,
   DropdownMenuCheckboxItem,
   DropdownMenuSeparator,
-  DropdownMenuLabel,
 } from "@/components/ui/dropdown-menu";
-import { ChevronDown, Circle, Flag } from "lucide-react";
-
-const PRIORITIES: { value: Task["priority"]; label: string; color: string }[] = [
-  { value: "high", label: "High", color: "text-red-400" },
-  { value: "medium", label: "Medium", color: "text-yellow-400" },
-  { value: "low", label: "Low", color: "text-blue-400" },
-];
+import { ChevronDown, Circle } from "lucide-react";
 
 interface TaskEditDialogProps {
   task: Task | null;
@@ -42,7 +34,6 @@ export function TaskEditDialog({ task, onClose, onSave, onTaskChange }: TaskEdit
   const activeClients = clients.filter((c) => c.active);
   const selectedClient = activeClients.find((c) => c.id === task?.client);
   const assignedMembers = TEAM_MEMBERS.filter((m) => task?.assignees?.includes(m.id));
-  const currentPriority = PRIORITIES.find((p) => p.value === task?.priority) || PRIORITIES[1];
 
   return (
     <Dialog open={task !== null} onOpenChange={(open) => { if (!open) onClose(); }}>
@@ -70,96 +61,60 @@ export function TaskEditDialog({ task, onClose, onSave, onTaskChange }: TaskEdit
                 onChange={(e) => onTaskChange({ ...task, description: e.target.value })}
                 onKeyDown={(e) => { if (e.key === "Enter") e.stopPropagation(); }}
                 placeholder="Optional description..."
+                className="placeholder:text-white/20"
                 rows={3}
               />
             </div>
 
-            {/* Client + Priority row */}
-            <div className="flex gap-3">
-              {/* Client dropdown */}
-              <div className="space-y-2.5 flex-1">
-                <label className="text-sm font-medium">Client</label>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <button
-                      type="button"
-                      className="flex items-center justify-between w-full px-3 py-2 rounded-md border border-white/10 bg-white/[0.02] text-sm hover:bg-white/[0.04] hover:border-white/20 transition-colors"
-                    >
-                      {selectedClient ? (
-                        <span className="flex items-center gap-2">
-                          <span className={`w-2 h-2 rounded-full ${CLIENT_DOT_COLORS[selectedClient.color] || 'bg-white/30'}`} />
-                          {selectedClient.logo_url && (
-                            <img src={selectedClient.logo_url} alt="" className="size-4 rounded-sm object-cover" />
-                          )}
-                          <span>{selectedClient.name}</span>
-                        </span>
-                      ) : (
-                        <span className="text-white/40">No client</span>
-                      )}
-                      <ChevronDown className="size-3.5 text-white/30 ml-2" />
-                    </button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="start" className="min-w-[200px]">
-                    <DropdownMenuItem
-                      onClick={() => onTaskChange({ ...task, client: undefined })}
-                      className="text-white/50"
-                    >
-                      No client
-                    </DropdownMenuItem>
-                    <DropdownMenuSeparator />
-                    {activeClients.map((client) => (
-                      <DropdownMenuItem
-                        key={client.id}
-                        onClick={() => onTaskChange({ ...task, client: client.id })}
-                        className="flex items-center gap-2"
-                      >
-                        <span className={`w-2 h-2 rounded-full shrink-0 ${CLIENT_DOT_COLORS[client.color] || 'bg-white/30'}`} />
-                        {client.logo_url && (
-                          <img src={client.logo_url} alt="" className="size-4 rounded-sm object-cover shrink-0" />
-                        )}
-                        <span>{client.name}</span>
-                        {task.client === client.id && (
-                          <Circle className="size-2 fill-white ml-auto" />
-                        )}
-                      </DropdownMenuItem>
-                    ))}
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </div>
-
-              {/* Priority dropdown */}
-              <div className="space-y-2.5 w-[140px]">
-                <label className="text-sm font-medium">Priority</label>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <button
-                      type="button"
-                      className="flex items-center justify-between w-full px-3 py-2 rounded-md border border-white/10 bg-white/[0.02] text-sm hover:bg-white/[0.04] hover:border-white/20 transition-colors"
-                    >
+            {/* Client dropdown */}
+            <div className="space-y-2.5">
+              <label className="text-sm font-medium">Client</label>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button
+                    type="button"
+                    className="flex items-center justify-between w-full px-3 py-2 rounded-md border border-white/10 bg-white/[0.02] text-sm hover:bg-white/[0.04] hover:border-white/20 transition-colors"
+                  >
+                    {selectedClient ? (
                       <span className="flex items-center gap-2">
-                        <Flag className={`size-3 ${currentPriority.color}`} />
-                        <span>{currentPriority.label}</span>
-                      </span>
-                      <ChevronDown className="size-3.5 text-white/30 ml-2" />
-                    </button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="start">
-                    {PRIORITIES.map((p) => (
-                      <DropdownMenuItem
-                        key={p.value}
-                        onClick={() => onTaskChange({ ...task, priority: p.value })}
-                        className="flex items-center gap-2"
-                      >
-                        <Flag className={`size-3 ${p.color}`} />
-                        <span>{p.label}</span>
-                        {task.priority === p.value && (
-                          <Circle className="size-2 fill-white ml-auto" />
+                        <span className={`w-2 h-2 rounded-full ${CLIENT_DOT_COLORS[selectedClient.color] || 'bg-white/30'}`} />
+                        {selectedClient.logo_url && (
+                          <img src={selectedClient.logo_url} alt="" className="size-4 rounded-sm object-cover" />
                         )}
-                      </DropdownMenuItem>
-                    ))}
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </div>
+                        <span>{selectedClient.name}</span>
+                      </span>
+                    ) : (
+                      <span className="text-white/25">No client</span>
+                    )}
+                    <ChevronDown className="size-3.5 text-white/30 ml-2" />
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start" className="min-w-[200px]">
+                  <DropdownMenuItem
+                    onClick={() => onTaskChange({ ...task, client: undefined })}
+                    className="text-white/50"
+                  >
+                    No client
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  {activeClients.map((client) => (
+                    <DropdownMenuItem
+                      key={client.id}
+                      onClick={() => onTaskChange({ ...task, client: client.id })}
+                      className="flex items-center gap-2"
+                    >
+                      <span className={`w-2 h-2 rounded-full shrink-0 ${CLIENT_DOT_COLORS[client.color] || 'bg-white/30'}`} />
+                      {client.logo_url && (
+                        <img src={client.logo_url} alt="" className="size-4 rounded-sm object-cover shrink-0" />
+                      )}
+                      <span>{client.name}</span>
+                      {task.client === client.id && (
+                        <Circle className="size-2 fill-white ml-auto" />
+                      )}
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
 
             {/* Team Members dropdown */}
@@ -190,7 +145,7 @@ export function TaskEditDialog({ task, onClose, onSave, onTaskChange }: TaskEdit
                         <span>{assignedMembers.map((m) => m.name).join(", ")}</span>
                       </span>
                     ) : (
-                      <span className="text-white/40">No assignees</span>
+                      <span className="text-white/25">No assignees</span>
                     )}
                     <ChevronDown className="size-3.5 text-white/30 ml-2" />
                   </button>
