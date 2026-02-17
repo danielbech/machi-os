@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, KeyboardEvent, useEffect } from "react";
+import { useState, useCallback, KeyboardEvent, useEffect } from "react";
+import { createClient } from "@/lib/supabase/client";
 import { loadTasksByDay, saveTask, updateDayTasks, deleteTask } from "@/lib/supabase/tasks-simple";
 import { useWorkspace } from "@/lib/workspace-context";
 import { TaskEditDialog } from "@/components/task-edit-dialog";
@@ -28,27 +29,42 @@ export default function BoardPage() {
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [editingColumn, setEditingColumn] = useState<string | null>(null);
 
+  // Load tasks
+  const refreshTasks = useCallback(async () => {
+    if (!activeProjectId) return;
+    try {
+      const tasks = await loadTasksByDay(activeProjectId);
+      setColumns(tasks);
+    } catch (error) {
+      console.error("Error loading tasks:", error);
+    }
+  }, [activeProjectId]);
+
   // Load tasks when active project changes
   useEffect(() => {
     if (!activeProjectId) {
       setColumns({ ...EMPTY_COLUMNS });
       return;
     }
+    refreshTasks();
+  }, [activeProjectId, refreshTasks]);
 
-    let cancelled = false;
+  // Realtime: reload when another user changes tasks
+  useEffect(() => {
+    if (!activeProjectId) return;
 
-    async function loadTasks() {
-      try {
-        const tasks = await loadTasksByDay(activeProjectId!);
-        if (!cancelled) setColumns(tasks);
-      } catch (error) {
-        console.error("Error loading tasks:", error);
-      }
-    }
+    const supabase = createClient();
+    const channel = supabase
+      .channel(`tasks-${activeProjectId}`)
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "tasks" },
+        () => { refreshTasks(); }
+      )
+      .subscribe();
 
-    loadTasks();
-    return () => { cancelled = true; };
-  }, [activeProjectId]);
+    return () => { supabase.removeChannel(channel); };
+  }, [activeProjectId, refreshTasks]);
 
   // Week dates
   const getWeekDates = () => {
