@@ -272,7 +272,7 @@ export default function ClientsPage() {
             <DialogTitle>{editingClient ? "Edit Client" : "Add Client"}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-4">
-            <div className="space-y-2">
+            <div className="space-y-2.5">
               <label className="text-sm font-medium">Name</label>
               <Input
                 type="text"
@@ -283,7 +283,7 @@ export default function ClientsPage() {
               />
             </div>
 
-            <div className="space-y-2">
+            <div className="space-y-2.5">
               <label className="text-sm font-medium">Keyboard Shortcut</label>
               <Input
                 type="text"
@@ -296,7 +296,7 @@ export default function ClientsPage() {
               <div className="text-xs text-white/30">Press this key on a task card to assign this client</div>
             </div>
 
-            <div className="space-y-2">
+            <div className="space-y-2.5">
               <label className="text-sm font-medium">Color</label>
               <div className="flex flex-wrap gap-2">
                 {COLOR_NAMES.map((color) => (
@@ -316,7 +316,7 @@ export default function ClientsPage() {
               </div>
             </div>
 
-            <div className="space-y-2">
+            <div className="space-y-2.5">
               <label className="text-sm font-medium">Logo <span className="text-white/30 font-normal">(optional)</span></label>
               <input
                 ref={fileInputRef}
@@ -356,7 +356,7 @@ export default function ClientsPage() {
 
             {/* Preview */}
             {formName.trim() && (
-              <div className="space-y-2">
+              <div className="space-y-2.5">
                 <label className="text-sm font-medium text-white/40">Preview</label>
                 <Badge className={getClientClassName(formColor)}>{formName.trim()}</Badge>
               </div>

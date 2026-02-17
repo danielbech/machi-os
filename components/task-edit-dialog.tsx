@@ -32,7 +32,7 @@ export function TaskEditDialog({ task, onClose, onSave, onTaskChange }: TaskEdit
         {task && (
           <div className="space-y-4 py-4">
             {/* Title */}
-            <div className="space-y-2">
+            <div className="space-y-2.5">
               <label className="text-sm font-medium">Title</label>
               <Input
                 type="text"
@@ -42,7 +42,7 @@ export function TaskEditDialog({ task, onClose, onSave, onTaskChange }: TaskEdit
             </div>
 
             {/* Description */}
-            <div className="space-y-2">
+            <div className="space-y-2.5">
               <label className="text-sm font-medium">Description</label>
               <Textarea
                 value={task.description || ""}
@@ -53,7 +53,7 @@ export function TaskEditDialog({ task, onClose, onSave, onTaskChange }: TaskEdit
             </div>
 
             {/* Client */}
-            <div className="space-y-2">
+            <div className="space-y-2.5">
               <label className="text-sm font-medium">Client</label>
               <div className="flex flex-wrap gap-2">
                 {clients.filter((c) => c.active).map((client) => (
@@ -82,7 +82,7 @@ export function TaskEditDialog({ task, onClose, onSave, onTaskChange }: TaskEdit
             </div>
 
             {/* Team Members */}
-            <div className="space-y-2">
+            <div className="space-y-2.5">
               <label className="text-sm font-medium">Team Members</label>
               <div className="flex flex-wrap gap-2">
                 {TEAM_MEMBERS.map((member) => {
