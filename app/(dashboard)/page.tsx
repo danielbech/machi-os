@@ -307,7 +307,7 @@ export default function BoardPage() {
                         onMouseEnter={(e: any) => {
                           if (!addingToColumn) e.currentTarget.focus();
                         }}
-                        onKeyDown={(e: any) => {
+                        onKeyDownCapture={(e: any) => {
                           const key = e.key;
                           if (key === " ") {
                             e.preventDefault();
