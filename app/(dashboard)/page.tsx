@@ -16,7 +16,7 @@ import {
   KanbanOverlay,
 } from "@/components/ui/kanban";
 import { Badge } from "@/components/ui/badge";
-import { Check, Plus, Calendar } from "lucide-react";
+import { Check, Plus, Calendar, Keyboard } from "lucide-react";
 
 export default function BoardPage() {
   const { activeProjectId, clients, calendarEvents } = useWorkspace();
@@ -28,6 +28,7 @@ export default function BoardPage() {
   const [newlyCreatedCardId, setNewlyCreatedCardId] = useState<string | null>(null);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [editingColumn, setEditingColumn] = useState<string | null>(null);
+  const [showShortcuts, setShowShortcuts] = useState(false);
 
   // Load tasks
   const refreshTasks = useCallback(async () => {
@@ -518,6 +519,54 @@ export default function BoardPage() {
         onSave={saveEditedTask}
         onTaskChange={setEditingTask}
       />
+
+      {/* Keyboard shortcuts */}
+      <div className="fixed bottom-5 right-5 z-50">
+        {showShortcuts && (
+          <div className="absolute bottom-12 right-0 w-64 rounded-xl border border-white/10 bg-zinc-900/95 backdrop-blur-md p-4 shadow-2xl mb-2 animate-in fade-in slide-in-from-bottom-2 duration-200">
+            <div className="text-xs font-medium text-white/40 uppercase tracking-wider mb-3">Keyboard Shortcuts</div>
+            <div className="space-y-2.5">
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-white/70">Toggle complete</span>
+                <kbd className="px-1.5 py-0.5 rounded bg-white/10 text-[11px] font-mono text-white/50">space</kbd>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-white/70">Delete card</span>
+                <kbd className="px-1.5 py-0.5 rounded bg-white/10 text-[11px] font-mono text-white/50">⌫</kbd>
+              </div>
+              <div className="border-t border-white/5 my-1" />
+              {TEAM_MEMBERS.map((member, i) => (
+                <div key={member.id} className="flex items-center justify-between">
+                  <span className="text-sm text-white/70">Assign {member.name}</span>
+                  <kbd className="px-1.5 py-0.5 rounded bg-white/10 text-[11px] font-mono text-white/50">{i + 1}</kbd>
+                </div>
+              ))}
+              {clients.filter((c) => c.active).length > 0 && (
+                <>
+                  <div className="border-t border-white/5 my-1" />
+                  {clients.filter((c) => c.active).map((client) => (
+                    <div key={client.id} className="flex items-center justify-between">
+                      <span className="text-sm text-white/70 truncate mr-2">{client.name}</span>
+                      <kbd className="px-1.5 py-0.5 rounded bg-white/10 text-[11px] font-mono text-white/50 shrink-0">{client.slug}</kbd>
+                    </div>
+                  ))}
+                </>
+              )}
+            </div>
+          </div>
+        )}
+        <button
+          onClick={() => setShowShortcuts(!showShortcuts)}
+          className={`flex items-center justify-center size-10 rounded-full border shadow-lg transition-all ${
+            showShortcuts
+              ? "bg-white/10 border-white/20 text-white"
+              : "bg-zinc-900/90 border-white/10 text-white/40 hover:text-white/70 hover:border-white/20"
+          }`}
+          aria-label="Keyboard shortcuts"
+        >
+          <Keyboard className="size-4" />
+        </button>
+      </div>
     </main>
   );
 }
