@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Calendar, RefreshCw, Plus, X } from "lucide-react";
+import { Calendar, RefreshCw, Plus, X, ChevronDown } from "lucide-react";
 
 interface SettingsDialogProps {
   open: boolean;
@@ -52,6 +52,7 @@ export function SettingsDialog({
   const [inviteMessage, setInviteMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [pendingInvites, setPendingInvites] = useState<PendingInvite[]>([]);
   const [syncing, setSyncing] = useState(false);
+  const [expandedConnections, setExpandedConnections] = useState<Set<string>>(new Set());
 
   // Load pending invites when dialog opens
   useEffect(() => {
@@ -162,66 +163,90 @@ export function SettingsDialog({
             </div>
 
             {/* Connected accounts */}
-            {calendarConnections.map((conn) => (
-              <div key={conn.id} className="rounded-lg border border-white/5 bg-white/[0.02] overflow-hidden">
-                <div className="flex items-center justify-between p-3">
-                  <div className="flex items-center gap-3">
-                    <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-white/5">
-                      <Calendar className="size-4" />
-                    </div>
-                    <div>
-                      <div className="text-sm font-medium">{conn.google_email || 'Google Account'}</div>
-                      <div className="text-xs text-white/40">
-                        {new Date(conn.expires_at) < new Date() ? 'Expired — reconnect' : 'Connected'}
-                      </div>
-                    </div>
-                  </div>
-                  <Button
-                    size="icon-xs"
-                    variant="ghost"
-                    className="text-white/30 hover:text-red-400 hover:bg-red-500/10"
-                    onClick={() => onDisconnectAccount(conn.id)}
-                    aria-label={`Disconnect ${conn.google_email}`}
-                  >
-                    <X className="size-3.5" />
-                  </Button>
-                </div>
+            {calendarConnections.map((conn) => {
+              const isExpanded = expandedConnections.has(conn.id);
+              const selectedCount = conn.selected_calendars.length;
+              const totalCount = conn.availableCalendars.length;
 
-                {/* Calendar picker for this account */}
-                {conn.availableCalendars.length > 0 && (
-                  <div className="border-t border-white/5 p-3 space-y-2">
-                    {conn.availableCalendars.map((cal) => (
-                      <label
-                        key={cal.id}
-                        className="flex items-center gap-2.5 py-1 cursor-pointer group"
-                      >
-                        <input
-                          type="checkbox"
-                          checked={conn.selected_calendars.includes(cal.id)}
-                          onChange={() => handleToggleCalendar(conn.id, cal.id)}
-                          className="sr-only peer"
-                        />
-                        <div className="flex items-center justify-center w-4 h-4 rounded border border-white/20 peer-checked:bg-white/90 peer-checked:border-white/90 transition-colors">
-                          {conn.selected_calendars.includes(cal.id) && (
-                            <svg className="w-3 h-3 text-black" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
-                              <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                            </svg>
-                          )}
+              return (
+                <div key={conn.id} className="rounded-lg border border-white/5 bg-white/[0.02] overflow-hidden">
+                  <div className="flex items-center justify-between p-3">
+                    <button
+                      type="button"
+                      className="flex items-center gap-3 flex-1 min-w-0 text-left"
+                      onClick={() => {
+                        setExpandedConnections(prev => {
+                          const next = new Set(prev);
+                          if (next.has(conn.id)) next.delete(conn.id);
+                          else next.add(conn.id);
+                          return next;
+                        });
+                      }}
+                    >
+                      <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-white/5 shrink-0">
+                        <Calendar className="size-4" />
+                      </div>
+                      <div className="min-w-0">
+                        <div className="text-sm font-medium truncate">{conn.google_email || 'Google Account'}</div>
+                        <div className="text-xs text-white/40">
+                          {new Date(conn.expires_at) < new Date()
+                            ? 'Expired — reconnect'
+                            : totalCount > 0
+                              ? `${selectedCount} of ${totalCount} calendars`
+                              : 'Connected'}
                         </div>
-                        <div
-                          className="w-2.5 h-2.5 rounded-full shrink-0"
-                          style={{ backgroundColor: cal.backgroundColor }}
-                        />
-                        <span className="text-sm text-white/70 group-hover:text-white/90 truncate">
-                          {cal.summary}
-                          {cal.primary && <span className="text-white/30 ml-1">(primary)</span>}
-                        </span>
-                      </label>
-                    ))}
+                      </div>
+                      {totalCount > 0 && (
+                        <ChevronDown className={`size-3.5 text-white/30 shrink-0 transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
+                      )}
+                    </button>
+                    <Button
+                      size="icon-xs"
+                      variant="ghost"
+                      className="text-white/30 hover:text-red-400 hover:bg-red-500/10 ml-2 shrink-0"
+                      onClick={() => onDisconnectAccount(conn.id)}
+                      aria-label={`Disconnect ${conn.google_email}`}
+                    >
+                      <X className="size-3.5" />
+                    </Button>
                   </div>
-                )}
-              </div>
-            ))}
+
+                  {/* Collapsible calendar picker */}
+                  {isExpanded && conn.availableCalendars.length > 0 && (
+                    <div className="border-t border-white/5 p-3 space-y-2">
+                      {conn.availableCalendars.map((cal) => (
+                        <label
+                          key={cal.id}
+                          className="flex items-center gap-2.5 py-1 cursor-pointer group"
+                        >
+                          <input
+                            type="checkbox"
+                            checked={conn.selected_calendars.includes(cal.id)}
+                            onChange={() => handleToggleCalendar(conn.id, cal.id)}
+                            className="sr-only peer"
+                          />
+                          <div className="flex items-center justify-center w-4 h-4 rounded border border-white/20 peer-checked:bg-white/90 peer-checked:border-white/90 transition-colors">
+                            {conn.selected_calendars.includes(cal.id) && (
+                              <svg className="w-3 h-3 text-black" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                              </svg>
+                            )}
+                          </div>
+                          <div
+                            className="w-2.5 h-2.5 rounded-full shrink-0"
+                            style={{ backgroundColor: cal.backgroundColor }}
+                          />
+                          <span className="text-sm text-white/70 group-hover:text-white/90 truncate">
+                            {cal.summary}
+                            {cal.primary && <span className="text-white/30 ml-1">(primary)</span>}
+                          </span>
+                        </label>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
 
             {/* Add account button */}
             <Button
