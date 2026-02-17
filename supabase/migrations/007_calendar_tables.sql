@@ -34,7 +34,7 @@ ALTER TABLE calendar_events ENABLE ROW LEVEL SECURITY;
 -- calendar_connections: workspace members can view all connections
 CREATE POLICY "Members can view calendar connections"
   ON calendar_connections FOR SELECT
-  USING (project_id IN (SELECT get_user_project_ids()));
+  USING (project_id IN (SELECT public.get_user_project_ids(auth.uid())));
 
 -- calendar_connections: users can manage their own connection
 CREATE POLICY "Users can insert own calendar connection"
@@ -52,7 +52,7 @@ CREATE POLICY "Users can delete own calendar connection"
 -- calendar_events: workspace members can view all events
 CREATE POLICY "Members can view calendar events"
   ON calendar_events FOR SELECT
-  USING (project_id IN (SELECT get_user_project_ids()));
+  USING (project_id IN (SELECT public.get_user_project_ids(auth.uid())));
 
 -- calendar_events: users can manage their own events
 CREATE POLICY "Users can insert own calendar events"
