@@ -375,8 +375,8 @@ export default function BoardPage() {
                               <StickyNote className="size-3" />
                               {newCardType === "note" ? "Note" : "Task"}
                             </button>
-                            <span className="ml-auto text-muted-foreground/30">↵ Save</span>
-                            <span className="text-muted-foreground/30">⎋ Cancel</span>
+                            <span className="ml-auto text-white/15">↵ Save</span>
+                            <span className="text-white/15">⎋ Cancel</span>
                           </div>
                         </div>
                       ) : (
@@ -556,8 +556,8 @@ export default function BoardPage() {
                           <StickyNote className="size-3" />
                           {newCardType === "note" ? "Note" : "Task"}
                         </button>
-                        <span className="ml-auto">↵ Save</span>
-                        <span>⎋ Cancel</span>
+                        <span className="ml-auto text-white/15">↵ Save</span>
+                        <span className="text-white/15">⎋ Cancel</span>
                       </div>
                     </div>
                   ) : (
