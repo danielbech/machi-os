@@ -235,10 +235,10 @@ export default function BoardPage() {
                   </div>
                 </div>
 
-                <div className="flex flex-col gap-1 overflow-y-auto">
+                <div className="flex flex-col overflow-y-auto">
                   {/* Calendar Events */}
                   {calendarEvents[columnId]?.map((event) => (
-                    <div key={event.id} className="rounded-lg border border-blue-500/20 bg-blue-500/5 p-2 cursor-default">
+                    <div key={event.id} className="rounded-lg border border-blue-500/20 bg-blue-500/5 p-2 mb-1 cursor-default">
                       <div className="flex items-start gap-2">
                         <Calendar className="size-3.5 text-blue-400 mt-0.5 shrink-0" />
                         <div className="flex-1 min-w-0">
@@ -294,7 +294,7 @@ export default function BoardPage() {
                             setAddingAtIndex(index);
                             setNewCardTitle("");
                           }}
-                          className="flex h-1 w-full rounded"
+                          className="flex w-full py-[3px]"
                         />
                       )}
 
@@ -410,7 +410,7 @@ export default function BoardPage() {
                   ))}
 
                   {addingToColumn === columnId && addingAtIndex === null ? (
-                    <div className="rounded-lg border border-white/5 bg-white/[0.02] p-3">
+                    <div className="mt-1 rounded-lg border border-white/5 bg-white/[0.02] p-3">
                       <input
                         type="text"
                         value={newCardTitle}
@@ -440,7 +440,7 @@ export default function BoardPage() {
                         setAddingAtIndex(null);
                         setNewCardTitle("");
                       }}
-                      className="flex items-center gap-2 rounded-lg border border-transparent bg-transparent p-2 text-xs text-muted-foreground/40 transition-colors hover:text-muted-foreground/60"
+                      className="flex items-center gap-2 rounded-lg border border-transparent bg-transparent mt-1 p-2 text-xs text-muted-foreground/40 transition-colors hover:text-muted-foreground/60"
                     >
                       <Plus className="size-3.5" />
                       Add card
