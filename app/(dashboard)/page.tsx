@@ -29,6 +29,7 @@ export default function BoardPage() {
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [editingColumn, setEditingColumn] = useState<string | null>(null);
   const [showShortcuts, setShowShortcuts] = useState(false);
+  const [clipboard, setClipboard] = useState<{ task: Task; column: string } | null>(null);
 
   // Load tasks
   const refreshTasks = useCallback(async () => {
@@ -200,6 +201,29 @@ export default function BoardPage() {
     if (updatedTask) await saveTask(activeProjectId, updatedTask);
   };
 
+  const pasteTask = async (columnId: string) => {
+    if (!clipboard || !activeProjectId) return;
+    const tempId = `task-${Date.now()}`;
+    const newCard: Task = {
+      id: tempId,
+      title: clipboard.task.title,
+      description: clipboard.task.description,
+      assignees: clipboard.task.assignees ? [...clipboard.task.assignees] : undefined,
+      client: clipboard.task.client,
+      priority: clipboard.task.priority,
+      day: columnId,
+    };
+    const columnItems = [...columns[columnId], newCard];
+    setColumns({ ...columns, [columnId]: columnItems });
+    const realId = await saveTask(activeProjectId, newCard);
+    const updatedItems = columnItems.map((item) =>
+      item.id === tempId ? { ...item, id: realId } : item
+    );
+    setColumns({ ...columns, [columnId]: updatedItems });
+    setNewlyCreatedCardId(realId);
+    await updateDayTasks(activeProjectId, columnId, updatedItems);
+  };
+
   const removeTask = async (taskId: string) => {
     if (!activeProjectId) return;
     const updated = { ...columns };
@@ -348,7 +372,13 @@ export default function BoardPage() {
                         }}
                         onKeyDownCapture={(e: any) => {
                           const key = e.key;
-                          if (key === "Backspace") {
+                          if ((e.metaKey || e.ctrlKey) && key === "c") {
+                            e.preventDefault();
+                            setClipboard({ task: item, column: columnId });
+                          } else if ((e.metaKey || e.ctrlKey) && key === "v") {
+                            e.preventDefault();
+                            pasteTask(columnId);
+                          } else if (key === "Backspace") {
                             e.preventDefault();
                             removeTask(item.id);
                           } else if (key === " ") {
@@ -543,6 +573,14 @@ export default function BoardPage() {
               <div className="flex items-center justify-between">
                 <span className="text-sm text-white/70">Delete card</span>
                 <kbd className="px-1.5 py-0.5 rounded bg-white/10 text-[11px] font-mono text-white/50">⌫</kbd>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-white/70">Copy card</span>
+                <kbd className="px-1.5 py-0.5 rounded bg-white/10 text-[11px] font-mono text-white/50">⌘C</kbd>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-white/70">Paste card</span>
+                <kbd className="px-1.5 py-0.5 rounded bg-white/10 text-[11px] font-mono text-white/50">⌘V</kbd>
               </div>
               <div className="border-t border-white/5 my-1" />
               {TEAM_MEMBERS.map((member, i) => (
