@@ -30,7 +30,7 @@ export function TaskEditDialog({ task, onClose, onSave, onTaskChange }: TaskEdit
           <DialogTitle>Edit Task</DialogTitle>
         </DialogHeader>
         {task && (
-          <div className="space-y-4 py-4">
+          <form onSubmit={(e) => { e.preventDefault(); onSave(task); }} className="space-y-4 py-4">
             {/* Title */}
             <div className="space-y-2.5">
               <label className="text-sm font-medium">Title</label>
@@ -47,6 +47,7 @@ export function TaskEditDialog({ task, onClose, onSave, onTaskChange }: TaskEdit
               <Textarea
                 value={task.description || ""}
                 onChange={(e) => onTaskChange({ ...task, description: e.target.value })}
+                onKeyDown={(e) => { if (e.key === "Enter") e.stopPropagation(); }}
                 placeholder="Optional description..."
                 rows={3}
               />
@@ -122,14 +123,14 @@ export function TaskEditDialog({ task, onClose, onSave, onTaskChange }: TaskEdit
 
             {/* Actions */}
             <div className="flex justify-end gap-2 pt-4">
-              <Button variant="ghost" onClick={onClose}>
+              <Button type="button" variant="ghost" onClick={onClose}>
                 Cancel
               </Button>
-              <Button onClick={() => onSave(task)}>
+              <Button type="submit">
                 Save
               </Button>
             </div>
-          </div>
+          </form>
         )}
       </DialogContent>
     </Dialog>
