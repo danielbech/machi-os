@@ -55,21 +55,17 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Failed to fetch members" }, { status: 500 });
     }
 
-    // Resolve user IDs to emails via auth.admin
+    // Resolve user IDs to emails — fetch each member individually
     const userIds = (memberships || []).map((m) => m.user_id);
     const emailMap: Record<string, string> = {};
 
-    // Supabase admin API: list users and filter
-    // For small teams this is fine — fetch all and match
-    const { data: { users }, error: usersError } = await admin.auth.admin.listUsers({
-      perPage: 100,
-    });
+    const userResults = await Promise.all(
+      userIds.map((id) => admin.auth.admin.getUserById(id))
+    );
 
-    if (!usersError && users) {
-      for (const u of users) {
-        if (userIds.includes(u.id) && u.email) {
-          emailMap[u.id] = u.email;
-        }
+    for (const result of userResults) {
+      if (result.data?.user?.id && result.data.user.email) {
+        emailMap[result.data.user.id] = result.data.user.email;
       }
     }
 

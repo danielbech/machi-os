@@ -69,7 +69,7 @@ export async function getCalendarConnections(
 
   const { data, error } = await supabase
     .from('calendar_connections')
-    .select('*')
+    .select('id, project_id, user_id, access_token, expires_at, selected_calendars, google_email')
     .eq('project_id', projectId)
     .eq('user_id', user.id)
     .order('created_at')
@@ -174,7 +174,7 @@ export async function loadSharedCalendarEvents(
 
   const { data, error } = await supabase
     .from('calendar_events')
-    .select('*')
+    .select('id, project_id, user_id, google_event_id, calendar_id, summary, description, start_time, end_time, location, synced_at, connection_id')
     .eq('project_id', projectId)
     .gte('start_time', weekStart.toISOString())
     .lte('start_time', weekEnd.toISOString())
