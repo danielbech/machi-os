@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, KeyboardEvent, useEffect } from "react";
-import { loadTasksByDay, saveTask, updateDayTasks } from "@/lib/supabase/tasks-simple";
+import { loadTasksByDay, saveTask, updateDayTasks, deleteTask } from "@/lib/supabase/tasks-simple";
 import { useWorkspace } from "@/lib/workspace-context";
 import { TaskEditDialog } from "@/components/task-edit-dialog";
 import type { Task } from "@/lib/types";
@@ -173,6 +173,20 @@ export default function BoardPage() {
     if (updatedTask) await saveTask(activeProjectId, updatedTask);
   };
 
+  const removeTask = async (taskId: string) => {
+    if (!activeProjectId) return;
+    const updated = { ...columns };
+    for (const col of Object.keys(updated)) {
+      const idx = updated[col].findIndex((t) => t.id === taskId);
+      if (idx !== -1) {
+        updated[col] = updated[col].filter((t) => t.id !== taskId);
+        break;
+      }
+    }
+    setColumns(updated);
+    await deleteTask(taskId);
+  };
+
   const saveEditedTask = async (updatedTask: Task) => {
     if (!editingColumn || !activeProjectId) return;
     const updated = { ...columns };
@@ -309,7 +323,10 @@ export default function BoardPage() {
                         }}
                         onKeyDownCapture={(e: any) => {
                           const key = e.key;
-                          if (key === " ") {
+                          if (key === "Backspace") {
+                            e.preventDefault();
+                            removeTask(item.id);
+                          } else if (key === " ") {
                             e.preventDefault();
                             toggleComplete(item.id);
                           } else if (key >= "1" && key <= "9") {
