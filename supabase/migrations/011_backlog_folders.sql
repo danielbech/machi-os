@@ -13,19 +13,19 @@ ALTER TABLE backlog_folders ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "Users can view backlog folders in their projects"
   ON backlog_folders FOR SELECT
-  USING (area_id IN (SELECT id FROM areas WHERE project_id IN (SELECT get_user_project_ids())));
+  USING (area_id IN (SELECT id FROM areas WHERE project_id IN (SELECT get_user_project_ids(auth.uid()))));
 
 CREATE POLICY "Users can create backlog folders in their projects"
   ON backlog_folders FOR INSERT
-  WITH CHECK (area_id IN (SELECT id FROM areas WHERE project_id IN (SELECT get_user_project_ids())));
+  WITH CHECK (area_id IN (SELECT id FROM areas WHERE project_id IN (SELECT get_user_project_ids(auth.uid()))));
 
 CREATE POLICY "Users can update backlog folders in their projects"
   ON backlog_folders FOR UPDATE
-  USING (area_id IN (SELECT id FROM areas WHERE project_id IN (SELECT get_user_project_ids())));
+  USING (area_id IN (SELECT id FROM areas WHERE project_id IN (SELECT get_user_project_ids(auth.uid()))));
 
 CREATE POLICY "Users can delete backlog folders in their projects"
   ON backlog_folders FOR DELETE
-  USING (area_id IN (SELECT id FROM areas WHERE project_id IN (SELECT get_user_project_ids())));
+  USING (area_id IN (SELECT id FROM areas WHERE project_id IN (SELECT get_user_project_ids(auth.uid()))));
 
 -- Add folder_id to tasks
 ALTER TABLE tasks ADD COLUMN folder_id UUID REFERENCES backlog_folders(id) ON DELETE SET NULL;
