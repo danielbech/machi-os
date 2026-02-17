@@ -5,7 +5,7 @@ const GOOGLE_REDIRECT_URI = typeof window !== 'undefined'
   ? `${window.location.origin}/auth/callback`
   : '';
 
-const SCOPES = 'https://www.googleapis.com/auth/calendar.readonly';
+const SCOPES = 'https://www.googleapis.com/auth/calendar.readonly email';
 
 export interface CalendarEvent {
   id: string;
@@ -45,6 +45,21 @@ export function initiateGoogleAuth() {
     'Google Calendar Authorization',
     `width=${width},height=${height},left=${left},top=${top}`
   );
+}
+
+// Fetch the email of the authenticated Google account
+export async function fetchGoogleEmail(token: string): Promise<string> {
+  const response = await fetch(
+    'https://www.googleapis.com/oauth2/v2/userinfo',
+    { headers: { 'Authorization': `Bearer ${token}` } }
+  );
+
+  if (!response.ok) {
+    throw new Error('Failed to fetch Google user info');
+  }
+
+  const data = await response.json();
+  return data.email;
 }
 
 // Fetch list of user's calendars

@@ -5,7 +5,7 @@ import type { User } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/client";
 import { removeUserFromWorkspace, getPendingInvites, cancelInvite, type WorkspaceMember } from "@/lib/supabase/workspace";
 import type { PendingInvite } from "@/lib/types";
-import type { GoogleCalendarInfo } from "@/lib/google-calendar";
+import type { ConnectionWithCalendars } from "@/lib/workspace-context";
 import {
   Dialog,
   DialogContent,
@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Calendar, RefreshCw } from "lucide-react";
+import { Calendar, RefreshCw, Plus, X } from "lucide-react";
 
 interface SettingsDialogProps {
   open: boolean;
@@ -23,14 +23,13 @@ interface SettingsDialogProps {
   activeProjectId: string | null;
   googleCalendarConnected: boolean;
   onGoogleCalendarConnect: () => void;
-  onGoogleCalendarDisconnect: () => void;
+  onDisconnectAccount: (connectionId: string) => Promise<void>;
   onSyncCalendarEvents: () => Promise<void>;
   workspaceMembers: WorkspaceMember[];
   onMembersChange: (members: WorkspaceMember[]) => void;
-  // Calendar picker
-  availableCalendars: GoogleCalendarInfo[];
-  selectedCalendars: string[];
-  onUpdateSelectedCalendars: (calendarIds: string[]) => Promise<void>;
+  // Multi-account calendar
+  calendarConnections: ConnectionWithCalendars[];
+  onUpdateSelectedCalendars: (connectionId: string, calendarIds: string[]) => Promise<void>;
 }
 
 export function SettingsDialog({
@@ -40,12 +39,11 @@ export function SettingsDialog({
   activeProjectId,
   googleCalendarConnected,
   onGoogleCalendarConnect,
-  onGoogleCalendarDisconnect,
+  onDisconnectAccount,
   onSyncCalendarEvents,
   workspaceMembers,
   onMembersChange,
-  availableCalendars,
-  selectedCalendars,
+  calendarConnections,
   onUpdateSelectedCalendars,
 }: SettingsDialogProps) {
   const [inviteEmail, setInviteEmail] = useState("");
@@ -115,17 +113,19 @@ export function SettingsDialog({
     }
   };
 
-  const handleToggleCalendar = async (calendarId: string) => {
-    const isSelected = selectedCalendars.includes(calendarId);
+  const handleToggleCalendar = async (connectionId: string, calendarId: string) => {
+    const conn = calendarConnections.find(c => c.id === connectionId);
+    if (!conn) return;
+
+    const isSelected = conn.selected_calendars.includes(calendarId);
     let newSelection: string[];
     if (isSelected) {
-      newSelection = selectedCalendars.filter(id => id !== calendarId);
-      // Don't allow deselecting all
+      newSelection = conn.selected_calendars.filter(id => id !== calendarId);
       if (newSelection.length === 0) return;
     } else {
-      newSelection = [...selectedCalendars, calendarId];
+      newSelection = [...conn.selected_calendars, calendarId];
     }
-    await onUpdateSelectedCalendars(newSelection);
+    await onUpdateSelectedCalendars(connectionId, newSelection);
   };
 
   const handleSyncNow = async () => {
@@ -146,85 +146,93 @@ export function SettingsDialog({
         <div className="space-y-6 py-4">
           {/* Integrations Section */}
           <div className="space-y-3">
-            <h3 className="text-sm font-medium">Integrations</h3>
-
-            {/* Google Calendar */}
-            <div className="rounded-lg border border-white/5 bg-white/[0.02] overflow-hidden">
-              <div className="flex items-center justify-between p-3">
-                <div className="flex items-center gap-3">
-                  <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-white/5">
-                    <Calendar className="size-4" />
-                  </div>
-                  <div>
-                    <div className="text-sm font-medium">Google Calendar</div>
-                    <div className="text-xs text-white/40">
-                      {googleCalendarConnected ? 'Connected' : 'Sync your calendar events'}
-                    </div>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  {googleCalendarConnected && (
-                    <Button
-                      size="icon-xs"
-                      variant="ghost"
-                      onClick={handleSyncNow}
-                      disabled={syncing}
-                      aria-label="Sync now"
-                    >
-                      <RefreshCw className={`size-3.5 ${syncing ? 'animate-spin' : ''}`} />
-                    </Button>
-                  )}
-                  <Button
-                    size="sm"
-                    variant={googleCalendarConnected ? "destructive" : "default"}
-                    onClick={() => {
-                      if (googleCalendarConnected) {
-                        onGoogleCalendarDisconnect();
-                      } else {
-                        onGoogleCalendarConnect();
-                      }
-                    }}
-                  >
-                    {googleCalendarConnected ? 'Disconnect' : 'Connect'}
-                  </Button>
-                </div>
-              </div>
-
-              {/* Calendar picker (only when connected and calendars are loaded) */}
-              {googleCalendarConnected && availableCalendars.length > 0 && (
-                <div className="border-t border-white/5 p-3 space-y-2">
-                  <div className="text-xs text-white/40">Select calendars to sync</div>
-                  {availableCalendars.map((cal) => (
-                    <label
-                      key={cal.id}
-                      className="flex items-center gap-2.5 py-1 cursor-pointer group"
-                    >
-                      <input
-                        type="checkbox"
-                        checked={selectedCalendars.includes(cal.id)}
-                        onChange={() => handleToggleCalendar(cal.id)}
-                        className="sr-only peer"
-                      />
-                      <div className="flex items-center justify-center w-4 h-4 rounded border border-white/20 peer-checked:bg-white/90 peer-checked:border-white/90 transition-colors">
-                        {selectedCalendars.includes(cal.id) && (
-                          <svg className="w-3 h-3 text-black" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                          </svg>
-                        )}
-                      </div>
-                      <div
-                        className="w-2.5 h-2.5 rounded-full shrink-0"
-                        style={{ backgroundColor: cal.backgroundColor }}
-                      />
-                      <span className="text-sm text-white/70 group-hover:text-white/90 truncate">
-                        {cal.summary}
-                        {cal.primary && <span className="text-white/30 ml-1">(primary)</span>}
-                      </span>
-                    </label>
-                  ))}
-                </div>
+            <div className="flex items-center justify-between">
+              <h3 className="text-sm font-medium">Google Calendar</h3>
+              {googleCalendarConnected && (
+                <Button
+                  size="icon-xs"
+                  variant="ghost"
+                  onClick={handleSyncNow}
+                  disabled={syncing}
+                  aria-label="Sync all accounts"
+                >
+                  <RefreshCw className={`size-3.5 ${syncing ? 'animate-spin' : ''}`} />
+                </Button>
               )}
             </div>
+
+            {/* Connected accounts */}
+            {calendarConnections.map((conn) => (
+              <div key={conn.id} className="rounded-lg border border-white/5 bg-white/[0.02] overflow-hidden">
+                <div className="flex items-center justify-between p-3">
+                  <div className="flex items-center gap-3">
+                    <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-white/5">
+                      <Calendar className="size-4" />
+                    </div>
+                    <div>
+                      <div className="text-sm font-medium">{conn.google_email || 'Google Account'}</div>
+                      <div className="text-xs text-white/40">
+                        {new Date(conn.expires_at) < new Date() ? 'Expired — reconnect' : 'Connected'}
+                      </div>
+                    </div>
+                  </div>
+                  <Button
+                    size="icon-xs"
+                    variant="ghost"
+                    className="text-white/30 hover:text-red-400 hover:bg-red-500/10"
+                    onClick={() => onDisconnectAccount(conn.id)}
+                    aria-label={`Disconnect ${conn.google_email}`}
+                  >
+                    <X className="size-3.5" />
+                  </Button>
+                </div>
+
+                {/* Calendar picker for this account */}
+                {conn.availableCalendars.length > 0 && (
+                  <div className="border-t border-white/5 p-3 space-y-2">
+                    {conn.availableCalendars.map((cal) => (
+                      <label
+                        key={cal.id}
+                        className="flex items-center gap-2.5 py-1 cursor-pointer group"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={conn.selected_calendars.includes(cal.id)}
+                          onChange={() => handleToggleCalendar(conn.id, cal.id)}
+                          className="sr-only peer"
+                        />
+                        <div className="flex items-center justify-center w-4 h-4 rounded border border-white/20 peer-checked:bg-white/90 peer-checked:border-white/90 transition-colors">
+                          {conn.selected_calendars.includes(cal.id) && (
+                            <svg className="w-3 h-3 text-black" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                            </svg>
+                          )}
+                        </div>
+                        <div
+                          className="w-2.5 h-2.5 rounded-full shrink-0"
+                          style={{ backgroundColor: cal.backgroundColor }}
+                        />
+                        <span className="text-sm text-white/70 group-hover:text-white/90 truncate">
+                          {cal.summary}
+                          {cal.primary && <span className="text-white/30 ml-1">(primary)</span>}
+                        </span>
+                      </label>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ))}
+
+            {/* Add account button */}
+            <Button
+              size="sm"
+              variant="ghost"
+              className="w-full justify-center gap-2 border border-dashed border-white/10 text-white/50 hover:text-white/80 hover:border-white/20"
+              onClick={onGoogleCalendarConnect}
+            >
+              <Plus className="size-3.5" />
+              {googleCalendarConnected ? 'Add another Google account' : 'Connect Google Calendar'}
+            </Button>
           </div>
 
           {/* Team Section */}

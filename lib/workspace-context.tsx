@@ -9,6 +9,7 @@ import { getUserWorkspaces } from "@/lib/supabase/workspace";
 import { loadClients } from "@/lib/supabase/clients";
 import {
   initiateGoogleAuth,
+  fetchGoogleEmail,
   fetchCalendarList,
   getEventsGroupedByDay,
   type CalendarEvent,
@@ -16,12 +17,18 @@ import {
 } from "@/lib/google-calendar";
 import {
   saveCalendarConnection,
-  getCalendarConnection,
+  getCalendarConnections,
   updateSelectedCalendars as updateSelectedCalendarsDb,
   removeCalendarConnection,
   syncCalendarEventsToDb,
   loadSharedCalendarEvents,
+  type CalendarConnection,
 } from "@/lib/supabase/calendar";
+
+// Per-connection calendar info for the settings UI
+export interface ConnectionWithCalendars extends CalendarConnection {
+  availableCalendars: GoogleCalendarInfo[];
+}
 
 interface WorkspaceContextValue {
   user: User | null;
@@ -37,11 +44,10 @@ interface WorkspaceContextValue {
   calendarEvents: Record<string, CalendarEvent[]>;
   syncCalendarEvents: () => Promise<void>;
   connectGoogleCalendar: () => void;
-  disconnectGoogleCalendar: () => Promise<void>;
-  // Calendar picker
-  availableCalendars: GoogleCalendarInfo[];
-  selectedCalendars: string[];
-  updateSelectedCalendars: (calendarIds: string[]) => Promise<void>;
+  disconnectGoogleAccount: (connectionId: string) => Promise<void>;
+  // Multi-account calendar
+  calendarConnections: ConnectionWithCalendars[];
+  updateSelectedCalendars: (connectionId: string, calendarIds: string[]) => Promise<void>;
 }
 
 const WorkspaceContext = createContext<WorkspaceContextValue | null>(null);
@@ -74,11 +80,11 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
   const [clients, setClients] = useState<Client[]>([]);
 
   // Google Calendar state
-  const [googleCalendarConnected, setGoogleCalendarConnected] = useState(false);
+  const [calendarConnections, setCalendarConnections] = useState<ConnectionWithCalendars[]>([]);
   const [calendarEvents, setCalendarEvents] = useState<Record<string, CalendarEvent[]>>({});
-  const [availableCalendars, setAvailableCalendars] = useState<GoogleCalendarInfo[]>([]);
-  const [selectedCalendars, setSelectedCalendars] = useState<string[]>(['primary']);
   const [currentWeekStart, setCurrentWeekStart] = useState<string>("");
+
+  const googleCalendarConnected = calendarConnections.length > 0;
 
   const setActiveProjectId = useCallback((id: string) => {
     setActiveProjectIdState(id);
@@ -188,105 +194,109 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     setCalendarEvents(grouped);
   }, []);
 
-  // Sync current user's Google Calendar events to DB, then reload shared events
+  // Sync all of the current user's Google Calendar connections to DB
   const syncCalendarEvents = useCallback(async () => {
     if (!activeProjectId || !user) return;
 
     try {
-      const connection = await getCalendarConnection(activeProjectId);
-      if (!connection) return;
-
-      // Check if token is expired
-      if (new Date(connection.expires_at) < new Date()) {
-        setGoogleCalendarConnected(false);
-        setAvailableCalendars([]);
-        setSelectedCalendars(['primary']);
-        return;
-      }
+      const connections = await getCalendarConnections(activeProjectId);
+      if (connections.length === 0) return;
 
       const { monday, friday } = getWeekRange();
+      const updatedConnections: ConnectionWithCalendars[] = [];
 
-      // Fetch events from Google for all selected calendars
-      const { flat: allEvents } = await getEventsGroupedByDay(
-        connection.access_token,
-        monday,
-        friday,
-        connection.selected_calendars
-      );
+      for (const conn of connections) {
+        // Check if token is expired
+        if (new Date(conn.expires_at) < new Date()) {
+          updatedConnections.push({ ...conn, availableCalendars: [] });
+          continue;
+        }
 
-      // Write to DB
-      await syncCalendarEventsToDb(
-        activeProjectId,
-        user.id,
-        allEvents.map(e => ({
-          google_event_id: e.id,
-          calendar_id: e.calendarId || 'primary',
-          summary: e.summary,
-          description: e.description,
-          start_time: e.start,
-          end_time: e.end,
-          location: e.location,
-        }))
-      );
+        try {
+          // Fetch events from Google for all selected calendars
+          const { flat: allEvents } = await getEventsGroupedByDay(
+            conn.access_token,
+            monday,
+            friday,
+            conn.selected_calendars
+          );
 
-      // Reload shared events
+          // Write to DB
+          await syncCalendarEventsToDb(
+            activeProjectId,
+            user.id,
+            conn.id,
+            allEvents.map(e => ({
+              google_event_id: e.id,
+              calendar_id: e.calendarId || 'primary',
+              summary: e.summary,
+              description: e.description,
+              start_time: e.start,
+              end_time: e.end,
+              location: e.location,
+            }))
+          );
+
+          // Fetch available calendars
+          const calendars = await fetchCalendarList(conn.access_token).catch(() => []);
+          updatedConnections.push({ ...conn, availableCalendars: calendars });
+        } catch (error) {
+          console.error(`Failed to sync connection ${conn.google_email}:`, error);
+          updatedConnections.push({ ...conn, availableCalendars: [] });
+        }
+      }
+
+      setCalendarConnections(updatedConnections);
       await loadSharedEvents(activeProjectId);
     } catch (error) {
       console.error("Failed to sync calendar events:", error);
-      if (error instanceof Error && error.message === "Authentication expired") {
-        setGoogleCalendarConnected(false);
-        setAvailableCalendars([]);
-        setSelectedCalendars(['primary']);
-      }
     }
   }, [activeProjectId, user, loadSharedEvents]);
 
-  // Check calendar connection + load shared events on project change
+  // Check calendar connections + load shared events on project change
   useEffect(() => {
     if (!activeProjectId || !user) {
-      setGoogleCalendarConnected(false);
+      setCalendarConnections([]);
       setCalendarEvents({});
-      setAvailableCalendars([]);
-      setSelectedCalendars(['primary']);
       return;
     }
 
     let cancelled = false;
 
-    async function checkConnection() {
+    async function checkConnections() {
       try {
-        // Load shared events regardless of own connection
+        // Load shared events regardless of own connections
         await loadSharedEvents(activeProjectId!);
 
-        // Check own connection
-        const connection = await getCalendarConnection(activeProjectId!);
+        // Check own connections
+        const connections = await getCalendarConnections(activeProjectId!);
         if (cancelled) return;
 
-        if (connection) {
-          const isExpired = new Date(connection.expires_at) < new Date();
-          setGoogleCalendarConnected(!isExpired);
-          setSelectedCalendars(connection.selected_calendars);
+        if (connections.length > 0) {
+          // Fetch available calendars for each non-expired connection
+          const withCalendars: ConnectionWithCalendars[] = await Promise.all(
+            connections.map(async (conn) => {
+              const isExpired = new Date(conn.expires_at) < new Date();
+              if (isExpired) return { ...conn, availableCalendars: [] };
 
-          if (!isExpired) {
-            // Fetch available calendars from Google
-            try {
-              const calendars = await fetchCalendarList(connection.access_token);
-              if (!cancelled) setAvailableCalendars(calendars);
-            } catch {
-              // Token might be invalid — still show as connected until next sync fails
-            }
-          }
+              try {
+                const calendars = await fetchCalendarList(conn.access_token);
+                return { ...conn, availableCalendars: calendars };
+              } catch {
+                return { ...conn, availableCalendars: [] };
+              }
+            })
+          );
+          if (!cancelled) setCalendarConnections(withCalendars);
         } else {
-          setGoogleCalendarConnected(false);
-          setAvailableCalendars([]);
-          setSelectedCalendars(['primary']);
+          setCalendarConnections([]);
         }
       } catch (error) {
-        console.error("Error checking calendar connection:", error);
+        console.error("Error checking calendar connections:", error);
       }
     }
 
-    checkConnection();
+    checkConnections();
     return () => { cancelled = true; };
   }, [activeProjectId, user, loadSharedEvents]);
 
@@ -299,19 +309,19 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
         const expiresAt = new Date(Date.now() + expiresIn * 1000);
 
         try {
+          // Get the Google account email
+          const googleEmail = await fetchGoogleEmail(accessToken);
+
           // Fetch available calendars
           const calendars = await fetchCalendarList(accessToken);
-          setAvailableCalendars(calendars);
-
-          // Default: select all calendars
           const allCalendarIds = calendars.map(c => c.id);
-          setSelectedCalendars(allCalendarIds);
 
-          // Save connection to DB
-          await saveCalendarConnection(activeProjectId, accessToken, expiresAt, allCalendarIds);
-          setGoogleCalendarConnected(true);
+          // Save connection to DB (upserts if same Google account)
+          const connectionId = await saveCalendarConnection(
+            activeProjectId, accessToken, expiresAt, googleEmail, allCalendarIds
+          );
 
-          // Sync events
+          // Sync events for this connection
           if (user) {
             const { monday, friday } = getWeekRange();
             const { flat: allEvents } = await getEventsGroupedByDay(
@@ -320,6 +330,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
             await syncCalendarEventsToDb(
               activeProjectId,
               user.id,
+              connectionId,
               allEvents.map(e => ({
                 google_event_id: e.id,
                 calendar_id: e.calendarId || 'primary',
@@ -332,6 +343,27 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
             );
             await loadSharedEvents(activeProjectId);
           }
+
+          // Update local state — add or replace the connection
+          setCalendarConnections(prev => {
+            const existing = prev.findIndex(c => c.google_email === googleEmail);
+            const newConn: ConnectionWithCalendars = {
+              id: connectionId,
+              project_id: activeProjectId,
+              user_id: user?.id || '',
+              access_token: accessToken,
+              expires_at: expiresAt.toISOString(),
+              selected_calendars: allCalendarIds,
+              google_email: googleEmail,
+              availableCalendars: calendars,
+            };
+            if (existing >= 0) {
+              const updated = [...prev];
+              updated[existing] = newConn;
+              return updated;
+            }
+            return [...prev, newConn];
+          });
         } catch (error) {
           console.error("Error handling OAuth callback:", error);
         }
@@ -372,27 +404,27 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     initiateGoogleAuth();
   }, []);
 
-  const disconnectGoogleCalendar = useCallback(async () => {
-    if (!activeProjectId) return;
+  const disconnectGoogleAccount = useCallback(async (connectionId: string) => {
     try {
-      await removeCalendarConnection(activeProjectId);
+      await removeCalendarConnection(connectionId);
     } catch (error) {
       console.error("Error disconnecting calendar:", error);
     }
-    setGoogleCalendarConnected(false);
-    setAvailableCalendars([]);
-    setSelectedCalendars(['primary']);
-    // Reload shared events (this user's events are now removed)
-    await loadSharedEvents(activeProjectId);
+    setCalendarConnections(prev => prev.filter(c => c.id !== connectionId));
+    if (activeProjectId) {
+      await loadSharedEvents(activeProjectId);
+    }
   }, [activeProjectId, loadSharedEvents]);
 
-  const handleUpdateSelectedCalendars = useCallback(async (calendarIds: string[]) => {
-    if (!activeProjectId) return;
-    setSelectedCalendars(calendarIds);
-    await updateSelectedCalendarsDb(activeProjectId, calendarIds);
-    // Re-sync with new calendar selection
+  const handleUpdateSelectedCalendars = useCallback(async (connectionId: string, calendarIds: string[]) => {
+    // Update local state immediately
+    setCalendarConnections(prev =>
+      prev.map(c => c.id === connectionId ? { ...c, selected_calendars: calendarIds } : c)
+    );
+    await updateSelectedCalendarsDb(connectionId, calendarIds);
+    // Re-sync
     await syncCalendarEvents();
-  }, [activeProjectId, syncCalendarEvents]);
+  }, [syncCalendarEvents]);
 
   const activeProject = userProjects.find((p) => p.id === activeProjectId);
 
@@ -411,9 +443,8 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
         calendarEvents,
         syncCalendarEvents,
         connectGoogleCalendar,
-        disconnectGoogleCalendar,
-        availableCalendars,
-        selectedCalendars,
+        disconnectGoogleAccount,
+        calendarConnections,
         updateSelectedCalendars: handleUpdateSelectedCalendars,
       }}
     >

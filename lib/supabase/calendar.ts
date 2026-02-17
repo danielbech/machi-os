@@ -7,6 +7,7 @@ export interface CalendarConnection {
   access_token: string
   expires_at: string
   selected_calendars: string[]
+  google_email: string | null
 }
 
 export interface DbCalendarEvent {
@@ -21,20 +22,22 @@ export interface DbCalendarEvent {
   end_time: string
   location: string | null
   synced_at: string
+  connection_id: string | null
 }
 
-// Upsert the current user's calendar connection for a workspace
+// Upsert a calendar connection for a specific Google account
 export async function saveCalendarConnection(
   projectId: string,
   accessToken: string,
   expiresAt: Date,
+  googleEmail: string,
   selectedCalendars: string[] = ['primary']
-): Promise<void> {
+): Promise<string> {
   const supabase = createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) throw new Error('Not authenticated')
 
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from('calendar_connections')
     .upsert({
       project_id: projectId,
@@ -42,65 +45,49 @@ export async function saveCalendarConnection(
       access_token: accessToken,
       expires_at: expiresAt.toISOString(),
       selected_calendars: selectedCalendars,
+      google_email: googleEmail,
       updated_at: new Date().toISOString(),
-    }, { onConflict: 'project_id,user_id' })
+    }, { onConflict: 'project_id,user_id,google_email' })
+    .select('id')
+    .single()
 
   if (error) {
     console.error('Error saving calendar connection:', error)
     throw error
   }
+
+  return data.id
 }
 
-// Get current user's calendar connection for a workspace
-export async function getCalendarConnection(
+// Get all of the current user's calendar connections for a workspace
+export async function getCalendarConnections(
   projectId: string
-): Promise<CalendarConnection | null> {
+): Promise<CalendarConnection[]> {
   const supabase = createClient()
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return null
+  if (!user) return []
 
   const { data, error } = await supabase
     .from('calendar_connections')
     .select('*')
     .eq('project_id', projectId)
     .eq('user_id', user.id)
-    .maybeSingle()
+    .order('created_at')
 
   if (error) {
-    console.error('Error getting calendar connection:', error)
-    return null
-  }
-
-  return data
-}
-
-// Get all calendar connections for a workspace (for syncing all users' events)
-export async function getAllCalendarConnections(
-  projectId: string
-): Promise<CalendarConnection[]> {
-  const supabase = createClient()
-
-  const { data, error } = await supabase
-    .from('calendar_connections')
-    .select('*')
-    .eq('project_id', projectId)
-
-  if (error) {
-    console.error('Error getting all calendar connections:', error)
+    console.error('Error getting calendar connections:', error)
     return []
   }
 
   return data || []
 }
 
-// Update which calendars to sync
+// Update which calendars to sync for a specific connection
 export async function updateSelectedCalendars(
-  projectId: string,
+  connectionId: string,
   calendarIds: string[]
 ): Promise<void> {
   const supabase = createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) throw new Error('Not authenticated')
 
   const { error } = await supabase
     .from('calendar_connections')
@@ -108,8 +95,7 @@ export async function updateSelectedCalendars(
       selected_calendars: calendarIds,
       updated_at: new Date().toISOString(),
     })
-    .eq('project_id', projectId)
-    .eq('user_id', user.id)
+    .eq('id', connectionId)
 
   if (error) {
     console.error('Error updating selected calendars:', error)
@@ -117,51 +103,35 @@ export async function updateSelectedCalendars(
   }
 }
 
-// Remove calendar connection (disconnect)
-export async function removeCalendarConnection(projectId: string): Promise<void> {
+// Remove a specific calendar connection (events cascade-delete via connection_id FK)
+export async function removeCalendarConnection(connectionId: string): Promise<void> {
   const supabase = createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) throw new Error('Not authenticated')
 
-  // Delete connection
-  const { error: connError } = await supabase
+  const { error } = await supabase
     .from('calendar_connections')
     .delete()
-    .eq('project_id', projectId)
-    .eq('user_id', user.id)
+    .eq('id', connectionId)
 
-  if (connError) {
-    console.error('Error removing calendar connection:', connError)
-    throw connError
-  }
-
-  // Delete user's events
-  const { error: eventsError } = await supabase
-    .from('calendar_events')
-    .delete()
-    .eq('project_id', projectId)
-    .eq('user_id', user.id)
-
-  if (eventsError) {
-    console.error('Error removing calendar events:', eventsError)
-    throw eventsError
+  if (error) {
+    console.error('Error removing calendar connection:', error)
+    throw error
   }
 }
 
-// Sync events: delete old events for user, bulk insert new ones
+// Sync events for a specific connection: delete old events, bulk insert new ones
 export async function syncCalendarEventsToDb(
   projectId: string,
   userId: string,
+  connectionId: string,
   events: { google_event_id: string; calendar_id: string; summary: string; description?: string; start_time: string; end_time: string; location?: string }[]
 ): Promise<void> {
   const supabase = createClient()
 
-  // Delete existing events for this user in this project
+  // Delete existing events for this connection
   const { error: deleteError } = await supabase
     .from('calendar_events')
     .delete()
-    .eq('project_id', projectId)
-    .eq('user_id', userId)
+    .eq('connection_id', connectionId)
 
   if (deleteError) {
     console.error('Error deleting old calendar events:', deleteError)
@@ -170,10 +140,10 @@ export async function syncCalendarEventsToDb(
 
   if (events.length === 0) return
 
-  // Insert new events
   const rows = events.map(e => ({
     project_id: projectId,
     user_id: userId,
+    connection_id: connectionId,
     google_event_id: e.google_event_id,
     calendar_id: e.calendar_id,
     summary: e.summary,
