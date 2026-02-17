@@ -44,7 +44,7 @@ export function TaskEditDialog({ task, onClose, onSave, onTaskChange }: TaskEdit
         {task && (
           <form onSubmit={(e) => { e.preventDefault(); onSave(task); }} className="space-y-4 py-4">
             {/* Title */}
-            <div className="space-y-2.5">
+            <div className="space-y-3">
               <label className="text-sm font-medium">Title</label>
               <Input
                 type="text"
@@ -54,7 +54,7 @@ export function TaskEditDialog({ task, onClose, onSave, onTaskChange }: TaskEdit
             </div>
 
             {/* Description */}
-            <div className="space-y-2.5">
+            <div className="space-y-3">
               <label className="text-sm font-medium">Description</label>
               <Textarea
                 value={task.description || ""}
@@ -67,7 +67,7 @@ export function TaskEditDialog({ task, onClose, onSave, onTaskChange }: TaskEdit
             </div>
 
             {/* Client dropdown */}
-            <div className="space-y-2.5">
+            <div className="space-y-3">
               <label className="text-sm font-medium">Client</label>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
@@ -118,7 +118,7 @@ export function TaskEditDialog({ task, onClose, onSave, onTaskChange }: TaskEdit
             </div>
 
             {/* Team Members dropdown */}
-            <div className="space-y-2.5">
+            <div className="space-y-3">
               <label className="text-sm font-medium">Assignees</label>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
