@@ -310,7 +310,7 @@ export function SettingsDialog({
                 >
                   <div>
                     <div className="text-sm font-medium">
-                      {member.user_id}
+                      {member.email || member.user_id}
                       {member.role === 'owner' && (
                         <span className="ml-2 text-xs px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-400">
                           Owner

@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 import { useState } from "react";
 import { useWorkspace } from "@/lib/workspace-context";
 import { SettingsDialog } from "@/components/settings-dialog";
-import { getWorkspaceMembers, type WorkspaceMember } from "@/lib/supabase/workspace";
+import type { WorkspaceMember } from "@/lib/supabase/workspace";
 import {
   Sidebar,
   SidebarContent,
@@ -44,8 +44,11 @@ export function AppSidebar() {
     setShowSettings(true);
     if (activeProjectId) {
       try {
-        const members = await getWorkspaceMembers(activeProjectId);
-        setWorkspaceMembers(members);
+        const res = await fetch(`/api/workspace-members?projectId=${activeProjectId}`);
+        if (res.ok) {
+          const data = await res.json();
+          setWorkspaceMembers(data.members);
+        }
       } catch (error) {
         console.error("Failed to load workspace members:", error);
       }
