@@ -1,8 +1,8 @@
 // Google Calendar OAuth and API utilities
 
 const GOOGLE_CLIENT_ID = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || '';
-const GOOGLE_REDIRECT_URI = typeof window !== 'undefined' 
-  ? `${window.location.origin}/auth/callback` 
+const GOOGLE_REDIRECT_URI = typeof window !== 'undefined'
+  ? `${window.location.origin}/auth/callback`
   : '';
 
 const SCOPES = 'https://www.googleapis.com/auth/calendar.readonly';
@@ -15,6 +15,14 @@ export interface CalendarEvent {
   end: string;
   location?: string;
   attendees?: string[];
+  calendarId?: string;
+}
+
+export interface GoogleCalendarInfo {
+  id: string;
+  summary: string;
+  primary: boolean;
+  backgroundColor: string;
 }
 
 // Start OAuth flow
@@ -25,14 +33,13 @@ export function initiateGoogleAuth() {
   authUrl.searchParams.set('response_type', 'token');
   authUrl.searchParams.set('scope', SCOPES);
   authUrl.searchParams.set('include_granted_scopes', 'true');
-  authUrl.searchParams.set('prompt', 'select_account'); // Force account selection
-  
-  // Open OAuth popup
+  authUrl.searchParams.set('prompt', 'select_account');
+
   const width = 500;
   const height = 600;
   const left = window.screenX + (window.outerWidth - width) / 2;
   const top = window.screenY + (window.outerHeight - height) / 2;
-  
+
   window.open(
     authUrl.toString(),
     'Google Calendar Authorization',
@@ -40,76 +47,52 @@ export function initiateGoogleAuth() {
   );
 }
 
-// Store access token
-export function storeAccessToken(token: string, expiresIn: number) {
-  const expiresAt = Date.now() + (expiresIn * 1000);
-  localStorage.setItem('google_access_token', token);
-  localStorage.setItem('google_token_expires_at', expiresAt.toString());
-}
+// Fetch list of user's calendars
+export async function fetchCalendarList(token: string): Promise<GoogleCalendarInfo[]> {
+  const response = await fetch(
+    'https://www.googleapis.com/calendar/v3/users/me/calendarList',
+    { headers: { 'Authorization': `Bearer ${token}` } }
+  );
 
-// Get access token
-export function getAccessToken(): string | null {
-  const token = localStorage.getItem('google_access_token');
-  const expiresAt = localStorage.getItem('google_token_expires_at');
-  
-  if (!token || !expiresAt) return null;
-  
-  if (Date.now() > parseInt(expiresAt)) {
-    // Token expired
-    clearAccessToken();
-    return null;
+  if (!response.ok) {
+    throw new Error('Failed to fetch calendar list');
   }
-  
-  return token;
+
+  const data = await response.json();
+  return (data.items || []).map((cal: any) => ({
+    id: cal.id,
+    summary: cal.summary || cal.id,
+    primary: cal.primary || false,
+    backgroundColor: cal.backgroundColor || '#4285f4',
+  }));
 }
 
-// Clear access token
-export function clearAccessToken() {
-  localStorage.removeItem('google_access_token');
-  localStorage.removeItem('google_token_expires_at');
-}
-
-// Check if connected
-export function isGoogleCalendarConnected(): boolean {
-  return getAccessToken() !== null;
-}
-
-// Fetch calendar events for a date range
+// Fetch calendar events for a date range using a provided token
 export async function fetchCalendarEvents(
+  token: string,
   startDate: Date,
   endDate: Date,
   calendarId: string = 'primary'
 ): Promise<CalendarEvent[]> {
-  const token = getAccessToken();
-  if (!token) {
-    throw new Error('Not authenticated with Google Calendar');
-  }
-
-  const timeMin = startDate.toISOString();
-  const timeMax = endDate.toISOString();
-
   const url = new URL('https://www.googleapis.com/calendar/v3/calendars/' + encodeURIComponent(calendarId) + '/events');
-  url.searchParams.set('timeMin', timeMin);
-  url.searchParams.set('timeMax', timeMax);
+  url.searchParams.set('timeMin', startDate.toISOString());
+  url.searchParams.set('timeMax', endDate.toISOString());
   url.searchParams.set('singleEvents', 'true');
   url.searchParams.set('orderBy', 'startTime');
 
   const response = await fetch(url.toString(), {
-    headers: {
-      'Authorization': `Bearer ${token}`,
-    },
+    headers: { 'Authorization': `Bearer ${token}` },
   });
 
   if (!response.ok) {
     if (response.status === 401) {
-      clearAccessToken();
       throw new Error('Authentication expired');
     }
     throw new Error('Failed to fetch calendar events');
   }
 
   const data = await response.json();
-  
+
   return (data.items || []).map((event: any) => ({
     id: event.id,
     summary: event.summary || 'Untitled Event',
@@ -118,24 +101,30 @@ export async function fetchCalendarEvents(
     end: event.end.dateTime || event.end.date,
     location: event.location,
     attendees: event.attendees?.map((a: any) => a.email) || [],
+    calendarId,
   }));
 }
 
-// Get events grouped by day
+// Get events grouped by day (using a provided token, fetching from multiple calendars)
 export async function getEventsGroupedByDay(
+  token: string,
   startDate: Date,
   endDate: Date,
-  calendarId?: string
-): Promise<Record<string, CalendarEvent[]>> {
-  const events = await fetchCalendarEvents(startDate, endDate, calendarId);
-  const grouped: Record<string, CalendarEvent[]> = {};
+  calendarIds: string[] = ['primary']
+): Promise<{ grouped: Record<string, CalendarEvent[]>; flat: CalendarEvent[] }> {
+  // Fetch from all selected calendars in parallel
+  const allEvents = await Promise.all(
+    calendarIds.map(calId => fetchCalendarEvents(token, startDate, endDate, calId).catch(() => []))
+  );
+  const events = allEvents.flat();
 
+  const grouped: Record<string, CalendarEvent[]> = {};
   const days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday'];
 
   events.forEach(event => {
     const eventDate = new Date(event.start);
-    const dayOfWeek = eventDate.getDay(); // 0 = Sunday, 1 = Monday, etc.
-    
+    const dayOfWeek = eventDate.getDay();
+
     if (dayOfWeek >= 1 && dayOfWeek <= 5) {
       const dayName = days[dayOfWeek - 1];
       if (!grouped[dayName]) {
@@ -145,5 +134,5 @@ export async function getEventsGroupedByDay(
     }
   });
 
-  return grouped;
+  return { grouped, flat: events };
 }

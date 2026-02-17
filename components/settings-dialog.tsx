@@ -3,12 +3,9 @@
 import { useState, useEffect } from "react";
 import type { User } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/client";
-import {
-  initiateGoogleAuth,
-  clearAccessToken,
-} from "@/lib/google-calendar";
 import { removeUserFromWorkspace, getPendingInvites, cancelInvite, type WorkspaceMember } from "@/lib/supabase/workspace";
 import type { PendingInvite } from "@/lib/types";
+import type { GoogleCalendarInfo } from "@/lib/google-calendar";
 import {
   Dialog,
   DialogContent,
@@ -17,7 +14,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Calendar } from "lucide-react";
+import { Calendar, RefreshCw } from "lucide-react";
 
 interface SettingsDialogProps {
   open: boolean;
@@ -27,8 +24,13 @@ interface SettingsDialogProps {
   googleCalendarConnected: boolean;
   onGoogleCalendarConnect: () => void;
   onGoogleCalendarDisconnect: () => void;
+  onSyncCalendarEvents: () => Promise<void>;
   workspaceMembers: WorkspaceMember[];
   onMembersChange: (members: WorkspaceMember[]) => void;
+  // Calendar picker
+  availableCalendars: GoogleCalendarInfo[];
+  selectedCalendars: string[];
+  onUpdateSelectedCalendars: (calendarIds: string[]) => Promise<void>;
 }
 
 export function SettingsDialog({
@@ -39,14 +41,19 @@ export function SettingsDialog({
   googleCalendarConnected,
   onGoogleCalendarConnect,
   onGoogleCalendarDisconnect,
+  onSyncCalendarEvents,
   workspaceMembers,
   onMembersChange,
+  availableCalendars,
+  selectedCalendars,
+  onUpdateSelectedCalendars,
 }: SettingsDialogProps) {
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteRole, setInviteRole] = useState<"admin" | "member">("member");
   const [inviteLoading, setInviteLoading] = useState(false);
   const [inviteMessage, setInviteMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [pendingInvites, setPendingInvites] = useState<PendingInvite[]>([]);
+  const [syncing, setSyncing] = useState(false);
 
   // Load pending invites when dialog opens
   useEffect(() => {
@@ -108,6 +115,28 @@ export function SettingsDialog({
     }
   };
 
+  const handleToggleCalendar = async (calendarId: string) => {
+    const isSelected = selectedCalendars.includes(calendarId);
+    let newSelection: string[];
+    if (isSelected) {
+      newSelection = selectedCalendars.filter(id => id !== calendarId);
+      // Don't allow deselecting all
+      if (newSelection.length === 0) return;
+    } else {
+      newSelection = [...selectedCalendars, calendarId];
+    }
+    await onUpdateSelectedCalendars(newSelection);
+  };
+
+  const handleSyncNow = async () => {
+    setSyncing(true);
+    try {
+      await onSyncCalendarEvents();
+    } finally {
+      setSyncing(false);
+    }
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[500px]">
@@ -120,33 +149,81 @@ export function SettingsDialog({
             <h3 className="text-sm font-medium">Integrations</h3>
 
             {/* Google Calendar */}
-            <div className="flex items-center justify-between p-3 rounded-lg border border-white/5 bg-white/[0.02]">
-              <div className="flex items-center gap-3">
-                <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-white/5">
-                  <Calendar className="size-4" />
-                </div>
-                <div>
-                  <div className="text-sm font-medium">Google Calendar</div>
-                  <div className="text-xs text-white/40">
-                    {googleCalendarConnected ? 'Connected' : 'Sync your calendar events'}
+            <div className="rounded-lg border border-white/5 bg-white/[0.02] overflow-hidden">
+              <div className="flex items-center justify-between p-3">
+                <div className="flex items-center gap-3">
+                  <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-white/5">
+                    <Calendar className="size-4" />
+                  </div>
+                  <div>
+                    <div className="text-sm font-medium">Google Calendar</div>
+                    <div className="text-xs text-white/40">
+                      {googleCalendarConnected ? 'Connected' : 'Sync your calendar events'}
+                    </div>
                   </div>
                 </div>
+                <div className="flex items-center gap-2">
+                  {googleCalendarConnected && (
+                    <Button
+                      size="icon-xs"
+                      variant="ghost"
+                      onClick={handleSyncNow}
+                      disabled={syncing}
+                      aria-label="Sync now"
+                    >
+                      <RefreshCw className={`size-3.5 ${syncing ? 'animate-spin' : ''}`} />
+                    </Button>
+                  )}
+                  <Button
+                    size="sm"
+                    variant={googleCalendarConnected ? "destructive" : "default"}
+                    onClick={() => {
+                      if (googleCalendarConnected) {
+                        onGoogleCalendarDisconnect();
+                      } else {
+                        onGoogleCalendarConnect();
+                      }
+                    }}
+                  >
+                    {googleCalendarConnected ? 'Disconnect' : 'Connect'}
+                  </Button>
+                </div>
               </div>
-              <Button
-                size="sm"
-                variant={googleCalendarConnected ? "destructive" : "default"}
-                onClick={() => {
-                  if (googleCalendarConnected) {
-                    clearAccessToken();
-                    onGoogleCalendarDisconnect();
-                  } else {
-                    initiateGoogleAuth();
-                    onGoogleCalendarConnect();
-                  }
-                }}
-              >
-                {googleCalendarConnected ? 'Disconnect' : 'Connect'}
-              </Button>
+
+              {/* Calendar picker (only when connected and calendars are loaded) */}
+              {googleCalendarConnected && availableCalendars.length > 0 && (
+                <div className="border-t border-white/5 p-3 space-y-2">
+                  <div className="text-xs text-white/40">Select calendars to sync</div>
+                  {availableCalendars.map((cal) => (
+                    <label
+                      key={cal.id}
+                      className="flex items-center gap-2.5 py-1 cursor-pointer group"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={selectedCalendars.includes(cal.id)}
+                        onChange={() => handleToggleCalendar(cal.id)}
+                        className="sr-only peer"
+                      />
+                      <div className="flex items-center justify-center w-4 h-4 rounded border border-white/20 peer-checked:bg-white/90 peer-checked:border-white/90 transition-colors">
+                        {selectedCalendars.includes(cal.id) && (
+                          <svg className="w-3 h-3 text-black" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                          </svg>
+                        )}
+                      </div>
+                      <div
+                        className="w-2.5 h-2.5 rounded-full shrink-0"
+                        style={{ backgroundColor: cal.backgroundColor }}
+                      />
+                      <span className="text-sm text-white/70 group-hover:text-white/90 truncate">
+                        {cal.summary}
+                        {cal.primary && <span className="text-white/30 ml-1">(primary)</span>}
+                      </span>
+                    </label>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
 

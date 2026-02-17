@@ -34,7 +34,8 @@ export function AppSidebar() {
   const pathname = usePathname();
   const {
     userProjects, activeProjectId, setActiveProjectId, activeProject, user,
-    googleCalendarConnected, disconnectGoogleCalendar,
+    googleCalendarConnected, connectGoogleCalendar, disconnectGoogleCalendar,
+    syncCalendarEvents, availableCalendars, selectedCalendars, updateSelectedCalendars,
   } = useWorkspace();
   const [showSettings, setShowSettings] = useState(false);
   const [workspaceMembers, setWorkspaceMembers] = useState<WorkspaceMember[]>([]);
@@ -151,10 +152,14 @@ export function AppSidebar() {
           user={user}
           activeProjectId={activeProjectId}
           googleCalendarConnected={googleCalendarConnected}
-          onGoogleCalendarConnect={() => {}}
+          onGoogleCalendarConnect={connectGoogleCalendar}
           onGoogleCalendarDisconnect={disconnectGoogleCalendar}
+          onSyncCalendarEvents={syncCalendarEvents}
           workspaceMembers={workspaceMembers}
           onMembersChange={setWorkspaceMembers}
+          availableCalendars={availableCalendars}
+          selectedCalendars={selectedCalendars}
+          onUpdateSelectedCalendars={updateSelectedCalendars}
         />
       )}
     </>
