@@ -16,7 +16,7 @@ import {
   KanbanOverlay,
 } from "@/components/ui/kanban";
 import { Badge } from "@/components/ui/badge";
-import { Check, Plus, Calendar, Keyboard } from "lucide-react";
+import { Check, Plus, Calendar, Keyboard, StickyNote } from "lucide-react";
 
 export default function BoardPage() {
   const { activeProjectId, clients, calendarEvents } = useWorkspace();
@@ -31,6 +31,7 @@ export default function BoardPage() {
   const [showShortcuts, setShowShortcuts] = useState(false);
   const [clipboard, setClipboard] = useState<{ task: Task; column: string } | null>(null);
   const [hoveredColumn, setHoveredColumn] = useState<string | null>(null);
+  const [newCardType, setNewCardType] = useState<"task" | "note">("task");
 
   // Load tasks
   const refreshTasks = useCallback(async () => {
@@ -107,11 +108,19 @@ export default function BoardPage() {
   const handleAddCard = async (columnId: string, index?: number) => {
     const title = newCardTitle.trim();
     if (!title || !activeProjectId) return;
+    const cardType = newCardType;
     setNewCardTitle("");
     setAddingToColumn(null);
     setAddingAtIndex(null);
+    setNewCardType("task");
     const tempId = `task-${Date.now()}`;
-    const newCard: Task = { id: tempId, title, priority: "medium", day: columnId };
+    const newCard: Task = {
+      id: tempId,
+      title,
+      priority: cardType === "note" ? undefined : "medium",
+      day: columnId,
+      type: cardType,
+    };
     const columnItems = [...columns[columnId]];
     if (index !== undefined && index !== null) {
       columnItems.splice(index, 0, newCard);
@@ -136,6 +145,7 @@ export default function BoardPage() {
       setAddingToColumn(null);
       setAddingAtIndex(null);
       setNewCardTitle("");
+      setNewCardType("task");
     }
   };
 
@@ -335,7 +345,7 @@ export default function BoardPage() {
                   {items.map((item, index) => (
                     <div key={item.id}>
                       {addingToColumn === columnId && addingAtIndex === index ? (
-                        <div className="rounded-lg border border-white/10 bg-white/[0.03] p-3 mb-1">
+                        <div className={`rounded-lg border p-3 mb-1 ${newCardType === "note" ? "border-amber-500/20 bg-amber-500/5" : "border-white/10 bg-white/[0.03]"}`}>
                           <input
                             type="text"
                             value={newCardTitle}
@@ -347,14 +357,24 @@ export default function BoardPage() {
                               } else {
                                 setAddingToColumn(null);
                                 setAddingAtIndex(null);
+                                setNewCardType("task");
                               }
                             }}
-                            placeholder="Task title..."
+                            placeholder={newCardType === "note" ? "Note..." : "Task title..."}
                             autoFocus
                             className="w-full bg-transparent text-sm outline-none placeholder:text-muted-foreground/40"
                           />
-                          <div className="mt-2 flex gap-2 text-xs text-muted-foreground/60">
-                            <span>↵ Save</span>
+                          <div className="mt-2 flex items-center gap-2 text-xs text-muted-foreground/60">
+                            <button
+                              type="button"
+                              onMouseDown={(e) => e.preventDefault()}
+                              onClick={() => setNewCardType(newCardType === "task" ? "note" : "task")}
+                              className={`flex items-center gap-1 px-1.5 py-0.5 rounded transition-colors ${newCardType === "note" ? "bg-amber-500/20 text-amber-400" : "hover:text-muted-foreground/80"}`}
+                            >
+                              <StickyNote className="size-3" />
+                              {newCardType === "note" ? "Note" : "Task"}
+                            </button>
+                            <span className="ml-auto">↵ Save</span>
                             <span>⎋ Cancel</span>
                           </div>
                         </div>
@@ -373,7 +393,11 @@ export default function BoardPage() {
                       <KanbanItem
                         asHandle
                         value={item.id}
-                        className="group rounded-lg border border-white/5 bg-white/[0.02] p-2 text-card-foreground shadow-[0_1px_3px_rgba(0,0,0,0.3)] hover:bg-white/[0.04] hover:border-white/10 hover:shadow-[0_2px_6px_rgba(0,0,0,0.4)] transition-all duration-200 focus:outline-none !cursor-pointer"
+                        className={`group rounded-lg border p-2 text-card-foreground shadow-[0_1px_3px_rgba(0,0,0,0.3)] transition-all duration-200 focus:outline-none !cursor-pointer ${
+                          item.type === "note"
+                            ? "border-amber-500/20 bg-amber-500/5 hover:bg-amber-500/10 hover:border-amber-500/30 hover:shadow-[0_2px_6px_rgba(0,0,0,0.4)]"
+                            : "border-white/5 bg-white/[0.02] hover:bg-white/[0.04] hover:border-white/10 hover:shadow-[0_2px_6px_rgba(0,0,0,0.4)]"
+                        }`}
                         tabIndex={0}
                         onClick={(e: any) => {
                           if (e.target.closest("button")) return;
@@ -399,6 +423,9 @@ export default function BoardPage() {
                           } else if (key === "Backspace") {
                             e.preventDefault();
                             removeTask(item.id);
+                          } else if (item.type === "note") {
+                            // Notes only support Backspace and copy — skip task shortcuts
+                            return;
                           } else if (key === " ") {
                             e.preventDefault();
                             toggleComplete(item.id);
@@ -414,88 +441,92 @@ export default function BoardPage() {
                               e.preventDefault();
                               const currentIdx = matches.findIndex((c) => c.id === item.client);
                               if (currentIdx === -1) {
-                                // No matching client assigned — assign first
                                 toggleClient(item.id, matches[0].id);
                               } else if (currentIdx < matches.length - 1) {
-                                // Cycle to next matching client
                                 toggleClient(item.id, matches[currentIdx + 1].id);
                               } else {
-                                // Last match — unassign
                                 toggleClient(item.id, matches[currentIdx].id);
                               }
                             }
                           }
                         }}
                       >
-                        <div className="relative">
-                          <div className={`transition-opacity ${item.completed ? "opacity-50" : ""}`}>
-                            <div className={`text-sm pr-6 ${item.completed ? "line-through" : ""}`}>{item.title}</div>
-                            {(item.client || (item.assignees && item.assignees.length > 0)) && (
-                              <div className="flex gap-1.5 mt-1.5 items-center flex-wrap">
-                                {item.client &&
-                                  (() => {
-                                    const client = clients.find((c) => c.id === item.client);
-                                    return client ? (
-                                      <Badge key={client.id} className={`${getClientClassName(client.color)} flex items-center gap-1`}>
-                                        {client.logo_url && (
-                                          <img src={client.logo_url} alt="" className="size-3 rounded-sm object-cover" />
-                                        )}
-                                        {client.name}
-                                      </Badge>
-                                    ) : null;
-                                  })()}
-                                {item.assignees &&
-                                  item.assignees.length > 0 && (
-                                    <>
-                                      {item.assignees.map((assigneeId) => {
-                                        const member = TEAM_MEMBERS.find((m) => m.id === assigneeId);
-                                        return member ? (
-                                          <div
-                                            key={member.id}
-                                            className={`flex items-center justify-center w-5 h-5 rounded-full ${!member.avatar ? member.color : "bg-white/5"} text-[10px] font-semibold text-white overflow-hidden`}
-                                            title={member.name}
-                                          >
-                                            {member.avatar ? (
-                                              <img src={member.avatar} alt={member.name} className="w-full h-full object-cover" />
-                                            ) : (
-                                              member.initials
-                                            )}
-                                          </div>
-                                        ) : null;
-                                      })}
-                                    </>
-                                  )}
-                              </div>
-                            )}
+                        {item.type === "note" ? (
+                          <div className="flex items-start gap-2">
+                            <StickyNote className="size-3.5 text-amber-400 mt-0.5 shrink-0" />
+                            <div className="text-sm text-amber-100/90">{item.title}</div>
                           </div>
-
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              toggleComplete(item.id);
-                            }}
-                            onMouseDown={(e) => e.stopPropagation()}
-                            className="absolute top-0.5 right-0 shrink-0"
-                            aria-label={item.completed ? "Mark as incomplete" : "Mark as complete"}
-                          >
-                            <div
-                              className={`flex size-4 items-center justify-center rounded-full border transition-all ${
-                                item.completed
-                                  ? "border-green-500/80 bg-green-500/80"
-                                  : "border-white/20 hover:border-white/40"
-                              }`}
-                            >
-                              {item.completed && <Check className="size-3 text-white" strokeWidth={3} />}
+                        ) : (
+                          <div className="relative">
+                            <div className={`transition-opacity ${item.completed ? "opacity-50" : ""}`}>
+                              <div className={`text-sm pr-6 ${item.completed ? "line-through" : ""}`}>{item.title}</div>
+                              {(item.client || (item.assignees && item.assignees.length > 0)) && (
+                                <div className="flex gap-1.5 mt-1.5 items-center flex-wrap">
+                                  {item.client &&
+                                    (() => {
+                                      const client = clients.find((c) => c.id === item.client);
+                                      return client ? (
+                                        <Badge key={client.id} className={`${getClientClassName(client.color)} flex items-center gap-1`}>
+                                          {client.logo_url && (
+                                            <img src={client.logo_url} alt="" className="size-3 rounded-sm object-cover" />
+                                          )}
+                                          {client.name}
+                                        </Badge>
+                                      ) : null;
+                                    })()}
+                                  {item.assignees &&
+                                    item.assignees.length > 0 && (
+                                      <>
+                                        {item.assignees.map((assigneeId) => {
+                                          const member = TEAM_MEMBERS.find((m) => m.id === assigneeId);
+                                          return member ? (
+                                            <div
+                                              key={member.id}
+                                              className={`flex items-center justify-center w-5 h-5 rounded-full ${!member.avatar ? member.color : "bg-white/5"} text-[10px] font-semibold text-white overflow-hidden`}
+                                              title={member.name}
+                                            >
+                                              {member.avatar ? (
+                                                <img src={member.avatar} alt={member.name} className="w-full h-full object-cover" />
+                                              ) : (
+                                                member.initials
+                                              )}
+                                            </div>
+                                          ) : null;
+                                        })}
+                                      </>
+                                    )}
+                                </div>
+                              )}
                             </div>
-                          </button>
-                        </div>
+
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                toggleComplete(item.id);
+                              }}
+                              onMouseDown={(e) => e.stopPropagation()}
+                              className="absolute top-0.5 right-0 shrink-0"
+                              aria-label={item.completed ? "Mark as incomplete" : "Mark as complete"}
+                            >
+                              <div
+                                className={`flex size-4 items-center justify-center rounded-full border transition-all ${
+                                  item.completed
+                                    ? "border-green-500/80 bg-green-500/80"
+                                    : "border-white/20 hover:border-white/40"
+                                }`}
+                              >
+                                {item.completed && <Check className="size-3 text-white" strokeWidth={3} />}
+                              </div>
+                            </button>
+                          </div>
+                        )}
                       </KanbanItem>
                     </div>
                   ))}
 
                   {addingToColumn === columnId && addingAtIndex === null ? (
-                    <div className="mt-1 rounded-lg border border-white/5 bg-white/[0.02] p-3">
+                    <div className={`mt-1 rounded-lg border p-3 ${newCardType === "note" ? "border-amber-500/20 bg-amber-500/5" : "border-white/5 bg-white/[0.02]"}`}>
                       <input
                         type="text"
                         value={newCardTitle}
@@ -507,14 +538,24 @@ export default function BoardPage() {
                           } else {
                             setAddingToColumn(null);
                             setAddingAtIndex(null);
+                            setNewCardType("task");
                           }
                         }}
-                        placeholder="Task title..."
+                        placeholder={newCardType === "note" ? "Note..." : "Task title..."}
                         autoFocus
                         className="w-full bg-transparent text-sm outline-none placeholder:text-muted-foreground/40"
                       />
-                      <div className="mt-2 flex gap-2 text-xs text-muted-foreground/60">
-                        <span>↵ Save</span>
+                      <div className="mt-2 flex items-center gap-2 text-xs text-muted-foreground/60">
+                        <button
+                          type="button"
+                          onMouseDown={(e) => e.preventDefault()}
+                          onClick={() => setNewCardType(newCardType === "task" ? "note" : "task")}
+                          className={`flex items-center gap-1 px-1.5 py-0.5 rounded transition-colors ${newCardType === "note" ? "bg-amber-500/20 text-amber-400" : "hover:text-muted-foreground/80"}`}
+                        >
+                          <StickyNote className="size-3" />
+                          {newCardType === "note" ? "Note" : "Task"}
+                        </button>
+                        <span className="ml-auto">↵ Save</span>
                         <span>⎋ Cancel</span>
                       </div>
                     </div>
@@ -542,6 +583,16 @@ export default function BoardPage() {
                 .flat()
                 .find((item) => item.id === value);
               if (!task) return null;
+              if (task.type === "note") {
+                return (
+                  <div className="w-80 rounded-lg border border-amber-500/20 bg-amber-500/10 p-3 shadow-lg">
+                    <div className="flex items-start gap-2">
+                      <StickyNote className="size-3.5 text-amber-400 mt-0.5 shrink-0" />
+                      <div className="text-sm text-amber-100/90">{task.title}</div>
+                    </div>
+                  </div>
+                );
+              }
               return (
                 <div className="w-80 rounded-lg border border-white/10 bg-card p-3 shadow-lg">
                   <div className="relative">

@@ -26,6 +26,7 @@ export interface Task {
   assignees?: string[];
   client?: string;
   day?: string;
+  type?: "task" | "note";
 }
 
 export interface Project {

@@ -36,6 +36,7 @@ export async function loadTasksByDay(projectId: string): Promise<Record<string, 
         client: task.client || undefined,
         priority: task.priority || undefined,
         day: task.day,
+        type: task.type || 'task',
       })
     }
   })
@@ -66,6 +67,7 @@ export async function saveTask(projectId: string, task: Task): Promise<string> {
         assignees: task.assignees || [],
         client: task.client || null,
         priority: task.priority || null,
+        type: task.type || 'task',
       })
       .eq('id', task.id)
 
@@ -87,6 +89,7 @@ export async function saveTask(projectId: string, task: Task): Promise<string> {
         assignees: task.assignees || [],
         client: task.client || null,
         priority: task.priority || null,
+        type: task.type || 'task',
       })
       .select()
       .single()
@@ -124,6 +127,7 @@ export async function updateDayTasks(projectId: string, day: string, tasks: Task
       assignees: task.assignees || [],
       client: task.client || null,
       priority: task.priority || null,
+      type: task.type || 'task',
     }))
 
   if (updates.length === 0) return
