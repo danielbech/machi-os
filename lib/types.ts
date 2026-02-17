@@ -27,6 +27,16 @@ export interface Task {
   client?: string;
   day?: string;
   type?: "task" | "note";
+  folder_id?: string;
+}
+
+export interface BacklogFolder {
+  id: string;
+  area_id: string;
+  client_id: string;
+  name: string;
+  sort_order: number;
+  created_at: string;
 }
 
 export interface Project {

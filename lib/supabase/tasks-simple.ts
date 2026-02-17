@@ -37,6 +37,7 @@ export async function loadTasksByDay(projectId: string): Promise<Record<string, 
         priority: task.priority || undefined,
         day: task.day,
         type: task.type || 'task',
+        folder_id: task.folder_id || undefined,
       })
     }
   })
@@ -68,6 +69,7 @@ export async function saveTask(projectId: string, task: Task): Promise<string> {
         client: task.client || null,
         priority: task.priority || null,
         type: task.type || 'task',
+        folder_id: task.folder_id || null,
       })
       .eq('id', task.id)
 
@@ -90,6 +92,7 @@ export async function saveTask(projectId: string, task: Task): Promise<string> {
         client: task.client || null,
         priority: task.priority || null,
         type: task.type || 'task',
+        folder_id: task.folder_id || null,
       })
       .select()
       .single()
@@ -128,6 +131,7 @@ export async function updateDayTasks(projectId: string, day: string, tasks: Task
       client: task.client || null,
       priority: task.priority || null,
       type: task.type || 'task',
+      folder_id: task.folder_id || null,
     }))
 
   if (updates.length === 0) return
@@ -140,4 +144,37 @@ export async function updateDayTasks(projectId: string, day: string, tasks: Task
     console.error('Error batch updating tasks:', error)
     throw error
   }
+}
+
+// Load all tasks that have a client (for backlog view)
+export async function loadBacklogTasks(projectId: string): Promise<Task[]> {
+  const supabase = createClient()
+  const areaId = await getAreaIdForProject(projectId)
+
+  if (!areaId) return []
+
+  const { data: tasks, error } = await supabase
+    .from('tasks')
+    .select('*')
+    .eq('area_id', areaId)
+    .not('client', 'is', null)
+    .order('sort_order')
+
+  if (error) {
+    console.error('Error loading backlog tasks:', error)
+    return []
+  }
+
+  return (tasks || []).map(task => ({
+    id: task.id,
+    title: task.title,
+    description: task.description || undefined,
+    completed: task.completed,
+    assignees: task.assignees || [],
+    client: task.client || undefined,
+    priority: task.priority || undefined,
+    day: task.day || undefined,
+    type: task.type || 'task',
+    folder_id: task.folder_id || undefined,
+  }))
 }

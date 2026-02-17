@@ -1,6 +1,6 @@
 "use client";
 
-import type { Task } from "@/lib/types";
+import type { Task, BacklogFolder } from "@/lib/types";
 import { useWorkspace } from "@/lib/workspace-context";
 import { CLIENT_DOT_COLORS } from "@/lib/colors";
 import { TEAM_MEMBERS } from "@/lib/constants";
@@ -20,19 +20,22 @@ import {
   DropdownMenuCheckboxItem,
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
-import { ChevronDown, Circle, StickyNote, ListTodo } from "lucide-react";
+import { ChevronDown, Circle, StickyNote, ListTodo, Folder } from "lucide-react";
 
 interface TaskEditDialogProps {
   task: Task | null;
   onClose: () => void;
   onSave: (task: Task) => void;
   onTaskChange: (task: Task) => void;
+  folders?: BacklogFolder[];
 }
 
-export function TaskEditDialog({ task, onClose, onSave, onTaskChange }: TaskEditDialogProps) {
+export function TaskEditDialog({ task, onClose, onSave, onTaskChange, folders }: TaskEditDialogProps) {
   const { clients } = useWorkspace();
   const activeClients = clients.filter((c) => c.active);
   const selectedClient = activeClients.find((c) => c.id === task?.client);
+  const clientFolders = folders?.filter((f) => f.client_id === task?.client) || [];
+  const selectedFolder = clientFolders.find((f) => f.id === task?.folder_id);
   const assignedMembers = TEAM_MEMBERS.filter((m) => task?.assignees?.includes(m.id));
 
   return (
@@ -146,6 +149,53 @@ export function TaskEditDialog({ task, onClose, onSave, onTaskChange }: TaskEdit
                     </DropdownMenuContent>
                   </DropdownMenu>
                 </div>
+
+                {/* Folder dropdown (shown when task has a client and folders exist) */}
+                {task.client && folders && clientFolders.length > 0 && (
+                  <div className="flex flex-col gap-3">
+                    <label className="text-sm font-medium">Folder</label>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <button
+                          type="button"
+                          className="flex items-center justify-between w-full px-3 py-2 rounded-md border border-white/10 bg-white/[0.02] text-sm hover:bg-white/[0.04] hover:border-white/20 transition-colors"
+                        >
+                          {selectedFolder ? (
+                            <span className="flex items-center gap-2">
+                              <Folder className="size-3.5 text-white/30" />
+                              <span>{selectedFolder.name}</span>
+                            </span>
+                          ) : (
+                            <span className="text-white/25">No folder</span>
+                          )}
+                          <ChevronDown className="size-3.5 text-white/30 ml-2" />
+                        </button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="start" className="min-w-[200px]">
+                        <DropdownMenuItem
+                          onClick={() => onTaskChange({ ...task, folder_id: undefined })}
+                          className="text-white/50"
+                        >
+                          No folder
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        {clientFolders.map((folder) => (
+                          <DropdownMenuItem
+                            key={folder.id}
+                            onClick={() => onTaskChange({ ...task, folder_id: folder.id })}
+                            className="flex items-center gap-2"
+                          >
+                            <Folder className="size-3.5 text-white/30" />
+                            <span>{folder.name}</span>
+                            {task.folder_id === folder.id && (
+                              <Circle className="size-2 fill-white ml-auto" />
+                            )}
+                          </DropdownMenuItem>
+                        ))}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
+                )}
 
                 {/* Team Members dropdown */}
                 <div className="flex flex-col gap-3">

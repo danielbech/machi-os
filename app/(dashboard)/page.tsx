@@ -2,10 +2,12 @@
 
 import { useState, useCallback, useRef, KeyboardEvent, useEffect } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { loadTasksByDay, saveTask, updateDayTasks, deleteTask } from "@/lib/supabase/tasks-simple";
+import { loadTasksByDay, loadBacklogTasks, saveTask, updateDayTasks, deleteTask } from "@/lib/supabase/tasks-simple";
+import { loadBacklogFolders, createBacklogFolder, updateBacklogFolder, deleteBacklogFolder } from "@/lib/supabase/backlog-folders";
 import { useWorkspace } from "@/lib/workspace-context";
 import { TaskEditDialog } from "@/components/task-edit-dialog";
-import type { Task } from "@/lib/types";
+import { BacklogPanel } from "@/components/backlog-panel";
+import type { Task, BacklogFolder } from "@/lib/types";
 import { TEAM_MEMBERS, COLUMN_TITLES, EMPTY_COLUMNS } from "@/lib/constants";
 import { getClientClassName } from "@/lib/colors";
 import {
@@ -32,6 +34,8 @@ export default function BoardPage() {
   const [clipboard, setClipboard] = useState<{ task: Task; column: string } | null>(null);
   const [hoveredColumn, setHoveredColumn] = useState<string | null>(null);
   const [newCardType, setNewCardType] = useState<"task" | "note">("task");
+  const [backlogTasks, setBacklogTasks] = useState<Task[]>([]);
+  const [backlogFolders, setBacklogFolders] = useState<BacklogFolder[]>([]);
 
   // Load tasks
   const refreshTasks = useCallback(async () => {
@@ -44,39 +48,63 @@ export default function BoardPage() {
     }
   }, [activeProjectId]);
 
+  // Load backlog
+  const refreshBacklog = useCallback(async () => {
+    if (!activeProjectId) return;
+    try {
+      const [tasks, folders] = await Promise.all([
+        loadBacklogTasks(activeProjectId),
+        loadBacklogFolders(activeProjectId),
+      ]);
+      setBacklogTasks(tasks);
+      setBacklogFolders(folders);
+    } catch (error) {
+      console.error("Error loading backlog:", error);
+    }
+  }, [activeProjectId]);
+
   // Load tasks when active project changes
   useEffect(() => {
     if (!activeProjectId) {
       setColumns({ ...EMPTY_COLUMNS });
+      setBacklogTasks([]);
+      setBacklogFolders([]);
       return;
     }
     refreshTasks();
-  }, [activeProjectId, refreshTasks]);
+    refreshBacklog();
+  }, [activeProjectId, refreshTasks, refreshBacklog]);
 
-  // Realtime: reload when another user changes tasks (debounced)
+  // Realtime: reload when another user changes tasks or backlog folders (debounced)
   const realtimeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => {
     if (!activeProjectId) return;
 
     const supabase = createClient();
-    const channel = supabase
+    const reloadAll = () => {
+      if (realtimeTimer.current) clearTimeout(realtimeTimer.current);
+      realtimeTimer.current = setTimeout(() => {
+        refreshTasks();
+        refreshBacklog();
+      }, 500);
+    };
+
+    const tasksChannel = supabase
       .channel(`tasks-${activeProjectId}`)
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "tasks" },
-        () => {
-          // Debounce — wait 500ms after the last change before reloading
-          if (realtimeTimer.current) clearTimeout(realtimeTimer.current);
-          realtimeTimer.current = setTimeout(() => { refreshTasks(); }, 500);
-        }
-      )
+      .on("postgres_changes", { event: "*", schema: "public", table: "tasks" }, reloadAll)
+      .subscribe();
+
+    const foldersChannel = supabase
+      .channel(`backlog-folders-${activeProjectId}`)
+      .on("postgres_changes", { event: "*", schema: "public", table: "backlog_folders" }, reloadAll)
       .subscribe();
 
     return () => {
       if (realtimeTimer.current) clearTimeout(realtimeTimer.current);
-      supabase.removeChannel(channel);
+      supabase.removeChannel(tasksChannel);
+      supabase.removeChannel(foldersChannel);
     };
-  }, [activeProjectId, refreshTasks]);
+  }, [activeProjectId, refreshTasks, refreshBacklog]);
 
   // Week dates
   const getWeekDates = () => {
@@ -270,21 +298,119 @@ export default function BoardPage() {
   };
 
   const saveEditedTask = async (updatedTask: Task) => {
-    if (!editingColumn || !activeProjectId) return;
-    const updated = { ...columns };
-    const idx = updated[editingColumn].findIndex((t) => t.id === updatedTask.id);
-    if (idx !== -1) {
-      updated[editingColumn] = [...updated[editingColumn]];
-      updated[editingColumn][idx] = { ...updatedTask, day: editingColumn };
-      setColumns(updated);
+    if (!activeProjectId) return;
+    // Update in kanban columns if it's on the board
+    if (editingColumn) {
+      const updated = { ...columns };
+      const idx = updated[editingColumn].findIndex((t) => t.id === updatedTask.id);
+      if (idx !== -1) {
+        updated[editingColumn] = [...updated[editingColumn]];
+        updated[editingColumn][idx] = { ...updatedTask, day: editingColumn };
+        setColumns(updated);
+      }
       await saveTask(activeProjectId, { ...updatedTask, day: editingColumn });
+    } else {
+      // Editing from backlog (no kanban column)
+      await saveTask(activeProjectId, updatedTask);
+    }
+    // Update in backlog if task has a client
+    if (updatedTask.client) {
+      setBacklogTasks((prev) =>
+        prev.map((t) => (t.id === updatedTask.id ? { ...updatedTask, day: editingColumn || updatedTask.day } : t))
+      );
     }
     setEditingTask(null);
     setEditingColumn(null);
   };
 
+  // Backlog action handlers
+  const handleSendToDay = async (taskId: string, day: string) => {
+    if (!activeProjectId) return;
+    // Update backlog task optimistically
+    const task = backlogTasks.find((t) => t.id === taskId);
+    if (!task) return;
+    const updatedTask = { ...task, day };
+    setBacklogTasks((prev) => prev.map((t) => (t.id === taskId ? updatedTask : t)));
+    // Add to kanban column
+    const columnItems = [...(columns[day] || []), updatedTask];
+    setColumns({ ...columns, [day]: columnItems });
+    await saveTask(activeProjectId, updatedTask);
+    await updateDayTasks(activeProjectId, day, columnItems);
+  };
+
+  const handleRemoveFromDay = async (taskId: string) => {
+    if (!activeProjectId) return;
+    const task = backlogTasks.find((t) => t.id === taskId);
+    if (!task || !task.day) return;
+    const oldDay = task.day;
+    const updatedTask = { ...task, day: undefined };
+    // Remove from kanban
+    setColumns((prev) => ({
+      ...prev,
+      [oldDay]: prev[oldDay]?.filter((t) => t.id !== taskId) || [],
+    }));
+    // Update backlog
+    setBacklogTasks((prev) => prev.map((t) => (t.id === taskId ? updatedTask : t)));
+    await saveTask(activeProjectId, updatedTask);
+  };
+
+  const handleCreateBacklogTask = async (title: string, clientId: string, folderId?: string) => {
+    if (!activeProjectId) return;
+    const tempId = `task-${Date.now()}`;
+    const newTask: Task = {
+      id: tempId,
+      title,
+      client: clientId,
+      folder_id: folderId,
+      priority: "medium",
+    };
+    setBacklogTasks((prev) => [...prev, newTask]);
+    const realId = await saveTask(activeProjectId, newTask);
+    setBacklogTasks((prev) => prev.map((t) => (t.id === tempId ? { ...t, id: realId } : t)));
+  };
+
+  const handleCreateFolder = async (clientId: string, name: string) => {
+    if (!activeProjectId) return;
+    const folder = await createBacklogFolder(activeProjectId, clientId, name, backlogFolders.length);
+    if (folder) setBacklogFolders((prev) => [...prev, folder]);
+  };
+
+  const handleRenameFolder = async (folderId: string, name: string) => {
+    setBacklogFolders((prev) => prev.map((f) => (f.id === folderId ? { ...f, name } : f)));
+    await updateBacklogFolder(folderId, { name });
+  };
+
+  const handleDeleteFolder = async (folderId: string) => {
+    setBacklogFolders((prev) => prev.filter((f) => f.id !== folderId));
+    setBacklogTasks((prev) =>
+      prev.map((t) => (t.folder_id === folderId ? { ...t, folder_id: undefined } : t))
+    );
+    await deleteBacklogFolder(folderId);
+  };
+
+  const handleDeleteBacklogTask = async (taskId: string) => {
+    setBacklogTasks((prev) => prev.filter((t) => t.id !== taskId));
+    // Also remove from kanban if it was there
+    const updated = { ...columns };
+    for (const col of Object.keys(updated)) {
+      const idx = updated[col].findIndex((t) => t.id === taskId);
+      if (idx !== -1) {
+        updated[col] = updated[col].filter((t) => t.id !== taskId);
+        break;
+      }
+    }
+    setColumns(updated);
+    await deleteTask(taskId);
+  };
+
+  const handleEditBacklogTask = (task: Task) => {
+    setEditingTask(task);
+    setEditingColumn(task.day || null);
+  };
+
   return (
     <main className="flex min-h-screen flex-col p-4 md:p-8 bg-black/50">
+      <div className="flex flex-col 2xl:flex-row gap-6 flex-1">
       <div className="flex-1 overflow-hidden">
         <Kanban
           value={columns}
@@ -620,6 +746,24 @@ export default function BoardPage() {
         </Kanban>
       </div>
 
+      {/* Backlog panel */}
+      <div className="2xl:w-[400px] 2xl:shrink-0 2xl:overflow-y-auto 2xl:max-h-[calc(100vh-4rem)] rounded-xl border border-white/5 bg-white/[0.02] p-4">
+        <BacklogPanel
+          tasks={backlogTasks}
+          folders={backlogFolders}
+          clients={clients}
+          onSendToDay={handleSendToDay}
+          onRemoveFromDay={handleRemoveFromDay}
+          onCreateTask={handleCreateBacklogTask}
+          onEditTask={handleEditBacklogTask}
+          onDeleteTask={handleDeleteBacklogTask}
+          onCreateFolder={handleCreateFolder}
+          onRenameFolder={handleRenameFolder}
+          onDeleteFolder={handleDeleteFolder}
+        />
+      </div>
+      </div>
+
       <TaskEditDialog
         task={editingTask}
         onClose={() => {
@@ -628,6 +772,7 @@ export default function BoardPage() {
         }}
         onSave={saveEditedTask}
         onTaskChange={setEditingTask}
+        folders={backlogFolders}
       />
 
       {/* Keyboard shortcuts */}
