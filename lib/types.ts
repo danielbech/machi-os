@@ -14,6 +14,7 @@ export interface Client {
   color: string;
   logo_url?: string;
   sort_order: number;
+  active: boolean;
 }
 
 export interface Task {

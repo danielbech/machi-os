@@ -203,7 +203,7 @@ export default function BoardPage() {
           }}
           getItemValue={(item) => item.id}
         >
-          <KanbanBoard className="h-[calc(100vh-8rem)] overflow-x-auto p-1 [&::-webkit-scrollbar]:h-2 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-white/10 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:hover:bg-white/20">
+          <KanbanBoard className="h-[calc(100vh-8rem)] overflow-x-auto p-1 pb-3">
             {Object.entries(columns).map(([columnId, items]) => (
               <KanbanColumn
                 key={columnId}
@@ -320,7 +320,7 @@ export default function BoardPage() {
                               toggleAssignee(item.id, TEAM_MEMBERS[memberIndex].id);
                             }
                           } else {
-                            const client = clients.find((c) => c.slug === key.toLowerCase());
+                            const client = clients.find((c) => c.slug === key.toLowerCase() && c.active);
                             if (client) {
                               e.preventDefault();
                               toggleClient(item.id, client.id);

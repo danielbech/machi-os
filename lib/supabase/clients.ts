@@ -6,7 +6,7 @@ export async function loadClients(projectId: string): Promise<Client[]> {
 
   const { data, error } = await supabase
     .from('clients')
-    .select('id, project_id, name, slug, color, logo_url, sort_order')
+    .select('id, project_id, name, slug, color, logo_url, sort_order, active')
     .eq('project_id', projectId)
     .order('sort_order')
 
@@ -23,12 +23,13 @@ export async function loadClients(projectId: string): Promise<Client[]> {
     color: c.color,
     logo_url: c.logo_url || undefined,
     sort_order: c.sort_order,
+    active: c.active ?? true,
   }))
 }
 
 export async function createClientRecord(
   projectId: string,
-  client: { name: string; slug: string; color: string; logo_url?: string; sort_order: number }
+  client: { name: string; slug: string; color: string; logo_url?: string; sort_order: number; active?: boolean }
 ): Promise<Client> {
   const supabase = createClient()
 
@@ -41,6 +42,7 @@ export async function createClientRecord(
       color: client.color,
       logo_url: client.logo_url || null,
       sort_order: client.sort_order,
+      active: client.active ?? true,
     })
     .select()
     .single()
@@ -58,12 +60,13 @@ export async function createClientRecord(
     color: data.color,
     logo_url: data.logo_url || undefined,
     sort_order: data.sort_order,
+    active: data.active ?? true,
   }
 }
 
 export async function updateClientRecord(
   clientId: string,
-  updates: { name?: string; slug?: string; color?: string; logo_url?: string | null; sort_order?: number }
+  updates: { name?: string; slug?: string; color?: string; logo_url?: string | null; sort_order?: number; active?: boolean }
 ): Promise<void> {
   const supabase = createClient()
 

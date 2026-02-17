@@ -56,7 +56,7 @@ export function TaskEditDialog({ task, onClose, onSave, onTaskChange }: TaskEdit
             <div className="space-y-2">
               <label className="text-sm font-medium">Client</label>
               <div className="flex flex-wrap gap-2">
-                {clients.map((client) => (
+                {clients.filter((c) => c.active).map((client) => (
                   <button
                     key={client.id}
                     type="button"

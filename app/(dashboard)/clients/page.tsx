@@ -20,10 +20,8 @@ import { Plus, Pencil, Trash2, Upload, X } from "lucide-react";
 function generateSlug(name: string, existingSlugs: string[]): string {
   const first = name.charAt(0).toLowerCase();
   if (first && !existingSlugs.includes(first)) return first;
-  // Try first two letters
   const two = name.slice(0, 2).toLowerCase();
   if (two.length === 2 && !existingSlugs.includes(two)) return two;
-  // Fallback: first letter + number
   for (let i = 1; i <= 9; i++) {
     const slug = `${first}${i}`;
     if (!existingSlugs.includes(slug)) return slug;
@@ -45,6 +43,9 @@ export default function ClientsPage() {
   const [saving, setSaving] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const activeClients = clients.filter((c) => c.active);
+  const idleClients = clients.filter((c) => !c.active);
 
   const openAdd = () => {
     setEditingClient(null);
@@ -84,7 +85,6 @@ export default function ClientsPage() {
 
   const handleNameChange = (name: string) => {
     setFormName(name);
-    // Auto-generate slug only when adding new
     if (!editingClient) {
       const existingSlugs = clients.map((c) => c.slug);
       setFormSlug(generateSlug(name, existingSlugs));
@@ -98,11 +98,9 @@ export default function ClientsPage() {
       let logoUrl = formLogoUrl.trim() || null;
 
       if (editingClient) {
-        // Upload new logo if a file was selected
         if (formLogoFile) {
           logoUrl = await uploadClientLogo(formLogoFile, editingClient.id);
         }
-        // If logo was cleared and there was an old one, delete it
         if (!logoUrl && editingClient.logo_url) {
           await deleteClientLogo(editingClient.logo_url);
         }
@@ -113,12 +111,12 @@ export default function ClientsPage() {
           logo_url: logoUrl,
         });
       } else {
-        // Create first to get the ID, then upload logo
         const newClient = await createClientRecord(activeProjectId, {
           name: formName.trim(),
           slug: formSlug.trim().toLowerCase(),
           color: formColor,
           sort_order: clients.length,
+          active: true,
         });
         if (formLogoFile) {
           logoUrl = await uploadClientLogo(formLogoFile, newClient.id);
@@ -134,6 +132,15 @@ export default function ClientsPage() {
     }
   };
 
+  const handleToggleActive = async (client: Client) => {
+    try {
+      await updateClientRecord(client.id, { active: !client.active });
+      await refreshClients();
+    } catch (error) {
+      console.error("Error toggling client status:", error);
+    }
+  };
+
   const handleDelete = async (clientId: string) => {
     try {
       await deleteClientRecord(clientId);
@@ -143,6 +150,69 @@ export default function ClientsPage() {
       console.error("Error deleting client:", error);
     }
   };
+
+  const ClientRow = ({ client }: { client: Client }) => (
+    <div className="group flex items-center gap-4 px-4 py-3 rounded-lg border border-white/5 bg-white/[0.02] hover:bg-white/[0.04] hover:border-white/10 transition-all">
+      {/* Logo / Avatar */}
+      {client.logo_url ? (
+        <img
+          src={client.logo_url}
+          alt={client.name}
+          className="size-8 rounded-lg object-cover bg-white/5 shrink-0"
+        />
+      ) : (
+        <div className={`size-8 rounded-lg ${CLIENT_DOT_COLORS[client.color] || "bg-blue-500"} flex items-center justify-center text-white font-bold text-xs shrink-0`}>
+          {client.name.charAt(0).toUpperCase()}
+        </div>
+      )}
+
+      {/* Name + Badge */}
+      <div className="flex-1 min-w-0 flex items-center gap-3">
+        <span className="font-medium truncate">{client.name}</span>
+        <Badge className={getClientClassName(client.color)}>
+          {client.name}
+        </Badge>
+      </div>
+
+      {/* Shortcut */}
+      <span className="text-xs text-white/30 font-mono w-8 text-center shrink-0">{client.slug}</span>
+
+      {/* Status toggle */}
+      <Button
+        variant="ghost"
+        size="sm"
+        className={client.active
+          ? "text-green-400 hover:text-orange-400 hover:bg-orange-500/10"
+          : "text-white/30 hover:text-green-400 hover:bg-green-500/10"
+        }
+        onClick={() => handleToggleActive(client)}
+      >
+        {client.active ? "Active" : "Idle"}
+      </Button>
+
+      {/* Actions */}
+      <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+        <Button
+          variant="ghost"
+          size="icon-xs"
+          className="text-white/40 hover:text-white hover:bg-white/10"
+          onClick={() => openEdit(client)}
+          aria-label={`Edit ${client.name}`}
+        >
+          <Pencil className="size-3.5" />
+        </Button>
+        <Button
+          variant="ghost"
+          size="icon-xs"
+          className="text-white/40 hover:text-red-400 hover:bg-red-500/10"
+          onClick={() => setDeleteConfirm(client.id)}
+          aria-label={`Delete ${client.name}`}
+        >
+          <Trash2 className="size-3.5" />
+        </Button>
+      </div>
+    </div>
+  );
 
   return (
     <main className="flex min-h-screen flex-col p-4 md:p-8 bg-black/50">
@@ -164,58 +234,34 @@ export default function ClientsPage() {
           </div>
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-          {clients.map((client) => (
-            <div
-              key={client.id}
-              className="group relative rounded-xl border border-white/5 bg-white/[0.02] p-4 hover:bg-white/[0.04] hover:border-white/10 transition-all"
-            >
-              <div className="flex items-start gap-3">
-                {client.logo_url ? (
-                  <img
-                    src={client.logo_url}
-                    alt={client.name}
-                    className="size-10 rounded-lg object-cover bg-white/5"
-                  />
-                ) : (
-                  <div className={`size-10 rounded-lg ${CLIENT_DOT_COLORS[client.color] || "bg-blue-500"} flex items-center justify-center text-white font-bold text-sm`}>
-                    {client.name.charAt(0).toUpperCase()}
-                  </div>
-                )}
-                <div className="flex-1 min-w-0">
-                  <div className="font-medium">{client.name}</div>
-                  <div className="flex items-center gap-2 mt-1">
-                    <Badge className={getClientClassName(client.color)}>
-                      {client.name}
-                    </Badge>
-                    <span className="text-xs text-white/30 font-mono">{client.slug}</span>
-                  </div>
-                </div>
+        <div className="space-y-6">
+          {/* Active clients */}
+          {activeClients.length > 0 && (
+            <div className="space-y-2">
+              <div className="text-xs font-medium text-white/40 uppercase tracking-wider px-1">
+                Active ({activeClients.length})
               </div>
-
-              {/* Action buttons */}
-              <div className="absolute top-3 right-3 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                <Button
-                  variant="ghost"
-                  size="icon-xs"
-                  className="text-white/40 hover:text-white hover:bg-white/10"
-                  onClick={() => openEdit(client)}
-                  aria-label={`Edit ${client.name}`}
-                >
-                  <Pencil className="size-3.5" />
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="icon-xs"
-                  className="text-white/40 hover:text-red-400 hover:bg-red-500/10"
-                  onClick={() => setDeleteConfirm(client.id)}
-                  aria-label={`Delete ${client.name}`}
-                >
-                  <Trash2 className="size-3.5" />
-                </Button>
+              <div className="space-y-1">
+                {activeClients.map((client) => (
+                  <ClientRow key={client.id} client={client} />
+                ))}
               </div>
             </div>
-          ))}
+          )}
+
+          {/* Idle clients */}
+          {idleClients.length > 0 && (
+            <div className="space-y-2">
+              <div className="text-xs font-medium text-white/40 uppercase tracking-wider px-1">
+                Idle ({idleClients.length})
+              </div>
+              <div className="space-y-1 opacity-60">
+                {idleClients.map((client) => (
+                  <ClientRow key={client.id} client={client} />
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       )}
 
