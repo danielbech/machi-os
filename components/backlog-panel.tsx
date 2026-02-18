@@ -55,18 +55,12 @@ export function BacklogPanel({
   const [renamingFolder, setRenamingFolder] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState("");
 
-  // Group tasks by client
+  // All active clients + any inactive clients that have backlog tasks
   const activeClients = clients.filter((c) => c.active);
-  const clientsWithTasks = activeClients.filter((client) =>
-    tasks.some((t) => t.client === client.id)
+  const inactiveWithTasks = clients.filter(
+    (c) => !c.active && tasks.some((t) => t.client === c.id)
   );
-  // Also include clients that have folders even if no tasks yet
-  const clientsWithFolders = activeClients.filter((client) =>
-    folders.some((f) => f.client_id === client.id)
-  );
-  const relevantClients = activeClients.filter(
-    (c) => clientsWithTasks.some((ct) => ct.id === c.id) || clientsWithFolders.some((cf) => cf.id === c.id)
-  );
+  const relevantClients = [...activeClients, ...inactiveWithTasks];
 
   const toggleClient = (clientId: string) => {
     const next = new Set(collapsedClients);
@@ -332,7 +326,7 @@ export function BacklogPanel({
       </div>
 
       {relevantClients.length === 0 && (
-        <p className="text-sm text-white/20 px-1">No client tasks yet. Assign a client to a task to see it here.</p>
+        <p className="text-sm text-white/20 px-1">No clients yet. Add clients to get started.</p>
       )}
 
       {relevantClients.map((client) => {
