@@ -194,6 +194,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
           start: e.start_time,
           end: e.end_time,
           location: e.location || undefined,
+          attendees: e.attendees || [],
           calendarId: e.calendar_id,
         });
       }
@@ -242,6 +243,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
               start_time: e.start,
               end_time: e.end,
               location: e.location,
+              attendees: e.attendees,
             }))
           );
 
@@ -347,6 +349,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
                 start_time: e.start,
                 end_time: e.end,
                 location: e.location,
+                attendees: e.attendees,
               }))
             );
             await loadSharedEvents(activeProjectId);

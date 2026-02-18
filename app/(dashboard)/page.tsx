@@ -434,6 +434,11 @@ export default function BoardPage() {
                               })}
                               {event.location && ` • ${event.location}`}
                             </div>
+                            {event.attendees && event.attendees.length > 0 && (
+                              <div className={`text-[10px] mt-1 leading-tight truncate ${isPast ? "text-white/15" : "text-blue-300/40"}`}>
+                                {event.attendees.join(", ")}
+                              </div>
+                            )}
                           </div>
                         </div>
                       </div>

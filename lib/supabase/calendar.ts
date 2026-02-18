@@ -21,6 +21,7 @@ export interface DbCalendarEvent {
   start_time: string
   end_time: string
   location: string | null
+  attendees: string[]
   synced_at: string
   connection_id: string | null
 }
@@ -123,7 +124,7 @@ export async function syncCalendarEventsToDb(
   projectId: string,
   userId: string,
   connectionId: string,
-  events: { google_event_id: string; calendar_id: string; summary: string; description?: string; start_time: string; end_time: string; location?: string }[]
+  events: { google_event_id: string; calendar_id: string; summary: string; description?: string; start_time: string; end_time: string; location?: string; attendees?: string[] }[]
 ): Promise<void> {
   const supabase = createClient()
 
@@ -151,6 +152,7 @@ export async function syncCalendarEventsToDb(
     start_time: e.start_time,
     end_time: e.end_time,
     location: e.location || null,
+    attendees: e.attendees || [],
     synced_at: new Date().toISOString(),
   }))
 
@@ -174,7 +176,7 @@ export async function loadSharedCalendarEvents(
 
   const { data, error } = await supabase
     .from('calendar_events')
-    .select('id, project_id, user_id, google_event_id, calendar_id, summary, description, start_time, end_time, location, synced_at, connection_id')
+    .select('id, project_id, user_id, google_event_id, calendar_id, summary, description, start_time, end_time, location, attendees, synced_at, connection_id')
     .eq('project_id', projectId)
     .gte('start_time', weekStart.toISOString())
     .lte('start_time', weekEnd.toISOString())
