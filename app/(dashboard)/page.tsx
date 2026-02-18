@@ -18,6 +18,7 @@ import {
   KanbanOverlay,
 } from "@/components/ui/kanban";
 import { Badge } from "@/components/ui/badge";
+import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from "@/components/ui/tooltip";
 import { Check, Plus, Calendar, Keyboard, StickyNote } from "lucide-react";
 
 export default function BoardPage() {
@@ -435,15 +436,25 @@ export default function BoardPage() {
                               {event.location && ` • ${event.location}`}
                             </div>
                             {event.attendees && event.attendees.length > 0 && (
-                              <div
-                                className={`text-[10px] mt-1 leading-tight ${isPast ? "text-white/15" : "text-blue-300/40"}`}
-                                title={event.attendees.join("\n")}
-                              >
-                                {event.attendees.slice(0, 2).join(", ")}
-                                {event.attendees.length > 2 && (
-                                  <span className={`ml-1 ${isPast ? "text-white/20" : "text-blue-300/50"}`}>+{event.attendees.length - 2}</span>
-                                )}
-                              </div>
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <div className={`text-[10px] mt-1 leading-tight cursor-default ${isPast ? "text-white/15" : "text-blue-300/40"}`}>
+                                      {event.attendees.slice(0, 2).join(", ")}
+                                      {event.attendees.length > 2 && (
+                                        <span className={`ml-1 ${isPast ? "text-white/20" : "text-blue-300/50"}`}>+{event.attendees.length - 2}</span>
+                                      )}
+                                    </div>
+                                  </TooltipTrigger>
+                                  <TooltipContent side="bottom" className="max-w-[250px]">
+                                    <div className="flex flex-col gap-0.5">
+                                      {event.attendees.map((email) => (
+                                        <span key={email}>{email}</span>
+                                      ))}
+                                    </div>
+                                  </TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
                             )}
                           </div>
                         </div>
