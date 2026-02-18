@@ -20,6 +20,7 @@ import {
   DropdownMenuCheckboxItem,
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
+import { useRef, useEffect, useCallback } from "react";
 import { ChevronDown, Circle, StickyNote, ListTodo, Folder } from "lucide-react";
 
 interface TaskEditDialogProps {
@@ -37,6 +38,15 @@ export function TaskEditDialog({ task, onClose, onSave, onTaskChange, folders }:
   const clientFolders = folders?.filter((f) => f.client_id === task?.client) || [];
   const selectedFolder = clientFolders.find((f) => f.id === task?.folder_id);
   const assignedMembers = TEAM_MEMBERS.filter((m) => task?.assignees?.includes(m.id));
+
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const autoResize = useCallback(() => {
+    const el = textareaRef.current;
+    if (!el) return;
+    el.style.height = "auto";
+    el.style.height = el.scrollHeight + "px";
+  }, []);
+  useEffect(() => { autoResize(); }, [task?.description, task?.id, autoResize]);
 
   return (
     <Dialog open={task !== null} onOpenChange={(open) => { if (!open) onClose(); }}>
@@ -88,12 +98,16 @@ export function TaskEditDialog({ task, onClose, onSave, onTaskChange, folders }:
             <div className="flex flex-col gap-3">
               <label className="text-sm font-medium">Description</label>
               <Textarea
+                ref={textareaRef}
                 value={task.description || ""}
-                onChange={(e) => onTaskChange({ ...task, description: e.target.value })}
+                onChange={(e) => {
+                  onTaskChange({ ...task, description: e.target.value });
+                  autoResize();
+                }}
                 onKeyDown={(e) => { if (e.key === "Enter") e.stopPropagation(); }}
                 placeholder="Optional description..."
-                className="placeholder:text-white/20"
-                rows={3}
+                className="placeholder:text-white/20 resize-none overflow-hidden min-h-[80px]"
+                rows={2}
               />
             </div>
 
