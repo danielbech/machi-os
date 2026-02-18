@@ -693,13 +693,8 @@ export default function BoardPage() {
               return (
                 <div className="w-80 rounded-lg border border-white/10 bg-card p-3 shadow-lg">
                   <div className="relative">
-                    <div className={`space-y-2 ${task.completed ? "opacity-50" : ""}`}>
+                    <div className={`${task.completed ? "opacity-50" : ""}`}>
                       <div className={`text-sm pr-6 ${task.completed ? "line-through" : ""}`}>{task.title}</div>
-                      {task.description && (
-                        <p className={`text-sm text-muted-foreground ${task.completed ? "line-through" : ""}`}>
-                          {task.description}
-                        </p>
-                      )}
                     </div>
                     <div
                       className={`absolute top-0 right-0 flex size-4 items-center justify-center rounded-full border ${
