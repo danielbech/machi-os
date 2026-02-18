@@ -4,7 +4,6 @@ import { useState, KeyboardEvent } from "react";
 import type { Task, BacklogFolder, Client } from "@/lib/types";
 import { CLIENT_DOT_COLORS } from "@/lib/colors";
 import { TEAM_MEMBERS, COLUMN_TITLES } from "@/lib/constants";
-import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -16,7 +15,6 @@ import {
   Folder,
   Plus,
   Send,
-  X,
   Pencil,
   Trash2,
 } from "lucide-react";
@@ -26,7 +24,6 @@ interface BacklogPanelProps {
   folders: BacklogFolder[];
   clients: Client[];
   onSendToDay: (taskId: string, day: string) => Promise<void>;
-  onRemoveFromDay: (taskId: string) => Promise<void>;
   onCreateTask: (title: string, clientId: string, folderId?: string) => Promise<void>;
   onEditTask: (task: Task) => void;
   onDeleteTask: (taskId: string) => Promise<void>;
@@ -36,20 +33,12 @@ interface BacklogPanelProps {
 }
 
 const DAYS = ["monday", "tuesday", "wednesday", "thursday", "friday"];
-const DAY_SHORT: Record<string, string> = {
-  monday: "Mon",
-  tuesday: "Tue",
-  wednesday: "Wed",
-  thursday: "Thu",
-  friday: "Fri",
-};
 
 export function BacklogPanel({
   tasks,
   folders,
   clients,
   onSendToDay,
-  onRemoveFromDay,
   onCreateTask,
   onEditTask,
   onDeleteTask,
@@ -142,7 +131,6 @@ export function BacklogPanel({
   };
 
   const renderTaskRow = (task: Task) => {
-    const isOnBoard = !!task.day;
     const priorityColors: Record<string, string> = {
       high: "bg-red-500",
       medium: "bg-yellow-500",
@@ -152,9 +140,7 @@ export function BacklogPanel({
     return (
       <div
         key={task.id}
-        className={`group flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-white/[0.03] transition-colors ${
-          isOnBoard ? "opacity-40" : ""
-        }`}
+        className="group flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-white/[0.03] transition-colors"
       >
         {/* Priority dot */}
         {task.priority && (
@@ -193,42 +179,26 @@ export function BacklogPanel({
           </div>
         )}
 
-        {/* Day badge or Send button */}
-        {isOnBoard ? (
-          <div className="flex items-center gap-1 shrink-0">
-            <span className="text-[10px] px-1.5 py-0.5 rounded bg-white/10 text-white/50">
-              {DAY_SHORT[task.day!] || task.day}
-            </span>
+        {/* Send to day */}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
             <button
               type="button"
-              onClick={() => onRemoveFromDay(task.id)}
-              className="opacity-0 group-hover:opacity-100 transition-opacity"
-              aria-label="Remove from board"
+              className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded bg-white/5 text-white/40 hover:bg-white/10 hover:text-white/60 shrink-0"
+              aria-label="Send to day"
             >
-              <X className="size-3 text-white/30 hover:text-white/60" />
+              <Send className="size-2.5" />
+              Send
             </button>
-          </div>
-        ) : (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <button
-                type="button"
-                className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded bg-white/5 text-white/40 hover:bg-white/10 hover:text-white/60 shrink-0"
-                aria-label="Send to day"
-              >
-                <Send className="size-2.5" />
-                Send
-              </button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="min-w-[120px]">
-              {DAYS.map((day) => (
-                <DropdownMenuItem key={day} onClick={() => onSendToDay(task.id, day)}>
-                  {COLUMN_TITLES[day]}
-                </DropdownMenuItem>
-              ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
-        )}
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="min-w-[120px]">
+            {DAYS.map((day) => (
+              <DropdownMenuItem key={day} onClick={() => onSendToDay(task.id, day)}>
+                {COLUMN_TITLES[day]}
+              </DropdownMenuItem>
+            ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
 
         {/* Delete */}
         <button
@@ -358,7 +328,7 @@ export function BacklogPanel({
     <div className="flex flex-col">
       <div className="flex items-center justify-between mb-4 px-1">
         <h2 className="text-sm font-semibold text-white/60 uppercase tracking-wider">Backlog</h2>
-        <span className="text-xs text-white/20">{tasks.filter((t) => !t.day).length} tasks</span>
+        <span className="text-xs text-white/20">{tasks.length} tasks</span>
       </div>
 
       {relevantClients.length === 0 && (

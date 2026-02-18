@@ -299,8 +299,8 @@ export default function BoardPage() {
 
   const saveEditedTask = async (updatedTask: Task) => {
     if (!activeProjectId) return;
-    // Update in kanban columns if it's on the board
     if (editingColumn) {
+      // Editing from kanban
       const updated = { ...columns };
       const idx = updated[editingColumn].findIndex((t) => t.id === updatedTask.id);
       if (idx !== -1) {
@@ -310,14 +310,11 @@ export default function BoardPage() {
       }
       await saveTask(activeProjectId, { ...updatedTask, day: editingColumn });
     } else {
-      // Editing from backlog (no kanban column)
-      await saveTask(activeProjectId, updatedTask);
-    }
-    // Update in backlog if task has a client
-    if (updatedTask.client) {
+      // Editing from backlog
       setBacklogTasks((prev) =>
-        prev.map((t) => (t.id === updatedTask.id ? { ...updatedTask, day: editingColumn || updatedTask.day } : t))
+        prev.map((t) => (t.id === updatedTask.id ? updatedTask : t))
       );
+      await saveTask(activeProjectId, updatedTask);
     }
     setEditingTask(null);
     setEditingColumn(null);
@@ -326,32 +323,15 @@ export default function BoardPage() {
   // Backlog action handlers
   const handleSendToDay = async (taskId: string, day: string) => {
     if (!activeProjectId) return;
-    // Update backlog task optimistically
     const task = backlogTasks.find((t) => t.id === taskId);
     if (!task) return;
     const updatedTask = { ...task, day };
-    setBacklogTasks((prev) => prev.map((t) => (t.id === taskId ? updatedTask : t)));
-    // Add to kanban column
+    // Remove from backlog, add to kanban
+    setBacklogTasks((prev) => prev.filter((t) => t.id !== taskId));
     const columnItems = [...(columns[day] || []), updatedTask];
     setColumns({ ...columns, [day]: columnItems });
     await saveTask(activeProjectId, updatedTask);
     await updateDayTasks(activeProjectId, day, columnItems);
-  };
-
-  const handleRemoveFromDay = async (taskId: string) => {
-    if (!activeProjectId) return;
-    const task = backlogTasks.find((t) => t.id === taskId);
-    if (!task || !task.day) return;
-    const oldDay = task.day;
-    const updatedTask = { ...task, day: undefined };
-    // Remove from kanban
-    setColumns((prev) => ({
-      ...prev,
-      [oldDay]: prev[oldDay]?.filter((t) => t.id !== taskId) || [],
-    }));
-    // Update backlog
-    setBacklogTasks((prev) => prev.map((t) => (t.id === taskId ? updatedTask : t)));
-    await saveTask(activeProjectId, updatedTask);
   };
 
   const handleCreateBacklogTask = async (title: string, clientId: string, folderId?: string) => {
@@ -390,16 +370,6 @@ export default function BoardPage() {
 
   const handleDeleteBacklogTask = async (taskId: string) => {
     setBacklogTasks((prev) => prev.filter((t) => t.id !== taskId));
-    // Also remove from kanban if it was there
-    const updated = { ...columns };
-    for (const col of Object.keys(updated)) {
-      const idx = updated[col].findIndex((t) => t.id === taskId);
-      if (idx !== -1) {
-        updated[col] = updated[col].filter((t) => t.id !== taskId);
-        break;
-      }
-    }
-    setColumns(updated);
     await deleteTask(taskId);
   };
 
@@ -753,7 +723,6 @@ export default function BoardPage() {
           folders={backlogFolders}
           clients={clients}
           onSendToDay={handleSendToDay}
-          onRemoveFromDay={handleRemoveFromDay}
           onCreateTask={handleCreateBacklogTask}
           onEditTask={handleEditBacklogTask}
           onDeleteTask={handleDeleteBacklogTask}

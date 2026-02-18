@@ -146,7 +146,7 @@ export async function updateDayTasks(projectId: string, day: string, tasks: Task
   }
 }
 
-// Load all tasks that have a client (for backlog view)
+// Load backlog tasks (have a client, NOT on the kanban)
 export async function loadBacklogTasks(projectId: string): Promise<Task[]> {
   const supabase = createClient()
   const areaId = await getAreaIdForProject(projectId)
@@ -158,6 +158,7 @@ export async function loadBacklogTasks(projectId: string): Promise<Task[]> {
     .select('*')
     .eq('area_id', areaId)
     .not('client', 'is', null)
+    .is('day', null)
     .order('sort_order')
 
   if (error) {
