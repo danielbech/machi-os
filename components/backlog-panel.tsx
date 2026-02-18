@@ -2,7 +2,6 @@
 
 import { useState, KeyboardEvent } from "react";
 import type { Task, BacklogFolder, Client } from "@/lib/types";
-import { CLIENT_DOT_COLORS } from "@/lib/colors";
 import { TEAM_MEMBERS, COLUMN_TITLES } from "@/lib/constants";
 import {
   DropdownMenu,
@@ -134,11 +133,6 @@ export function BacklogPanel({
   };
 
   const renderTaskRow = (task: Task) => {
-    const priorityColors: Record<string, string> = {
-      high: "bg-red-500",
-      medium: "bg-yellow-500",
-      low: "bg-blue-500",
-    };
     const isExpanded = expandedTasks.has(task.id);
 
     return (
@@ -161,12 +155,6 @@ export function BacklogPanel({
           ) : (
             <span className="w-3 shrink-0" />
           )}
-
-          {/* Priority dot */}
-          {task.priority && (
-            <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${priorityColors[task.priority] || "bg-white/20"}`} />
-          )}
-          {!task.priority && <span className="w-1.5 shrink-0" />}
 
           {/* Title */}
           <button
@@ -382,9 +370,6 @@ export function BacklogPanel({
             >
               <ChevronRight
                 className={`size-3.5 text-white/30 transition-transform ${isCollapsed ? "" : "rotate-90"}`}
-              />
-              <span
-                className={`w-2 h-2 rounded-full shrink-0 ${CLIENT_DOT_COLORS[client.color] || "bg-white/30"}`}
               />
               {client.logo_url && (
                 <img src={client.logo_url} alt="" className="size-4 rounded-sm object-cover shrink-0" />
