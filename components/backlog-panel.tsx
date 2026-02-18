@@ -234,7 +234,10 @@ export function BacklogPanel({
         {/* Expandable description */}
         {isExpanded && task.description && (
           <div className="px-2 pb-2 pl-9">
-            <p className="text-xs text-white/40 whitespace-pre-wrap break-words">{task.description}</p>
+            <div
+              className="tiptap text-xs text-white/40 break-words [&_a]:text-blue-400 [&_a]:underline"
+              dangerouslySetInnerHTML={{ __html: task.description }}
+            />
           </div>
         )}
       </div>
