@@ -170,10 +170,19 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     const { monday, friday } = getWeekRange();
     const dbEvents = await loadSharedCalendarEvents(projectId, monday, friday);
 
+    // Deduplicate events shared across multiple users' calendars
+    const seen = new Set<string>();
+    const uniqueEvents = dbEvents.filter(e => {
+      const key = `${e.google_event_id}:${e.calendar_id}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+
     const days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday'];
     const grouped: Record<string, CalendarEvent[]> = {};
 
-    dbEvents.forEach(e => {
+    uniqueEvents.forEach(e => {
       const eventDate = new Date(e.start_time);
       const dayOfWeek = eventDate.getDay();
       if (dayOfWeek >= 1 && dayOfWeek <= 5) {
