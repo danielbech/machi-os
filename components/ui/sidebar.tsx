@@ -100,6 +100,11 @@ function SidebarProvider({
         event.key === SIDEBAR_KEYBOARD_SHORTCUT &&
         (event.metaKey || event.ctrlKey)
       ) {
+        // Don't toggle sidebar when typing in an editor/input
+        const target = event.target as HTMLElement
+        if (target.isContentEditable || target.tagName === "INPUT" || target.tagName === "TEXTAREA") {
+          return
+        }
         event.preventDefault()
         toggleSidebar()
       }
