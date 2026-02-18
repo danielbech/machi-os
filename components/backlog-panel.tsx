@@ -406,7 +406,7 @@ export function BacklogPanel({
                   </div>
                 )}
 
-                {/* Add folder button */}
+                {/* Add task + Add folder inline inputs */}
                 {addingFolderFor === client.id ? (
                   <div className="ml-2 px-2 py-1">
                     <div className="flex items-center gap-1.5">
@@ -430,17 +430,31 @@ export function BacklogPanel({
                     </div>
                   </div>
                 ) : (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setAddingFolderFor(client.id);
-                      setNewFolderName("");
-                    }}
-                    className="flex items-center gap-1.5 ml-2 px-2 py-1 text-xs text-white/15 hover:text-white/30 transition-colors"
-                  >
-                    <Plus className="size-3" />
-                    Add folder
-                  </button>
+                  <div className="flex items-center gap-1 ml-2 px-1 py-1">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const key = `${client.id}:unsorted`;
+                        setAddingTaskIn(key);
+                        setNewTaskTitle("");
+                      }}
+                      className="p-1 rounded text-white/15 hover:text-white/40 hover:bg-white/[0.04] transition-colors"
+                      aria-label="Add task"
+                    >
+                      <Plus className="size-3.5" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setAddingFolderFor(client.id);
+                        setNewFolderName("");
+                      }}
+                      className="p-1 rounded text-white/15 hover:text-white/40 hover:bg-white/[0.04] transition-colors"
+                      aria-label="Add folder"
+                    >
+                      <Folder className="size-3.5" />
+                    </button>
+                  </div>
                 )}
               </div>
             )}
