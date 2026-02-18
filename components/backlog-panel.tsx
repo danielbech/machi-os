@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import {
   ChevronRight,
+  ChevronDown,
   Folder,
   Plus,
   Send,
@@ -54,6 +55,7 @@ export function BacklogPanel({
   const [newFolderName, setNewFolderName] = useState("");
   const [renamingFolder, setRenamingFolder] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState("");
+  const [expandedTasks, setExpandedTasks] = useState<Set<string>>(new Set());
 
   // All active clients + any inactive clients that have backlog tasks
   const activeClients = clients.filter((c) => c.active);
@@ -124,85 +126,117 @@ export function BacklogPanel({
     }
   };
 
+  const toggleExpanded = (taskId: string) => {
+    const next = new Set(expandedTasks);
+    if (next.has(taskId)) next.delete(taskId);
+    else next.add(taskId);
+    setExpandedTasks(next);
+  };
+
   const renderTaskRow = (task: Task) => {
     const priorityColors: Record<string, string> = {
       high: "bg-red-500",
       medium: "bg-yellow-500",
       low: "bg-blue-500",
     };
+    const isExpanded = expandedTasks.has(task.id);
 
     return (
-      <div
-        key={task.id}
-        className="group flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-white/[0.03] transition-colors"
-      >
-        {/* Priority dot */}
-        {task.priority && (
-          <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${priorityColors[task.priority] || "bg-white/20"}`} />
-        )}
-        {!task.priority && <span className="w-1.5 shrink-0" />}
-
-        {/* Title */}
-        <button
-          type="button"
-          onClick={() => onEditTask(task)}
-          className="flex-1 text-left text-sm text-white/80 truncate hover:text-white transition-colors"
-        >
-          {task.title}
-        </button>
-
-        {/* Assignee avatars */}
-        {task.assignees && task.assignees.length > 0 && (
-          <div className="flex -space-x-1 shrink-0">
-            {task.assignees.map((assigneeId) => {
-              const member = TEAM_MEMBERS.find((m) => m.id === assigneeId);
-              return member ? (
-                <div
-                  key={member.id}
-                  className={`flex items-center justify-center w-4 h-4 rounded-full ${!member.avatar ? member.color : "bg-white/5"} text-[8px] font-semibold text-white overflow-hidden`}
-                  title={member.name}
-                >
-                  {member.avatar ? (
-                    <img src={member.avatar} alt={member.name} className="w-full h-full object-cover" />
-                  ) : (
-                    member.initials
-                  )}
-                </div>
-              ) : null;
-            })}
-          </div>
-        )}
-
-        {/* Send to day */}
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
+      <div key={task.id} className="group rounded-md hover:bg-white/[0.03] transition-colors">
+        <div className="flex items-center gap-2 px-2 py-1.5">
+          {/* Expand chevron (only if has description) */}
+          {task.description ? (
             <button
               type="button"
-              className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded bg-white/5 text-white/40 hover:bg-white/10 hover:text-white/60 shrink-0"
-              aria-label="Send to day"
+              onClick={() => toggleExpanded(task.id)}
+              className="shrink-0 p-0"
+              aria-label={isExpanded ? "Collapse description" : "Expand description"}
             >
-              <Send className="size-2.5" />
-              Send
+              {isExpanded ? (
+                <ChevronDown className="size-3 text-white/30" />
+              ) : (
+                <ChevronRight className="size-3 text-white/30" />
+              )}
             </button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="min-w-[120px]">
-            {DAYS.map((day) => (
-              <DropdownMenuItem key={day} onClick={() => onSendToDay(task.id, day)}>
-                {COLUMN_TITLES[day]}
-              </DropdownMenuItem>
-            ))}
-          </DropdownMenuContent>
-        </DropdownMenu>
+          ) : (
+            <span className="w-3 shrink-0" />
+          )}
 
-        {/* Delete */}
-        <button
-          type="button"
-          onClick={() => onDeleteTask(task.id)}
-          className="opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
-          aria-label="Delete task"
-        >
-          <Trash2 className="size-3 text-white/20 hover:text-red-400" />
-        </button>
+          {/* Priority dot */}
+          {task.priority && (
+            <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${priorityColors[task.priority] || "bg-white/20"}`} />
+          )}
+          {!task.priority && <span className="w-1.5 shrink-0" />}
+
+          {/* Title */}
+          <button
+            type="button"
+            onClick={() => onEditTask(task)}
+            className="flex-1 text-left text-sm text-white/80 truncate hover:text-white transition-colors"
+          >
+            {task.title}
+          </button>
+
+          {/* Assignee avatars */}
+          {task.assignees && task.assignees.length > 0 && (
+            <div className="flex -space-x-1 shrink-0">
+              {task.assignees.map((assigneeId) => {
+                const member = TEAM_MEMBERS.find((m) => m.id === assigneeId);
+                return member ? (
+                  <div
+                    key={member.id}
+                    className={`flex items-center justify-center w-4 h-4 rounded-full ${!member.avatar ? member.color : "bg-white/5"} text-[8px] font-semibold text-white overflow-hidden`}
+                    title={member.name}
+                  >
+                    {member.avatar ? (
+                      <img src={member.avatar} alt={member.name} className="w-full h-full object-cover" />
+                    ) : (
+                      member.initials
+                    )}
+                  </div>
+                ) : null;
+              })}
+            </div>
+          )}
+
+          {/* Send to day */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button
+                type="button"
+                className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded bg-white/5 text-white/40 hover:bg-white/10 hover:text-white/60 shrink-0"
+                aria-label="Send to day"
+              >
+                <Send className="size-2.5" />
+                Send
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="min-w-[120px]">
+              {DAYS.map((day) => (
+                <DropdownMenuItem key={day} onClick={() => onSendToDay(task.id, day)}>
+                  {COLUMN_TITLES[day]}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+
+          {/* Delete */}
+          <button
+            type="button"
+            onClick={() => onDeleteTask(task.id)}
+            className="opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
+            aria-label="Delete task"
+          >
+            <Trash2 className="size-3 text-white/20 hover:text-red-400" />
+          </button>
+        </div>
+
+        {/* Expandable description */}
+        {isExpanded && task.description && (
+          <div className="px-2 pb-2 pl-9">
+            <p className="text-xs text-white/40 whitespace-pre-wrap break-words">{task.description}</p>
+          </div>
+        )}
       </div>
     );
   };
