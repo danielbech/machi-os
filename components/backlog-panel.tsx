@@ -394,20 +394,31 @@ export function BacklogPanel({
                     )}
                     <div className={clientFolders.length > 0 ? "ml-3" : ""}>
                       {unsortedTasks.map(renderTaskRow)}
-                      {renderAddTaskInput(client.id)}
                     </div>
                   </div>
                 )}
 
-                {/* No folders yet — just show tasks flat */}
-                {clientFolders.length === 0 && unsortedTasks.length === 0 && (
-                  <div className="ml-2">
-                    {renderAddTaskInput(client.id)}
+                {/* Add task / Add folder */}
+                {addingTaskIn === `${client.id}:unsorted` ? (
+                  <div className="ml-2 px-2 py-1">
+                    <input
+                      type="text"
+                      value={newTaskTitle}
+                      onChange={(e) => setNewTaskTitle(e.target.value)}
+                      onKeyDown={(e) => handleTaskKeyDown(e, client.id)}
+                      onBlur={() => {
+                        if (newTaskTitle.trim()) handleAddTask(client.id);
+                        else {
+                          setAddingTaskIn(null);
+                          setNewTaskTitle("");
+                        }
+                      }}
+                      placeholder="Task title..."
+                      autoFocus
+                      className="w-full bg-transparent text-sm outline-none placeholder:text-white/15 text-white/80"
+                    />
                   </div>
-                )}
-
-                {/* Add task + Add folder inline inputs */}
-                {addingFolderFor === client.id ? (
+                ) : addingFolderFor === client.id ? (
                   <div className="ml-2 px-2 py-1">
                     <div className="flex items-center gap-1.5">
                       <Folder className="size-3 text-white/30" />
