@@ -173,9 +173,8 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     // Deduplicate events shared across multiple users' calendars
     const seen = new Set<string>();
     const uniqueEvents = dbEvents.filter(e => {
-      const key = `${e.google_event_id}:${e.calendar_id}`;
-      if (seen.has(key)) return false;
-      seen.add(key);
+      if (seen.has(e.google_event_id)) return false;
+      seen.add(e.google_event_id);
       return true;
     });
 
