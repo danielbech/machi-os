@@ -416,24 +416,29 @@ export default function BoardPage() {
 
                 <div className="flex flex-col overflow-y-auto">
                   {/* Calendar Events */}
-                  {calendarEvents[columnId]?.map((event) => (
-                    <div key={event.id} className="rounded-lg border border-blue-500/20 bg-blue-500/5 p-2 mb-1 cursor-default">
-                      <div className="flex items-start gap-2">
-                        <Calendar className="size-3.5 text-blue-400 mt-0.5 shrink-0" />
-                        <div className="flex-1 min-w-0">
-                          <div className="text-sm font-medium text-blue-100">{event.summary}</div>
-                          <div className="text-xs text-blue-300/60 mt-0.5">
-                            {new Date(event.start).toLocaleTimeString("en-US", {
-                              hour: "numeric",
-                              minute: "2-digit",
-                              hour12: true,
-                            })}
-                            {event.location && ` • ${event.location}`}
+                  {calendarEvents[columnId]?.map((event) => {
+                    const dayIndex = ["monday", "tuesday", "wednesday", "thursday", "friday"].indexOf(columnId);
+                    const todayIndex = ["monday", "tuesday", "wednesday", "thursday", "friday"].indexOf(todayName);
+                    const isPast = dayIndex < todayIndex;
+                    return (
+                      <div key={event.id} className={`rounded-lg border p-2 mb-1 cursor-default ${isPast ? "border-white/5 bg-white/[0.02] opacity-40" : "border-blue-500/20 bg-blue-500/5"}`}>
+                        <div className="flex items-start gap-2">
+                          <Calendar className={`size-3.5 mt-0.5 shrink-0 ${isPast ? "text-white/30" : "text-blue-400"}`} />
+                          <div className="flex-1 min-w-0">
+                            <div className={`text-sm font-medium ${isPast ? "text-white/50" : "text-blue-100"}`}>{event.summary}</div>
+                            <div className={`text-xs mt-0.5 ${isPast ? "text-white/20" : "text-blue-300/60"}`}>
+                              {new Date(event.start).toLocaleTimeString("en-US", {
+                                hour: "numeric",
+                                minute: "2-digit",
+                                hour12: true,
+                              })}
+                              {event.location && ` • ${event.location}`}
+                            </div>
                           </div>
                         </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
 
                   {calendarEvents[columnId]?.length > 0 && (
                     <div className="my-1 border-t border-dotted border-white/10" />
