@@ -446,7 +446,7 @@ export default function BoardPage() {
                                       )}
                                     </div>
                                   </TooltipTrigger>
-                                  <TooltipContent side="bottom" className="max-w-[250px]">
+                                  <TooltipContent side="bottom" className="max-w-[250px] bg-zinc-900 text-white border border-white/10">
                                     <div className="flex flex-col gap-0.5">
                                       {event.attendees.map((email) => (
                                         <span key={email}>{email}</span>
