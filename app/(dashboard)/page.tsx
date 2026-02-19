@@ -426,7 +426,7 @@ export default function BoardPage() {
     <main className="flex min-h-screen flex-col p-4 md:p-8 bg-black/50">
       {/* Backlog panel — fixed, slides out from sidebar */}
       <div
-        className={`fixed top-0 bottom-0 left-[3rem] w-[340px] z-20 border-r border-white/[0.06] bg-black/80 backdrop-blur-md overflow-y-auto transition-transform duration-200 ease-in-out ${
+        className={`fixed top-0 bottom-0 left-[3rem] w-[340px] z-[5] border-r border-white/[0.06] bg-black/80 backdrop-blur-md overflow-y-auto transition-transform duration-200 ease-in-out ${
           backlogOpen ? "translate-x-0" : "-translate-x-full"
         }`}
       >
