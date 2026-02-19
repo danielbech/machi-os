@@ -704,8 +704,10 @@ export default function BoardPage() {
                             ? "border-amber-500/20 bg-amber-500/5 hover:bg-amber-500/10 hover:border-amber-500/30 hover:shadow-[0_2px_6px_rgba(0,0,0,0.4)]"
                             : "border-white/5 bg-white/[0.02] hover:bg-white/[0.04] hover:border-white/10 hover:shadow-[0_2px_6px_rgba(0,0,0,0.4)]"
                         } ${glowingCards.has(item.id) ? "animate-complete-glow" : ""}`}
-                        style={glowingCards.has(item.id) && item.client ? {
-                          "--glow-color": `rgb(${CLIENT_RGB_COLORS[clients.find((c) => c.id === item.client)?.color || "green"] || CLIENT_RGB_COLORS.green})`
+                        style={glowingCards.has(item.id) ? {
+                          "--glow": item.client
+                            ? CLIENT_RGB_COLORS[clients.find((c) => c.id === item.client)?.color || "green"] || CLIENT_RGB_COLORS.green
+                            : CLIENT_RGB_COLORS.green
                         } as React.CSSProperties : undefined}
                         tabIndex={0}
                         onClick={(e: any) => {

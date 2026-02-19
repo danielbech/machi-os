@@ -192,12 +192,12 @@
   margin-bottom: 0;
 }
 
-/* Card completion glow — color driven by --glow-color custom property */
+/* Card completion glow — color driven by --glow RGB custom property */
 @keyframes card-complete-glow {
   0% {
-    border-color: color-mix(in srgb, var(--glow-color, rgb(34, 197, 94)) 60%, transparent);
-    box-shadow: 0 0 12px color-mix(in srgb, var(--glow-color, rgb(34, 197, 94)) 20%, transparent),
-                0 0 4px color-mix(in srgb, var(--glow-color, rgb(34, 197, 94)) 10%, transparent);
+    border-color: rgba(var(--glow, 34, 197, 94), 0.6);
+    box-shadow: 0 0 12px rgba(var(--glow, 34, 197, 94), 0.2),
+                0 0 4px rgba(var(--glow, 34, 197, 94), 0.1);
   }
   100% {
     border-color: rgba(255, 255, 255, 0.05);
