@@ -495,11 +495,11 @@ export function BacklogPanel({
     return (
       <div key={folder.id}>
         {/* Folder header */}
-        <div className="flex items-center gap-1 group/folder border-b border-white/[0.04]">
+        <div className="flex items-center gap-1 group/folder border-b border-white/[0.04] hover:bg-white/[0.04] transition-colors px-3 py-1.5">
           <button
             type="button"
             onClick={() => toggleFolder(folder.id)}
-            className="flex items-center gap-1.5 flex-1 px-3 py-1.5 hover:bg-white/[0.04] transition-colors"
+            className="flex items-center gap-1.5 flex-1"
           >
             <ChevronRight
               className={`size-3 text-white/30 transition-transform ${isCollapsed ? "" : "rotate-90"}`}
@@ -554,18 +554,18 @@ export function BacklogPanel({
               setRenamingFolder(folder.id);
               setRenameValue(folder.name);
             }}
-            className="opacity-0 group-hover/folder:opacity-100 transition-opacity p-0.5"
+            className="opacity-0 group-hover/folder:opacity-100 transition-opacity p-1.5 rounded hover:bg-white/[0.06]"
             aria-label="Rename folder"
           >
-            <Pencil className="size-2.5 text-white/20 hover:text-white/50" />
+            <Pencil className="size-3.5 text-white/20 hover:text-white/50" />
           </button>
           <button
             type="button"
             onClick={() => onDeleteFolder(folder.id)}
-            className="opacity-0 group-hover/folder:opacity-100 transition-opacity p-0.5"
+            className="opacity-0 group-hover/folder:opacity-100 transition-opacity p-1.5 rounded hover:bg-white/[0.06]"
             aria-label="Delete folder"
           >
-            <Trash2 className="size-2.5 text-white/20 hover:text-red-400" />
+            <Trash2 className="size-3.5 text-white/20 hover:text-red-400" />
           </button>
         </div>
 
