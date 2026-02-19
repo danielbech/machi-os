@@ -98,6 +98,7 @@ interface BacklogPanelProps {
   onRenameFolder: (folderId: string, name: string) => Promise<void>;
   onDeleteFolder: (folderId: string) => Promise<void>;
   onReorderTasks: (tasks: Task[]) => Promise<void>;
+  onDragActiveChange?: (active: boolean) => void;
 }
 
 const DAYS = ["monday", "tuesday", "wednesday", "thursday", "friday"];
@@ -115,6 +116,7 @@ export function BacklogPanel({
   onRenameFolder,
   onDeleteFolder,
   onReorderTasks,
+  onDragActiveChange,
 }: BacklogPanelProps) {
   // Manual toggle overrides (true = forced open, false = forced closed)
   const [clientToggleOverrides, setClientToggleOverrides] = useState<Record<string, boolean>>({});
@@ -168,6 +170,7 @@ export function BacklogPanel({
     if (task) {
       setActiveTask(task);
       setLocalTasks([...tasks]);
+      onDragActiveChange?.(true);
     }
   };
 
@@ -247,9 +250,29 @@ export function BacklogPanel({
   };
 
   const handleDragEnd = (event: DragEndEvent) => {
+    onDragActiveChange?.(false);
+
     if (!localTasks) {
       setActiveTask(null);
       return;
+    }
+
+    // Check if dropped over a kanban column using pointer position
+    const { activatorEvent, delta } = event;
+    const pe = activatorEvent as PointerEvent | undefined;
+    if (pe && typeof pe.clientX === "number") {
+      const x = pe.clientX + delta.x;
+      const y = pe.clientY + delta.y;
+      const elements = document.elementsFromPoint(x, y);
+      const columnEl = elements.find((el) => el.hasAttribute("data-column-id"));
+      if (columnEl) {
+        const day = columnEl.getAttribute("data-column-id")!;
+        const taskId = event.active.id as string;
+        setLocalTasks(null);
+        setActiveTask(null);
+        onSendToDay(taskId, day);
+        return;
+      }
     }
 
     if (!event.over) {

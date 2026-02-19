@@ -36,6 +36,7 @@ export default function BoardPage() {
   const [newCardType, setNewCardType] = useState<"task" | "note">("task");
   const [backlogTasks, setBacklogTasks] = useState<Task[]>([]);
   const [backlogFolders, setBacklogFolders] = useState<BacklogFolder[]>([]);
+  const [backlogDragActive, setBacklogDragActive] = useState(false);
 
   // Load tasks
   const refreshTasks = useCallback(async () => {
@@ -444,6 +445,7 @@ export default function BoardPage() {
             onRenameFolder={handleRenameFolder}
             onDeleteFolder={handleDeleteFolder}
             onReorderTasks={handleReorderBacklogTasks}
+            onDragActiveChange={setBacklogDragActive}
           />
         </div>
       </div>
@@ -466,7 +468,8 @@ export default function BoardPage() {
               <KanbanColumn
                 key={columnId}
                 value={columnId}
-                className="w-[280px] shrink-0"
+                data-column-id={columnId}
+                className={`w-[280px] shrink-0 transition-shadow ${backlogDragActive ? "ring-1 ring-white/10 ring-inset rounded-lg" : ""}`}
                 onMouseEnter={() => setHoveredColumn(columnId)}
               >
                 <div className="mb-1.5 px-1">
