@@ -374,7 +374,7 @@ export function BacklogPanel({
               <button
                 type="button"
                 onClick={() => onEditTask(task)}
-                className="flex-1 text-left text-base text-white/80 truncate hover:text-white transition-colors"
+                className="flex-1 text-left text-sm text-white/80 truncate hover:text-white transition-colors"
               >
                 {task.title}
               </button>
