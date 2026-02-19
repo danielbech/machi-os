@@ -9,7 +9,7 @@ import { TaskEditDialog } from "@/components/task-edit-dialog";
 import { BacklogPanel } from "@/components/backlog-panel";
 import type { Task, BacklogFolder } from "@/lib/types";
 import { TEAM_MEMBERS, COLUMN_TITLES, EMPTY_COLUMNS } from "@/lib/constants";
-import { getClientClassName } from "@/lib/colors";
+import { getClientTextClassName } from "@/lib/colors";
 import {
   Kanban,
   KanbanBoard,
@@ -17,7 +17,6 @@ import {
   KanbanItem,
   KanbanOverlay,
 } from "@/components/ui/kanban";
-import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from "@/components/ui/tooltip";
 import { Check, Plus, Calendar, Keyboard, StickyNote } from "lucide-react";
 
@@ -621,12 +620,12 @@ export default function BoardPage() {
                                     (() => {
                                       const client = clients.find((c) => c.id === item.client);
                                       return client ? (
-                                        <Badge key={client.id} className={`${getClientClassName(client.color)} flex items-center gap-1`}>
+                                        <div key={client.id} className={`flex items-center gap-1.5 ${getClientTextClassName(client.color)} text-xs font-medium`}>
                                           {client.logo_url && (
-                                            <img src={client.logo_url} alt="" className="size-3 rounded-sm object-cover" />
+                                            <img src={client.logo_url} alt="" className="w-5 h-5 rounded-full object-cover" />
                                           )}
                                           {client.name}
-                                        </Badge>
+                                        </div>
                                       ) : null;
                                     })()}
                                   {item.assignees &&

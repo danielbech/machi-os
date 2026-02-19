@@ -22,8 +22,24 @@ export const CLIENT_DOT_COLORS: Record<string, string> = {
   cyan: "bg-cyan-500",
 };
 
+// Text-only colors (no background)
+export const CLIENT_TEXT_COLORS: Record<string, string> = {
+  blue: "text-blue-400",
+  green: "text-green-400",
+  purple: "text-purple-400",
+  orange: "text-orange-400",
+  pink: "text-pink-400",
+  red: "text-red-400",
+  yellow: "text-yellow-400",
+  cyan: "text-cyan-400",
+};
+
 export const COLOR_NAMES = Object.keys(CLIENT_COLORS);
 
 export function getClientClassName(color: string): string {
   return CLIENT_COLORS[color] || CLIENT_COLORS.blue;
+}
+
+export function getClientTextClassName(color: string): string {
+  return CLIENT_TEXT_COLORS[color] || CLIENT_TEXT_COLORS.blue;
 }
