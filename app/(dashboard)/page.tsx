@@ -673,11 +673,13 @@ export default function BoardPage() {
                               <div
                                 className={`flex size-4 items-center justify-center rounded-full border transition-all ${
                                   item.completed
-                                    ? "border-green-500/80 bg-green-500/80"
+                                    ? dimCompleted
+                                      ? "border-white/15 bg-white/15"
+                                      : "border-green-500/80 bg-green-500/80"
                                     : "border-white/20 hover:border-white/40"
                                 }`}
                               >
-                                {item.completed && <Check className="size-3 text-white" strokeWidth={3} />}
+                                {item.completed && <Check className={`size-3 ${dimCompleted ? "text-white/40" : "text-white"}`} strokeWidth={3} />}
                               </div>
                             </button>
                           </div>
