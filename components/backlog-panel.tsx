@@ -599,7 +599,7 @@ export function BacklogPanel({
         </div>
 
         {relevantClients.length === 0 && (
-          <p className="text-sm text-white/20 px-1">No clients yet. Add clients to get started.</p>
+          <p className="text-sm text-white/20 px-1">No projects yet. Add projects to get started.</p>
         )}
 
         {relevantClients.map((client) => {

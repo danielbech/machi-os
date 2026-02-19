@@ -29,7 +29,7 @@ function generateSlug(name: string, existingSlugs: string[]): string {
   return first;
 }
 
-export default function ClientsPage() {
+export default function ProjectsPage() {
   const { activeProjectId, clients, refreshClients } = useWorkspace();
 
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -126,7 +126,7 @@ export default function ClientsPage() {
       await refreshClients();
       setDialogOpen(false);
     } catch (error) {
-      console.error("Error saving client:", error);
+      console.error("Error saving project:", error);
     } finally {
       setSaving(false);
     }
@@ -137,7 +137,7 @@ export default function ClientsPage() {
       await updateClientRecord(client.id, { active: !client.active });
       await refreshClients();
     } catch (error) {
-      console.error("Error toggling client status:", error);
+      console.error("Error toggling project status:", error);
     }
   };
 
@@ -147,7 +147,7 @@ export default function ClientsPage() {
       await refreshClients();
       setDeleteConfirm(null);
     } catch (error) {
-      console.error("Error deleting client:", error);
+      console.error("Error deleting project:", error);
     }
   };
 
@@ -217,25 +217,25 @@ export default function ClientsPage() {
   return (
     <main className="flex min-h-screen flex-col p-4 md:p-8 bg-black/50">
       <div className="mb-6 flex items-center justify-between">
-        <h1 className="text-2xl font-bold">Clients</h1>
+        <h1 className="text-2xl font-bold">Projects</h1>
         <Button onClick={openAdd}>
           <Plus className="size-4" />
-          Add Client
+          Add Project
         </Button>
       </div>
 
       {clients.length === 0 ? (
         <div className="flex-1 flex items-center justify-center">
           <div className="text-center space-y-3">
-            <div className="text-white/40 text-sm">No clients yet</div>
+            <div className="text-white/40 text-sm">No projects yet</div>
             <Button variant="link" onClick={openAdd} className="text-white/60 hover:text-white">
-              Add your first client
+              Add your first project
             </Button>
           </div>
         </div>
       ) : (
         <div className="space-y-6">
-          {/* Active clients */}
+          {/* Active projects */}
           {activeClients.length > 0 && (
             <div className="space-y-2">
               <div className="text-xs font-medium text-white/40 uppercase tracking-wider px-1">
@@ -249,7 +249,7 @@ export default function ClientsPage() {
             </div>
           )}
 
-          {/* Idle clients */}
+          {/* Idle projects */}
           {idleClients.length > 0 && (
             <div className="space-y-2">
               <div className="text-xs font-medium text-white/40 uppercase tracking-wider px-1">
@@ -267,35 +267,91 @@ export default function ClientsPage() {
 
       {/* Add/Edit Dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="sm:max-w-[420px]">
+        <DialogContent className="sm:max-w-[460px]">
           <DialogHeader>
-            <DialogTitle>{editingClient ? "Edit Client" : "Add Client"}</DialogTitle>
+            <DialogTitle>{editingClient ? "Edit Project" : "Add Project"}</DialogTitle>
           </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2.5">
-              <label className="text-sm font-medium">Name</label>
-              <Input
-                type="text"
-                value={formName}
-                onChange={(e) => handleNameChange(e.target.value)}
-                placeholder="Client name"
-                autoFocus
-              />
+          <div className="space-y-5 py-4">
+            {/* Name + Shortcut row */}
+            <div className="flex gap-3">
+              <div className="flex-1 space-y-2">
+                <label className="text-sm font-medium">Name</label>
+                <Input
+                  type="text"
+                  value={formName}
+                  onChange={(e) => handleNameChange(e.target.value)}
+                  placeholder="Project name"
+                  autoFocus
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Shortcut</label>
+                <Input
+                  type="text"
+                  value={formSlug}
+                  onChange={(e) => setFormSlug(e.target.value.slice(0, 3))}
+                  placeholder="e.g. b"
+                  maxLength={3}
+                  className="w-16 font-mono text-center"
+                />
+              </div>
             </div>
 
+            <div className="border-t border-white/[0.06]" />
+
+            {/* Logo */}
             <div className="space-y-2.5">
-              <label className="text-sm font-medium">Keyboard Shortcut</label>
-              <Input
-                type="text"
-                value={formSlug}
-                onChange={(e) => setFormSlug(e.target.value.slice(0, 3))}
-                placeholder="e.g. b"
-                maxLength={3}
-                className="w-20 font-mono"
+              <label className="text-sm font-medium">Logo <span className="text-white/30 font-normal">(optional)</span></label>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*,.svg"
+                onChange={handleFileSelect}
+                className="hidden"
               />
-              <div className="text-xs text-white/30">Press this key on a task card to assign this client</div>
+              {formLogoPreview ? (
+                <div className="flex items-center gap-4">
+                  <img
+                    src={formLogoPreview}
+                    alt="Logo preview"
+                    className="size-16 rounded-xl object-cover bg-white/5"
+                  />
+                  <div className="flex flex-col gap-1.5">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="text-white/40 hover:text-white/60"
+                      onClick={() => fileInputRef.current?.click()}
+                    >
+                      <Upload className="size-3" />
+                      Replace
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="text-white/40 hover:text-red-400 hover:bg-red-500/10"
+                      onClick={clearLogo}
+                    >
+                      <X className="size-3" />
+                      Remove
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="flex items-center justify-center gap-2 w-full rounded-xl border border-dashed border-white/10 bg-white/[0.02] px-3 py-5 text-sm text-white/30 hover:text-white/50 hover:border-white/20 transition-colors"
+                >
+                  <Upload className="size-4" />
+                  Upload logo
+                </button>
+              )}
             </div>
 
+            <div className="border-t border-white/[0.06]" />
+
+            {/* Color */}
             <div className="space-y-2.5">
               <label className="text-sm font-medium">Color</label>
               <div className="flex flex-wrap gap-2">
@@ -316,62 +372,44 @@ export default function ClientsPage() {
               </div>
             </div>
 
-            <div className="space-y-2.5">
-              <label className="text-sm font-medium">Logo <span className="text-white/30 font-normal">(optional)</span></label>
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/*,.svg"
-                onChange={handleFileSelect}
-                className="hidden"
-              />
-              {formLogoPreview ? (
-                <div className="flex items-center gap-3">
-                  <img
-                    src={formLogoPreview}
-                    alt="Logo preview"
-                    className="size-12 rounded-lg object-cover bg-white/5"
-                  />
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="text-white/40 hover:text-red-400 hover:bg-red-500/10"
-                    onClick={clearLogo}
-                  >
-                    <X className="size-3" />
-                    Remove
-                  </Button>
-                </div>
-              ) : (
-                <button
-                  type="button"
-                  onClick={() => fileInputRef.current?.click()}
-                  className="flex items-center gap-2 w-full rounded-md border border-dashed border-white/10 bg-white/[0.02] px-3 py-3 text-sm text-white/40 hover:text-white/60 hover:border-white/20 transition-colors"
-                >
-                  <Upload className="size-4" />
-                  Upload logo
-                </button>
-              )}
-            </div>
-
             {/* Preview */}
             {formName.trim() && (
-              <div className="space-y-2.5">
-                <label className="text-sm font-medium text-white/40">Preview</label>
-                <Badge className={getClientClassName(formColor)}>{formName.trim()}</Badge>
-              </div>
+              <>
+                <div className="border-t border-white/[0.06]" />
+                <div className="space-y-2.5">
+                  <label className="text-sm font-medium text-white/40">Preview</label>
+                  <div className="flex items-center gap-3 rounded-lg border border-white/[0.06] bg-white/[0.02] px-3 py-2.5">
+                    {formLogoPreview ? (
+                      <img
+                        src={formLogoPreview}
+                        alt=""
+                        className="size-6 rounded-md object-cover bg-white/5 shrink-0"
+                      />
+                    ) : (
+                      <div className={`size-6 rounded-md ${CLIENT_DOT_COLORS[formColor] || "bg-blue-500"} flex items-center justify-center text-white font-bold text-[10px] shrink-0`}>
+                        {formName.trim().charAt(0).toUpperCase()}
+                      </div>
+                    )}
+                    <span className="text-sm font-medium text-white/80">{formName.trim()}</span>
+                    <Badge className={`${getClientClassName(formColor)} ml-auto`}>{formName.trim()}</Badge>
+                  </div>
+                </div>
+              </>
             )}
 
-            <div className="flex justify-end gap-2 pt-4">
-              <Button variant="ghost" onClick={() => setDialogOpen(false)}>
-                Cancel
-              </Button>
-              <Button
-                onClick={handleSave}
-                disabled={saving || !formName.trim() || !formSlug.trim()}
-              >
-                {saving ? "Saving..." : editingClient ? "Save" : "Add Client"}
-              </Button>
+            <div className="flex items-center justify-between pt-2">
+              <span className="text-[11px] text-white/20">Press shortcut key on a task card to assign this project</span>
+              <div className="flex gap-2">
+                <Button variant="ghost" onClick={() => setDialogOpen(false)}>
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handleSave}
+                  disabled={saving || !formName.trim() || !formSlug.trim()}
+                >
+                  {saving ? "Saving..." : editingClient ? "Save" : "Add Project"}
+                </Button>
+              </div>
             </div>
           </div>
         </DialogContent>
@@ -381,11 +419,11 @@ export default function ClientsPage() {
       <Dialog open={deleteConfirm !== null} onOpenChange={() => setDeleteConfirm(null)}>
         <DialogContent className="sm:max-w-[360px]">
           <DialogHeader>
-            <DialogTitle>Delete Client</DialogTitle>
+            <DialogTitle>Delete Project</DialogTitle>
           </DialogHeader>
           <div className="py-4 space-y-4">
             <p className="text-sm text-white/60">
-              Are you sure you want to delete this client? Tasks assigned to this client will keep their assignment but it won&apos;t be visible.
+              Are you sure you want to delete this project? Tasks assigned to this project will keep their assignment but it won&apos;t be visible.
             </p>
             <div className="flex justify-end gap-2">
               <Button variant="ghost" onClick={() => setDeleteConfirm(null)}>

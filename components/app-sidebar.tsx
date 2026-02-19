@@ -23,11 +23,11 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { LayoutDashboard, Building2, Settings, Check, ChevronDown } from "lucide-react";
+import { LayoutDashboard, FolderKanban, Settings, Check, ChevronDown } from "lucide-react";
 
 const NAV_ITEMS = [
   { title: "Board", href: "/", icon: LayoutDashboard },
-  { title: "Clients", href: "/clients", icon: Building2 },
+  { title: "Projects", href: "/projects", icon: FolderKanban },
 ];
 
 export function AppSidebar() {

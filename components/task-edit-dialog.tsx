@@ -99,7 +99,7 @@ export function TaskEditDialog({ task, onClose, onSave, onTaskChange, folders }:
               <>
                 {/* Client dropdown */}
                 <div className="flex flex-col gap-3">
-                  <label className="text-sm font-medium">Client</label>
+                  <label className="text-sm font-medium">Project</label>
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <button
@@ -115,7 +115,7 @@ export function TaskEditDialog({ task, onClose, onSave, onTaskChange, folders }:
                             <span>{selectedClient.name}</span>
                           </span>
                         ) : (
-                          <span className="text-white/25">No client</span>
+                          <span className="text-white/25">No project</span>
                         )}
                         <ChevronDown className="size-3.5 text-white/30 ml-2" />
                       </button>
@@ -125,7 +125,7 @@ export function TaskEditDialog({ task, onClose, onSave, onTaskChange, folders }:
                         onClick={() => onTaskChange({ ...task, client: undefined })}
                         className="text-white/50"
                       >
-                        No client
+                        No project
                       </DropdownMenuItem>
                       <DropdownMenuSeparator />
                       {activeClients.map((client) => (
