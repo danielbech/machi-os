@@ -18,7 +18,7 @@ import {
   KanbanOverlay,
 } from "@/components/ui/kanban";
 import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from "@/components/ui/tooltip";
-import { Check, Plus, Calendar, Keyboard, StickyNote } from "lucide-react";
+import { Check, Plus, Calendar, Keyboard, StickyNote, ListChecks } from "lucide-react";
 
 export default function BoardPage() {
   const { activeProjectId, clients, calendarEvents, backlogOpen, toggleBacklog } = useWorkspace();
@@ -717,15 +717,25 @@ export default function BoardPage() {
                           const isPastDay = dayIdx < todayIdx;
                           const dimCompleted = item.completed && isPastDay;
                           return item.type === "note" ? (
-                          <div className="flex items-start gap-2">
-                            <StickyNote className="size-3.5 text-amber-400 mt-0.5 shrink-0" />
-                            <div className="text-sm text-amber-100/90">{item.title}</div>
+                          <div>
+                            <div className="flex items-start gap-2">
+                              <StickyNote className="size-3.5 text-amber-400 mt-0.5 shrink-0" />
+                              <div className="text-sm text-amber-100/90">{item.title}</div>
+                            </div>
+                            {item.checklist && item.checklist.length > 0 && (
+                              <div className="flex items-center gap-1 mt-1 ml-5.5">
+                                <ListChecks className="size-3 text-amber-400/40" />
+                                <span className="text-[11px] text-amber-400/40 tabular-nums">
+                                  {item.checklist.filter((i) => i.checked).length}/{item.checklist.length}
+                                </span>
+                              </div>
+                            )}
                           </div>
                         ) : (
                           <div className="relative">
                             <div className={`transition-opacity ${dimCompleted ? "opacity-30" : item.completed ? "opacity-50" : ""}`}>
                               <div className={`text-sm pr-6 ${item.completed ? "line-through" : ""}`}>{item.title}</div>
-                              {(item.client || (item.assignees && item.assignees.length > 0)) && (
+                              {(item.client || (item.assignees && item.assignees.length > 0) || (item.checklist && item.checklist.length > 0)) && (
                                 <div className="flex gap-1.5 mt-1.5 items-center flex-wrap">
                                   {item.client &&
                                     (() => {
@@ -739,6 +749,14 @@ export default function BoardPage() {
                                         </div>
                                       ) : null;
                                     })()}
+                                  {item.checklist && item.checklist.length > 0 && (
+                                    <div className="flex items-center gap-1">
+                                      <ListChecks className="size-3 text-white/30" />
+                                      <span className="text-[11px] text-white/30 tabular-nums">
+                                        {item.checklist.filter((i) => i.checked).length}/{item.checklist.length}
+                                      </span>
+                                    </div>
+                                  )}
                                   {item.assignees &&
                                     item.assignees.length > 0 && (
                                       <>

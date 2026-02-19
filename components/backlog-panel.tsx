@@ -38,6 +38,7 @@ import {
   Send,
   Pencil,
   Trash2,
+  ListChecks,
 } from "lucide-react";
 
 // --- Sortable task row wrapper (must be a top-level component for hooks) ---
@@ -386,6 +387,16 @@ export function BacklogPanel({
               >
                 {task.title}
               </button>
+
+              {/* Checklist indicator */}
+              {task.checklist && task.checklist.length > 0 && (
+                <div className="flex items-center gap-1 shrink-0">
+                  <ListChecks className="size-3 text-white/30" />
+                  <span className="text-[11px] text-white/30 tabular-nums">
+                    {task.checklist.filter((i) => i.checked).length}/{task.checklist.length}
+                  </span>
+                </div>
+              )}
 
               {/* Assignee avatars */}
               {task.assignees && task.assignees.length > 0 && (

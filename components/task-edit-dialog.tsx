@@ -1,7 +1,7 @@
 "use client";
 
-import { useRef } from "react";
-import type { Task, BacklogFolder } from "@/lib/types";
+import { useRef, useCallback } from "react";
+import type { Task, BacklogFolder, ChecklistItem } from "@/lib/types";
 import { useWorkspace } from "@/lib/workspace-context";
 import { TEAM_MEMBERS } from "@/lib/constants";
 import {
@@ -18,7 +18,7 @@ import {
   DropdownMenuCheckboxItem,
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
-import { Check, ChevronDown, Circle, StickyNote, ListTodo, Folder } from "lucide-react";
+import { Check, ChevronDown, Circle, StickyNote, ListTodo, Folder, X, Plus } from "lucide-react";
 
 interface TaskEditDialogProps {
   task: Task | null;
@@ -31,6 +31,7 @@ interface TaskEditDialogProps {
 export function TaskEditDialog({ task, onClose, onSave, onTaskChange, folders }: TaskEditDialogProps) {
   const { clients } = useWorkspace();
   const titleRef = useRef<HTMLInputElement>(null);
+  const checklistRefs = useRef<Map<string, HTMLInputElement>>(new Map());
   const activeClients = clients.filter((c) => c.active);
   const selectedClient = activeClients.find((c) => c.id === task?.client);
   const clientFolders = folders?.filter((f) => f.client_id === task?.client) || [];
@@ -277,6 +278,118 @@ export function TaskEditDialog({ task, onClose, onSave, onTaskChange, folders }:
                 onChange={(html) => onTaskChange({ ...task, description: html })}
                 placeholder="Optional description..."
               />
+            </div>
+
+            {/* Checklist */}
+            <div className="flex flex-col gap-2">
+              <div className="flex items-center justify-between">
+                <label className="text-sm font-medium">Checklist</label>
+                {task.checklist && task.checklist.length > 0 && (
+                  <span className="text-xs text-white/30 tabular-nums">
+                    {task.checklist.filter((i) => i.checked).length}/{task.checklist.length}
+                  </span>
+                )}
+              </div>
+              <div className="flex flex-col">
+                {(task.checklist || []).map((item, idx) => (
+                  <div key={item.id} className="group/item flex items-center gap-2 py-1">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const updated = [...(task.checklist || [])];
+                        updated[idx] = { ...updated[idx], checked: !updated[idx].checked };
+                        onTaskChange({ ...task, checklist: updated });
+                      }}
+                      className="shrink-0"
+                    >
+                      <div
+                        className={`flex size-4 items-center justify-center rounded-full border transition-all ${
+                          item.checked
+                            ? "border-green-500/80 bg-green-500/80"
+                            : "border-white/20 hover:border-white/40"
+                        }`}
+                      >
+                        {item.checked && <Check className="size-2.5 text-white" strokeWidth={3} />}
+                      </div>
+                    </button>
+                    <input
+                      type="text"
+                      value={item.text}
+                      ref={(el) => {
+                        if (el) checklistRefs.current.set(item.id, el);
+                        else checklistRefs.current.delete(item.id);
+                      }}
+                      onChange={(e) => {
+                        const updated = [...(task.checklist || [])];
+                        updated[idx] = { ...updated[idx], text: e.target.value };
+                        onTaskChange({ ...task, checklist: updated });
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          e.preventDefault();
+                          const newItem: ChecklistItem = { id: crypto.randomUUID(), text: "", checked: false };
+                          const updated = [...(task.checklist || [])];
+                          updated.splice(idx + 1, 0, newItem);
+                          onTaskChange({ ...task, checklist: updated });
+                          requestAnimationFrame(() => {
+                            checklistRefs.current.get(newItem.id)?.focus();
+                          });
+                        } else if (e.key === "Backspace" && item.text === "") {
+                          e.preventDefault();
+                          const updated = (task.checklist || []).filter((_, i) => i !== idx);
+                          onTaskChange({ ...task, checklist: updated });
+                          const prevItem = (task.checklist || [])[idx - 1];
+                          if (prevItem) {
+                            requestAnimationFrame(() => {
+                              const el = checklistRefs.current.get(prevItem.id);
+                              if (el) {
+                                el.focus();
+                                el.setSelectionRange(el.value.length, el.value.length);
+                              }
+                            });
+                          }
+                        } else if (e.key === "ArrowUp") {
+                          e.preventDefault();
+                          const prevItem = (task.checklist || [])[idx - 1];
+                          if (prevItem) checklistRefs.current.get(prevItem.id)?.focus();
+                        } else if (e.key === "ArrowDown") {
+                          e.preventDefault();
+                          const nextItem = (task.checklist || [])[idx + 1];
+                          if (nextItem) checklistRefs.current.get(nextItem.id)?.focus();
+                        }
+                      }}
+                      className={`flex-1 text-sm bg-transparent outline-none placeholder:text-white/20 ${
+                        item.checked ? "line-through text-white/30" : ""
+                      }`}
+                      placeholder="Item..."
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const updated = (task.checklist || []).filter((_, i) => i !== idx);
+                        onTaskChange({ ...task, checklist: updated });
+                      }}
+                      className="shrink-0 opacity-0 group-hover/item:opacity-100 transition-opacity p-0.5 rounded hover:bg-white/10"
+                    >
+                      <X className="size-3 text-white/30" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  const newItem: ChecklistItem = { id: crypto.randomUUID(), text: "", checked: false };
+                  onTaskChange({ ...task, checklist: [...(task.checklist || []), newItem] });
+                  requestAnimationFrame(() => {
+                    checklistRefs.current.get(newItem.id)?.focus();
+                  });
+                }}
+                className="flex items-center gap-1.5 text-xs text-white/30 hover:text-white/50 transition-colors w-fit"
+              >
+                <Plus className="size-3" />
+                Add item
+              </button>
             </div>
 
             {/* Actions */}

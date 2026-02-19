@@ -38,6 +38,7 @@ export async function loadTasksByDay(projectId: string): Promise<Record<string, 
         day: task.day,
         type: task.type || 'task',
         folder_id: task.folder_id || undefined,
+        checklist: task.checklist || [],
       })
     }
   })
@@ -70,6 +71,7 @@ export async function saveTask(projectId: string, task: Task): Promise<string> {
         priority: task.priority || null,
         type: task.type || 'task',
         folder_id: task.folder_id || null,
+        checklist: task.checklist || [],
       })
       .eq('id', task.id)
 
@@ -93,6 +95,7 @@ export async function saveTask(projectId: string, task: Task): Promise<string> {
         priority: task.priority || null,
         type: task.type || 'task',
         folder_id: task.folder_id || null,
+        checklist: task.checklist || [],
       })
       .select()
       .single()
@@ -132,6 +135,7 @@ export async function updateDayTasks(projectId: string, day: string, tasks: Task
       priority: task.priority || null,
       type: task.type || 'task',
       folder_id: task.folder_id || null,
+      checklist: task.checklist || [],
     }))
 
   if (updates.length === 0) return
@@ -167,6 +171,7 @@ export async function updateBacklogTaskOrder(projectId: string, tasks: Task[]) {
       priority: task.priority || null,
       type: task.type || 'task',
       folder_id: task.folder_id || null,
+      checklist: task.checklist || [],
     }))
 
   if (updates.length === 0) return
@@ -212,5 +217,6 @@ export async function loadBacklogTasks(projectId: string): Promise<Task[]> {
     day: task.day || undefined,
     type: task.type || 'task',
     folder_id: task.folder_id || undefined,
+    checklist: task.checklist || [],
   }))
 }

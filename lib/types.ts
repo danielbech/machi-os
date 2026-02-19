@@ -17,6 +17,12 @@ export interface Client {
   active: boolean;
 }
 
+export interface ChecklistItem {
+  id: string;
+  text: string;
+  checked: boolean;
+}
+
 export interface Task {
   id: string;
   title: string;
@@ -28,6 +34,7 @@ export interface Task {
   day?: string;
   type?: "task" | "note";
   folder_id?: string;
+  checklist?: ChecklistItem[];
 }
 
 export interface BacklogFolder {
