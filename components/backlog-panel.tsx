@@ -375,7 +375,7 @@ export function BacklogPanel({
               <button
                 type="button"
                 onClick={() => onEditTask(task)}
-                className="flex-1 text-left text-sm text-white/80 truncate hover:text-white transition-colors"
+                className="flex-1 text-left text-base text-white/80 truncate hover:text-white transition-colors"
               >
                 {task.title}
               </button>
@@ -388,7 +388,7 @@ export function BacklogPanel({
                     return member ? (
                       <div
                         key={member.id}
-                        className={`flex items-center justify-center w-4 h-4 rounded-full ${!member.avatar ? member.color : "bg-white/5"} text-[8px] font-semibold text-white overflow-hidden`}
+                        className={`flex items-center justify-center w-5 h-5 rounded-full ${!member.avatar ? member.color : "bg-white/5"} text-[9px] font-semibold text-white overflow-hidden`}
                         title={member.name}
                       >
                         {member.avatar ? (
@@ -505,7 +505,7 @@ export function BacklogPanel({
             <ChevronRight
               className={`size-3 text-white/30 transition-transform ${isCollapsed ? "" : "rotate-90"}`}
             />
-            <Folder className="size-3 text-white/30" />
+            <Folder className="size-3.5 text-white/30" />
             {renamingFolder === folder.id ? (
               <input
                 type="text"
@@ -521,10 +521,10 @@ export function BacklogPanel({
                 }}
                 onClick={(e) => e.stopPropagation()}
                 autoFocus
-                className="bg-transparent text-xs text-white/50 outline-none flex-1"
+                className="bg-transparent text-sm text-white/50 outline-none flex-1"
               />
             ) : (
-              <span className="text-xs text-white/50">{folder.name}</span>
+              <span className="text-sm text-white/50">{folder.name}</span>
             )}
             <span className="text-[10px] text-white/20 ml-1">{folderTasks.length}</span>
           </button>
@@ -601,9 +601,9 @@ export function BacklogPanel({
                   className={`size-3.5 text-white/30 transition-transform ${isCollapsed ? "" : "rotate-90"}`}
                 />
                 {client.logo_url && (
-                  <img src={client.logo_url} alt="" className="size-4 rounded-sm object-cover shrink-0" />
+                  <img src={client.logo_url} alt="" className="size-5 rounded-sm object-cover shrink-0" />
                 )}
-                <span className="text-sm font-medium text-white/80">{client.name}</span>
+                <span className="text-base font-medium text-white/80">{client.name}</span>
                 <span className="text-xs text-white/20 ml-auto">{clientTasks.length}</span>
               </button>
 
