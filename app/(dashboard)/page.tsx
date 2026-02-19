@@ -18,7 +18,7 @@ import {
   KanbanOverlay,
 } from "@/components/ui/kanban";
 import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from "@/components/ui/tooltip";
-import { Check, Plus, Calendar, Keyboard, StickyNote, ListChecks } from "lucide-react";
+import { Check, Plus, Calendar, Keyboard, StickyNote } from "lucide-react";
 
 export default function BoardPage() {
   const { activeProjectId, clients, calendarEvents, backlogOpen, toggleBacklog } = useWorkspace();
@@ -39,6 +39,7 @@ export default function BoardPage() {
   const [backlogDragActive, setBacklogDragActive] = useState(false);
   const [kanbanDragActive, setKanbanDragActive] = useState(false);
   const [dragOverTarget, setDragOverTarget] = useState<string | null>(null);
+  const [glowingCards, setGlowingCards] = useState<Set<string>>(new Set());
 
   // Load tasks
   const refreshTasks = useCallback(async () => {
@@ -192,16 +193,28 @@ export default function BoardPage() {
     if (!activeProjectId) return;
     const updated = { ...columns };
     let updatedTask: Task | null = null;
+    let wasCompleted = false;
     for (const col of Object.keys(updated)) {
       const idx = updated[col].findIndex((t) => t.id === taskId);
       if (idx !== -1) {
         updated[col] = [...updated[col]];
-        updated[col][idx] = { ...updated[col][idx], completed: !updated[col][idx].completed, day: col };
+        wasCompleted = updated[col][idx].completed || false;
+        updated[col][idx] = { ...updated[col][idx], completed: !wasCompleted, day: col };
         updatedTask = updated[col][idx];
         break;
       }
     }
     setColumns(updated);
+    if (!wasCompleted) {
+      setGlowingCards((prev) => new Set(prev).add(taskId));
+      setTimeout(() => {
+        setGlowingCards((prev) => {
+          const next = new Set(prev);
+          next.delete(taskId);
+          return next;
+        });
+      }, 1500);
+    }
     if (updatedTask) await saveTask(activeProjectId, updatedTask);
   };
 
@@ -351,6 +364,13 @@ export default function BoardPage() {
     if (!activeProjectId) return;
     suppressTaskReload.current = true;
     suppressBacklogReload.current = true;
+
+    // Check if task was just completed (via checklist or manual toggle)
+    const wasCompleted = editingColumn
+      ? columns[editingColumn]?.find((t) => t.id === updatedTask.id)?.completed
+      : backlogTasks.find((t) => t.id === updatedTask.id)?.completed;
+    const justCompleted = updatedTask.completed && !wasCompleted;
+
     if (editingColumn) {
       // Editing from kanban
       const updated = { ...columns };
@@ -370,6 +390,16 @@ export default function BoardPage() {
     }
     setEditingTask(null);
     setEditingColumn(null);
+    if (justCompleted) {
+      setGlowingCards((prev) => new Set(prev).add(updatedTask.id));
+      setTimeout(() => {
+        setGlowingCards((prev) => {
+          const next = new Set(prev);
+          next.delete(updatedTask.id);
+          return next;
+        });
+      }, 1500);
+    }
     setTimeout(() => {
       suppressTaskReload.current = false;
       suppressBacklogReload.current = false;
@@ -664,9 +694,11 @@ export default function BoardPage() {
                         asHandle
                         value={item.id}
                         className={`group rounded-lg border p-2 text-card-foreground shadow-[0_1px_3px_rgba(0,0,0,0.3)] transition-all duration-200 focus:outline-none !cursor-pointer ${
-                          item.type === "note"
-                            ? "border-amber-500/20 bg-amber-500/5 hover:bg-amber-500/10 hover:border-amber-500/30 hover:shadow-[0_2px_6px_rgba(0,0,0,0.4)]"
-                            : "border-white/5 bg-white/[0.02] hover:bg-white/[0.04] hover:border-white/10 hover:shadow-[0_2px_6px_rgba(0,0,0,0.4)]"
+                          glowingCards.has(item.id)
+                            ? "animate-complete-glow"
+                            : item.type === "note"
+                              ? "border-amber-500/20 bg-amber-500/5 hover:bg-amber-500/10 hover:border-amber-500/30 hover:shadow-[0_2px_6px_rgba(0,0,0,0.4)]"
+                              : "border-white/5 bg-white/[0.02] hover:bg-white/[0.04] hover:border-white/10 hover:shadow-[0_2px_6px_rgba(0,0,0,0.4)]"
                         }`}
                         tabIndex={0}
                         onClick={(e: any) => {
@@ -727,25 +759,20 @@ export default function BoardPage() {
                           const isPastDay = dayIdx < todayIdx;
                           const dimCompleted = item.completed && isPastDay;
                           return item.type === "note" ? (
-                          <div>
-                            <div className="flex items-start gap-2">
-                              <StickyNote className="size-3.5 text-amber-400 mt-0.5 shrink-0" />
-                              <div className="text-sm text-amber-100/90">{item.title}</div>
-                            </div>
+                          <div className="flex items-start gap-2">
+                            <StickyNote className="size-3.5 text-amber-400 mt-0.5 shrink-0" />
+                            <div className="flex-1 text-sm text-amber-100/90">{item.title}</div>
                             {item.checklist && item.checklist.length > 0 && (
-                              <div className="flex items-center gap-1 mt-1 ml-5.5">
-                                <ListChecks className="size-3 text-amber-400/40" />
-                                <span className="text-[11px] text-amber-400/40 tabular-nums">
-                                  {item.checklist.filter((i) => i.checked).length}/{item.checklist.length}
-                                </span>
-                              </div>
+                              <span className="text-[10px] text-amber-400/40 tabular-nums shrink-0 mt-0.5">
+                                {item.checklist.filter((i) => i.checked).length}/{item.checklist.length}
+                              </span>
                             )}
                           </div>
                         ) : (
                           <div className="relative">
                             <div className={`transition-opacity ${dimCompleted ? "opacity-30" : item.completed ? "opacity-50" : ""}`}>
                               <div className={`text-sm pr-6 ${item.completed ? "line-through" : ""}`}>{item.title}</div>
-                              {(item.client || (item.assignees && item.assignees.length > 0) || (item.checklist && item.checklist.length > 0)) && (
+                              {(item.client || (item.assignees && item.assignees.length > 0)) && (
                                 <div className="flex gap-1.5 mt-1.5 items-center flex-wrap">
                                   {item.client &&
                                     (() => {
@@ -759,14 +786,6 @@ export default function BoardPage() {
                                         </div>
                                       ) : null;
                                     })()}
-                                  {item.checklist && item.checklist.length > 0 && (
-                                    <div className="flex items-center gap-1">
-                                      <ListChecks className="size-3 text-white/30" />
-                                      <span className="text-[11px] text-white/30 tabular-nums">
-                                        {item.checklist.filter((i) => i.checked).length}/{item.checklist.length}
-                                      </span>
-                                    </div>
-                                  )}
                                   {item.assignees &&
                                     item.assignees.length > 0 && (
                                       <>
@@ -792,30 +811,36 @@ export default function BoardPage() {
                               )}
                             </div>
 
-                            <button
-                              type="button"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                toggleComplete(item.id);
-                              }}
-                              onMouseDown={(e) => e.stopPropagation()}
-                              className={`absolute top-0.5 right-0 shrink-0 transition-opacity ${
-                                item.completed ? "" : "opacity-0 group-hover:opacity-100"
-                              }`}
-                              aria-label={item.completed ? "Mark as incomplete" : "Mark as complete"}
-                            >
-                              <div
-                                className={`flex size-4 items-center justify-center rounded-full border transition-all ${
-                                  item.completed
-                                    ? dimCompleted
-                                      ? "border-white/8 bg-white/8"
-                                      : "border-green-500/80 bg-green-500/80"
-                                    : "border-white/20 hover:border-white/40"
-                                }`}
+                            <div className={`absolute top-0.5 right-0 flex flex-col items-center gap-1 transition-opacity ${
+                              item.completed || (item.checklist && item.checklist.length > 0) ? "" : "opacity-0 group-hover:opacity-100"
+                            }`}>
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  toggleComplete(item.id);
+                                }}
+                                onMouseDown={(e) => e.stopPropagation()}
+                                aria-label={item.completed ? "Mark as incomplete" : "Mark as complete"}
                               >
-                                {item.completed && <Check className={`size-3 ${dimCompleted ? "text-white/20" : "text-white"}`} strokeWidth={3} />}
-                              </div>
-                            </button>
+                                <div
+                                  className={`flex size-4 items-center justify-center rounded-full border transition-all ${
+                                    item.completed
+                                      ? dimCompleted
+                                        ? "border-white/8 bg-white/8"
+                                        : "border-green-500/80 bg-green-500/80"
+                                      : "border-white/20 hover:border-white/40"
+                                  }`}
+                                >
+                                  {item.completed && <Check className={`size-3 ${dimCompleted ? "text-white/20" : "text-white"}`} strokeWidth={3} />}
+                                </div>
+                              </button>
+                              {item.checklist && item.checklist.length > 0 && (
+                                <span className={`text-[10px] tabular-nums leading-none ${dimCompleted ? "text-white/15" : "text-white/30"}`}>
+                                  {item.checklist.filter((i) => i.checked).length}/{item.checklist.length}
+                                </span>
+                              )}
+                            </div>
                           </div>
                         );
                         })()}
