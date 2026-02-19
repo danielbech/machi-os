@@ -426,7 +426,7 @@ export function BacklogPanel({
               )}
 
               {/* Hover actions — overlaid so they don't squeeze the title */}
-              <div className="absolute right-0 top-0 bottom-0 hidden group-hover:flex items-center gap-1 pr-2 pl-6 bg-gradient-to-r from-transparent to-zinc-950">
+              <div className="absolute right-0 top-0 bottom-0 hidden group-hover:flex items-center gap-1 pr-2 pl-6 bg-gradient-to-r from-transparent via-black/80 to-black/90 backdrop-blur-sm">
                 {/* Send to day */}
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>

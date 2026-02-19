@@ -49,12 +49,12 @@ export function TaskEditDialog({ task, onClose, onSave, onTaskChange, folders }:
       >
         {task && (
           <form onSubmit={(e) => { e.preventDefault(); onSave(task); }} className="space-y-4">
-            {/* Type toggle — top right, next to close button */}
-            <div className="absolute top-[18px] right-12 flex gap-1">
+            {/* Type toggle */}
+            <div className="flex gap-1">
               <button
                 type="button"
                 onClick={() => onTaskChange({ ...task, type: "task" })}
-                className={`flex items-center gap-1.5 px-2 py-0.5 rounded-md text-xs font-medium transition-colors ${
+                className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium transition-colors ${
                   task.type !== "note"
                     ? "bg-white/10 text-white"
                     : "text-white/30 hover:text-white/50"
@@ -66,7 +66,7 @@ export function TaskEditDialog({ task, onClose, onSave, onTaskChange, folders }:
               <button
                 type="button"
                 onClick={() => onTaskChange({ ...task, type: "note" })}
-                className={`flex items-center gap-1.5 px-2 py-0.5 rounded-md text-xs font-medium transition-colors ${
+                className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium transition-colors ${
                   task.type === "note"
                     ? "bg-amber-500/20 text-amber-400"
                     : "text-white/30 hover:text-white/50"
@@ -83,7 +83,7 @@ export function TaskEditDialog({ task, onClose, onSave, onTaskChange, folders }:
               type="text"
               value={task.title}
               onChange={(e) => onTaskChange({ ...task, title: e.target.value })}
-              className="w-full text-lg font-semibold bg-transparent outline-none placeholder:text-white/20 pr-32"
+              className="w-full text-lg font-semibold bg-transparent outline-none placeholder:text-white/20"
               placeholder={task.type === "note" ? "Note title..." : "Task title..."}
             />
 
