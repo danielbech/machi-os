@@ -114,14 +114,8 @@ export function BacklogPanel({
   onDeleteFolder,
   onReorderTasks,
 }: BacklogPanelProps) {
-  // Auto-collapse clients with no tasks
-  const [collapsedClients, setCollapsedClients] = useState<Set<string>>(() => {
-    const empty = new Set<string>();
-    for (const c of clients) {
-      if (!tasks.some((t) => t.client === c.id)) empty.add(c.id);
-    }
-    return empty;
-  });
+  // Manual toggle overrides (true = forced open, false = forced closed)
+  const [clientToggleOverrides, setClientToggleOverrides] = useState<Record<string, boolean>>({});
   const [collapsedFolders, setCollapsedFolders] = useState<Set<string>>(new Set());
   const [addingTaskIn, setAddingTaskIn] = useState<string | null>(null);
   const [newTaskTitle, setNewTaskTitle] = useState("");
@@ -277,11 +271,14 @@ export function BacklogPanel({
   );
   const relevantClients = [...activeClients, ...inactiveWithTasks];
 
+  const isClientCollapsed = (clientId: string) => {
+    if (clientId in clientToggleOverrides) return !clientToggleOverrides[clientId];
+    // Auto-collapse if no tasks
+    return !activeTasks.some((t) => t.client === clientId);
+  };
+
   const toggleClient = (clientId: string) => {
-    const next = new Set(collapsedClients);
-    if (next.has(clientId)) next.delete(clientId);
-    else next.add(clientId);
-    setCollapsedClients(next);
+    setClientToggleOverrides((prev) => ({ ...prev, [clientId]: isClientCollapsed(clientId) }));
   };
 
   const toggleFolder = (folderId: string) => {
@@ -586,7 +583,7 @@ export function BacklogPanel({
           const clientTasks = activeTasks.filter((t) => t.client === client.id);
           const clientFolders = folders.filter((f) => f.client_id === client.id);
           const unsortedTasks = clientTasks.filter((t) => !t.folder_id);
-          const isCollapsed = collapsedClients.has(client.id);
+          const isCollapsed = isClientCollapsed(client.id);
           const unsortedContainerId = `unsorted:${client.id}`;
 
           return (
