@@ -115,7 +115,14 @@ export function BacklogPanel({
   onDeleteFolder,
   onReorderTasks,
 }: BacklogPanelProps) {
-  const [collapsedClients, setCollapsedClients] = useState<Set<string>>(new Set());
+  // Auto-collapse clients with no tasks
+  const [collapsedClients, setCollapsedClients] = useState<Set<string>>(() => {
+    const empty = new Set<string>();
+    for (const c of clients) {
+      if (!tasks.some((t) => t.client === c.id)) empty.add(c.id);
+    }
+    return empty;
+  });
   const [collapsedFolders, setCollapsedFolders] = useState<Set<string>>(new Set());
   const [addingTaskIn, setAddingTaskIn] = useState<string | null>(null);
   const [newTaskTitle, setNewTaskTitle] = useState("");
