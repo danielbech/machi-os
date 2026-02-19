@@ -385,12 +385,7 @@ export default function BoardPage() {
     // Suppress realtime reloads while we persist — the upsert triggers
     // postgres change events that would overwrite our optimistic state
     suppressBacklogReload.current = true;
-    const orderUpdates = updatedTasks.map((task, i) => ({
-      id: task.id,
-      sort_order: i,
-      folder_id: task.folder_id || null,
-    }));
-    await updateBacklogTaskOrder(activeProjectId, orderUpdates);
+    await updateBacklogTaskOrder(activeProjectId, updatedTasks);
     // Keep suppressing briefly to let any trailing realtime events pass
     setTimeout(() => { suppressBacklogReload.current = false; }, 2000);
   };

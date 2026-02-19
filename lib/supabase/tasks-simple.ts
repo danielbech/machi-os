@@ -147,21 +147,26 @@ export async function updateDayTasks(projectId: string, day: string, tasks: Task
 }
 
 // Batch update backlog task order (sort_order + folder_id)
-export async function updateBacklogTaskOrder(
-  projectId: string,
-  tasks: { id: string; sort_order: number; folder_id: string | null }[]
-) {
+export async function updateBacklogTaskOrder(projectId: string, tasks: Task[]) {
   const supabase = createClient()
   const areaId = await getAreaIdForProject(projectId)
   if (!areaId) return
 
   const updates = tasks
-    .filter(t => t.id.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i))
-    .map(t => ({
-      id: t.id,
+    .filter(task => task.id.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i))
+    .map((task, i) => ({
+      id: task.id,
       area_id: areaId,
-      sort_order: t.sort_order,
-      folder_id: t.folder_id,
+      title: task.title,
+      description: task.description || null,
+      day: task.day || null,
+      completed: task.completed || false,
+      sort_order: i,
+      assignees: task.assignees || [],
+      client: task.client || null,
+      priority: task.priority || null,
+      type: task.type || 'task',
+      folder_id: task.folder_id || null,
     }))
 
   if (updates.length === 0) return
