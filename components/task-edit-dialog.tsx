@@ -1,5 +1,6 @@
 "use client";
 
+import { useRef } from "react";
 import type { Task, BacklogFolder } from "@/lib/types";
 import { useWorkspace } from "@/lib/workspace-context";
 import { CLIENT_DOT_COLORS } from "@/lib/colors";
@@ -7,10 +8,7 @@ import { TEAM_MEMBERS } from "@/lib/constants";
 import {
   Dialog,
   DialogContent,
-  DialogHeader,
-  DialogTitle,
 } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { RichTextEditor } from "@/components/rich-text-editor";
 import {
@@ -33,6 +31,7 @@ interface TaskEditDialogProps {
 
 export function TaskEditDialog({ task, onClose, onSave, onTaskChange, folders }: TaskEditDialogProps) {
   const { clients } = useWorkspace();
+  const titleRef = useRef<HTMLInputElement>(null);
   const activeClients = clients.filter((c) => c.active);
   const selectedClient = activeClients.find((c) => c.id === task?.client);
   const clientFolders = folders?.filter((f) => f.client_id === task?.client) || [];
@@ -41,18 +40,21 @@ export function TaskEditDialog({ task, onClose, onSave, onTaskChange, folders }:
 
   return (
     <Dialog open={task !== null} onOpenChange={(open) => { if (!open) onClose(); }}>
-      <DialogContent className="sm:max-w-[500px]">
-        <DialogHeader>
-          <DialogTitle>{task?.type === "note" ? "Edit Note" : "Edit Task"}</DialogTitle>
-        </DialogHeader>
+      <DialogContent
+        className="sm:max-w-[500px]"
+        onOpenAutoFocus={(e) => {
+          e.preventDefault();
+          titleRef.current?.focus();
+        }}
+      >
         {task && (
-          <form onSubmit={(e) => { e.preventDefault(); onSave(task); }} className="space-y-4 py-4">
-            {/* Type toggle */}
-            <div className="flex gap-1">
+          <form onSubmit={(e) => { e.preventDefault(); onSave(task); }} className="space-y-4">
+            {/* Type toggle — top right, next to close button */}
+            <div className="absolute top-[18px] right-12 flex gap-1">
               <button
                 type="button"
                 onClick={() => onTaskChange({ ...task, type: "task" })}
-                className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium transition-colors ${
+                className={`flex items-center gap-1.5 px-2 py-0.5 rounded-md text-xs font-medium transition-colors ${
                   task.type !== "note"
                     ? "bg-white/10 text-white"
                     : "text-white/30 hover:text-white/50"
@@ -64,7 +66,7 @@ export function TaskEditDialog({ task, onClose, onSave, onTaskChange, folders }:
               <button
                 type="button"
                 onClick={() => onTaskChange({ ...task, type: "note" })}
-                className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium transition-colors ${
+                className={`flex items-center gap-1.5 px-2 py-0.5 rounded-md text-xs font-medium transition-colors ${
                   task.type === "note"
                     ? "bg-amber-500/20 text-amber-400"
                     : "text-white/30 hover:text-white/50"
@@ -75,15 +77,15 @@ export function TaskEditDialog({ task, onClose, onSave, onTaskChange, folders }:
               </button>
             </div>
 
-            {/* Title */}
-            <div className="flex flex-col gap-3">
-              <label className="text-sm font-medium">Title</label>
-              <Input
-                type="text"
-                value={task.title}
-                onChange={(e) => onTaskChange({ ...task, title: e.target.value })}
-              />
-            </div>
+            {/* Title — large, freestanding, auto-focused */}
+            <input
+              ref={titleRef}
+              type="text"
+              value={task.title}
+              onChange={(e) => onTaskChange({ ...task, title: e.target.value })}
+              className="w-full text-lg font-semibold bg-transparent outline-none placeholder:text-white/20 pr-32"
+              placeholder={task.type === "note" ? "Note title..." : "Task title..."}
+            />
 
             {/* Description */}
             <div className="flex flex-col gap-3">
