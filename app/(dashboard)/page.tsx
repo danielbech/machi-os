@@ -38,6 +38,7 @@ export default function BoardPage() {
   const [backlogFolders, setBacklogFolders] = useState<BacklogFolder[]>([]);
   const [backlogDragActive, setBacklogDragActive] = useState(false);
   const [kanbanDragActive, setKanbanDragActive] = useState(false);
+  const [dragOverTarget, setDragOverTarget] = useState<string | null>(null);
 
   // Load tasks
   const refreshTasks = useCallback(async () => {
@@ -303,6 +304,31 @@ export default function BoardPage() {
     return () => window.removeEventListener("keydown", handleDotKey);
   }, [toggleBacklog]);
 
+  // Track which drop target the cursor is over during any drag
+  useEffect(() => {
+    if (!backlogDragActive && !kanbanDragActive) {
+      setDragOverTarget(null);
+      return;
+    }
+    let current: string | null = null;
+    const onPointerMove = (e: PointerEvent) => {
+      const els = document.elementsFromPoint(e.clientX, e.clientY);
+      let target: string | null = null;
+      const col = els.find((el) => el.hasAttribute("data-column-id"));
+      if (col) {
+        target = col.getAttribute("data-column-id");
+      } else if (els.some((el) => el.hasAttribute("data-backlog-panel"))) {
+        target = "backlog";
+      }
+      if (target !== current) {
+        current = target;
+        setDragOverTarget(target);
+      }
+    };
+    window.addEventListener("pointermove", onPointerMove);
+    return () => window.removeEventListener("pointermove", onPointerMove);
+  }, [backlogDragActive, kanbanDragActive]);
+
   const removeTask = async (taskId: string) => {
     if (!activeProjectId) return;
     const updated = { ...columns };
@@ -452,9 +478,9 @@ export default function BoardPage() {
       {/* Backlog panel — fixed, slides out from sidebar */}
       <div
         data-backlog-panel
-        className={`fixed top-0 bottom-0 left-[3rem] w-[400px] z-[5] border-r border-white/[0.06] bg-black/80 backdrop-blur-md overflow-y-auto transition-transform duration-200 ease-in-out ${
+        className={`fixed top-0 bottom-0 left-[3rem] w-[400px] z-[5] border-r bg-black/80 backdrop-blur-md overflow-y-auto transition-transform duration-200 ease-in-out ${
           backlogOpen ? "translate-x-0" : "-translate-x-full"
-        } ${kanbanDragActive && backlogOpen ? "ring-1 ring-white/10 ring-inset" : ""}`}
+        } ${dragOverTarget === "backlog" ? "border-white/20 bg-white/[0.06]" : "border-white/[0.06]"}`}
       >
         <div className="p-4">
           <BacklogPanel
@@ -510,7 +536,7 @@ export default function BoardPage() {
                 key={columnId}
                 value={columnId}
                 data-column-id={columnId}
-                className={`w-[280px] shrink-0 transition-shadow ${backlogDragActive ? "ring-1 ring-white/10 ring-inset rounded-lg" : ""}`}
+                className={`w-[280px] shrink-0 rounded-lg transition-all duration-150 ${dragOverTarget === columnId ? "bg-white/[0.04] ring-1 ring-white/15 ring-inset" : ""}`}
                 onMouseEnter={() => setHoveredColumn(columnId)}
               >
                 <div className="mb-1.5 px-1">
