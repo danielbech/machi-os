@@ -213,7 +213,13 @@ export default function BoardPage() {
           next.delete(taskId);
           return next;
         });
-      }, 1500);
+      }, 800);
+    } else {
+      setGlowingCards((prev) => {
+        const next = new Set(prev);
+        next.delete(taskId);
+        return next;
+      });
     }
     if (updatedTask) await saveTask(activeProjectId, updatedTask);
   };
@@ -398,7 +404,7 @@ export default function BoardPage() {
           next.delete(updatedTask.id);
           return next;
         });
-      }, 1500);
+      }, 800);
     }
     setTimeout(() => {
       suppressTaskReload.current = false;
