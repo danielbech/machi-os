@@ -430,7 +430,7 @@ export default function BoardPage() {
               <KanbanColumn
                 key={columnId}
                 value={columnId}
-                className={`w-[280px] shrink-0 ${columnId === todayName ? "ring-2 ring-white/20 rounded-lg" : ""}`}
+                className="w-[280px] shrink-0"
                 onMouseEnter={() => setHoveredColumn(columnId)}
               >
                 <div className="mb-3 px-1">
