@@ -37,7 +37,6 @@ import {
   Send,
   Pencil,
   Trash2,
-  GripVertical,
 } from "lucide-react";
 
 // --- Sortable task row wrapper (must be a top-level component for hooks) ---
@@ -46,7 +45,7 @@ function SortableTaskRow({
   children,
 }: {
   id: string;
-  children: (dragListeners: Record<string, any>) => React.ReactNode;
+  children: React.ReactNode;
 }) {
   const {
     attributes,
@@ -64,8 +63,8 @@ function SortableTaskRow({
   };
 
   return (
-    <div ref={setNodeRef} style={style} {...attributes}>
-      {children(listeners || {})}
+    <div ref={setNodeRef} style={style} {...attributes} {...listeners} className="touch-none">
+      {children}
     </div>
   );
 }
@@ -352,17 +351,8 @@ export function BacklogPanel({
 
     return (
       <SortableTaskRow key={task.id} id={task.id}>
-        {(dragListeners) => (
-          <div className="group rounded-md hover:bg-white/[0.03] transition-colors">
+          <div className="group rounded-md hover:bg-white/[0.03] transition-colors cursor-grab active:cursor-grabbing">
             <div className="flex items-center gap-2 px-2 py-1.5">
-              {/* Drag handle */}
-              <div
-                {...dragListeners}
-                className="shrink-0 opacity-0 group-hover:opacity-100 transition-opacity cursor-grab active:cursor-grabbing touch-none"
-              >
-                <GripVertical className="size-3 text-white/20" />
-              </div>
-
               {/* Expand chevron (only if has description) */}
               {task.description ? (
                 <button
@@ -454,7 +444,6 @@ export function BacklogPanel({
               </div>
             )}
           </div>
-        )}
       </SortableTaskRow>
     );
   };
