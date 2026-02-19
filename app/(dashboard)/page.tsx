@@ -21,7 +21,7 @@ import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from "@/comp
 import { Check, Plus, Calendar, Keyboard, StickyNote } from "lucide-react";
 
 export default function BoardPage() {
-  const { activeProjectId, clients, calendarEvents } = useWorkspace();
+  const { activeProjectId, clients, calendarEvents, backlogOpen, toggleBacklog } = useWorkspace();
 
   const [columns, setColumns] = useState<Record<string, Task[]>>({ ...EMPTY_COLUMNS });
   const [addingToColumn, setAddingToColumn] = useState<string | null>(null);
@@ -288,6 +288,19 @@ export default function BoardPage() {
     return () => window.removeEventListener("keydown", handleGlobalKeyDown);
   }, []);
 
+  // "." shortcut to toggle backlog panel
+  useEffect(() => {
+    const handleDotKey = (e: globalThis.KeyboardEvent) => {
+      if (e.key !== ".") return;
+      const tag = (e.target as HTMLElement).tagName;
+      if (tag === "INPUT" || tag === "TEXTAREA" || (e.target as HTMLElement).isContentEditable) return;
+      e.preventDefault();
+      toggleBacklog();
+    };
+    window.addEventListener("keydown", handleDotKey);
+    return () => window.removeEventListener("keydown", handleDotKey);
+  }, [toggleBacklog]);
+
   const removeTask = async (taskId: string) => {
     if (!activeProjectId) return;
     const updated = { ...columns };
@@ -411,8 +424,31 @@ export default function BoardPage() {
 
   return (
     <main className="flex min-h-screen flex-col p-4 md:p-8 bg-black/50">
-      <div className="flex flex-col 2xl:flex-row gap-6 flex-1">
-      <div className="flex-1 overflow-hidden">
+      {/* Backlog panel — fixed, slides out from sidebar */}
+      <div
+        className={`fixed top-0 bottom-0 left-[3rem] w-[340px] z-20 border-r border-white/[0.06] bg-black/80 backdrop-blur-md overflow-y-auto transition-transform duration-200 ease-in-out ${
+          backlogOpen ? "translate-x-0" : "-translate-x-full"
+        }`}
+      >
+        <div className="p-4">
+          <BacklogPanel
+            tasks={backlogTasks}
+            folders={backlogFolders}
+            clients={clients}
+            onSendToDay={handleSendToDay}
+            onSendFolderToDay={handleSendFolderToDay}
+            onCreateTask={handleCreateBacklogTask}
+            onEditTask={handleEditBacklogTask}
+            onDeleteTask={handleDeleteBacklogTask}
+            onCreateFolder={handleCreateFolder}
+            onRenameFolder={handleRenameFolder}
+            onDeleteFolder={handleDeleteFolder}
+            onReorderTasks={handleReorderBacklogTasks}
+          />
+        </div>
+      </div>
+
+      <div className={`transition-[margin] duration-200 ease-in-out ${backlogOpen ? "ml-[340px]" : ""}`}>
         <Kanban
           value={columns}
           onValueChange={async (newColumns) => {
@@ -425,7 +461,7 @@ export default function BoardPage() {
           }}
           getItemValue={(item) => item.id}
         >
-          <KanbanBoard className="h-[calc(100vh-8rem)] overflow-x-auto p-1 pb-3">
+          <KanbanBoard className="overflow-x-auto p-1 pb-3">
             {Object.entries(columns).map(([columnId, items]) => (
               <KanbanColumn
                 key={columnId}
@@ -778,25 +814,6 @@ export default function BoardPage() {
         </Kanban>
       </div>
 
-      {/* Backlog panel */}
-      <div className="2xl:w-[400px] 2xl:shrink-0 2xl:overflow-y-auto 2xl:max-h-[calc(100vh-4rem)] rounded-xl border border-white/5 bg-white/[0.02] p-4">
-        <BacklogPanel
-          tasks={backlogTasks}
-          folders={backlogFolders}
-          clients={clients}
-          onSendToDay={handleSendToDay}
-          onSendFolderToDay={handleSendFolderToDay}
-          onCreateTask={handleCreateBacklogTask}
-          onEditTask={handleEditBacklogTask}
-          onDeleteTask={handleDeleteBacklogTask}
-          onCreateFolder={handleCreateFolder}
-          onRenameFolder={handleRenameFolder}
-          onDeleteFolder={handleDeleteFolder}
-          onReorderTasks={handleReorderBacklogTasks}
-        />
-      </div>
-      </div>
-
       <TaskEditDialog
         task={editingTask}
         onClose={() => {
@@ -829,6 +846,10 @@ export default function BoardPage() {
               <div className="flex items-center justify-between">
                 <span className="text-sm text-white/70">Paste card</span>
                 <kbd className="px-1.5 py-0.5 rounded bg-white/10 text-[11px] font-mono text-white/50">⌘V</kbd>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-white/70">Toggle backlog</span>
+                <kbd className="px-1.5 py-0.5 rounded bg-white/10 text-[11px] font-mono text-white/50">.</kbd>
               </div>
               <div className="border-t border-white/5 my-1" />
               {TEAM_MEMBERS.map((member, i) => (

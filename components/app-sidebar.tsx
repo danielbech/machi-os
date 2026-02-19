@@ -23,12 +23,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { LayoutDashboard, FolderKanban, Settings, Check, ChevronDown } from "lucide-react";
-
-const NAV_ITEMS = [
-  { title: "Board", href: "/", icon: LayoutDashboard },
-  { title: "Projects", href: "/projects", icon: FolderKanban },
-];
+import { LayoutDashboard, FolderKanban, Inbox, Settings, Check, ChevronDown } from "lucide-react";
 
 export function AppSidebar() {
   const pathname = usePathname();
@@ -36,6 +31,7 @@ export function AppSidebar() {
     userProjects, activeProjectId, setActiveProjectId, activeProject, user,
     googleCalendarConnected, connectGoogleCalendar, disconnectGoogleAccount,
     syncCalendarEvents, calendarConnections, updateSelectedCalendars,
+    backlogOpen, toggleBacklog,
   } = useWorkspace();
   const [showSettings, setShowSettings] = useState(false);
   const [workspaceMembers, setWorkspaceMembers] = useState<WorkspaceMember[]>([]);
@@ -121,16 +117,28 @@ export function AppSidebar() {
           <SidebarGroup>
             <SidebarGroupContent>
               <SidebarMenu>
-                {NAV_ITEMS.map((item) => (
-                  <SidebarMenuItem key={item.title}>
-                    <SidebarMenuButton asChild isActive={pathname === item.href} tooltip={item.title}>
-                      <Link href={item.href}>
-                        <item.icon />
-                        <span>{item.title}</span>
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                ))}
+                <SidebarMenuItem>
+                  <SidebarMenuButton asChild isActive={pathname === "/"} tooltip="Board">
+                    <Link href="/">
+                      <LayoutDashboard />
+                      <span>Board</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+                <SidebarMenuItem>
+                  <SidebarMenuButton isActive={backlogOpen} tooltip="Backlog" onClick={toggleBacklog}>
+                    <Inbox />
+                    <span>Backlog</span>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+                <SidebarMenuItem>
+                  <SidebarMenuButton asChild isActive={pathname === "/projects"} tooltip="Projects">
+                    <Link href="/projects">
+                      <FolderKanban />
+                      <span>Projects</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
               </SidebarMenu>
             </SidebarGroupContent>
           </SidebarGroup>

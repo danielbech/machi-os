@@ -48,6 +48,9 @@ interface WorkspaceContextValue {
   // Multi-account calendar
   calendarConnections: ConnectionWithCalendars[];
   updateSelectedCalendars: (connectionId: string, calendarIds: string[]) => Promise<void>;
+  // Backlog panel
+  backlogOpen: boolean;
+  toggleBacklog: () => void;
 }
 
 const WorkspaceContext = createContext<WorkspaceContextValue | null>(null);
@@ -78,6 +81,10 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
   const [userProjects, setUserProjects] = useState<Project[]>([]);
   const [activeProjectId, setActiveProjectIdState] = useState<string | null>(null);
   const [clients, setClients] = useState<Client[]>([]);
+
+  // Backlog panel
+  const [backlogOpen, setBacklogOpen] = useState(false);
+  const toggleBacklog = useCallback(() => setBacklogOpen((prev) => !prev), []);
 
   // Google Calendar state
   const [calendarConnections, setCalendarConnections] = useState<ConnectionWithCalendars[]>([]);
@@ -457,6 +464,8 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
         disconnectGoogleAccount,
         calendarConnections,
         updateSelectedCalendars: handleUpdateSelectedCalendars,
+        backlogOpen,
+        toggleBacklog,
       }}
     >
       {children}
