@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useRef, KeyboardEvent, useEffect } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { loadTasksByDay, loadBacklogTasks, saveTask, updateDayTasks, deleteTask } from "@/lib/supabase/tasks-simple";
+import { loadTasksByDay, loadBacklogTasks, saveTask, updateDayTasks, deleteTask, updateBacklogTaskOrder } from "@/lib/supabase/tasks-simple";
 import { loadBacklogFolders, createBacklogFolder, updateBacklogFolder, deleteBacklogFolder } from "@/lib/supabase/backlog-folders";
 import { useWorkspace } from "@/lib/workspace-context";
 import { TaskEditDialog } from "@/components/task-edit-dialog";
@@ -372,6 +372,17 @@ export default function BoardPage() {
   const handleDeleteBacklogTask = async (taskId: string) => {
     setBacklogTasks((prev) => prev.filter((t) => t.id !== taskId));
     await deleteTask(taskId);
+  };
+
+  const handleReorderBacklogTasks = async (updatedTasks: Task[]) => {
+    if (!activeProjectId) return;
+    setBacklogTasks(updatedTasks);
+    const orderUpdates = updatedTasks.map((task, i) => ({
+      id: task.id,
+      sort_order: i,
+      folder_id: task.folder_id || null,
+    }));
+    await updateBacklogTaskOrder(activeProjectId, orderUpdates);
   };
 
   const handleEditBacklogTask = (task: Task) => {
@@ -751,6 +762,7 @@ export default function BoardPage() {
           onCreateFolder={handleCreateFolder}
           onRenameFolder={handleRenameFolder}
           onDeleteFolder={handleDeleteFolder}
+          onReorderTasks={handleReorderBacklogTasks}
         />
       </div>
       </div>

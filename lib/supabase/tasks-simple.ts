@@ -146,6 +146,36 @@ export async function updateDayTasks(projectId: string, day: string, tasks: Task
   }
 }
 
+// Batch update backlog task order (sort_order + folder_id)
+export async function updateBacklogTaskOrder(
+  projectId: string,
+  tasks: { id: string; sort_order: number; folder_id: string | null }[]
+) {
+  const supabase = createClient()
+  const areaId = await getAreaIdForProject(projectId)
+  if (!areaId) return
+
+  const updates = tasks
+    .filter(t => t.id.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i))
+    .map(t => ({
+      id: t.id,
+      area_id: areaId,
+      sort_order: t.sort_order,
+      folder_id: t.folder_id,
+    }))
+
+  if (updates.length === 0) return
+
+  const { error } = await supabase
+    .from('tasks')
+    .upsert(updates)
+
+  if (error) {
+    console.error('Error batch updating backlog task order:', error)
+    throw error
+  }
+}
+
 // Load backlog tasks (have a client, NOT on the kanban)
 export async function loadBacklogTasks(projectId: string): Promise<Task[]> {
   const supabase = createClient()
