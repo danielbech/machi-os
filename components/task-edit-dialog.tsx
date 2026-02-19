@@ -102,7 +102,7 @@ export function TaskEditDialog({ task, onClose, onSave, onTaskChange, folders }:
                 type="text"
                 value={task.title}
                 onChange={(e) => onTaskChange({ ...task, title: e.target.value })}
-                className={`flex-1 text-lg font-semibold bg-transparent outline-none placeholder:text-white/20 ${task.completed ? "line-through opacity-50" : ""}`}
+                className={`flex-1 text-lg font-semibold bg-transparent outline-none placeholder:text-white/20 ${task.completed ? "text-green-500" : ""}`}
                 placeholder={task.type === "note" ? "Note title..." : "Task title..."}
               />
             </div>
