@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, KeyboardEvent } from "react";
+import { useState, useEffect, KeyboardEvent } from "react";
+import { createPortal } from "react-dom";
 import type { Task, BacklogFolder, Client } from "@/lib/types";
 import { TEAM_MEMBERS, COLUMN_TITLES } from "@/lib/constants";
 import {
@@ -132,6 +133,8 @@ export function BacklogPanel({
   // DnD state
   const [localTasks, setLocalTasks] = useState<Task[] | null>(null);
   const [activeTask, setActiveTask] = useState<Task | null>(null);
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
 
   // During drag use local copy; otherwise use prop
   const activeTasks = localTasks || tasks;
@@ -738,14 +741,17 @@ export function BacklogPanel({
         })}
       </div>
 
-      {/* Drag overlay */}
-      <DragOverlay>
-        {activeTask ? (
-          <div className="rounded-md border border-white/10 bg-zinc-900 px-3 py-2 shadow-lg">
-            <span className="text-sm text-white/80">{activeTask.title}</span>
-          </div>
-        ) : null}
-      </DragOverlay>
+      {/* Drag overlay — portaled to body to escape overflow clipping from the backlog's scroll container */}
+      {mounted && createPortal(
+        <DragOverlay>
+          {activeTask ? (
+            <div className="rounded-md border border-white/10 bg-zinc-900 px-3 py-2 shadow-lg">
+              <span className="text-sm text-white/80">{activeTask.title}</span>
+            </div>
+          ) : null}
+        </DragOverlay>,
+        document.body
+      )}
     </DndContext>
   );
 }
