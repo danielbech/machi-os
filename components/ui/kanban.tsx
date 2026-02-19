@@ -674,7 +674,7 @@ function KanbanBoard(props: KanbanBoardProps) {
           {...boardProps}
           ref={ref}
           className={cn(
-            "flex size-full gap-4",
+            "flex size-full gap-2",
             context.orientation === "horizontal" ? "flex-row" : "flex-col",
             className,
           )}
