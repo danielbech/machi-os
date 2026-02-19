@@ -200,14 +200,29 @@ export function BacklogPanel({
       overContainerId = getContainerId(overTask);
     }
 
-    if (activeContainerId === overContainerId) return;
-
     // Block cross-client moves
     const activeClient = getClientForContainer(activeContainerId);
     const overClient = getClientForContainer(overContainerId);
     if (activeClient !== overClient) return;
 
-    // Move task to new container
+    if (activeContainerId === overContainerId) {
+      // Same container — reorder in place
+      if (isContainer) return; // hovering over own container label, nothing to do
+      setLocalTasks((prev) => {
+        if (!prev) return prev;
+        const containerTasks = prev.filter((t) => getContainerId(t) === activeContainerId);
+        const activeIdx = containerTasks.findIndex((t) => t.id === activeId);
+        const overIdx = containerTasks.findIndex((t) => t.id === overId);
+        if (activeIdx === -1 || overIdx === -1 || activeIdx === overIdx) return prev;
+        const reordered = arrayMove(containerTasks, activeIdx, overIdx);
+        let ri = 0;
+        const ids = new Set(containerTasks.map((t) => t.id));
+        return prev.map((t) => (ids.has(t.id) ? reordered[ri++]! : t));
+      });
+      return;
+    }
+
+    // Cross-container move
     const newFolderId = getFolderIdFromContainer(overContainerId);
 
     setLocalTasks((prev) => {
@@ -237,56 +252,20 @@ export function BacklogPanel({
   };
 
   const handleDragEnd = (event: DragEndEvent) => {
-    const { active, over } = event;
-
     if (!localTasks) {
       setActiveTask(null);
       return;
     }
 
-    if (!over) {
+    if (!event.over) {
       // Dropped outside — revert
       setLocalTasks(null);
       setActiveTask(null);
       return;
     }
 
-    const activeId = active.id as string;
-    const overId = over.id as string;
-
-    let finalTasks = [...localTasks];
-
-    // Handle same-container reordering
-    if (activeId !== overId && !overId.startsWith("folder:") && !overId.startsWith("unsorted:")) {
-      const draggedTask = finalTasks.find((t) => t.id === activeId);
-      const overTask = finalTasks.find((t) => t.id === overId);
-
-      if (draggedTask && overTask) {
-        const activeContainer = getContainerId(draggedTask);
-        const overContainer = getContainerId(overTask);
-
-        if (activeContainer === overContainer) {
-          // Same container — reorder
-          const containerTasks = finalTasks.filter((t) => getContainerId(t) === activeContainer);
-          const activeIdx = containerTasks.findIndex((t) => t.id === activeId);
-          const overIdx = containerTasks.findIndex((t) => t.id === overId);
-
-          if (activeIdx !== -1 && overIdx !== -1 && activeIdx !== overIdx) {
-            const reordered = arrayMove(containerTasks, activeIdx, overIdx);
-            // Rebuild full array preserving positions of other tasks
-            let reorderedIdx = 0;
-            const containerIds = new Set(containerTasks.map((t) => t.id));
-            finalTasks = finalTasks.map((t) => {
-              if (containerIds.has(t.id)) {
-                return reordered[reorderedIdx++]!;
-              }
-              return t;
-            });
-          }
-        }
-      }
-    }
-
+    // All reordering already happened in onDragOver — just persist
+    const finalTasks = [...localTasks];
     setLocalTasks(null);
     setActiveTask(null);
     onReorderTasks(finalTasks);
