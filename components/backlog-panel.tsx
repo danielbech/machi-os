@@ -90,6 +90,7 @@ interface BacklogPanelProps {
   folders: BacklogFolder[];
   clients: Client[];
   onSendToDay: (taskId: string, day: string) => Promise<void>;
+  onSendFolderToDay: (folderId: string, day: string) => Promise<void>;
   onCreateTask: (title: string, clientId: string, folderId?: string) => Promise<void>;
   onEditTask: (task: Task) => void;
   onDeleteTask: (taskId: string) => Promise<void>;
@@ -106,6 +107,7 @@ export function BacklogPanel({
   folders,
   clients,
   onSendToDay,
+  onSendFolderToDay,
   onCreateTask,
   onEditTask,
   onDeleteTask,
@@ -525,6 +527,27 @@ export function BacklogPanel({
             )}
             <span className="text-[10px] text-white/20 ml-1">{folderTasks.length}</span>
           </button>
+          {folderTasks.length > 0 && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button
+                  type="button"
+                  className="opacity-0 group-hover/folder:opacity-100 transition-opacity flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded bg-white/5 text-white/40 hover:bg-white/10 hover:text-white/60 shrink-0 mr-0.5"
+                  aria-label="Send folder to day"
+                >
+                  <Send className="size-2.5" />
+                  Send all
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="min-w-[120px]">
+                {DAYS.map((day) => (
+                  <DropdownMenuItem key={day} onClick={() => onSendFolderToDay(folder.id, day)}>
+                    {COLUMN_TITLES[day]}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
           <button
             type="button"
             onClick={() => {

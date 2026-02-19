@@ -340,6 +340,21 @@ export default function BoardPage() {
     await updateDayTasks(activeProjectId, day, columnItems);
   };
 
+  const handleSendFolderToDay = async (folderId: string, day: string) => {
+    if (!activeProjectId) return;
+    const folderTasks = backlogTasks.filter((t) => t.folder_id === folderId);
+    if (folderTasks.length === 0) return;
+    const updatedTasks = folderTasks.map((t) => ({ ...t, day }));
+    // Remove from backlog, add to kanban
+    setBacklogTasks((prev) => prev.filter((t) => t.folder_id !== folderId));
+    const columnItems = [...(columns[day] || []), ...updatedTasks];
+    setColumns({ ...columns, [day]: columnItems });
+    for (const task of updatedTasks) {
+      await saveTask(activeProjectId, task);
+    }
+    await updateDayTasks(activeProjectId, day, columnItems);
+  };
+
   const handleCreateBacklogTask = async (title: string, clientId: string, folderId?: string) => {
     if (!activeProjectId) return;
     const tempId = `task-${Date.now()}`;
@@ -761,6 +776,7 @@ export default function BoardPage() {
           folders={backlogFolders}
           clients={clients}
           onSendToDay={handleSendToDay}
+          onSendFolderToDay={handleSendFolderToDay}
           onCreateTask={handleCreateBacklogTask}
           onEditTask={handleEditBacklogTask}
           onDeleteTask={handleDeleteBacklogTask}
