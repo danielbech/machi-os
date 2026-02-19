@@ -700,12 +700,10 @@ export default function BoardPage() {
                         asHandle
                         value={item.id}
                         className={`group rounded-lg border p-2 text-card-foreground shadow-[0_1px_3px_rgba(0,0,0,0.3)] transition-all duration-200 focus:outline-none !cursor-pointer ${
-                          glowingCards.has(item.id)
-                            ? "animate-complete-glow"
-                            : item.type === "note"
-                              ? "border-amber-500/20 bg-amber-500/5 hover:bg-amber-500/10 hover:border-amber-500/30 hover:shadow-[0_2px_6px_rgba(0,0,0,0.4)]"
-                              : "border-white/5 bg-white/[0.02] hover:bg-white/[0.04] hover:border-white/10 hover:shadow-[0_2px_6px_rgba(0,0,0,0.4)]"
-                        }`}
+                          item.type === "note"
+                            ? "border-amber-500/20 bg-amber-500/5 hover:bg-amber-500/10 hover:border-amber-500/30 hover:shadow-[0_2px_6px_rgba(0,0,0,0.4)]"
+                            : "border-white/5 bg-white/[0.02] hover:bg-white/[0.04] hover:border-white/10 hover:shadow-[0_2px_6px_rgba(0,0,0,0.4)]"
+                        } ${glowingCards.has(item.id) ? "animate-complete-glow" : ""}`}
                         tabIndex={0}
                         onClick={(e: any) => {
                           if (e.target.closest("button")) return;

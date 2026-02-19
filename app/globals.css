@@ -196,9 +196,11 @@
 @keyframes card-complete-glow {
   0% {
     border-color: rgba(34, 197, 94, 0.6);
+    box-shadow: 0 0 12px rgba(34, 197, 94, 0.2), 0 0 4px rgba(34, 197, 94, 0.1);
   }
   100% {
     border-color: rgba(255, 255, 255, 0.05);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
   }
 }
 
