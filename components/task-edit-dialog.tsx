@@ -19,7 +19,7 @@ import {
   DropdownMenuCheckboxItem,
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
-import { ChevronDown, Circle, StickyNote, ListTodo, Folder } from "lucide-react";
+import { Check, ChevronDown, Circle, StickyNote, ListTodo, Folder, X } from "lucide-react";
 
 interface TaskEditDialogProps {
   task: Task | null;
@@ -78,14 +78,223 @@ export function TaskEditDialog({ task, onClose, onSave, onTaskChange, folders }:
             </div>
 
             {/* Title — large, freestanding, auto-focused */}
-            <input
-              ref={titleRef}
-              type="text"
-              value={task.title}
-              onChange={(e) => onTaskChange({ ...task, title: e.target.value })}
-              className="w-full text-lg font-semibold bg-transparent outline-none placeholder:text-white/20"
-              placeholder={task.type === "note" ? "Note title..." : "Task title..."}
-            />
+            <div className="flex items-start gap-3">
+              {task.type !== "note" && (
+                <button
+                  type="button"
+                  onClick={() => onTaskChange({ ...task, completed: !task.completed })}
+                  className="mt-1.5 shrink-0"
+                  aria-label={task.completed ? "Mark as incomplete" : "Mark as complete"}
+                >
+                  <div
+                    className={`flex size-5 items-center justify-center rounded-full border transition-all ${
+                      task.completed
+                        ? "border-green-500/80 bg-green-500/80"
+                        : "border-white/20 hover:border-white/40"
+                    }`}
+                  >
+                    {task.completed && <Check className="size-3.5 text-white" strokeWidth={3} />}
+                  </div>
+                </button>
+              )}
+              <input
+                ref={titleRef}
+                type="text"
+                value={task.title}
+                onChange={(e) => onTaskChange({ ...task, title: e.target.value })}
+                className={`flex-1 text-lg font-semibold bg-transparent outline-none placeholder:text-white/20 ${task.completed ? "line-through opacity-50" : ""}`}
+                placeholder={task.type === "note" ? "Note title..." : "Task title..."}
+              />
+            </div>
+
+            {/* Project, Folder, Assignees — compact row */}
+            {task.type !== "note" && (
+              <div className="flex items-center gap-2 flex-wrap">
+                {/* Project */}
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <button
+                      type="button"
+                      className="flex items-center gap-1.5 px-2 py-1 rounded-md border border-white/10 bg-white/[0.02] text-xs hover:bg-white/[0.04] hover:border-white/20 transition-colors"
+                    >
+                      {selectedClient ? (
+                        <>
+                          <span className={`w-2 h-2 rounded-full shrink-0 ${CLIENT_DOT_COLORS[selectedClient.color] || 'bg-white/30'}`} />
+                          {selectedClient.logo_url && (
+                            <img src={selectedClient.logo_url} alt="" className="size-3.5 rounded-sm object-cover" />
+                          )}
+                          <span className="text-white/70">{selectedClient.name}</span>
+                        </>
+                      ) : (
+                        <span className="text-white/25">Project</span>
+                      )}
+                      <ChevronDown className="size-3 text-white/30" />
+                    </button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="start" className="min-w-[200px]">
+                    <DropdownMenuItem
+                      onClick={() => onTaskChange({ ...task, client: undefined })}
+                      className="text-white/50"
+                    >
+                      No project
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    {activeClients.map((client) => (
+                      <DropdownMenuItem
+                        key={client.id}
+                        onClick={() => onTaskChange({ ...task, client: client.id })}
+                        className="flex items-center gap-2"
+                      >
+                        <span className={`w-2 h-2 rounded-full shrink-0 ${CLIENT_DOT_COLORS[client.color] || 'bg-white/30'}`} />
+                        {client.logo_url && (
+                          <img src={client.logo_url} alt="" className="size-4 rounded-sm object-cover shrink-0" />
+                        )}
+                        <span>{client.name}</span>
+                        {task.client === client.id && (
+                          <Circle className="size-2 fill-white ml-auto" />
+                        )}
+                      </DropdownMenuItem>
+                    ))}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+
+                {/* Folder (only when client selected and folders exist) */}
+                {task.client && folders && clientFolders.length > 0 && (
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <button
+                        type="button"
+                        className="flex items-center gap-1.5 px-2 py-1 rounded-md border border-white/10 bg-white/[0.02] text-xs hover:bg-white/[0.04] hover:border-white/20 transition-colors"
+                      >
+                        <Folder className="size-3 text-white/30" />
+                        <span className={selectedFolder ? "text-white/70" : "text-white/25"}>
+                          {selectedFolder ? selectedFolder.name : "Folder"}
+                        </span>
+                        <ChevronDown className="size-3 text-white/30" />
+                      </button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="start" className="min-w-[200px]">
+                      <DropdownMenuItem
+                        onClick={() => onTaskChange({ ...task, folder_id: undefined })}
+                        className="text-white/50"
+                      >
+                        No folder
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                      {clientFolders.map((folder) => (
+                        <DropdownMenuItem
+                          key={folder.id}
+                          onClick={() => onTaskChange({ ...task, folder_id: folder.id })}
+                          className="flex items-center gap-2"
+                        >
+                          <Folder className="size-3.5 text-white/30" />
+                          <span>{folder.name}</span>
+                          {task.folder_id === folder.id && (
+                            <Circle className="size-2 fill-white ml-auto" />
+                          )}
+                        </DropdownMenuItem>
+                      ))}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                )}
+
+                {/* Assignees */}
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <button
+                      type="button"
+                      className="flex items-center gap-1.5 px-2 py-1 rounded-md border border-white/10 bg-white/[0.02] text-xs hover:bg-white/[0.04] hover:border-white/20 transition-colors"
+                    >
+                      {assignedMembers.length > 0 ? (
+                        <span className="flex -space-x-1">
+                          {assignedMembers.map((m) => (
+                            <div
+                              key={m.id}
+                              className={`flex items-center justify-center w-4 h-4 rounded-full ${!m.avatar ? m.color : "bg-white/5"} text-[8px] font-semibold text-white overflow-hidden ring-1 ring-black/50`}
+                            >
+                              {m.avatar ? (
+                                <img src={m.avatar} alt={m.name} className="w-full h-full object-cover" />
+                              ) : (
+                                m.initials
+                              )}
+                            </div>
+                          ))}
+                        </span>
+                      ) : (
+                        <span className="text-white/25">Assignee</span>
+                      )}
+                      <ChevronDown className="size-3 text-white/30" />
+                    </button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="start" className="min-w-[200px]">
+                    {TEAM_MEMBERS.map((member) => {
+                      const isAssigned = task.assignees?.includes(member.id) || false;
+                      return (
+                        <DropdownMenuCheckboxItem
+                          key={member.id}
+                          checked={isAssigned}
+                          onCheckedChange={() => {
+                            const assignees = task.assignees || [];
+                            onTaskChange({
+                              ...task,
+                              assignees: isAssigned
+                                ? assignees.filter((id) => id !== member.id)
+                                : [...assignees, member.id],
+                            });
+                          }}
+                          onSelect={(e) => e.preventDefault()}
+                        >
+                          <div className="flex items-center gap-2">
+                            <div
+                              className={`flex items-center justify-center w-5 h-5 rounded-full ${!member.avatar ? member.color : "bg-white/5"} text-[9px] font-semibold text-white overflow-hidden`}
+                            >
+                              {member.avatar ? (
+                                <img src={member.avatar} alt={member.name} className="w-full h-full object-cover" />
+                              ) : (
+                                member.initials
+                              )}
+                            </div>
+                            <span>{member.name}</span>
+                          </div>
+                        </DropdownMenuCheckboxItem>
+                      );
+                    })}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+
+                {/* Assigned member chips with remove */}
+                {assignedMembers.map((m) => (
+                  <span
+                    key={m.id}
+                    className="flex items-center gap-1 pl-1 pr-0.5 py-0.5 rounded-md bg-white/[0.06] text-xs text-white/60"
+                  >
+                    <div
+                      className={`flex items-center justify-center w-4 h-4 rounded-full ${!m.avatar ? m.color : "bg-white/5"} text-[8px] font-semibold text-white overflow-hidden`}
+                    >
+                      {m.avatar ? (
+                        <img src={m.avatar} alt={m.name} className="w-full h-full object-cover" />
+                      ) : (
+                        m.initials
+                      )}
+                    </div>
+                    {m.name}
+                    <button
+                      type="button"
+                      onClick={() =>
+                        onTaskChange({
+                          ...task,
+                          assignees: (task.assignees || []).filter((id) => id !== m.id),
+                        })
+                      }
+                      className="p-0.5 rounded hover:bg-white/10 transition-colors"
+                      aria-label={`Remove ${m.name}`}
+                    >
+                      <X className="size-3 text-white/30 hover:text-white/60" />
+                    </button>
+                  </span>
+                ))}
+              </div>
+            )}
 
             {/* Description */}
             <div className="flex flex-col gap-3">
@@ -96,178 +305,6 @@ export function TaskEditDialog({ task, onClose, onSave, onTaskChange, folders }:
                 placeholder="Optional description..."
               />
             </div>
-
-            {task.type !== "note" && (
-              <>
-                {/* Client dropdown */}
-                <div className="flex flex-col gap-3">
-                  <label className="text-sm font-medium">Project</label>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <button
-                        type="button"
-                        className="flex items-center justify-between w-full px-3 py-2 rounded-md border border-white/10 bg-white/[0.02] text-sm hover:bg-white/[0.04] hover:border-white/20 transition-colors"
-                      >
-                        {selectedClient ? (
-                          <span className="flex items-center gap-2">
-                            <span className={`w-2 h-2 rounded-full ${CLIENT_DOT_COLORS[selectedClient.color] || 'bg-white/30'}`} />
-                            {selectedClient.logo_url && (
-                              <img src={selectedClient.logo_url} alt="" className="size-4 rounded-sm object-cover" />
-                            )}
-                            <span>{selectedClient.name}</span>
-                          </span>
-                        ) : (
-                          <span className="text-white/25">No project</span>
-                        )}
-                        <ChevronDown className="size-3.5 text-white/30 ml-2" />
-                      </button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="start" className="min-w-[200px]">
-                      <DropdownMenuItem
-                        onClick={() => onTaskChange({ ...task, client: undefined })}
-                        className="text-white/50"
-                      >
-                        No project
-                      </DropdownMenuItem>
-                      <DropdownMenuSeparator />
-                      {activeClients.map((client) => (
-                        <DropdownMenuItem
-                          key={client.id}
-                          onClick={() => onTaskChange({ ...task, client: client.id })}
-                          className="flex items-center gap-2"
-                        >
-                          <span className={`w-2 h-2 rounded-full shrink-0 ${CLIENT_DOT_COLORS[client.color] || 'bg-white/30'}`} />
-                          {client.logo_url && (
-                            <img src={client.logo_url} alt="" className="size-4 rounded-sm object-cover shrink-0" />
-                          )}
-                          <span>{client.name}</span>
-                          {task.client === client.id && (
-                            <Circle className="size-2 fill-white ml-auto" />
-                          )}
-                        </DropdownMenuItem>
-                      ))}
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </div>
-
-                {/* Folder dropdown (shown when task has a client and folders exist) */}
-                {task.client && folders && clientFolders.length > 0 && (
-                  <div className="flex flex-col gap-3">
-                    <label className="text-sm font-medium">Folder</label>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <button
-                          type="button"
-                          className="flex items-center justify-between w-full px-3 py-2 rounded-md border border-white/10 bg-white/[0.02] text-sm hover:bg-white/[0.04] hover:border-white/20 transition-colors"
-                        >
-                          {selectedFolder ? (
-                            <span className="flex items-center gap-2">
-                              <Folder className="size-3.5 text-white/30" />
-                              <span>{selectedFolder.name}</span>
-                            </span>
-                          ) : (
-                            <span className="text-white/25">No folder</span>
-                          )}
-                          <ChevronDown className="size-3.5 text-white/30 ml-2" />
-                        </button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="start" className="min-w-[200px]">
-                        <DropdownMenuItem
-                          onClick={() => onTaskChange({ ...task, folder_id: undefined })}
-                          className="text-white/50"
-                        >
-                          No folder
-                        </DropdownMenuItem>
-                        <DropdownMenuSeparator />
-                        {clientFolders.map((folder) => (
-                          <DropdownMenuItem
-                            key={folder.id}
-                            onClick={() => onTaskChange({ ...task, folder_id: folder.id })}
-                            className="flex items-center gap-2"
-                          >
-                            <Folder className="size-3.5 text-white/30" />
-                            <span>{folder.name}</span>
-                            {task.folder_id === folder.id && (
-                              <Circle className="size-2 fill-white ml-auto" />
-                            )}
-                          </DropdownMenuItem>
-                        ))}
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </div>
-                )}
-
-                {/* Team Members dropdown */}
-                <div className="flex flex-col gap-3">
-                  <label className="text-sm font-medium">Assignees</label>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <button
-                        type="button"
-                        className="flex items-center justify-between w-full px-3 py-2 rounded-md border border-white/10 bg-white/[0.02] text-sm hover:bg-white/[0.04] hover:border-white/20 transition-colors"
-                      >
-                        {assignedMembers.length > 0 ? (
-                          <span className="flex items-center gap-2">
-                            <span className="flex -space-x-1.5">
-                              {assignedMembers.map((m) => (
-                                <div
-                                  key={m.id}
-                                  className={`flex items-center justify-center w-5 h-5 rounded-full ${!m.avatar ? m.color : "bg-white/5"} text-[9px] font-semibold text-white overflow-hidden ring-1 ring-black/50`}
-                                >
-                                  {m.avatar ? (
-                                    <img src={m.avatar} alt={m.name} className="w-full h-full object-cover" />
-                                  ) : (
-                                    m.initials
-                                  )}
-                                </div>
-                              ))}
-                            </span>
-                            <span>{assignedMembers.map((m) => m.name).join(", ")}</span>
-                          </span>
-                        ) : (
-                          <span className="text-white/25">No assignees</span>
-                        )}
-                        <ChevronDown className="size-3.5 text-white/30 ml-2" />
-                      </button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="start" className="min-w-[200px]">
-                      {TEAM_MEMBERS.map((member) => {
-                        const isAssigned = task.assignees?.includes(member.id) || false;
-                        return (
-                          <DropdownMenuCheckboxItem
-                            key={member.id}
-                            checked={isAssigned}
-                            onCheckedChange={() => {
-                              const assignees = task.assignees || [];
-                              onTaskChange({
-                                ...task,
-                                assignees: isAssigned
-                                  ? assignees.filter((id) => id !== member.id)
-                                  : [...assignees, member.id],
-                              });
-                            }}
-                            onSelect={(e) => e.preventDefault()}
-                          >
-                            <div className="flex items-center gap-2">
-                              <div
-                                className={`flex items-center justify-center w-5 h-5 rounded-full ${!member.avatar ? member.color : "bg-white/5"} text-[9px] font-semibold text-white overflow-hidden`}
-                              >
-                                {member.avatar ? (
-                                  <img src={member.avatar} alt={member.name} className="w-full h-full object-cover" />
-                                ) : (
-                                  member.initials
-                                )}
-                              </div>
-                              <span>{member.name}</span>
-                            </div>
-                          </DropdownMenuCheckboxItem>
-                        );
-                      })}
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </div>
-              </>
-            )}
 
             {/* Actions */}
             <div className="flex justify-end gap-2 pt-4">
