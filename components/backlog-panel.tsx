@@ -348,8 +348,8 @@ export function BacklogPanel({
 
     return (
       <SortableTaskRow key={task.id} id={task.id}>
-          <div className="group rounded-md hover:bg-white/[0.03] transition-colors cursor-grab active:cursor-grabbing">
-            <div className="flex items-center gap-2 px-2 py-1.5">
+          <div className="group border-b border-white/[0.04] last:border-b-0 hover:bg-white/[0.03] transition-colors cursor-grab active:cursor-grabbing">
+            <div className="flex items-center gap-2 px-3 py-2">
               {/* Expand chevron (only if has description) */}
               {task.description ? (
                 <button
@@ -491,13 +491,13 @@ export function BacklogPanel({
     const containerId = `folder:${folder.id}`;
 
     return (
-      <div key={folder.id} className="ml-2">
+      <div key={folder.id}>
         {/* Folder header */}
-        <div className="flex items-center gap-1 group/folder">
+        <div className="flex items-center gap-1 group/folder border-b border-white/[0.04]">
           <button
             type="button"
             onClick={() => toggleFolder(folder.id)}
-            className="flex items-center gap-1.5 flex-1 px-1 py-1 rounded hover:bg-white/[0.04] transition-colors"
+            className="flex items-center gap-1.5 flex-1 px-3 py-1.5 hover:bg-white/[0.04] transition-colors"
           >
             <ChevronRight
               className={`size-3 text-white/30 transition-transform ${isCollapsed ? "" : "rotate-90"}`}
@@ -548,7 +548,7 @@ export function BacklogPanel({
 
         {/* Folder tasks */}
         {!isCollapsed && (
-          <div className="ml-3">
+          <div className="ml-4">
             <DroppableArea id={containerId}>
               <SortableContext items={folderTasks.map((t) => t.id)} strategy={verticalListSortingStrategy}>
                 {folderTasks.map(renderTaskRow)}
@@ -587,12 +587,12 @@ export function BacklogPanel({
           const unsortedContainerId = `unsorted:${client.id}`;
 
           return (
-            <div key={client.id} className="mb-3">
+            <div key={client.id} className="mb-3 rounded-lg border border-white/[0.06] bg-white/[0.02] overflow-hidden">
               {/* Client header */}
               <button
                 type="button"
                 onClick={() => toggleClient(client.id)}
-                className="flex items-center gap-2 w-full px-1 py-1.5 rounded-md hover:bg-white/[0.04] transition-colors"
+                className="flex items-center gap-2 w-full px-3 py-2 bg-white/[0.03] hover:bg-white/[0.05] transition-colors"
               >
                 <ChevronRight
                   className={`size-3.5 text-white/30 transition-transform ${isCollapsed ? "" : "rotate-90"}`}
@@ -605,12 +605,12 @@ export function BacklogPanel({
               </button>
 
               {!isCollapsed && (
-                <div className="mt-1">
+                <div>
                   {/* Folders */}
                   {clientFolders.map((folder) => renderFolderSection(folder, clientTasks))}
 
                   {/* Unsorted tasks (siblings to folders) */}
-                  <div className="ml-2">
+                  <div>
                     <DroppableArea id={unsortedContainerId}>
                       <SortableContext items={unsortedTasks.map((t) => t.id)} strategy={verticalListSortingStrategy}>
                         {unsortedTasks.map(renderTaskRow)}
@@ -620,7 +620,7 @@ export function BacklogPanel({
 
                   {/* Add task / Add folder */}
                   {addingTaskIn === `${client.id}:unsorted` ? (
-                    <div className="ml-2 px-2 py-1">
+                    <div className="px-3 py-1.5">
                       <input
                         type="text"
                         value={newTaskTitle}
@@ -639,7 +639,7 @@ export function BacklogPanel({
                       />
                     </div>
                   ) : addingFolderFor === client.id ? (
-                    <div className="ml-2 px-2 py-1">
+                    <div className="px-3 py-1.5">
                       <div className="flex items-center gap-1.5">
                         <Folder className="size-3 text-white/30" />
                         <input
@@ -661,7 +661,7 @@ export function BacklogPanel({
                       </div>
                     </div>
                   ) : (
-                    <div className="flex items-center gap-1 ml-2 px-1 py-1">
+                    <div className="flex items-center gap-1 px-2 py-1">
                       <button
                         type="button"
                         onClick={() => {
