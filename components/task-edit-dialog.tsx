@@ -3,7 +3,6 @@
 import { useRef } from "react";
 import type { Task, BacklogFolder } from "@/lib/types";
 import { useWorkspace } from "@/lib/workspace-context";
-import { CLIENT_DOT_COLORS } from "@/lib/colors";
 import { TEAM_MEMBERS } from "@/lib/constants";
 import {
   Dialog,
@@ -19,7 +18,7 @@ import {
   DropdownMenuCheckboxItem,
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
-import { Check, ChevronDown, Circle, StickyNote, ListTodo, Folder, X } from "lucide-react";
+import { Check, ChevronDown, Circle, StickyNote, ListTodo, Folder } from "lucide-react";
 
 interface TaskEditDialogProps {
   task: Task | null;
@@ -83,7 +82,7 @@ export function TaskEditDialog({ task, onClose, onSave, onTaskChange, folders }:
                 <button
                   type="button"
                   onClick={() => onTaskChange({ ...task, completed: !task.completed })}
-                  className="mt-1.5 shrink-0"
+                  className="mt-1 shrink-0"
                   aria-label={task.completed ? "Mark as incomplete" : "Mark as complete"}
                 >
                   <div
@@ -102,7 +101,7 @@ export function TaskEditDialog({ task, onClose, onSave, onTaskChange, folders }:
                 type="text"
                 value={task.title}
                 onChange={(e) => onTaskChange({ ...task, title: e.target.value })}
-                className={`flex-1 text-lg font-semibold bg-transparent outline-none placeholder:text-white/20 ${task.completed ? "text-green-500" : ""}`}
+                className={`flex-1 text-lg font-semibold bg-transparent outline-none placeholder:text-white/20 ${task.completed && task.type !== "note" ? "text-green-500" : ""}`}
                 placeholder={task.type === "note" ? "Note title..." : "Task title..."}
               />
             </div>
@@ -119,7 +118,6 @@ export function TaskEditDialog({ task, onClose, onSave, onTaskChange, folders }:
                     >
                       {selectedClient ? (
                         <>
-                          <span className={`w-2 h-2 rounded-full shrink-0 ${CLIENT_DOT_COLORS[selectedClient.color] || 'bg-white/30'}`} />
                           {selectedClient.logo_url && (
                             <img src={selectedClient.logo_url} alt="" className="size-3.5 rounded-sm object-cover" />
                           )}
@@ -145,7 +143,6 @@ export function TaskEditDialog({ task, onClose, onSave, onTaskChange, folders }:
                         onClick={() => onTaskChange({ ...task, client: client.id })}
                         className="flex items-center gap-2"
                       >
-                        <span className={`w-2 h-2 rounded-full shrink-0 ${CLIENT_DOT_COLORS[client.color] || 'bg-white/30'}`} />
                         {client.logo_url && (
                           <img src={client.logo_url} alt="" className="size-4 rounded-sm object-cover shrink-0" />
                         )}
@@ -262,37 +259,6 @@ export function TaskEditDialog({ task, onClose, onSave, onTaskChange, folders }:
                   </DropdownMenuContent>
                 </DropdownMenu>
 
-                {/* Assigned member chips with remove */}
-                {assignedMembers.map((m) => (
-                  <span
-                    key={m.id}
-                    className="flex items-center gap-1 pl-1 pr-0.5 py-0.5 rounded-md bg-white/[0.06] text-xs text-white/60"
-                  >
-                    <div
-                      className={`flex items-center justify-center w-4 h-4 rounded-full ${!m.avatar ? m.color : "bg-white/5"} text-[8px] font-semibold text-white overflow-hidden`}
-                    >
-                      {m.avatar ? (
-                        <img src={m.avatar} alt={m.name} className="w-full h-full object-cover" />
-                      ) : (
-                        m.initials
-                      )}
-                    </div>
-                    {m.name}
-                    <button
-                      type="button"
-                      onClick={() =>
-                        onTaskChange({
-                          ...task,
-                          assignees: (task.assignees || []).filter((id) => id !== m.id),
-                        })
-                      }
-                      className="p-0.5 rounded hover:bg-white/10 transition-colors"
-                      aria-label={`Remove ${m.name}`}
-                    >
-                      <X className="size-3 text-white/30 hover:text-white/60" />
-                    </button>
-                  </span>
-                ))}
               </div>
             )}
 
