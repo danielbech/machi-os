@@ -37,6 +37,7 @@ export default function BoardPage() {
   const [backlogTasks, setBacklogTasks] = useState<Task[]>([]);
   const [backlogFolders, setBacklogFolders] = useState<BacklogFolder[]>([]);
   const [backlogDragActive, setBacklogDragActive] = useState(false);
+  const [kanbanDragActive, setKanbanDragActive] = useState(false);
 
   // Load tasks
   const refreshTasks = useCallback(async () => {
@@ -353,6 +354,29 @@ export default function BoardPage() {
     await updateDayTasks(activeProjectId, day, columnItems);
   };
 
+  const handleSendToBacklog = async (taskId: string) => {
+    if (!activeProjectId) return;
+    // Find the task in kanban columns
+    let task: Task | null = null;
+    let sourceColumn: string | null = null;
+    for (const [col, items] of Object.entries(columns)) {
+      const found = items.find((t) => t.id === taskId);
+      if (found) {
+        task = found;
+        sourceColumn = col;
+        break;
+      }
+    }
+    if (!task || !sourceColumn) return;
+    const backlogTask = { ...task, day: undefined };
+    // Remove from kanban column, add to backlog
+    const updatedColumnItems = columns[sourceColumn].filter((t) => t.id !== taskId);
+    setColumns({ ...columns, [sourceColumn]: updatedColumnItems });
+    setBacklogTasks((prev) => [...prev, backlogTask]);
+    await saveTask(activeProjectId, backlogTask);
+    await updateDayTasks(activeProjectId, sourceColumn, updatedColumnItems);
+  };
+
   const handleSendFolderToDay = async (folderId: string, day: string) => {
     if (!activeProjectId) return;
     const folderTasks = backlogTasks.filter((t) => t.folder_id === folderId);
@@ -427,9 +451,10 @@ export default function BoardPage() {
     <main className="flex min-h-screen flex-col p-4 md:px-8 md:pt-4 bg-black/50">
       {/* Backlog panel — fixed, slides out from sidebar */}
       <div
+        data-backlog-panel
         className={`fixed top-0 bottom-0 left-[3rem] w-[400px] z-[5] border-r border-white/[0.06] bg-black/80 backdrop-blur-md overflow-y-auto transition-transform duration-200 ease-in-out ${
           backlogOpen ? "translate-x-0" : "-translate-x-full"
-        }`}
+        } ${kanbanDragActive && backlogOpen ? "ring-1 ring-white/10 ring-inset" : ""}`}
       >
         <div className="p-4">
           <BacklogPanel
@@ -462,6 +487,22 @@ export default function BoardPage() {
             }
           }}
           getItemValue={(item) => item.id}
+          onDragStart={() => setKanbanDragActive(true)}
+          onDragEnd={(event) => {
+            setKanbanDragActive(false);
+            if (!backlogOpen) return;
+            const { activatorEvent, delta } = event;
+            const pe = activatorEvent as PointerEvent | undefined;
+            if (pe && typeof pe.clientX === "number") {
+              const x = pe.clientX + delta.x;
+              const y = pe.clientY + delta.y;
+              const elements = document.elementsFromPoint(x, y);
+              if (elements.some((el) => el.hasAttribute("data-backlog-panel"))) {
+                const taskId = event.active.id as string;
+                handleSendToBacklog(taskId);
+              }
+            }
+          }}
         >
           <KanbanBoard className="overflow-x-auto p-1 pb-3">
             {Object.entries(columns).map(([columnId, items]) => (
