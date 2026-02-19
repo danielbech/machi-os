@@ -605,14 +605,19 @@ export default function BoardPage() {
                           }
                         }}
                       >
-                        {item.type === "note" ? (
+                        {(() => {
+                          const dayIdx = ["monday", "tuesday", "wednesday", "thursday", "friday"].indexOf(columnId);
+                          const todayIdx = ["monday", "tuesday", "wednesday", "thursday", "friday"].indexOf(todayName);
+                          const isPastDay = dayIdx < todayIdx;
+                          const dimCompleted = item.completed && isPastDay;
+                          return item.type === "note" ? (
                           <div className="flex items-start gap-2">
                             <StickyNote className="size-3.5 text-amber-400 mt-0.5 shrink-0" />
                             <div className="text-sm text-amber-100/90">{item.title}</div>
                           </div>
                         ) : (
                           <div className="relative">
-                            <div className={`transition-opacity ${item.completed ? "opacity-50" : ""}`}>
+                            <div className={`transition-opacity ${dimCompleted ? "opacity-30" : item.completed ? "opacity-50" : ""}`}>
                               <div className={`text-sm pr-6 ${item.completed ? "line-through" : ""}`}>{item.title}</div>
                               {(item.client || (item.assignees && item.assignees.length > 0)) && (
                                 <div className="flex gap-1.5 mt-1.5 items-center flex-wrap">
@@ -660,7 +665,9 @@ export default function BoardPage() {
                                 toggleComplete(item.id);
                               }}
                               onMouseDown={(e) => e.stopPropagation()}
-                              className="absolute top-0.5 right-0 shrink-0"
+                              className={`absolute top-0.5 right-0 shrink-0 transition-opacity ${
+                                item.completed ? "" : "opacity-0 group-hover:opacity-100"
+                              }`}
                               aria-label={item.completed ? "Mark as incomplete" : "Mark as complete"}
                             >
                               <div
@@ -674,7 +681,8 @@ export default function BoardPage() {
                               </div>
                             </button>
                           </div>
-                        )}
+                        );
+                        })()}
                       </KanbanItem>
                     </div>
                   ))}
