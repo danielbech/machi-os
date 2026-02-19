@@ -637,24 +637,14 @@ export function BacklogPanel({
                   {/* Folders */}
                   {clientFolders.map((folder) => renderFolderSection(folder, clientTasks))}
 
-                  {/* Unsorted tasks */}
-                  {(unsortedTasks.length > 0 || clientFolders.length > 0) && (
-                    <div className="ml-2">
-                      {clientFolders.length > 0 && (
-                        <div className="flex items-center gap-1.5 px-1 py-1">
-                          <span className="text-xs text-white/25">Unsorted</span>
-                          <span className="text-[10px] text-white/15">{unsortedTasks.length}</span>
-                        </div>
-                      )}
-                      <div className={clientFolders.length > 0 ? "ml-3" : ""}>
-                        <DroppableArea id={unsortedContainerId}>
-                          <SortableContext items={unsortedTasks.map((t) => t.id)} strategy={verticalListSortingStrategy}>
-                            {unsortedTasks.map(renderTaskRow)}
-                          </SortableContext>
-                        </DroppableArea>
-                      </div>
-                    </div>
-                  )}
+                  {/* Unsorted tasks (siblings to folders) */}
+                  <div className="ml-2">
+                    <DroppableArea id={unsortedContainerId}>
+                      <SortableContext items={unsortedTasks.map((t) => t.id)} strategy={verticalListSortingStrategy}>
+                        {unsortedTasks.map(renderTaskRow)}
+                      </SortableContext>
+                    </DroppableArea>
+                  </div>
 
                   {/* Add task / Add folder */}
                   {addingTaskIn === `${client.id}:unsorted` ? (
