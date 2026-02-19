@@ -431,7 +431,7 @@ export default function BoardPage() {
                   </div>
                 </div>
 
-                <div className="flex flex-col overflow-y-auto">
+                <div className="flex flex-col overflow-y-auto pr-1">
                   {/* Calendar Events */}
                   {calendarEvents[columnId]?.map((event) => {
                     const dayIndex = ["monday", "tuesday", "wednesday", "thursday", "friday"].indexOf(columnId);
