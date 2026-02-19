@@ -4,7 +4,7 @@ import { useState, useRef } from "react";
 import { useWorkspace } from "@/lib/workspace-context";
 import { createClientRecord, updateClientRecord, deleteClientRecord } from "@/lib/supabase/clients";
 import { uploadClientLogo, deleteClientLogo } from "@/lib/supabase/storage";
-import { getClientClassName, CLIENT_DOT_COLORS, COLOR_NAMES } from "@/lib/colors";
+import { getClientClassName, getClientTextClassName, CLIENT_DOT_COLORS, COLOR_NAMES } from "@/lib/colors";
 import type { Client } from "@/lib/types";
 import {
   Dialog,
@@ -271,37 +271,9 @@ export default function ProjectsPage() {
           <DialogHeader>
             <DialogTitle>{editingClient ? "Edit Project" : "Add Project"}</DialogTitle>
           </DialogHeader>
-          <div className="space-y-5 py-4">
-            {/* Name + Shortcut row */}
-            <div className="flex gap-3">
-              <div className="flex-1 space-y-2">
-                <label className="text-sm font-medium">Name</label>
-                <Input
-                  type="text"
-                  value={formName}
-                  onChange={(e) => handleNameChange(e.target.value)}
-                  placeholder="Project name"
-                  autoFocus
-                />
-              </div>
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Shortcut</label>
-                <Input
-                  type="text"
-                  value={formSlug}
-                  onChange={(e) => setFormSlug(e.target.value.slice(0, 3))}
-                  placeholder="e.g. b"
-                  maxLength={3}
-                  className="w-16 font-mono text-center"
-                />
-              </div>
-            </div>
-
-            <div className="border-t border-white/[0.06]" />
-
+          <div className="py-4 space-y-6">
             {/* Logo */}
-            <div className="space-y-2.5">
-              <label className="text-sm font-medium">Logo <span className="text-white/30 font-normal">(optional)</span></label>
+            <div className="flex justify-center">
               <input
                 ref={fileInputRef}
                 type="file"
@@ -310,50 +282,69 @@ export default function ProjectsPage() {
                 className="hidden"
               />
               {formLogoPreview ? (
-                <div className="flex items-center gap-4">
+                <div className="group relative">
                   <img
                     src={formLogoPreview}
                     alt="Logo preview"
-                    className="size-16 rounded-xl object-cover bg-white/5"
+                    className="size-20 rounded-2xl object-cover bg-white/5 cursor-pointer"
+                    onClick={() => fileInputRef.current?.click()}
                   />
-                  <div className="flex flex-col gap-1.5">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="text-white/40 hover:text-white/60"
-                      onClick={() => fileInputRef.current?.click()}
-                    >
-                      <Upload className="size-3" />
-                      Replace
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="text-white/40 hover:text-red-400 hover:bg-red-500/10"
-                      onClick={clearLogo}
-                    >
-                      <X className="size-3" />
-                      Remove
-                    </Button>
-                  </div>
+                  <button
+                    type="button"
+                    onClick={clearLogo}
+                    className="absolute -top-1.5 -right-1.5 size-5 rounded-full bg-white/10 hover:bg-red-500/80 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                    aria-label="Remove logo"
+                  >
+                    <X className="size-3" />
+                  </button>
                 </div>
               ) : (
                 <button
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
-                  className="flex items-center justify-center gap-2 w-full rounded-xl border border-dashed border-white/10 bg-white/[0.02] px-3 py-5 text-sm text-white/30 hover:text-white/50 hover:border-white/20 transition-colors"
+                  className="size-20 rounded-2xl border-2 border-dashed border-white/10 bg-white/[0.02] flex flex-col items-center justify-center gap-1 text-white/20 hover:text-white/40 hover:border-white/20 hover:bg-white/[0.04] transition-colors cursor-pointer"
                 >
-                  <Upload className="size-4" />
-                  Upload logo
+                  <Upload className="size-5" />
+                  <span className="text-[10px]">Logo</span>
                 </button>
               )}
             </div>
 
-            <div className="border-t border-white/[0.06]" />
+            {/* Name + Shortcut */}
+            <div className="flex gap-3">
+              <div className="flex-1 space-y-1.5">
+                <label className="text-xs font-medium text-white/50">Name</label>
+                <Input
+                  type="text"
+                  value={formName}
+                  onChange={(e) => handleNameChange(e.target.value)}
+                  placeholder="Project name"
+                  autoFocus
+                />
+              </div>
+              <div className="space-y-1.5 w-16">
+                <label className="text-xs font-medium text-white/50">Key</label>
+                <Input
+                  type="text"
+                  value={formSlug}
+                  onChange={(e) => setFormSlug(e.target.value.slice(0, 3))}
+                  placeholder="b"
+                  maxLength={3}
+                  className="font-mono text-center"
+                />
+              </div>
+            </div>
 
-            {/* Color */}
-            <div className="space-y-2.5">
-              <label className="text-sm font-medium">Color</label>
+            {/* Text color */}
+            <div className="space-y-3">
+              <div className="flex items-center gap-3">
+                <label className="text-xs font-medium text-white/50">Text color</label>
+                {formName.trim() && (
+                  <span className={`text-sm font-medium ${getClientTextClassName(formColor)}`}>
+                    {formName.trim()}
+                  </span>
+                )}
+              </div>
               <div className="flex flex-wrap gap-2">
                 {COLOR_NAMES.map((color) => (
                   <button
@@ -372,44 +363,17 @@ export default function ProjectsPage() {
               </div>
             </div>
 
-            {/* Preview */}
-            {formName.trim() && (
-              <>
-                <div className="border-t border-white/[0.06]" />
-                <div className="space-y-2.5">
-                  <label className="text-sm font-medium text-white/40">Preview</label>
-                  <div className="flex items-center gap-3 rounded-lg border border-white/[0.06] bg-white/[0.02] px-3 py-2.5">
-                    {formLogoPreview ? (
-                      <img
-                        src={formLogoPreview}
-                        alt=""
-                        className="size-6 rounded-md object-cover bg-white/5 shrink-0"
-                      />
-                    ) : (
-                      <div className={`size-6 rounded-md ${CLIENT_DOT_COLORS[formColor] || "bg-blue-500"} flex items-center justify-center text-white font-bold text-[10px] shrink-0`}>
-                        {formName.trim().charAt(0).toUpperCase()}
-                      </div>
-                    )}
-                    <span className="text-sm font-medium text-white/80">{formName.trim()}</span>
-                    <Badge className={`${getClientClassName(formColor)} ml-auto`}>{formName.trim()}</Badge>
-                  </div>
-                </div>
-              </>
-            )}
-
-            <div className="flex items-center justify-between pt-2">
-              <span className="text-[11px] text-white/20">Press shortcut key on a task card to assign this project</span>
-              <div className="flex gap-2">
-                <Button variant="ghost" onClick={() => setDialogOpen(false)}>
-                  Cancel
-                </Button>
-                <Button
-                  onClick={handleSave}
-                  disabled={saving || !formName.trim() || !formSlug.trim()}
-                >
-                  {saving ? "Saving..." : editingClient ? "Save" : "Add Project"}
-                </Button>
-              </div>
+            {/* Actions */}
+            <div className="flex justify-end gap-2 pt-2 border-t border-white/[0.06]">
+              <Button variant="ghost" onClick={() => setDialogOpen(false)}>
+                Cancel
+              </Button>
+              <Button
+                onClick={handleSave}
+                disabled={saving || !formName.trim() || !formSlug.trim()}
+              >
+                {saving ? "Saving..." : editingClient ? "Save" : "Add Project"}
+              </Button>
             </div>
           </div>
         </DialogContent>
