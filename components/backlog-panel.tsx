@@ -352,24 +352,6 @@ export function BacklogPanel({
       <SortableTaskRow key={task.id} id={task.id}>
           <div className="group border-b border-white/[0.04] last:border-b-0 hover:bg-white/[0.03] transition-colors cursor-grab active:cursor-grabbing">
             <div className="flex items-center gap-2 px-3 py-2">
-              {/* Expand chevron (only if has description) */}
-              {task.description ? (
-                <button
-                  type="button"
-                  onClick={() => toggleExpanded(task.id)}
-                  className="shrink-0 p-0"
-                  aria-label={isExpanded ? "Collapse description" : "Expand description"}
-                >
-                  {isExpanded ? (
-                    <ChevronDown className="size-3 text-white/30" />
-                  ) : (
-                    <ChevronRight className="size-3 text-white/30" />
-                  )}
-                </button>
-              ) : (
-                <span className="w-3 shrink-0" />
-              )}
-
               {/* Title */}
               <button
                 type="button"
@@ -399,6 +381,22 @@ export function BacklogPanel({
                     ) : null;
                   })}
                 </div>
+              )}
+
+              {/* Expand chevron (only if has description) */}
+              {task.description && (
+                <button
+                  type="button"
+                  onClick={() => toggleExpanded(task.id)}
+                  className="shrink-0 p-0"
+                  aria-label={isExpanded ? "Collapse description" : "Expand description"}
+                >
+                  {isExpanded ? (
+                    <ChevronDown className="size-3 text-white/30" />
+                  ) : (
+                    <ChevronRight className="size-3 text-white/30" />
+                  )}
+                </button>
               )}
 
               {/* Send to day */}
@@ -435,7 +433,7 @@ export function BacklogPanel({
 
             {/* Expandable description */}
             {isExpanded && task.description && (
-              <div className="px-2 pb-2 pl-9">
+              <div className="px-2 pb-2 pl-3">
                 <div
                   className="tiptap text-xs text-white/40 break-words [&_a]:text-blue-400 [&_a]:underline"
                   dangerouslySetInnerHTML={{ __html: task.description }}
