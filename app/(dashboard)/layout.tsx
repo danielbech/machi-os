@@ -10,11 +10,7 @@ function DashboardGate({ children }: { children: React.ReactNode }) {
   const { user, loading } = useWorkspace();
 
   if (loading) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-black/50">
-        <div className="text-white/60">Loading...</div>
-      </div>
-    );
+    return <div className="min-h-screen bg-black/50" />;
   }
 
   if (!user) {
@@ -24,10 +20,12 @@ function DashboardGate({ children }: { children: React.ReactNode }) {
   return (
     <TooltipProvider>
       <SidebarProvider defaultOpen={false}>
-        <AppSidebar />
-        <SidebarInset>
-          {children}
-        </SidebarInset>
+        <div className="flex w-full animate-in fade-in duration-300">
+          <AppSidebar />
+          <SidebarInset>
+            {children}
+          </SidebarInset>
+        </div>
       </SidebarProvider>
     </TooltipProvider>
   );
