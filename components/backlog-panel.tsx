@@ -426,7 +426,7 @@ export function BacklogPanel({
               <button
                 type="button"
                 onClick={() => onDeleteTask(task.id)}
-                className="opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
+                className="opacity-0 group-hover:opacity-100 transition-opacity shrink-0 p-1 rounded hover:bg-white/[0.06]"
                 aria-label="Delete task"
               >
                 <Trash2 className="size-3 text-white/20 hover:text-red-400" />
@@ -554,18 +554,18 @@ export function BacklogPanel({
               setRenamingFolder(folder.id);
               setRenameValue(folder.name);
             }}
-            className="opacity-0 group-hover/folder:opacity-100 transition-opacity p-1.5 rounded hover:bg-white/[0.06]"
+            className="opacity-0 group-hover/folder:opacity-100 transition-opacity p-1 rounded hover:bg-white/[0.06]"
             aria-label="Rename folder"
           >
-            <Pencil className="size-3.5 text-white/20 hover:text-white/50" />
+            <Pencil className="size-3 text-white/20 hover:text-white/50" />
           </button>
           <button
             type="button"
             onClick={() => onDeleteFolder(folder.id)}
-            className="opacity-0 group-hover/folder:opacity-100 transition-opacity p-1.5 rounded hover:bg-white/[0.06]"
+            className="opacity-0 group-hover/folder:opacity-100 transition-opacity p-1 rounded hover:bg-white/[0.06]"
             aria-label="Delete folder"
           >
-            <Trash2 className="size-3.5 text-white/20 hover:text-red-400" />
+            <Trash2 className="size-3 text-white/20 hover:text-red-400" />
           </button>
         </div>
 
