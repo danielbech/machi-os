@@ -1,5 +1,6 @@
 // Map color names to Tailwind badge classes (light bg + dark text / dark bg + light text)
 export const CLIENT_COLORS: Record<string, string> = {
+  white: "bg-white/10 text-white dark:bg-white/10 dark:text-white",
   blue: "bg-blue-50 text-blue-700 dark:bg-blue-950 dark:text-blue-300",
   green: "bg-green-50 text-green-700 dark:bg-green-950 dark:text-green-300",
   purple: "bg-purple-50 text-purple-700 dark:bg-purple-950 dark:text-purple-300",
@@ -12,6 +13,7 @@ export const CLIENT_COLORS: Record<string, string> = {
 
 // Dot colors for color picker swatches
 export const CLIENT_DOT_COLORS: Record<string, string> = {
+  white: "bg-white",
   blue: "bg-blue-500",
   green: "bg-green-500",
   purple: "bg-purple-500",
@@ -24,6 +26,7 @@ export const CLIENT_DOT_COLORS: Record<string, string> = {
 
 // Text-only colors (no background)
 export const CLIENT_TEXT_COLORS: Record<string, string> = {
+  white: "text-white",
   blue: "text-blue-400",
   green: "text-green-400",
   purple: "text-purple-400",

@@ -4,7 +4,7 @@ import { useState, useRef } from "react";
 import { useWorkspace } from "@/lib/workspace-context";
 import { createClientRecord, updateClientRecord, deleteClientRecord } from "@/lib/supabase/clients";
 import { uploadClientLogo, deleteClientLogo } from "@/lib/supabase/storage";
-import { getClientClassName, getClientTextClassName, CLIENT_DOT_COLORS, COLOR_NAMES } from "@/lib/colors";
+import { getClientTextClassName, CLIENT_DOT_COLORS, COLOR_NAMES } from "@/lib/colors";
 import type { Client } from "@/lib/types";
 import {
   Dialog,
@@ -12,7 +12,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Plus, Pencil, Trash2, Upload, X } from "lucide-react";
@@ -166,13 +165,8 @@ export default function ProjectsPage() {
         </div>
       )}
 
-      {/* Name + Badge */}
-      <div className="flex-1 min-w-0 flex items-center gap-3">
-        <span className="font-medium truncate">{client.name}</span>
-        <Badge className={getClientClassName(client.color)}>
-          {client.name}
-        </Badge>
-      </div>
+      {/* Name */}
+      <span className={`flex-1 min-w-0 font-medium truncate ${getClientTextClassName(client.color)}`}>{client.name}</span>
 
       {/* Shortcut */}
       <span className="text-xs text-white/30 font-mono w-8 text-center shrink-0">{client.slug}</span>
@@ -345,16 +339,16 @@ export default function ProjectsPage() {
                   </span>
                 )}
               </div>
-              <div className="flex flex-wrap gap-2">
+              <div className="flex gap-1.5">
                 {COLOR_NAMES.map((color) => (
                   <button
                     key={color}
                     type="button"
                     onClick={() => setFormColor(color)}
-                    className={`size-8 rounded-full ${CLIENT_DOT_COLORS[color]} transition-all ${
+                    className={`size-6 rounded-full ${CLIENT_DOT_COLORS[color]} transition-all ${
                       formColor === color
-                        ? "ring-2 ring-white ring-offset-2 ring-offset-background scale-110"
-                        : "opacity-60 hover:opacity-100"
+                        ? "ring-2 ring-white/80 ring-offset-1 ring-offset-background"
+                        : "opacity-50 hover:opacity-90"
                     }`}
                     title={color}
                     aria-label={`Select ${color} color`}
