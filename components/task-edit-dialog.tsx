@@ -39,7 +39,7 @@ export function TaskEditDialog({ task, onClose, onSave, onTaskChange, folders }:
   const assignedMembers = TEAM_MEMBERS.filter((m) => task?.assignees?.includes(m.id));
 
   return (
-    <Dialog open={task !== null} onOpenChange={(open) => { if (!open) onClose(); }}>
+    <Dialog open={task !== null} onOpenChange={(open) => { if (!open && task) onSave(task); }}>
       <DialogContent
         className="sm:max-w-[500px]"
         onOpenAutoFocus={(e) => {
