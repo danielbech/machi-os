@@ -78,8 +78,9 @@ export default function BoardPage() {
     refreshBacklog();
   }, [activeProjectId, refreshTasks, refreshBacklog]);
 
-  // Suppress realtime backlog reloads briefly after local reorder
+  // Suppress realtime reloads briefly after local saves
   const suppressBacklogReload = useRef(false);
+  const suppressTaskReload = useRef(false);
 
   // Realtime: reload when another user changes tasks or backlog folders (debounced)
   const realtimeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -90,7 +91,9 @@ export default function BoardPage() {
     const reloadAll = () => {
       if (realtimeTimer.current) clearTimeout(realtimeTimer.current);
       realtimeTimer.current = setTimeout(() => {
-        refreshTasks();
+        if (!suppressTaskReload.current) {
+          refreshTasks();
+        }
         if (!suppressBacklogReload.current) {
           refreshBacklog();
         }
@@ -260,6 +263,7 @@ export default function BoardPage() {
       priority: clipboard.task.priority,
       type: clipboard.task.type,
       day: columnId,
+      checklist: clipboard.task.checklist ? clipboard.task.checklist.map(i => ({ ...i, id: crypto.randomUUID() })) : undefined,
     };
     const columnItems = [...columns[columnId], newCard];
     setColumns({ ...columns, [columnId]: columnItems });
@@ -345,6 +349,8 @@ export default function BoardPage() {
 
   const saveEditedTask = async (updatedTask: Task) => {
     if (!activeProjectId) return;
+    suppressTaskReload.current = true;
+    suppressBacklogReload.current = true;
     if (editingColumn) {
       // Editing from kanban
       const updated = { ...columns };
@@ -364,6 +370,10 @@ export default function BoardPage() {
     }
     setEditingTask(null);
     setEditingColumn(null);
+    setTimeout(() => {
+      suppressTaskReload.current = false;
+      suppressBacklogReload.current = false;
+    }, 2000);
   };
 
   // Backlog action handlers

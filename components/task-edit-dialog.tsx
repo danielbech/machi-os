@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useCallback } from "react";
+import { useRef } from "react";
 import type { Task, BacklogFolder, ChecklistItem } from "@/lib/types";
 import { useWorkspace } from "@/lib/workspace-context";
 import { TEAM_MEMBERS } from "@/lib/constants";
@@ -290,15 +290,21 @@ export function TaskEditDialog({ task, onClose, onSave, onTaskChange, folders }:
                   </span>
                 )}
               </div>
-              <div className="flex flex-col">
+              <div className="flex flex-col gap-1">
                 {(task.checklist || []).map((item, idx) => (
-                  <div key={item.id} className="group/item flex items-center gap-2 py-1">
+                  <div key={item.id} className="group/item flex items-center gap-2 rounded-md bg-white/[0.04] px-2 py-1.5">
                     <button
                       type="button"
                       onClick={() => {
                         const updated = [...(task.checklist || [])];
                         updated[idx] = { ...updated[idx], checked: !updated[idx].checked };
-                        onTaskChange({ ...task, checklist: updated });
+                        const allChecked = updated.length > 0 && updated.every((i) => i.checked);
+                        const anyUnchecked = updated.some((i) => !i.checked);
+                        onTaskChange({
+                          ...task,
+                          checklist: updated,
+                          completed: task.type !== "note" ? (allChecked ? true : anyUnchecked ? false : task.completed) : task.completed,
+                        });
                       }}
                       className="shrink-0"
                     >
@@ -330,14 +336,23 @@ export function TaskEditDialog({ task, onClose, onSave, onTaskChange, folders }:
                           const newItem: ChecklistItem = { id: crypto.randomUUID(), text: "", checked: false };
                           const updated = [...(task.checklist || [])];
                           updated.splice(idx + 1, 0, newItem);
-                          onTaskChange({ ...task, checklist: updated });
+                          onTaskChange({
+                            ...task,
+                            checklist: updated,
+                            completed: task.type !== "note" ? false : task.completed,
+                          });
                           requestAnimationFrame(() => {
                             checklistRefs.current.get(newItem.id)?.focus();
                           });
                         } else if (e.key === "Backspace" && item.text === "") {
                           e.preventDefault();
                           const updated = (task.checklist || []).filter((_, i) => i !== idx);
-                          onTaskChange({ ...task, checklist: updated });
+                          const allChecked = updated.length > 0 && updated.every((i) => i.checked);
+                          onTaskChange({
+                            ...task,
+                            checklist: updated,
+                            completed: task.type !== "note" && updated.length > 0 ? allChecked : task.completed,
+                          });
                           const prevItem = (task.checklist || [])[idx - 1];
                           if (prevItem) {
                             requestAnimationFrame(() => {
@@ -367,7 +382,12 @@ export function TaskEditDialog({ task, onClose, onSave, onTaskChange, folders }:
                       type="button"
                       onClick={() => {
                         const updated = (task.checklist || []).filter((_, i) => i !== idx);
-                        onTaskChange({ ...task, checklist: updated });
+                        const allChecked = updated.length > 0 && updated.every((i) => i.checked);
+                        onTaskChange({
+                          ...task,
+                          checklist: updated,
+                          completed: task.type !== "note" && updated.length > 0 ? allChecked : task.completed,
+                        });
                       }}
                       className="shrink-0 opacity-0 group-hover/item:opacity-100 transition-opacity p-0.5 rounded hover:bg-white/10"
                     >
@@ -380,7 +400,11 @@ export function TaskEditDialog({ task, onClose, onSave, onTaskChange, folders }:
                 type="button"
                 onClick={() => {
                   const newItem: ChecklistItem = { id: crypto.randomUUID(), text: "", checked: false };
-                  onTaskChange({ ...task, checklist: [...(task.checklist || []), newItem] });
+                  onTaskChange({
+                    ...task,
+                    checklist: [...(task.checklist || []), newItem],
+                    completed: task.type !== "note" ? false : task.completed,
+                  });
                   requestAnimationFrame(() => {
                     checklistRefs.current.get(newItem.id)?.focus();
                   });
