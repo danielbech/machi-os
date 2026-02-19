@@ -224,6 +224,13 @@ export function TaskEditDialog({ task, onClose, onSave, onTaskChange, folders }:
                     </button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="start" className="min-w-[200px]">
+                    <DropdownMenuItem
+                      onClick={() => onTaskChange({ ...task, assignees: [] })}
+                      className="text-white/50"
+                    >
+                      No assignee
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
                     {TEAM_MEMBERS.map((member) => {
                       const isAssigned = task.assignees?.includes(member.id) || false;
                       return (
