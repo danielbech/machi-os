@@ -377,7 +377,7 @@ export function BacklogPanel({
     return (
       <SortableTaskRow key={task.id} id={task.id}>
           <div className="group border-b border-white/[0.04] last:border-b-0 hover:bg-white/[0.03] transition-colors cursor-grab active:cursor-grabbing">
-            <div className="flex items-center gap-2 px-3 py-2">
+            <div className="relative flex items-center gap-2 px-3 py-2">
               {/* Title */}
               <button
                 type="button"
@@ -425,36 +425,39 @@ export function BacklogPanel({
                 </button>
               )}
 
-              {/* Send to day */}
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <button
-                    type="button"
-                    className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded bg-white/5 text-white/40 hover:bg-white/10 hover:text-white/60 shrink-0"
-                    aria-label="Send to day"
-                  >
-                    <Send className="size-2.5" />
-                    Send
-                  </button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="min-w-[120px]">
-                  {DAYS.map((day) => (
-                    <DropdownMenuItem key={day} onClick={() => onSendToDay(task.id, day)}>
-                      {COLUMN_TITLES[day]}
-                    </DropdownMenuItem>
-                  ))}
-                </DropdownMenuContent>
-              </DropdownMenu>
+              {/* Hover actions — overlaid so they don't squeeze the title */}
+              <div className="absolute right-0 top-0 bottom-0 hidden group-hover:flex items-center gap-1 pr-2 pl-6 bg-gradient-to-r from-transparent to-zinc-950">
+                {/* Send to day */}
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <button
+                      type="button"
+                      className="flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded bg-white/5 text-white/40 hover:bg-white/10 hover:text-white/60 shrink-0"
+                      aria-label="Send to day"
+                    >
+                      <Send className="size-2.5" />
+                      Send
+                    </button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="min-w-[120px]">
+                    {DAYS.map((day) => (
+                      <DropdownMenuItem key={day} onClick={() => onSendToDay(task.id, day)}>
+                        {COLUMN_TITLES[day]}
+                      </DropdownMenuItem>
+                    ))}
+                  </DropdownMenuContent>
+                </DropdownMenu>
 
-              {/* Delete */}
-              <button
-                type="button"
-                onClick={() => onDeleteTask(task.id)}
-                className="opacity-0 group-hover:opacity-100 transition-opacity shrink-0 p-1 rounded hover:bg-white/[0.06]"
-                aria-label="Delete task"
-              >
-                <Trash2 className="size-3 text-white/20 hover:text-red-400" />
-              </button>
+                {/* Delete */}
+                <button
+                  type="button"
+                  onClick={() => onDeleteTask(task.id)}
+                  className="shrink-0 p-1 rounded hover:bg-white/[0.06]"
+                  aria-label="Delete task"
+                >
+                  <Trash2 className="size-3 text-white/20 hover:text-red-400" />
+                </button>
+              </div>
             </div>
 
             {/* Expandable description */}
