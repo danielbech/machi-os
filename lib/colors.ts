@@ -37,6 +37,19 @@ export const CLIENT_TEXT_COLORS: Record<string, string> = {
   cyan: "text-cyan-400",
 };
 
+// Raw RGB values for dynamic CSS (glow effects, etc.)
+export const CLIENT_RGB_COLORS: Record<string, string> = {
+  white: "255, 255, 255",
+  blue: "96, 165, 250",
+  green: "74, 222, 128",
+  purple: "192, 132, 252",
+  orange: "251, 146, 60",
+  pink: "244, 114, 182",
+  red: "248, 113, 113",
+  yellow: "250, 204, 21",
+  cyan: "34, 211, 238",
+};
+
 export const COLOR_NAMES = Object.keys(CLIENT_COLORS);
 
 export function getClientClassName(color: string): string {
