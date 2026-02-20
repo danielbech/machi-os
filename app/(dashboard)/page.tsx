@@ -1,23 +1,23 @@
 "use client";
 
-import { useState, useCallback, useRef, KeyboardEvent, useEffect } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { loadTasksByDay, saveTask, updateDayTasks, deleteTask } from "@/lib/supabase/tasks-simple";
 import { useWorkspace } from "@/lib/workspace-context";
 import { TaskEditDialog } from "@/components/task-edit-dialog";
+import { BoardTaskCard } from "@/components/board-task-card";
+import { BoardCalendarEvent } from "@/components/board-calendar-event";
+import { BoardShortcuts } from "@/components/board-shortcuts";
+import { BoardAddCard } from "@/components/board-add-card";
 import type { Task, DayName } from "@/lib/types";
 import { COLUMN_TITLES, EMPTY_COLUMNS } from "@/lib/constants";
-import { getClientTextClassName, CLIENT_RGB_COLORS } from "@/lib/colors";
-import { ClientIcon } from "@/components/client-icon";
 import {
   Kanban,
   KanbanBoard,
   KanbanColumn,
-  KanbanItem,
   KanbanOverlay,
 } from "@/components/ui/kanban";
-import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from "@/components/ui/tooltip";
-import { Check, Plus, Calendar, Keyboard, StickyNote } from "lucide-react";
+import { Check, Plus, StickyNote } from "lucide-react";
 
 export default function BoardPage() {
   const { activeProjectId, clients, calendarEvents, backlogOpen, addToBacklog, backlogFolders, teamMembers } = useWorkspace();
@@ -154,17 +154,6 @@ export default function BoardPage() {
     setNewlyCreatedCardId(realId);
     // Persist correct sort order for the whole column
     await updateDayTasks(activeProjectId, columnId, updatedItems);
-  };
-
-  const handleKeyDown = (e: KeyboardEvent<HTMLInputElement>, columnId: string, index?: number) => {
-    if (e.key === "Enter") {
-      handleAddCard(columnId, index);
-    } else if (e.key === "Escape") {
-      setAddingToColumn(null);
-      setAddingAtIndex(null);
-      setNewCardTitle("");
-      setNewCardType("task");
-    }
   };
 
   const toggleComplete = async (taskId: string) => {
@@ -441,84 +430,26 @@ export default function BoardPage() {
                   {calendarEvents[columnId]?.map((event) => {
                     const dayIndex = ["monday", "tuesday", "wednesday", "thursday", "friday"].indexOf(columnId);
                     const todayIndex = ["monday", "tuesday", "wednesday", "thursday", "friday"].indexOf(todayName);
-                    const isPast = dayIndex < todayIndex;
                     return (
-                      <div key={event.id} className={`rounded-lg border p-2 mb-1 cursor-default ${isPast ? "border-white/5 bg-white/[0.02] opacity-40" : "border-blue-500/20 bg-blue-500/5"}`}>
-                        <div className="flex items-start gap-2">
-                          <Calendar className={`size-3.5 mt-0.5 shrink-0 ${isPast ? "text-white/30" : "text-blue-400"}`} />
-                          <div className="flex-1 min-w-0">
-                            <div className={`text-sm font-medium ${isPast ? "text-white/50" : "text-blue-100"}`}>{event.summary}</div>
-                            <div className={`text-xs mt-0.5 ${isPast ? "text-white/20" : "text-blue-300/60"}`}>
-                              {new Date(event.start).toLocaleTimeString("en-US", {
-                                hour: "numeric",
-                                minute: "2-digit",
-                                hour12: true,
-                              })}
-                              {event.location && ` • ${event.location}`}
-                            </div>
-                            {event.attendees && event.attendees.length > 0 && (
-                              <TooltipProvider>
-                                <Tooltip>
-                                  <TooltipTrigger asChild>
-                                    <div className={`text-[10px] mt-1 leading-tight cursor-default ${isPast ? "text-white/15" : "text-blue-300/40"}`}>
-                                      {event.attendees.slice(0, 2).join(", ")}
-                                      {event.attendees.length > 2 && (
-                                        <span className={`ml-1 ${isPast ? "text-white/20" : "text-blue-300/50"}`}>+{event.attendees.length - 2}</span>
-                                      )}
-                                    </div>
-                                  </TooltipTrigger>
-                                  <TooltipContent side="bottom" className="max-w-[250px] bg-zinc-900 text-white border border-white/10">
-                                    <div className="flex flex-col gap-0.5">
-                                      {event.attendees.map((email) => (
-                                        <span key={email}>{email}</span>
-                                      ))}
-                                    </div>
-                                  </TooltipContent>
-                                </Tooltip>
-                              </TooltipProvider>
-                            )}
-                          </div>
-                        </div>
-                      </div>
+                      <BoardCalendarEvent key={event.id} event={event} isPast={dayIndex < todayIndex} />
                     );
                   })}
 
                   {items.map((item, index) => (
                     <div key={item.id}>
                       {addingToColumn === columnId && addingAtIndex === index ? (
-                        <div className={`rounded-lg border p-3 mb-1 ${newCardType === "note" ? "border-amber-500/20 bg-amber-500/5" : "border-white/10 bg-white/[0.03]"}`}>
-                          <input
-                            type="text"
-                            value={newCardTitle}
-                            onChange={(e) => setNewCardTitle(e.target.value)}
-                            onKeyDown={(e) => handleKeyDown(e, columnId, index)}
-                            onBlur={() => {
-                              if (newCardTitle.trim()) {
-                                handleAddCard(columnId, index);
-                              } else {
-                                setAddingToColumn(null);
-                                setAddingAtIndex(null);
-                                setNewCardType("task");
-                              }
-                            }}
-                            placeholder={newCardType === "note" ? "Note..." : "Task title..."}
-                            autoFocus
-                            className="w-full bg-transparent text-sm outline-none placeholder:text-muted-foreground/40"
-                          />
-                          <div className="mt-2 flex items-center gap-2 text-xs text-muted-foreground/60">
-                            <button
-                              type="button"
-                              onMouseDown={(e) => e.preventDefault()}
-                              onClick={() => setNewCardType(newCardType === "task" ? "note" : "task")}
-                              className={`flex items-center gap-1 px-1.5 py-0.5 rounded transition-colors ${newCardType === "note" ? "bg-amber-500/20 text-amber-400" : "hover:text-muted-foreground/80"}`}
-                            >
-                              <StickyNote className="size-3" />
-                              {newCardType === "note" ? "Note" : "Task"}
-                            </button>
-                            <span className="ml-auto text-white/15">↵ Save</span>
-                            <span className="text-white/15">⎋ Cancel</span>
-                          </div>
-                        </div>
+                        <BoardAddCard
+                          value={newCardTitle}
+                          onChange={setNewCardTitle}
+                          cardType={newCardType}
+                          onToggleType={() => setNewCardType(newCardType === "task" ? "note" : "task")}
+                          onSubmit={() => handleAddCard(columnId, index)}
+                          onCancel={() => {
+                            setAddingToColumn(null);
+                            setAddingAtIndex(null);
+                            setNewCardType("task");
+                          }}
+                        />
                       ) : (
                         <button
                           onClick={(e) => {
@@ -531,203 +462,43 @@ export default function BoardPage() {
                         />
                       )}
 
-                      <KanbanItem
-                        asHandle
-                        value={item.id}
-                        className={`group rounded-lg border p-2 text-card-foreground shadow-[0_1px_3px_rgba(0,0,0,0.3)] transition-all duration-200 focus:outline-none !cursor-pointer ${
-                          item.type === "note"
-                            ? "border-amber-500/20 bg-amber-500/5 hover:bg-amber-500/10 hover:border-amber-500/30 hover:shadow-[0_2px_6px_rgba(0,0,0,0.4)]"
-                            : "border-white/5 bg-white/[0.02] hover:bg-white/[0.04] hover:border-white/10 hover:shadow-[0_2px_6px_rgba(0,0,0,0.4)]"
-                        } ${glowingCards.has(item.id) ? "animate-complete-glow" : ""}`}
-                        style={glowingCards.has(item.id) ? {
-                          "--glow": item.client
-                            ? CLIENT_RGB_COLORS[clients.find((c) => c.id === item.client)?.color || "green"] || CLIENT_RGB_COLORS.green
-                            : CLIENT_RGB_COLORS.green
-                        } as React.CSSProperties : undefined}
-                        tabIndex={0}
-                        onClick={(e: any) => {
-                          if (e.target.closest("button")) return;
+                      <BoardTaskCard
+                        item={item}
+                        columnId={columnId}
+                        todayName={todayName}
+                        clients={clients}
+                        teamMembers={teamMembers}
+                        isGlowing={glowingCards.has(item.id)}
+                        isNewlyCreated={item.id === newlyCreatedCardId}
+                        addingToColumn={addingToColumn}
+                        onEdit={() => {
                           setEditingTask(item);
                           setEditingColumn(columnId);
                         }}
-                        ref={(el: HTMLDivElement | null) => {
-                          if (el && item.id === newlyCreatedCardId) {
-                            setTimeout(() => {
-                              el.focus();
-                              setNewlyCreatedCardId(null);
-                            }, 100);
-                          }
-                        }}
-                        onMouseEnter={(e: any) => {
-                          if (!addingToColumn) e.currentTarget.focus();
-                        }}
-                        onKeyDownCapture={(e: any) => {
-                          const key = e.key;
-                          if ((e.metaKey || e.ctrlKey) && key === "c") {
-                            e.preventDefault();
-                            setClipboard({ task: item, column: columnId });
-                          } else if (key === "Backspace") {
-                            e.preventDefault();
-                            removeTask(item.id);
-                          } else if (item.type === "note") {
-                            // Notes only support Backspace and copy — skip task shortcuts
-                            return;
-                          } else if (key === " ") {
-                            e.preventDefault();
-                            toggleComplete(item.id);
-                          } else if (key >= "1" && key <= "9") {
-                            const memberIndex = parseInt(key) - 1;
-                            if (memberIndex < teamMembers.length) {
-                              e.preventDefault();
-                              toggleAssignee(item.id, teamMembers[memberIndex].id);
-                            }
-                          } else {
-                            const matches = clients.filter((c) => c.slug === key.toLowerCase() && c.active);
-                            if (matches.length > 0) {
-                              e.preventDefault();
-                              const currentIdx = matches.findIndex((c) => c.id === item.client);
-                              if (currentIdx === -1) {
-                                toggleClient(item.id, matches[0].id);
-                              } else if (currentIdx < matches.length - 1) {
-                                toggleClient(item.id, matches[currentIdx + 1].id);
-                              } else {
-                                toggleClient(item.id, matches[currentIdx].id);
-                              }
-                            }
-                          }
-                        }}
-                      >
-                        {(() => {
-                          const dayIdx = ["monday", "tuesday", "wednesday", "thursday", "friday"].indexOf(columnId);
-                          const todayIdx = ["monday", "tuesday", "wednesday", "thursday", "friday"].indexOf(todayName);
-                          const isPastDay = dayIdx < todayIdx;
-                          const dimCompleted = item.completed && isPastDay;
-                          return item.type === "note" ? (
-                          <div className="flex items-start gap-2">
-                            <StickyNote className="size-3.5 text-amber-400 mt-0.5 shrink-0" />
-                            <div className="flex-1 text-sm text-amber-100/90">{item.title}</div>
-                            {item.checklist && item.checklist.length > 0 && (
-                              <span className="text-[10px] text-amber-400/40 tabular-nums shrink-0 mt-0.5">
-                                {item.checklist.filter((i) => i.checked).length}/{item.checklist.length}
-                              </span>
-                            )}
-                          </div>
-                        ) : (
-                          <div className="relative">
-                            <div className={`transition-opacity ${dimCompleted ? "opacity-30" : item.completed ? "opacity-50" : ""}`}>
-                              <div className={`text-sm pr-6 ${item.completed ? "line-through" : ""}`}>{item.title}</div>
-                              {(item.client || (item.assignees && item.assignees.length > 0)) && (
-                                <div className="flex mt-1.5 items-center justify-between">
-                                  {item.client ?
-                                    (() => {
-                                      const client = clients.find((c) => c.id === item.client);
-                                      return client ? (
-                                        <div key={client.id} className={`flex items-center gap-1.5 ${getClientTextClassName(client.color)} text-xs font-medium`}>
-                                          {client.logo_url ? (
-                                            <img src={client.logo_url} alt="" className="w-5 h-5 rounded-full object-cover" />
-                                          ) : client.icon ? (
-                                            <ClientIcon icon={client.icon} className="size-3.5" />
-                                          ) : null}
-                                          {client.name}
-                                        </div>
-                                      ) : <div />;
-                                    })()
-                                  : <div />}
-                                  {item.assignees &&
-                                    item.assignees.length > 0 && (
-                                      <div className="flex gap-1.5">
-                                        {item.assignees.map((assigneeId) => {
-                                          const member = teamMembers.find((m) => m.id === assigneeId);
-                                          return member ? (
-                                            <div
-                                              key={member.id}
-                                              className={`flex items-center justify-center w-5 h-5 rounded-full ${!member.avatar ? member.color : "bg-white/5"} text-[10px] font-semibold text-white overflow-hidden`}
-                                              title={member.name}
-                                            >
-                                              {member.avatar ? (
-                                                <img src={member.avatar} alt={member.name} className="w-full h-full object-cover" />
-                                              ) : (
-                                                member.initials
-                                              )}
-                                            </div>
-                                          ) : null;
-                                        })}
-                                      </div>
-                                    )}
-                                </div>
-                              )}
-                            </div>
-
-                            <div className={`absolute top-0.5 right-0 flex flex-col items-center gap-1 transition-opacity ${
-                              item.completed || (item.checklist && item.checklist.length > 0) ? "" : "opacity-0 group-hover:opacity-100"
-                            }`}>
-                              <button
-                                type="button"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  toggleComplete(item.id);
-                                }}
-                                onMouseDown={(e) => e.stopPropagation()}
-                                aria-label={item.completed ? "Mark as incomplete" : "Mark as complete"}
-                              >
-                                <div
-                                  className={`flex size-4 items-center justify-center rounded-full border transition-all ${
-                                    item.completed
-                                      ? dimCompleted
-                                        ? "border-white/8 bg-white/8"
-                                        : "border-green-500/80 bg-green-500/80"
-                                      : "border-white/20 hover:border-white/40"
-                                  }`}
-                                >
-                                  {item.completed && <Check className={`size-3 ${dimCompleted ? "text-white/20" : "text-white"}`} strokeWidth={3} />}
-                                </div>
-                              </button>
-                              {item.checklist && item.checklist.length > 0 && (
-                                <span className={`text-[10px] tabular-nums leading-none ${dimCompleted ? "text-white/15" : "text-white/30"}`}>
-                                  {item.checklist.filter((i) => i.checked).length}/{item.checklist.length}
-                                </span>
-                              )}
-                            </div>
-                          </div>
-                        );
-                        })()}
-                      </KanbanItem>
+                        onToggleComplete={toggleComplete}
+                        onToggleAssignee={toggleAssignee}
+                        onToggleClient={toggleClient}
+                        onRemove={removeTask}
+                        onCopy={(task, col) => setClipboard({ task, column: col })}
+                        onNewlyCreatedSeen={() => setNewlyCreatedCardId(null)}
+                      />
                     </div>
                   ))}
 
                   {addingToColumn === columnId && addingAtIndex === null ? (
-                    <div className={`mt-1 rounded-lg border p-3 ${newCardType === "note" ? "border-amber-500/20 bg-amber-500/5" : "border-white/5 bg-white/[0.02]"}`}>
-                      <input
-                        type="text"
+                    <div className="mt-1">
+                      <BoardAddCard
                         value={newCardTitle}
-                        onChange={(e) => setNewCardTitle(e.target.value)}
-                        onKeyDown={(e) => handleKeyDown(e, columnId)}
-                        onBlur={() => {
-                          if (newCardTitle.trim()) {
-                            handleAddCard(columnId);
-                          } else {
-                            setAddingToColumn(null);
-                            setAddingAtIndex(null);
-                            setNewCardType("task");
-                          }
+                        onChange={setNewCardTitle}
+                        cardType={newCardType}
+                        onToggleType={() => setNewCardType(newCardType === "task" ? "note" : "task")}
+                        onSubmit={() => handleAddCard(columnId)}
+                        onCancel={() => {
+                          setAddingToColumn(null);
+                          setAddingAtIndex(null);
+                          setNewCardType("task");
                         }}
-                        placeholder={newCardType === "note" ? "Note..." : "Task title..."}
-                        autoFocus
-                        className="w-full bg-transparent text-sm outline-none placeholder:text-muted-foreground/40"
                       />
-                      <div className="mt-2 flex items-center gap-2 text-xs text-muted-foreground/60">
-                        <button
-                          type="button"
-                          onMouseDown={(e) => e.preventDefault()}
-                          onClick={() => setNewCardType(newCardType === "task" ? "note" : "task")}
-                          className={`flex items-center gap-1 px-1.5 py-0.5 rounded transition-colors ${newCardType === "note" ? "bg-amber-500/20 text-amber-400" : "hover:text-muted-foreground/80"}`}
-                        >
-                          <StickyNote className="size-3" />
-                          {newCardType === "note" ? "Note" : "Task"}
-                        </button>
-                        <span className="ml-auto text-white/15">↵ Save</span>
-                        <span className="text-white/15">⎋ Cancel</span>
-                      </div>
                     </div>
                   ) : (
                     <button
@@ -795,59 +566,11 @@ export default function BoardPage() {
         folders={backlogFolders}
       />
 
-      {/* Keyboard shortcuts */}
-      <div className="fixed bottom-5 right-5 z-50">
-        {showShortcuts && (
-          <div className="absolute bottom-12 right-0 w-64 rounded-xl border border-white/10 bg-zinc-900/95 backdrop-blur-md p-4 shadow-2xl mb-2 animate-in fade-in slide-in-from-bottom-2 duration-200">
-            <div className="text-xs font-medium text-white/40 uppercase tracking-wider mb-3">Keyboard Shortcuts</div>
-            <div className="space-y-2.5">
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-white/70">Toggle complete</span>
-                <kbd className="px-1.5 py-0.5 rounded bg-white/10 text-[11px] font-mono text-white/50">space</kbd>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-white/70">Delete card</span>
-                <kbd className="px-1.5 py-0.5 rounded bg-white/10 text-[11px] font-mono text-white/50">⌫</kbd>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-white/70">Copy card</span>
-                <kbd className="px-1.5 py-0.5 rounded bg-white/10 text-[11px] font-mono text-white/50">⌘C</kbd>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-white/70">Paste card</span>
-                <kbd className="px-1.5 py-0.5 rounded bg-white/10 text-[11px] font-mono text-white/50">⌘V</kbd>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-white/70">Toggle backlog</span>
-                <kbd className="px-1.5 py-0.5 rounded bg-white/10 text-[11px] font-mono text-white/50">.</kbd>
-              </div>
-              <div className="border-t border-white/5 my-1" />
-              {teamMembers.map((member, i) => (
-                <div key={member.id} className="flex items-center justify-between">
-                  <span className="text-sm text-white/70">Assign {member.name}</span>
-                  <kbd className="px-1.5 py-0.5 rounded bg-white/10 text-[11px] font-mono text-white/50">{i + 1}</kbd>
-                </div>
-              ))}
-              <div className="border-t border-white/5 my-1" />
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-white/70">Assign project</span>
-                <span className="text-[11px] text-white/40">first letter</span>
-              </div>
-            </div>
-          </div>
-        )}
-        <button
-          onClick={() => setShowShortcuts(!showShortcuts)}
-          className={`flex items-center justify-center size-10 rounded-full border shadow-lg transition-all ${
-            showShortcuts
-              ? "bg-white/10 border-white/20 text-white"
-              : "bg-zinc-900/90 border-white/10 text-white/40 hover:text-white/70 hover:border-white/20"
-          }`}
-          aria-label="Keyboard shortcuts"
-        >
-          <Keyboard className="size-4" />
-        </button>
-      </div>
+      <BoardShortcuts
+        open={showShortcuts}
+        onToggle={() => setShowShortcuts(!showShortcuts)}
+        teamMembers={teamMembers}
+      />
     </main>
   );
 }
