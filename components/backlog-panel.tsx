@@ -708,10 +708,11 @@ export function BacklogPanel({
             <button
               type="button"
               onClick={() => setProjectDialogOpen(true)}
-              className="p-1 rounded text-white/20 hover:text-white/50 hover:bg-white/[0.04] transition-colors"
+              className="flex items-center gap-1 px-2 py-1 rounded-md text-xs text-white/40 hover:text-white/70 border border-white/10 hover:border-white/20 hover:bg-white/[0.04] transition-colors"
               aria-label="Add project"
             >
-              <Plus className="size-3.5" />
+              <Plus className="size-3" />
+              Project
             </button>
           </div>
         </div>
