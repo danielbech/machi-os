@@ -80,14 +80,33 @@ export function useWorkspace() {
   return ctx;
 }
 
-// Helper: get current week's Monday and Friday
-function getWeekRange() {
+// Helper: get the raw current week's Monday (no transition offset)
+function getCurrentMonday() {
   const today = new Date();
   const currentDay = today.getDay();
   const monday = new Date(today);
   const offset = currentDay === 0 ? -6 : 1 - currentDay;
   monday.setDate(today.getDate() + offset);
   monday.setHours(0, 0, 0, 0);
+  return monday;
+}
+
+// Helper: check if we should show next week (transition ran + still Fri/Sat/Sun)
+function isTransitionedToNextWeek() {
+  if (typeof window === "undefined") return false;
+  const monday = getCurrentMonday();
+  const marker = localStorage.getItem("machi-last-transition");
+  const currentDay = new Date().getDay();
+  return marker === monday.toISOString() && (currentDay === 5 || currentDay === 6 || currentDay === 0);
+}
+
+// Helper: get display week's Monday and Friday
+// After weekly transition (Fri/Sat/Sun), returns next week's range
+function getWeekRange() {
+  const monday = getCurrentMonday();
+  if (isTransitionedToNextWeek()) {
+    monday.setDate(monday.getDate() + 7);
+  }
   const friday = new Date(monday);
   friday.setDate(monday.getDate() + 4);
   friday.setHours(23, 59, 59, 999);
@@ -353,12 +372,16 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
 
   // --- Weekly Transition ---
 
+  const [transitionCount, setTransitionCount] = useState(0);
+
   const transitionToNextWeek = useCallback(async () => {
     if (!activeProjectId) return { deleted: 0, carriedOver: 0 };
     const result = await transitionWeek(activeProjectId);
-    // Store marker so auto-trigger won't re-run this week
-    const { monday } = getWeekRange();
+    // Store marker using raw Monday so auto-trigger won't re-run this week
+    const monday = getCurrentMonday();
     localStorage.setItem("machi-last-transition", monday.toISOString());
+    // Bump counter to trigger calendar re-fetch with new week range
+    setTransitionCount((c) => c + 1);
     return result;
   }, [activeProjectId]);
 
@@ -370,7 +393,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
       const now = new Date();
       if (now.getDay() !== 5 || now.getHours() < 17) return; // not Friday >= 17:00
 
-      const { monday } = getWeekRange();
+      const monday = getCurrentMonday();
       const marker = localStorage.getItem("machi-last-transition");
       if (marker === monday.toISOString()) return; // already ran this week
 
@@ -527,7 +550,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
 
     checkConnections();
     return () => { cancelled = true; };
-  }, [activeProjectId, user, loadSharedEvents]);
+  }, [activeProjectId, user, loadSharedEvents, transitionCount]);
 
   // Listen for OAuth callback messages
   useEffect(() => {
