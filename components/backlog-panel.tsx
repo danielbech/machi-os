@@ -123,9 +123,27 @@ export function BacklogPanel({
   onReorderTasks,
   onDragActiveChange,
 }: BacklogPanelProps) {
-  // Manual toggle overrides (true = forced open, false = forced closed)
-  const [clientToggleOverrides, setClientToggleOverrides] = useState<Record<string, boolean>>({});
-  const [collapsedFolders, setCollapsedFolders] = useState<Set<string>>(new Set());
+  // Manual toggle overrides (true = forced open, false = forced closed) — persisted
+  const [clientToggleOverrides, setClientToggleOverrides] = useState<Record<string, boolean>>(() => {
+    try {
+      const stored = localStorage.getItem("machi-backlog-clients");
+      return stored ? JSON.parse(stored) : {};
+    } catch { return {}; }
+  });
+  const [collapsedFolders, setCollapsedFolders] = useState<Set<string>>(() => {
+    try {
+      const stored = localStorage.getItem("machi-backlog-folders");
+      return stored ? new Set(JSON.parse(stored)) : new Set();
+    } catch { return new Set(); }
+  });
+
+  // Persist collapse state
+  useEffect(() => {
+    localStorage.setItem("machi-backlog-clients", JSON.stringify(clientToggleOverrides));
+  }, [clientToggleOverrides]);
+  useEffect(() => {
+    localStorage.setItem("machi-backlog-folders", JSON.stringify([...collapsedFolders]));
+  }, [collapsedFolders]);
   const [addingTaskIn, setAddingTaskIn] = useState<string | null>(null);
   const [newTaskTitle, setNewTaskTitle] = useState("");
   const [addingFolderFor, setAddingFolderFor] = useState<string | null>(null);
