@@ -50,7 +50,7 @@ export function BacklogShell() {
 
       const handleMove = (ev: PointerEvent) => {
         const delta = ev.clientX - startX;
-        const newWidth = Math.max(280, Math.min(800, startWidth + delta));
+        const newWidth = Math.max(280, Math.min(window.innerWidth - 100, startWidth + delta));
         setBacklogWidth(newWidth);
       };
 
