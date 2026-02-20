@@ -757,8 +757,8 @@ export function BacklogPanel({
                     <ClientIcon icon={client.icon} className="size-4 text-white/50 shrink-0" />
                   ) : null}
                   <span className="text-base font-medium text-white/80 truncate">{client.name}</span>
+                  <span className="size-5 rounded-full bg-white/[0.06] flex items-center justify-center text-[10px] text-white/30 shrink-0">{clientTasks.length}</span>
                 </button>
-                <span className="text-xs text-white/20 shrink-0">{clientTasks.length}</span>
                 <button
                   type="button"
                   onClick={() => {
