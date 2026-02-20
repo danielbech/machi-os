@@ -683,8 +683,8 @@ export function BacklogPanel({
         </div>
 
         {/* Folder tasks */}
-        {!isCollapsed && (
-          <div className="ml-4">
+        <div className={`collapsible ${isCollapsed ? "" : "expanded"}`}>
+          <div className="collapsible-content ml-4">
             <DroppableArea id={containerId}>
               <SortableContext items={folderTasks.map((t) => t.id)} strategy={verticalListSortingStrategy}>
                 {folderTasks.map(renderTaskRow)}
@@ -692,7 +692,7 @@ export function BacklogPanel({
             </DroppableArea>
             {renderAddTaskInput(folder.client_id, folder.id)}
           </div>
-        )}
+        </div>
       </div>
     );
   };
@@ -777,8 +777,8 @@ export function BacklogPanel({
                 </button>
               </div>
 
-              {!isCollapsed && (
-                <div>
+              <div className={`collapsible ${isCollapsed ? "" : "expanded"}`}>
+                <div className="collapsible-content">
                   {/* Folders */}
                   {clientFolders.map((folder) => renderFolderSection(folder, clientTasks))}
 
@@ -861,7 +861,7 @@ export function BacklogPanel({
                     </div>
                   )}
                 </div>
-              )}
+              </div>
             </div>
           );
         })}

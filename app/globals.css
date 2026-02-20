@@ -208,3 +208,19 @@
 .animate-complete-glow {
   animation: card-complete-glow 0.8s ease-out forwards;
 }
+
+/* Smooth collapse/expand using CSS grid */
+.collapsible {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 200ms ease-out;
+}
+
+.collapsible.expanded {
+  grid-template-rows: 1fr;
+}
+
+.collapsible > .collapsible-content {
+  overflow: hidden;
+  min-height: 0;
+}
