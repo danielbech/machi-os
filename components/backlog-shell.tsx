@@ -98,9 +98,16 @@ export function BacklogShell() {
 
         {/* Resize handle */}
         <div
-          className="absolute top-0 bottom-0 right-0 w-1.5 cursor-col-resize hover:bg-white/10 active:bg-white/20 transition-colors"
+          className="absolute top-0 bottom-0 right-0 w-1.5 cursor-col-resize hover:bg-white/10 active:bg-white/20 transition-colors group/resize"
           onPointerDown={handleResizeStart}
-        />
+        >
+          {/* Grip indicator */}
+          <div className="absolute top-1/2 -translate-y-1/2 right-0 flex flex-col gap-[3px] items-center w-full opacity-30 group-hover/resize:opacity-60 transition-opacity">
+            <div className="w-[3px] h-[3px] rounded-full bg-white/80" />
+            <div className="w-[3px] h-[3px] rounded-full bg-white/80" />
+            <div className="w-[3px] h-[3px] rounded-full bg-white/80" />
+          </div>
+        </div>
       </div>
 
       <TaskEditDialog
