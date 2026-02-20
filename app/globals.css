@@ -125,6 +125,12 @@
     scrollbar-color: rgba(255 255 255 / 0.1) transparent;
   }
 
+  button,
+  [role="button"],
+  summary {
+    cursor: pointer;
+  }
+
   *:hover {
     scrollbar-color: rgba(255 255 255 / 0.2) transparent;
   }
