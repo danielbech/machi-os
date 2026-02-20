@@ -154,6 +154,7 @@ export function BacklogPanel({
   const [renameValue, setRenameValue] = useState("");
   const [expandedTasks, setExpandedTasks] = useState<Set<string>>(new Set());
   const [projectDialogOpen, setProjectDialogOpen] = useState(false);
+  const [editingProject, setEditingProject] = useState<Client | null>(null);
 
   // DnD state
   const [localTasks, setLocalTasks] = useState<Task[] | null>(null);
@@ -708,7 +709,7 @@ export function BacklogPanel({
             <span className="text-xs text-white/20">{tasks.length} tasks</span>
             <button
               type="button"
-              onClick={() => setProjectDialogOpen(true)}
+              onClick={() => { setEditingProject(null); setProjectDialogOpen(true); }}
               className="flex items-center gap-1 px-2 py-1 rounded-md text-xs text-white/40 hover:text-white/70 border border-white/10 hover:border-white/20 hover:bg-white/[0.04] transition-colors"
               aria-label="Add project"
             >
@@ -718,7 +719,14 @@ export function BacklogPanel({
           </div>
         </div>
 
-        <ProjectDialog open={projectDialogOpen} onOpenChange={setProjectDialogOpen} />
+        <ProjectDialog
+          open={projectDialogOpen}
+          onOpenChange={(open) => {
+            setProjectDialogOpen(open);
+            if (!open) setEditingProject(null);
+          }}
+          editingClient={editingProject}
+        />
 
         {relevantClients.length === 0 && (
           <p className="text-sm text-white/20 px-1">No projects yet. Add projects to get started.</p>
@@ -734,22 +742,35 @@ export function BacklogPanel({
           return (
             <div key={client.id} className="mb-3 rounded-lg border border-white/[0.06] bg-white/[0.02] overflow-hidden">
               {/* Client header */}
-              <button
-                type="button"
-                onClick={() => toggleClient(client.id)}
-                className="flex items-center gap-2 w-full px-3 py-2 bg-white/[0.03] hover:bg-white/[0.05] transition-colors"
-              >
-                <ChevronRight
-                  className={`size-3.5 text-white/30 transition-transform ${isCollapsed ? "" : "rotate-90"}`}
-                />
-                {client.logo_url ? (
-                  <img src={client.logo_url} alt="" className="size-5 rounded-sm object-cover shrink-0" />
-                ) : client.icon ? (
-                  <ClientIcon icon={client.icon} className="size-4 text-white/50 shrink-0" />
-                ) : null}
-                <span className="text-base font-medium text-white/80">{client.name}</span>
-                <span className="text-xs text-white/20 ml-auto">{clientTasks.length}</span>
-              </button>
+              <div className="group/client flex items-center gap-2 px-3 py-2 bg-white/[0.03] hover:bg-white/[0.05] transition-colors">
+                <button
+                  type="button"
+                  onClick={() => toggleClient(client.id)}
+                  className="flex items-center gap-2 flex-1 min-w-0"
+                >
+                  <ChevronRight
+                    className={`size-3.5 text-white/30 transition-transform ${isCollapsed ? "" : "rotate-90"}`}
+                  />
+                  {client.logo_url ? (
+                    <img src={client.logo_url} alt="" className="size-5 rounded-sm object-cover shrink-0" />
+                  ) : client.icon ? (
+                    <ClientIcon icon={client.icon} className="size-4 text-white/50 shrink-0" />
+                  ) : null}
+                  <span className="text-base font-medium text-white/80 truncate">{client.name}</span>
+                </button>
+                <span className="text-xs text-white/20 shrink-0">{clientTasks.length}</span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setEditingProject(client);
+                    setProjectDialogOpen(true);
+                  }}
+                  className="opacity-0 group-hover/client:opacity-100 transition-opacity p-1 rounded hover:bg-white/[0.06] shrink-0"
+                  aria-label={`Edit ${client.name}`}
+                >
+                  <Pencil className="size-3 text-white/20 hover:text-white/50" />
+                </button>
+              </div>
 
               {!isCollapsed && (
                 <div>
