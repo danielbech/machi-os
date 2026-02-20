@@ -40,7 +40,6 @@ import {
   Trash2,
   ListChecks,
   Check,
-  UserPlus,
 } from "lucide-react";
 
 // --- Sortable task row wrapper (must be a top-level component for hooks) ---
@@ -489,49 +488,6 @@ export function BacklogPanel({
 
               {/* Hover actions — overlaid so they don't squeeze the title */}
               <div className="absolute right-0 top-0 bottom-0 hidden group-hover:flex items-center gap-1 pr-2 pl-6 bg-gradient-to-r from-transparent via-black/80 to-black/90 backdrop-blur-sm">
-                {/* Assign member */}
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <button
-                      type="button"
-                      className="flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded bg-white/5 text-white/40 hover:bg-white/10 hover:text-white/60 shrink-0"
-                      onMouseDown={(e) => e.stopPropagation()}
-                      aria-label="Assign member"
-                    >
-                      <UserPlus className="size-2.5" />
-                    </button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="min-w-[140px]">
-                    {TEAM_MEMBERS.map((member) => {
-                      const isAssigned = task.assignees?.includes(member.id);
-                      return (
-                        <DropdownMenuItem
-                          key={member.id}
-                          onClick={() => {
-                            const assignees = task.assignees || [];
-                            const updated = isAssigned
-                              ? assignees.filter((id) => id !== member.id)
-                              : [...assignees, member.id];
-                            onSaveTask({ ...task, assignees: updated });
-                          }}
-                        >
-                          <div className="flex items-center gap-2 w-full">
-                            <div className={`flex items-center justify-center w-5 h-5 rounded-full ${!member.avatar ? member.color : "bg-white/5"} text-[9px] font-semibold text-white overflow-hidden shrink-0`}>
-                              {member.avatar ? (
-                                <img src={member.avatar} alt={member.name} className="w-full h-full object-cover" />
-                              ) : (
-                                member.initials
-                              )}
-                            </div>
-                            <span className="flex-1">{member.name}</span>
-                            {isAssigned && <Check className="size-3 ml-auto text-green-400" />}
-                          </div>
-                        </DropdownMenuItem>
-                      );
-                    })}
-                  </DropdownMenuContent>
-                </DropdownMenu>
-
                 {/* Send to day */}
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
