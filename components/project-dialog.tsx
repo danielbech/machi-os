@@ -9,8 +9,6 @@ import type { Client } from "@/lib/types";
 import {
   Dialog,
   DialogContent,
-  DialogHeader,
-  DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -45,6 +43,7 @@ export function ProjectDialog({ open, onOpenChange, editingClient = null }: Proj
   const [formLogoPreview, setFormLogoPreview] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const titleRef = useRef<HTMLInputElement>(null);
 
   // Reset form when dialog opens
   const handleOpenChange = (nextOpen: boolean) => {
@@ -133,13 +132,17 @@ export function ProjectDialog({ open, onOpenChange, editingClient = null }: Proj
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="sm:max-w-[460px]">
-        <DialogHeader>
-          <DialogTitle>{editingClient ? "Edit Project" : "Add Project"}</DialogTitle>
-        </DialogHeader>
-        <div className="py-4 space-y-6">
-          {/* Logo */}
-          <div className="flex justify-center">
+      <DialogContent
+        className="sm:max-w-[460px]"
+        onOpenAutoFocus={(e) => {
+          e.preventDefault();
+          titleRef.current?.focus();
+        }}
+      >
+        <form onSubmit={(e) => { e.preventDefault(); handleSave(); }} className="space-y-5">
+          {/* Name — big, freestanding, auto-focused */}
+          <div className="flex items-center gap-3">
+            {/* Logo — inline with title */}
             <input
               ref={fileInputRef}
               type="file"
@@ -148,100 +151,91 @@ export function ProjectDialog({ open, onOpenChange, editingClient = null }: Proj
               className="hidden"
             />
             {formLogoPreview ? (
-              <div className="group relative">
+              <div className="group relative shrink-0">
                 <img
                   src={formLogoPreview}
                   alt="Logo preview"
-                  className="size-20 rounded-2xl object-cover bg-white/5 cursor-pointer"
+                  className="size-10 rounded-xl object-cover bg-white/5 cursor-pointer"
                   onClick={() => fileInputRef.current?.click()}
                 />
                 <button
                   type="button"
                   onClick={clearLogo}
-                  className="absolute -top-1.5 -right-1.5 size-5 rounded-full bg-white/10 hover:bg-red-500/80 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                  className="absolute -top-1 -right-1 size-4 rounded-full bg-white/10 hover:bg-red-500/80 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
                   aria-label="Remove logo"
                 >
-                  <X className="size-3" />
+                  <X className="size-2.5" />
                 </button>
               </div>
             ) : (
               <button
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
-                className="size-20 rounded-2xl border-2 border-dashed border-white/10 bg-white/[0.02] flex flex-col items-center justify-center gap-1 text-white/20 hover:text-white/40 hover:border-white/20 hover:bg-white/[0.04] transition-colors cursor-pointer"
+                className="size-10 rounded-xl border-2 border-dashed border-white/10 bg-white/[0.02] flex items-center justify-center text-white/20 hover:text-white/40 hover:border-white/20 hover:bg-white/[0.04] transition-colors cursor-pointer shrink-0"
+                aria-label="Upload logo"
               >
-                <Upload className="size-5" />
-                <span className="text-[10px]">Logo</span>
+                <Upload className="size-4" />
               </button>
             )}
+
+            <input
+              ref={titleRef}
+              type="text"
+              value={formName}
+              onChange={(e) => handleNameChange(e.target.value)}
+              className={`flex-1 text-lg font-semibold bg-transparent outline-none placeholder:text-white/20 ${getClientTextClassName(formColor)}`}
+              placeholder="Project name..."
+            />
           </div>
 
-          {/* Name + Shortcut */}
-          <div className="flex gap-3">
-            <div className="flex-1 space-y-1.5">
-              <label className="text-xs font-medium text-white/50">Name</label>
-              <Input
-                type="text"
-                value={formName}
-                onChange={(e) => handleNameChange(e.target.value)}
-                placeholder="Project name"
-                autoFocus
-              />
-            </div>
-            <div className="space-y-1.5 w-16">
-              <label className="text-xs font-medium text-white/50">Key</label>
+          {/* Key + Color — compact row */}
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2">
+              <label className="text-xs text-white/40">Key</label>
               <Input
                 type="text"
                 value={formSlug}
                 onChange={(e) => setFormSlug(e.target.value.slice(0, 3))}
                 placeholder="b"
                 maxLength={3}
-                className="font-mono text-center"
+                className="font-mono text-center w-14 h-8 text-sm"
               />
             </div>
-          </div>
 
-          {/* Text color */}
-          <div className="space-y-3">
-            <div className="flex items-center gap-3">
-              <label className="text-xs font-medium text-white/50">Text color</label>
-              {formName.trim() && (
-                <span className={`text-sm font-medium ${getClientTextClassName(formColor)}`}>
-                  {formName.trim()}
-                </span>
-              )}
-            </div>
-            <div className="flex gap-1.5">
-              {COLOR_NAMES.map((color) => (
-                <button
-                  key={color}
-                  type="button"
-                  onClick={() => setFormColor(color)}
-                  className={`size-6 rounded-full ${CLIENT_DOT_COLORS[color]} transition-all ${
-                    formColor === color
-                      ? "ring-2 ring-white/80 ring-offset-1 ring-offset-background"
-                      : "opacity-50 hover:opacity-90"
-                  }`}
-                  title={color}
-                  aria-label={`Select ${color} color`}
-                />
-              ))}
+            <div className="flex items-center gap-2">
+              <label className="text-xs text-white/40">Color</label>
+              <div className="flex gap-1">
+                {COLOR_NAMES.map((color) => (
+                  <button
+                    key={color}
+                    type="button"
+                    onClick={() => setFormColor(color)}
+                    className={`size-5 rounded-full ${CLIENT_DOT_COLORS[color]} transition-all ${
+                      formColor === color
+                        ? "ring-2 ring-white/80 ring-offset-1 ring-offset-background"
+                        : "opacity-40 hover:opacity-80"
+                    }`}
+                    title={color}
+                    aria-label={`Select ${color} color`}
+                  />
+                ))}
+              </div>
             </div>
           </div>
 
           {/* Actions */}
           <div className="flex justify-end gap-2 pt-2 border-t border-white/[0.06]">
-            <Button variant="ghost" onClick={() => onOpenChange(false)}>
+            <Button variant="ghost" type="button" onClick={() => onOpenChange(false)}>
               Cancel
             </Button>
             <Button
-              onClick={handleSave}
+              type="submit"
               disabled={saving || !formName.trim() || !formSlug.trim()}
             >
               {saving ? "Saving..." : editingClient ? "Save" : "Add Project"}
             </Button>
           </div>
-        </div>
+        </form>
       </DialogContent>
     </Dialog>
   );
