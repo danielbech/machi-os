@@ -8,7 +8,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { BacklogShell } from "@/components/backlog-shell";
 
 function DashboardGate({ children }: { children: React.ReactNode }) {
-  const { user, loading, backlogOpen } = useWorkspace();
+  const { user, loading, backlogOpen, backlogWidth } = useWorkspace();
 
   if (loading) {
     return <div className="min-h-screen bg-black/50" />;
@@ -24,7 +24,7 @@ function DashboardGate({ children }: { children: React.ReactNode }) {
         <div className="flex w-full animate-in fade-in duration-300">
           <AppSidebar />
           <BacklogShell />
-          <SidebarInset className={`transition-[margin] duration-200 ease-in-out ${backlogOpen ? "ml-[400px]" : ""}`}>
+          <SidebarInset className="transition-[margin] duration-200 ease-in-out" style={backlogOpen ? { marginLeft: backlogWidth } : undefined}>
             {children}
           </SidebarInset>
         </div>

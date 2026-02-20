@@ -39,6 +39,8 @@ import {
   Pencil,
   Trash2,
   ListChecks,
+  Check,
+  UserPlus,
 } from "lucide-react";
 
 // --- Sortable task row wrapper (must be a top-level component for hooks) ---
@@ -99,6 +101,7 @@ interface BacklogPanelProps {
   onCreateFolder: (clientId: string, name: string) => Promise<void>;
   onRenameFolder: (folderId: string, name: string) => Promise<void>;
   onDeleteFolder: (folderId: string) => Promise<void>;
+  onSaveTask: (task: Task) => Promise<void>;
   onReorderTasks: (tasks: Task[]) => Promise<void>;
   onDragActiveChange?: (active: boolean) => void;
 }
@@ -117,6 +120,7 @@ export function BacklogPanel({
   onCreateFolder,
   onRenameFolder,
   onDeleteFolder,
+  onSaveTask,
   onReorderTasks,
   onDragActiveChange,
 }: BacklogPanelProps) {
@@ -377,13 +381,32 @@ export function BacklogPanel({
 
     return (
       <SortableTaskRow key={task.id} id={task.id}>
-          <div className="group border-b border-white/[0.04] last:border-b-0 hover:bg-white/[0.03] transition-colors cursor-grab active:cursor-grabbing">
+          <div className={`group border-b border-white/[0.04] last:border-b-0 hover:bg-white/[0.03] transition-colors cursor-grab active:cursor-grabbing ${task.completed ? "opacity-40" : ""}`}>
             <div className="relative flex items-center gap-2 px-3 py-2">
+              {/* Check circle */}
+              <button
+                type="button"
+                onClick={() => onSaveTask({ ...task, completed: !task.completed })}
+                onMouseDown={(e) => e.stopPropagation()}
+                className="shrink-0"
+                aria-label={task.completed ? "Mark as incomplete" : "Mark as complete"}
+              >
+                <div
+                  className={`flex size-4 items-center justify-center rounded-full border transition-all ${
+                    task.completed
+                      ? "border-green-500/80 bg-green-500/80"
+                      : "border-white/20 hover:border-white/40"
+                  }`}
+                >
+                  {task.completed && <Check className="size-3 text-white" strokeWidth={3} />}
+                </div>
+              </button>
+
               {/* Title */}
               <button
                 type="button"
                 onClick={() => onEditTask(task)}
-                className="flex-1 text-left text-sm text-white/80 truncate hover:text-white transition-colors"
+                className={`flex-1 text-left text-sm text-white/80 truncate hover:text-white transition-colors ${task.completed ? "line-through" : ""}`}
               >
                 {task.title}
               </button>
@@ -438,6 +461,49 @@ export function BacklogPanel({
 
               {/* Hover actions — overlaid so they don't squeeze the title */}
               <div className="absolute right-0 top-0 bottom-0 hidden group-hover:flex items-center gap-1 pr-2 pl-6 bg-gradient-to-r from-transparent via-black/80 to-black/90 backdrop-blur-sm">
+                {/* Assign member */}
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <button
+                      type="button"
+                      className="flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded bg-white/5 text-white/40 hover:bg-white/10 hover:text-white/60 shrink-0"
+                      onMouseDown={(e) => e.stopPropagation()}
+                      aria-label="Assign member"
+                    >
+                      <UserPlus className="size-2.5" />
+                    </button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="min-w-[140px]">
+                    {TEAM_MEMBERS.map((member) => {
+                      const isAssigned = task.assignees?.includes(member.id);
+                      return (
+                        <DropdownMenuItem
+                          key={member.id}
+                          onClick={() => {
+                            const assignees = task.assignees || [];
+                            const updated = isAssigned
+                              ? assignees.filter((id) => id !== member.id)
+                              : [...assignees, member.id];
+                            onSaveTask({ ...task, assignees: updated });
+                          }}
+                        >
+                          <div className="flex items-center gap-2 w-full">
+                            <div className={`flex items-center justify-center w-5 h-5 rounded-full ${!member.avatar ? member.color : "bg-white/5"} text-[9px] font-semibold text-white overflow-hidden shrink-0`}>
+                              {member.avatar ? (
+                                <img src={member.avatar} alt={member.name} className="w-full h-full object-cover" />
+                              ) : (
+                                member.initials
+                              )}
+                            </div>
+                            <span className="flex-1">{member.name}</span>
+                            {isAssigned && <Check className="size-3 ml-auto text-green-400" />}
+                          </div>
+                        </DropdownMenuItem>
+                      );
+                    })}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+
                 {/* Send to day */}
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>

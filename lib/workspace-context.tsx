@@ -66,6 +66,8 @@ interface WorkspaceContextValue {
   createFolder: (clientId: string, name: string) => Promise<void>;
   renameFolder: (folderId: string, name: string) => Promise<void>;
   deleteFolder: (folderId: string) => Promise<void>;
+  backlogWidth: number;
+  setBacklogWidth: (width: number) => void;
 }
 
 const WorkspaceContext = createContext<WorkspaceContextValue | null>(null);
@@ -103,6 +105,17 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
   const [backlogTasks, setBacklogTasks] = useState<Task[]>([]);
   const [backlogFolders, setBacklogFolders] = useState<BacklogFolder[]>([]);
   const suppressBacklogReload = useRef(false);
+
+  // Backlog panel width (persisted)
+  const [backlogWidth, setBacklogWidthState] = useState(400);
+  useEffect(() => {
+    const stored = localStorage.getItem("machi-backlog-width");
+    if (stored) setBacklogWidthState(Number(stored));
+  }, []);
+  const setBacklogWidth = useCallback((w: number) => {
+    setBacklogWidthState(w);
+    localStorage.setItem("machi-backlog-width", String(w));
+  }, []);
 
   // Google Calendar state
   const [calendarConnections, setCalendarConnections] = useState<ConnectionWithCalendars[]>([]);
@@ -636,6 +649,8 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
         createFolder: handleCreateFolder,
         renameFolder: handleRenameFolder,
         deleteFolder: handleDeleteFolder,
+        backlogWidth,
+        setBacklogWidth,
       }}
     >
       {children}
