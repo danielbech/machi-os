@@ -82,16 +82,17 @@ export function BacklogShell() {
         } border-white/[0.06] w-full md:w-auto`}
         style={!isMobile ? { width: backlogWidth } : undefined}
       >
-        {/* Mobile close button */}
-        <button
-          onClick={toggleBacklog}
-          className="absolute top-3 right-3 z-10 p-1.5 rounded-md text-white/40 hover:text-white hover:bg-white/10 transition-colors md:hidden"
-          aria-label="Close backlog"
-        >
-          <X className="size-5" />
-        </button>
-
         <div className="p-4">
+          {/* Mobile close button — inline above content */}
+          <div className="flex justify-end mb-2 md:hidden">
+            <button
+              onClick={toggleBacklog}
+              className="p-1.5 rounded-md text-white/40 hover:text-white hover:bg-white/10 transition-colors"
+              aria-label="Close backlog"
+            >
+              <X className="size-5" />
+            </button>
+          </div>
           <BacklogPanel
             tasks={backlogTasks}
             folders={backlogFolders}
