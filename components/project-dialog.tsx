@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useWorkspace } from "@/lib/workspace-context";
 import { createClientRecord, updateClientRecord } from "@/lib/supabase/clients";
 import { uploadClientLogo, deleteClientLogo } from "@/lib/supabase/storage";
@@ -48,30 +48,28 @@ export function ProjectDialog({ open, onOpenChange, editingClient = null }: Proj
   const fileInputRef = useRef<HTMLInputElement>(null);
   const titleRef = useRef<HTMLInputElement>(null);
 
-  // Reset form when dialog opens
-  const handleOpenChange = (nextOpen: boolean) => {
-    if (nextOpen) {
-      if (editingClient) {
-        setFormName(editingClient.name);
-        setFormSlug(editingClient.slug);
-        setFormColor(editingClient.color);
-        setFormIcon(editingClient.icon || null);
-        setFormLogoUrl(editingClient.logo_url || "");
-        setFormLogoFile(null);
-        setFormLogoPreview(editingClient.logo_url || null);
-      } else {
-        setFormName("");
-        setFormSlug("");
-        setFormColor("blue");
-        setFormIcon(null);
-        setFormLogoUrl("");
-        setFormLogoFile(null);
-        setFormLogoPreview(null);
-      }
-      setShowIconPicker(false);
+  // Reset form when dialog opens or editingClient changes
+  useEffect(() => {
+    if (!open) return;
+    if (editingClient) {
+      setFormName(editingClient.name);
+      setFormSlug(editingClient.slug);
+      setFormColor(editingClient.color);
+      setFormIcon(editingClient.icon || null);
+      setFormLogoUrl(editingClient.logo_url || "");
+      setFormLogoFile(null);
+      setFormLogoPreview(editingClient.logo_url || null);
+    } else {
+      setFormName("");
+      setFormSlug("");
+      setFormColor("blue");
+      setFormIcon(null);
+      setFormLogoUrl("");
+      setFormLogoFile(null);
+      setFormLogoPreview(null);
     }
-    onOpenChange(nextOpen);
-  };
+    setShowIconPicker(false);
+  }, [open, editingClient]);
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -188,7 +186,7 @@ export function ProjectDialog({ open, onOpenChange, editingClient = null }: Proj
   };
 
   return (
-    <Dialog open={open} onOpenChange={handleOpenChange}>
+    <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
         className="sm:max-w-[460px]"
         onOpenAutoFocus={(e) => {
