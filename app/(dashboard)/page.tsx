@@ -92,6 +92,7 @@ export default function BoardPage() {
     const monday = new Date(today);
     const offset = currentDay === 0 ? -6 : 1 - currentDay;
     monday.setDate(today.getDate() + offset);
+    monday.setHours(0, 0, 0, 0);
 
     // If transition already ran this week and it's still Fri/Sat/Sun, show next week
     const marker = localStorage.getItem("machi-last-transition");
