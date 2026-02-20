@@ -202,15 +202,17 @@ export async function transitionWeek(projectId: string): Promise<{ deleted: numb
 
   if (!tasks || tasks.length === 0) return { deleted: 0, carriedOver: 0 }
 
-  const completed = tasks.filter(t => t.completed)
-  const incomplete = tasks.filter(t => !t.completed)
+  const notes = tasks.filter(t => t.type === 'note')
+  const completed = tasks.filter(t => t.completed && t.type !== 'note')
+  const incomplete = tasks.filter(t => !t.completed && t.type !== 'note')
 
-  // Delete completed tasks
-  if (completed.length > 0) {
+  // Delete completed tasks and all notes
+  const toDelete = [...completed, ...notes]
+  if (toDelete.length > 0) {
     await supabase
       .from('tasks')
       .delete()
-      .in('id', completed.map(t => t.id))
+      .in('id', toDelete.map(t => t.id))
   }
 
   // Move incomplete tasks to Monday with sequential sort_order
@@ -223,7 +225,7 @@ export async function transitionWeek(projectId: string): Promise<{ deleted: numb
     }
   }
 
-  return { deleted: completed.length, carriedOver: incomplete.length }
+  return { deleted: toDelete.length, carriedOver: incomplete.length }
 }
 
 // Load backlog tasks (have a client, NOT on the kanban)
