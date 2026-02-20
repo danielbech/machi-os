@@ -842,7 +842,7 @@ export function BacklogPanel({
                           setAddingTaskIn(key);
                           setNewTaskTitle("");
                         }}
-                        className="flex items-center gap-1 px-1.5 py-0.5 rounded border border-white/[0.06] text-white/15 text-[11px] hover:text-white/40 hover:border-white/10 hover:bg-white/[0.04] transition-colors"
+                        className="flex items-center gap-1 px-1.5 py-0.5 rounded border border-white/[0.08] bg-white/[0.03] text-white/25 text-[11px] hover:text-white/50 hover:border-white/15 hover:bg-white/[0.06] transition-colors"
                         aria-label="Add task"
                       >
                         <Plus className="size-3" />
@@ -854,7 +854,7 @@ export function BacklogPanel({
                           setAddingFolderFor(client.id);
                           setNewFolderName("");
                         }}
-                        className="flex items-center gap-1 px-1.5 py-0.5 rounded border border-white/[0.06] text-white/15 text-[11px] hover:text-white/40 hover:border-white/10 hover:bg-white/[0.04] transition-colors"
+                        className="flex items-center gap-1 px-1.5 py-0.5 rounded border border-white/[0.08] bg-white/[0.03] text-white/25 text-[11px] hover:text-white/50 hover:border-white/15 hover:bg-white/[0.06] transition-colors"
                         aria-label="Add folder"
                       >
                         <Folder className="size-3" />
