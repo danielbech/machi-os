@@ -22,7 +22,7 @@ export function BoardAddCard({ value, onChange, cardType, onToggleType, onSubmit
   };
 
   return (
-    <div className={`rounded-lg border p-3 ${cardType === "note" ? "border-amber-500/20 bg-amber-500/5" : "border-white/10 bg-white/[0.03]"}`}>
+    <div className={`rounded-lg border p-3 animate-card-appear ${cardType === "note" ? "border-amber-500/20 bg-amber-500/5" : "border-white/10 bg-white/[0.03]"}`}>
       <input
         type="text"
         value={value}

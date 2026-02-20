@@ -54,7 +54,7 @@ export function BoardTaskCard({
         item.type === "note"
           ? "border-amber-500/20 bg-amber-500/5 hover:bg-amber-500/10 hover:border-amber-500/30 hover:shadow-[0_2px_6px_rgba(0,0,0,0.4)]"
           : "border-white/5 bg-white/[0.02] hover:bg-white/[0.04] hover:border-white/10 hover:shadow-[0_2px_6px_rgba(0,0,0,0.4)]"
-      } ${isGlowing ? "animate-complete-glow" : ""}`}
+      } ${isGlowing ? "animate-complete-glow" : ""} ${isNewlyCreated ? "animate-card-appear" : ""}`}
       style={isGlowing ? {
         "--glow": item.client
           ? CLIENT_RGB_COLORS[clients.find((c) => c.id === item.client)?.color || "green"] || CLIENT_RGB_COLORS.green
