@@ -30,6 +30,8 @@ interface SettingsDialogProps {
   // Multi-account calendar
   calendarConnections: ConnectionWithCalendars[];
   onUpdateSelectedCalendars: (connectionId: string, calendarIds: string[]) => Promise<void>;
+  // Weekly transition
+  onTransitionWeek: () => Promise<{ deleted: number; carriedOver: number }>;
 }
 
 export function SettingsDialog({
@@ -45,6 +47,7 @@ export function SettingsDialog({
   onMembersChange,
   calendarConnections,
   onUpdateSelectedCalendars,
+  onTransitionWeek,
 }: SettingsDialogProps) {
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteRole, setInviteRole] = useState<"admin" | "member">("member");
@@ -52,6 +55,8 @@ export function SettingsDialog({
   const [inviteMessage, setInviteMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [pendingInvites, setPendingInvites] = useState<PendingInvite[]>([]);
   const [syncing, setSyncing] = useState(false);
+  const [transitioning, setTransitioning] = useState(false);
+  const [transitionResult, setTransitionResult] = useState<string | null>(null);
   const [expandedConnections, setExpandedConnections] = useState<Set<string>>(new Set());
 
   // Load pending invites when dialog opens
@@ -376,6 +381,39 @@ export function SettingsDialog({
                 ))}
               </div>
             )}
+          </div>
+
+          {/* Week Transition Section */}
+          <div className="space-y-3">
+            <h3 className="text-sm font-medium">Week Transition</h3>
+            <div className="p-3 rounded-lg border border-white/5 bg-white/[0.02] space-y-3">
+              <div className="text-xs text-white/40">
+                Archive completed tasks and move incomplete tasks to Monday. Runs automatically every Friday at 17:00.
+              </div>
+              <Button
+                size="sm"
+                variant="ghost"
+                className="w-full justify-center border border-white/10"
+                disabled={transitioning}
+                onClick={async () => {
+                  setTransitioning(true);
+                  setTransitionResult(null);
+                  try {
+                    const result = await onTransitionWeek();
+                    setTransitionResult(`Archived ${result.deleted} tasks, carried over ${result.carriedOver}`);
+                  } catch {
+                    setTransitionResult("Failed to transition");
+                  } finally {
+                    setTransitioning(false);
+                  }
+                }}
+              >
+                {transitioning ? "Transitioning..." : "Transition to next week"}
+              </Button>
+              {transitionResult && (
+                <div className="text-xs text-white/60">{transitionResult}</div>
+              )}
+            </div>
           </div>
 
           {/* Account Section */}

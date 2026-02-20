@@ -186,6 +186,46 @@ export async function updateBacklogTaskOrder(projectId: string, tasks: Task[]) {
   }
 }
 
+// Transition week: delete completed board tasks, move incomplete to Monday
+export async function transitionWeek(projectId: string): Promise<{ deleted: number; carriedOver: number }> {
+  const supabase = createClient()
+  const areaId = await getAreaIdForProject(projectId)
+
+  if (!areaId) return { deleted: 0, carriedOver: 0 }
+
+  // Get all board tasks (day IS NOT NULL)
+  const { data: tasks } = await supabase
+    .from('tasks')
+    .select('*')
+    .eq('area_id', areaId)
+    .not('day', 'is', null)
+
+  if (!tasks || tasks.length === 0) return { deleted: 0, carriedOver: 0 }
+
+  const completed = tasks.filter(t => t.completed)
+  const incomplete = tasks.filter(t => !t.completed)
+
+  // Delete completed tasks
+  if (completed.length > 0) {
+    await supabase
+      .from('tasks')
+      .delete()
+      .in('id', completed.map(t => t.id))
+  }
+
+  // Move incomplete tasks to Monday with sequential sort_order
+  if (incomplete.length > 0) {
+    for (let i = 0; i < incomplete.length; i++) {
+      await supabase
+        .from('tasks')
+        .update({ day: 'monday', sort_order: i })
+        .eq('id', incomplete[i].id)
+    }
+  }
+
+  return { deleted: completed.length, carriedOver: incomplete.length }
+}
+
 // Load backlog tasks (have a client, NOT on the kanban)
 export async function loadBacklogTasks(projectId: string): Promise<Task[]> {
   const supabase = createClient()

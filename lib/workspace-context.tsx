@@ -24,7 +24,7 @@ import {
   loadSharedCalendarEvents,
   type CalendarConnection,
 } from "@/lib/supabase/calendar";
-import { loadBacklogTasks, saveTask, deleteTask, updateBacklogTaskOrder } from "@/lib/supabase/tasks-simple";
+import { loadBacklogTasks, saveTask, deleteTask, updateBacklogTaskOrder, transitionWeek } from "@/lib/supabase/tasks-simple";
 import { loadBacklogFolders, createBacklogFolder as createBacklogFolderDb, updateBacklogFolder, deleteBacklogFolder as deleteBacklogFolderDb } from "@/lib/supabase/backlog-folders";
 
 // Per-connection calendar info for the settings UI
@@ -68,6 +68,8 @@ interface WorkspaceContextValue {
   deleteFolder: (folderId: string) => Promise<void>;
   backlogWidth: number;
   setBacklogWidth: (width: number) => void;
+  // Weekly transition
+  transitionToNextWeek: () => Promise<{ deleted: number; carriedOver: number }>;
 }
 
 const WorkspaceContext = createContext<WorkspaceContextValue | null>(null);
@@ -348,6 +350,37 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     setBacklogTasks((prev) => prev.map((t) => (t.folder_id === folderId ? { ...t, folder_id: undefined } : t)));
     await deleteBacklogFolderDb(folderId);
   }, []);
+
+  // --- Weekly Transition ---
+
+  const transitionToNextWeek = useCallback(async () => {
+    if (!activeProjectId) return { deleted: 0, carriedOver: 0 };
+    const result = await transitionWeek(activeProjectId);
+    // Store marker so auto-trigger won't re-run this week
+    const { monday } = getWeekRange();
+    localStorage.setItem("machi-last-transition", monday.toISOString());
+    return result;
+  }, [activeProjectId]);
+
+  // Auto-trigger: every 60s check if it's Friday >= 17:00 and hasn't run this week
+  useEffect(() => {
+    if (!activeProjectId) return;
+
+    const check = () => {
+      const now = new Date();
+      if (now.getDay() !== 5 || now.getHours() < 17) return; // not Friday >= 17:00
+
+      const { monday } = getWeekRange();
+      const marker = localStorage.getItem("machi-last-transition");
+      if (marker === monday.toISOString()) return; // already ran this week
+
+      transitionToNextWeek();
+    };
+
+    check(); // run immediately on mount
+    const interval = setInterval(check, 60 * 1000);
+    return () => clearInterval(interval);
+  }, [activeProjectId, transitionToNextWeek]);
 
   // --- Google Calendar ---
 
@@ -659,6 +692,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
         deleteFolder: handleDeleteFolder,
         backlogWidth,
         setBacklogWidth,
+        transitionToNextWeek,
       }}
     >
       {children}
