@@ -1,18 +1,19 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
 import { useWorkspace } from "@/lib/workspace-context";
 import { createClientRecord, updateClientRecord } from "@/lib/supabase/clients";
 import { uploadClientLogo, deleteClientLogo } from "@/lib/supabase/storage";
 import { getClientTextClassName, CLIENT_DOT_COLORS, COLOR_NAMES } from "@/lib/colors";
-import { PROJECT_ICONS, PROJECT_ICON_NAMES, ClientIcon } from "@/components/client-icon";
+import { ClientIcon } from "@/components/client-icon";
 import type { Client } from "@/lib/types";
 import {
   Dialog,
   DialogContent,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Upload, X } from "lucide-react";
+import { Upload, X, Search } from "lucide-react";
+import { iconNames } from "lucide-react/dynamic";
 
 function generateSlug(name: string, existingSlugs: string[]): string {
   const first = name.charAt(0).toLowerCase();
@@ -44,8 +45,17 @@ export function ProjectDialog({ open, onOpenChange, editingClient = null }: Proj
   const [formLogoPreview, setFormLogoPreview] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [showIconPicker, setShowIconPicker] = useState(false);
+  const [iconSearch, setIconSearch] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
   const titleRef = useRef<HTMLInputElement>(null);
+  const iconSearchRef = useRef<HTMLInputElement>(null);
+
+  // Filter icons based on search
+  const filteredIcons = useMemo(() => {
+    const query = iconSearch.toLowerCase().trim();
+    if (!query) return iconNames.slice(0, 80); // Show first 80 by default
+    return iconNames.filter((name) => name.includes(query)).slice(0, 80);
+  }, [iconSearch]);
 
   // Reset form when dialog opens or editingClient changes
   useEffect(() => {
@@ -68,7 +78,15 @@ export function ProjectDialog({ open, onOpenChange, editingClient = null }: Proj
       setFormLogoPreview(null);
     }
     setShowIconPicker(false);
+    setIconSearch("");
   }, [open, editingClient]);
+
+  // Focus search when icon picker opens
+  useEffect(() => {
+    if (showIconPicker) {
+      setTimeout(() => iconSearchRef.current?.focus(), 50);
+    }
+  }, [showIconPicker]);
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -164,7 +182,7 @@ export function ProjectDialog({ open, onOpenChange, editingClient = null }: Proj
         <button
           type="button"
           onClick={() => setShowIconPicker(!showIconPicker)}
-          className={`size-10 rounded-xl ${CLIENT_DOT_COLORS[formColor] || "bg-blue-500"} flex items-center justify-center text-white cursor-pointer shrink-0 transition-colors`}
+          className="size-10 rounded-xl bg-white/[0.06] flex items-center justify-center text-zinc-400 cursor-pointer shrink-0 transition-colors hover:bg-white/[0.10]"
           aria-label="Change icon"
         >
           <ClientIcon icon={formIcon} className="size-5" />
@@ -176,11 +194,9 @@ export function ProjectDialog({ open, onOpenChange, editingClient = null }: Proj
       <button
         type="button"
         onClick={() => setShowIconPicker(!showIconPicker)}
-        className={`size-10 rounded-xl ${CLIENT_DOT_COLORS[formColor] || "bg-blue-500"} flex items-center justify-center text-white font-bold text-sm cursor-pointer shrink-0 transition-colors`}
+        className="size-10 rounded-xl border-2 border-dashed border-white/10 bg-white/[0.03] flex items-center justify-center cursor-pointer shrink-0 transition-colors hover:border-white/20 hover:bg-white/[0.06]"
         aria-label="Pick icon"
-      >
-        {formName.trim() ? formName.charAt(0).toUpperCase() : "?"}
-      </button>
+      />
     );
   };
 
@@ -218,30 +234,47 @@ export function ProjectDialog({ open, onOpenChange, editingClient = null }: Proj
           {/* Icon picker — collapsible */}
           {showIconPicker && (
             <div className="space-y-2">
-              <div className="grid grid-cols-8 gap-1">
-                {PROJECT_ICON_NAMES.map((name) => {
-                  const Icon = PROJECT_ICONS[name];
-                  return (
-                    <button
-                      key={name}
-                      type="button"
-                      onClick={() => {
-                        setFormIcon(formIcon === name ? null : name);
-                        setShowIconPicker(false);
-                      }}
-                      className={`flex items-center justify-center size-9 rounded-lg transition-all ${
-                        formIcon === name
-                          ? "bg-white/15 text-white ring-1 ring-white/30"
-                          : "text-zinc-500 hover:text-zinc-300 hover:bg-white/[0.06]"
-                      }`}
-                      title={name}
-                      aria-label={`Select ${name} icon`}
-                    >
-                      <Icon className="size-4" />
-                    </button>
-                  );
-                })}
+              {/* Search */}
+              <div className="relative">
+                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3.5 text-white/20" />
+                <input
+                  ref={iconSearchRef}
+                  type="text"
+                  value={iconSearch}
+                  onChange={(e) => setIconSearch(e.target.value)}
+                  placeholder="Search icons..."
+                  className="w-full pl-8 pr-3 py-1.5 rounded-lg bg-white/[0.04] border border-white/[0.06] text-sm text-white/80 outline-none placeholder:text-white/20 focus:border-white/15"
+                />
               </div>
+
+              {/* Icon grid */}
+              <div className="grid grid-cols-8 gap-1 max-h-[200px] overflow-y-auto">
+                {filteredIcons.map((name) => (
+                  <button
+                    key={name}
+                    type="button"
+                    onClick={() => {
+                      setFormIcon(formIcon === name ? null : name);
+                      setShowIconPicker(false);
+                      setIconSearch("");
+                    }}
+                    className={`flex items-center justify-center size-9 rounded-lg transition-all ${
+                      formIcon === name
+                        ? "bg-white/15 text-white ring-1 ring-white/30"
+                        : "text-zinc-500 hover:text-zinc-300 hover:bg-white/[0.06]"
+                    }`}
+                    title={name}
+                    aria-label={`Select ${name} icon`}
+                  >
+                    <ClientIcon icon={name} className="size-4" />
+                  </button>
+                ))}
+                {filteredIcons.length === 0 && (
+                  <div className="col-span-8 py-4 text-center text-xs text-white/20">No icons found</div>
+                )}
+              </div>
+
+              {/* Actions below grid */}
               <div className="flex items-center gap-2">
                 <button
                   type="button"
@@ -254,7 +287,7 @@ export function ProjectDialog({ open, onOpenChange, editingClient = null }: Proj
                 {formIcon && (
                   <button
                     type="button"
-                    onClick={() => { setFormIcon(null); setShowIconPicker(false); }}
+                    onClick={() => { setFormIcon(null); setShowIconPicker(false); setIconSearch(""); }}
                     className="text-xs text-white/30 hover:text-white/50 ml-auto transition-colors"
                   >
                     Remove icon
@@ -264,9 +297,9 @@ export function ProjectDialog({ open, onOpenChange, editingClient = null }: Proj
             </div>
           )}
 
-          {/* Color */}
+          {/* Text color */}
           <div className="flex items-center gap-2">
-            <label className="text-xs text-white/40">Color</label>
+            <label className="text-xs text-white/40">Text color</label>
             <div className="flex gap-1">
               {COLOR_NAMES.map((color) => (
                 <button

@@ -1,5 +1,7 @@
 "use client";
 
+import dynamic from "next/dynamic";
+import { type ComponentType, memo } from "react";
 import {
   Globe,
   Code,
@@ -26,9 +28,11 @@ import {
   Plane,
   Gem,
   type LucideIcon,
+  type LucideProps,
 } from "lucide-react";
 
-export const PROJECT_ICONS: Record<string, LucideIcon> = {
+// Legacy icon map — keeps old icon names working
+const LEGACY_ICONS: Record<string, LucideIcon> = {
   globe: Globe,
   code: Code,
   palette: Palette,
@@ -55,10 +59,42 @@ export const PROJECT_ICONS: Record<string, LucideIcon> = {
   gem: Gem,
 };
 
-export const PROJECT_ICON_NAMES = Object.keys(PROJECT_ICONS);
+// Cache for dynamically loaded icons
+const dynamicIconCache = new Map<string, ComponentType<LucideProps>>();
 
-export function ClientIcon({ icon, className }: { icon: string; className?: string }) {
-  const Icon = PROJECT_ICONS[icon];
+function getDynamicIcon(name: string): ComponentType<LucideProps> | null {
+  // Check legacy map first
+  if (LEGACY_ICONS[name]) return LEGACY_ICONS[name];
+
+  // Check cache
+  if (dynamicIconCache.has(name)) return dynamicIconCache.get(name)!;
+
+  // Dynamically import from lucide-react
+  const DynIcon = dynamic(
+    () => import("lucide-react").then((mod) => {
+      // Convert kebab-case to PascalCase: "arrow-right" -> "ArrowRight"
+      const pascalName = name
+        .split("-")
+        .map((s) => s.charAt(0).toUpperCase() + s.slice(1))
+        .join("");
+      const icon = (mod as Record<string, unknown>)[pascalName];
+      if (icon) return { default: icon as ComponentType<LucideProps> };
+      // Fallback: try with "2" suffix variations
+      return { default: (() => null) as unknown as ComponentType<LucideProps> };
+    }),
+    { ssr: false, loading: () => null }
+  );
+
+  dynamicIconCache.set(name, DynIcon);
+  return DynIcon;
+}
+
+export const ClientIcon = memo(function ClientIcon({ icon, className }: { icon: string; className?: string }) {
+  const Icon = getDynamicIcon(icon);
   if (!Icon) return null;
   return <Icon className={className} />;
-}
+});
+
+// Re-export for backward compat
+export const PROJECT_ICONS = LEGACY_ICONS;
+export const PROJECT_ICON_NAMES = Object.keys(LEGACY_ICONS);
