@@ -85,13 +85,20 @@ export default function BoardPage() {
     };
   }, [activeProjectId, refreshTasks]);
 
-  // Week dates
+  // Week dates — after transition, show next week's dates
   const getWeekDates = () => {
     const today = new Date();
     const currentDay = today.getDay();
     const monday = new Date(today);
     const offset = currentDay === 0 ? -6 : 1 - currentDay;
     monday.setDate(today.getDate() + offset);
+
+    // If transition already ran this week and it's still Fri/Sat/Sun, show next week
+    const marker = localStorage.getItem("machi-last-transition");
+    if (marker === monday.toISOString() && (currentDay === 5 || currentDay === 6 || currentDay === 0)) {
+      monday.setDate(monday.getDate() + 7);
+    }
+
     const weekDates: Record<string, string> = {};
     const days = ["monday", "tuesday", "wednesday", "thursday", "friday"];
     days.forEach((day, index) => {
