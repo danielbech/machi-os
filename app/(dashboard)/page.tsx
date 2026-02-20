@@ -614,8 +614,8 @@ export default function BoardPage() {
                             <div className={`transition-opacity ${dimCompleted ? "opacity-30" : item.completed ? "opacity-50" : ""}`}>
                               <div className={`text-sm pr-6 ${item.completed ? "line-through" : ""}`}>{item.title}</div>
                               {(item.client || (item.assignees && item.assignees.length > 0)) && (
-                                <div className="flex gap-1.5 mt-1.5 items-center flex-wrap">
-                                  {item.client &&
+                                <div className="flex mt-1.5 items-center justify-between">
+                                  {item.client ?
                                     (() => {
                                       const client = clients.find((c) => c.id === item.client);
                                       return client ? (
@@ -625,11 +625,12 @@ export default function BoardPage() {
                                           )}
                                           {client.name}
                                         </div>
-                                      ) : null;
-                                    })()}
+                                      ) : <div />;
+                                    })()
+                                  : <div />}
                                   {item.assignees &&
                                     item.assignees.length > 0 && (
-                                      <>
+                                      <div className="flex gap-1.5">
                                         {item.assignees.map((assigneeId) => {
                                           const member = TEAM_MEMBERS.find((m) => m.id === assigneeId);
                                           return member ? (
@@ -646,7 +647,7 @@ export default function BoardPage() {
                                             </div>
                                           ) : null;
                                         })}
-                                      </>
+                                      </div>
                                     )}
                                 </div>
                               )}
