@@ -381,7 +381,35 @@ export function BacklogPanel({
 
     return (
       <SortableTaskRow key={task.id} id={task.id}>
-          <div className={`group border-b border-white/[0.04] last:border-b-0 hover:bg-white/[0.03] transition-colors cursor-grab active:cursor-grabbing ${task.completed ? "opacity-40" : ""}`}>
+          <div
+            className={`group border-b border-white/[0.04] last:border-b-0 hover:bg-white/[0.03] transition-colors cursor-grab active:cursor-grabbing focus:outline-none ${task.completed ? "opacity-40" : ""}`}
+            tabIndex={0}
+            onMouseEnter={(e) => {
+              if (!addingTaskIn) e.currentTarget.focus();
+            }}
+            onKeyDownCapture={(e) => {
+              const key = e.key;
+              if (key === " ") {
+                e.preventDefault();
+                onSaveTask({ ...task, completed: !task.completed });
+              } else if (key === "Backspace") {
+                e.preventDefault();
+                onDeleteTask(task.id);
+              } else if (key >= "1" && key <= "9") {
+                const memberIndex = parseInt(key) - 1;
+                if (memberIndex < TEAM_MEMBERS.length) {
+                  e.preventDefault();
+                  const memberId = TEAM_MEMBERS[memberIndex].id;
+                  const assignees = task.assignees || [];
+                  const isAssigned = assignees.includes(memberId);
+                  const updated = isAssigned
+                    ? assignees.filter((id) => id !== memberId)
+                    : [...assignees, memberId];
+                  onSaveTask({ ...task, assignees: updated });
+                }
+              }
+            }}
+          >
             <div className="relative flex items-center gap-2 px-3 py-2">
               {/* Check circle */}
               <button
