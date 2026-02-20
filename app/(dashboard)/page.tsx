@@ -480,10 +480,6 @@ export default function BoardPage() {
                     );
                   })}
 
-                  {calendarEvents[columnId]?.length > 0 && (
-                    <div className="my-1 border-t border-dotted border-white/10" />
-                  )}
-
                   {items.map((item, index) => (
                     <div key={item.id}>
                       {addingToColumn === columnId && addingAtIndex === index ? (
