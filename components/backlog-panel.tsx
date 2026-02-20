@@ -709,7 +709,7 @@ export function BacklogPanel({
         <div className="flex items-center justify-between mb-4 px-1">
           <h2 className="text-sm font-semibold text-white/60 uppercase tracking-wider">Backlog</h2>
           <div className="flex items-center gap-2">
-            <span className="text-xs text-white/20">{tasks.length} tasks</span>
+            <span className="text-xs text-white/40 tabular-nums">{tasks.length} tasks</span>
             <button
               type="button"
               onClick={() => { setEditingProject(null); setProjectDialogOpen(true); }}
@@ -834,7 +834,7 @@ export function BacklogPanel({
                       </div>
                     </div>
                   ) : (
-                    <div className="flex items-center gap-1 px-2 py-1">
+                    <div className="flex items-center gap-1.5 px-2 py-1.5">
                       <button
                         type="button"
                         onClick={() => {
@@ -842,10 +842,11 @@ export function BacklogPanel({
                           setAddingTaskIn(key);
                           setNewTaskTitle("");
                         }}
-                        className="p-1 rounded bg-white/[0.03] text-white/25 hover:text-white/50 hover:bg-white/[0.06] transition-colors"
+                        className="flex items-center gap-1 px-1.5 py-0.5 rounded border border-white/[0.06] text-white/15 text-[11px] hover:text-white/40 hover:border-white/10 hover:bg-white/[0.04] transition-colors"
                         aria-label="Add task"
                       >
-                        <Plus className="size-3.5" />
+                        <Plus className="size-3" />
+                        Task
                       </button>
                       <button
                         type="button"
@@ -853,10 +854,11 @@ export function BacklogPanel({
                           setAddingFolderFor(client.id);
                           setNewFolderName("");
                         }}
-                        className="p-1 rounded bg-white/[0.03] text-white/25 hover:text-white/50 hover:bg-white/[0.06] transition-colors"
+                        className="flex items-center gap-1 px-1.5 py-0.5 rounded border border-white/[0.06] text-white/15 text-[11px] hover:text-white/40 hover:border-white/10 hover:bg-white/[0.04] transition-colors"
                         aria-label="Add folder"
                       >
-                        <Folder className="size-3.5" />
+                        <Folder className="size-3" />
+                        Folder
                       </button>
                     </div>
                   )}
