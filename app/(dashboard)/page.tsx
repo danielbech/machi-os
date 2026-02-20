@@ -734,7 +734,7 @@ export default function BoardPage() {
                         setAddingAtIndex(null);
                         setNewCardTitle("");
                       }}
-                      className="flex items-center gap-2 rounded-lg border border-transparent bg-transparent mt-1 p-2 text-xs text-muted-foreground/40 transition-colors hover:text-muted-foreground/60"
+                      className="flex items-center gap-2 rounded-lg mt-1 p-2 text-xs text-muted-foreground/40 bg-white/[0.02] hover:text-muted-foreground/60 hover:bg-white/[0.05] transition-colors"
                     >
                       <Plus className="size-3.5" />
                       Add card

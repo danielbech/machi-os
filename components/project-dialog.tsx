@@ -11,7 +11,6 @@ import {
   Dialog,
   DialogContent,
 } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Upload, X } from "lucide-react";
 
@@ -88,14 +87,14 @@ export function ProjectDialog({ open, onOpenChange, editingClient = null }: Proj
 
   const handleNameChange = (name: string) => {
     setFormName(name);
-    if (!editingClient) {
-      const existingSlugs = clients.map((c) => c.slug);
-      setFormSlug(generateSlug(name, existingSlugs));
-    }
+    const existingSlugs = clients
+      .filter((c) => c.id !== editingClient?.id)
+      .map((c) => c.slug);
+    setFormSlug(generateSlug(name, existingSlugs));
   };
 
   const handleSave = async () => {
-    if (!formName.trim() || !formSlug.trim() || !activeProjectId) return;
+    if (!formName.trim() || !activeProjectId) return;
     setSaving(true);
     try {
       let logoUrl = formLogoUrl.trim() || null;
@@ -233,7 +232,7 @@ export function ProjectDialog({ open, onOpenChange, editingClient = null }: Proj
                       className={`flex items-center justify-center size-9 rounded-lg transition-all ${
                         formIcon === name
                           ? "bg-white/15 text-white ring-1 ring-white/30"
-                          : "text-white/40 hover:text-white/70 hover:bg-white/[0.06]"
+                          : "text-zinc-500 hover:text-zinc-300 hover:bg-white/[0.06]"
                       }`}
                       title={name}
                       aria-label={`Select ${name} icon`}
@@ -265,38 +264,24 @@ export function ProjectDialog({ open, onOpenChange, editingClient = null }: Proj
             </div>
           )}
 
-          {/* Key + Color — compact row */}
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2">
-              <label className="text-xs text-white/40">Key</label>
-              <Input
-                type="text"
-                value={formSlug}
-                onChange={(e) => setFormSlug(e.target.value.slice(0, 3))}
-                placeholder="b"
-                maxLength={3}
-                className="font-mono text-center w-14 h-8 text-sm"
-              />
-            </div>
-
-            <div className="flex items-center gap-2">
-              <label className="text-xs text-white/40">Color</label>
-              <div className="flex gap-1">
-                {COLOR_NAMES.map((color) => (
-                  <button
-                    key={color}
-                    type="button"
-                    onClick={() => setFormColor(color)}
-                    className={`size-5 rounded-full ${CLIENT_DOT_COLORS[color]} transition-all ${
-                      formColor === color
-                        ? "ring-2 ring-white/80 ring-offset-1 ring-offset-background"
-                        : "opacity-40 hover:opacity-80"
-                    }`}
-                    title={color}
-                    aria-label={`Select ${color} color`}
-                  />
-                ))}
-              </div>
+          {/* Color */}
+          <div className="flex items-center gap-2">
+            <label className="text-xs text-white/40">Color</label>
+            <div className="flex gap-1">
+              {COLOR_NAMES.map((color) => (
+                <button
+                  key={color}
+                  type="button"
+                  onClick={() => setFormColor(color)}
+                  className={`size-5 rounded-full ${CLIENT_DOT_COLORS[color]} transition-all ${
+                    formColor === color
+                      ? "ring-2 ring-white/80 ring-offset-1 ring-offset-background"
+                      : "opacity-40 hover:opacity-80"
+                  }`}
+                  title={color}
+                  aria-label={`Select ${color} color`}
+                />
+              ))}
             </div>
           </div>
 
@@ -307,7 +292,7 @@ export function ProjectDialog({ open, onOpenChange, editingClient = null }: Proj
             </Button>
             <Button
               type="submit"
-              disabled={saving || !formName.trim() || !formSlug.trim()}
+              disabled={saving || !formName.trim()}
             >
               {saving ? "Saving..." : editingClient ? "Save" : "Add Project"}
             </Button>

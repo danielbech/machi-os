@@ -567,7 +567,7 @@ export function BacklogPanel({
             setAddingTaskIn(key);
             setNewTaskTitle("");
           }}
-          className="flex items-center gap-1.5 px-2 py-1 text-xs text-white/20 hover:text-white/40 transition-colors"
+          className="flex items-center gap-1.5 px-2 py-1 rounded-md text-xs text-white/30 bg-white/[0.03] hover:text-white/50 hover:bg-white/[0.06] transition-colors"
         >
           <Plus className="size-3" />
           Add task
@@ -710,7 +710,7 @@ export function BacklogPanel({
             <button
               type="button"
               onClick={() => { setEditingProject(null); setProjectDialogOpen(true); }}
-              className="flex items-center gap-1 px-2 py-1 rounded-md text-xs text-white/40 hover:text-white/70 border border-white/10 hover:border-white/20 hover:bg-white/[0.04] transition-colors"
+              className="flex items-center gap-1 px-2 py-1 rounded-md text-xs text-white/40 bg-white/[0.04] hover:text-white/70 border border-white/10 hover:border-white/20 hover:bg-white/[0.08] transition-colors"
               aria-label="Add project"
             >
               <Plus className="size-3" />
@@ -754,7 +754,7 @@ export function BacklogPanel({
                   {client.logo_url ? (
                     <img src={client.logo_url} alt="" className="size-5 rounded-sm object-cover shrink-0" />
                   ) : client.icon ? (
-                    <ClientIcon icon={client.icon} className="size-4 text-white/50 shrink-0" />
+                    <ClientIcon icon={client.icon} className="size-4 text-zinc-400 shrink-0" />
                   ) : null}
                   <span className="text-base font-medium text-white/80 truncate">{client.name}</span>
                   {clientTasks.length > 0 && (
@@ -839,7 +839,7 @@ export function BacklogPanel({
                           setAddingTaskIn(key);
                           setNewTaskTitle("");
                         }}
-                        className="p-1 rounded text-white/15 hover:text-white/40 hover:bg-white/[0.04] transition-colors"
+                        className="p-1 rounded bg-white/[0.03] text-white/25 hover:text-white/50 hover:bg-white/[0.06] transition-colors"
                         aria-label="Add task"
                       >
                         <Plus className="size-3.5" />
@@ -850,7 +850,7 @@ export function BacklogPanel({
                           setAddingFolderFor(client.id);
                           setNewFolderName("");
                         }}
-                        className="p-1 rounded text-white/15 hover:text-white/40 hover:bg-white/[0.04] transition-colors"
+                        className="p-1 rounded bg-white/[0.03] text-white/25 hover:text-white/50 hover:bg-white/[0.06] transition-colors"
                         aria-label="Add folder"
                       >
                         <Folder className="size-3.5" />
