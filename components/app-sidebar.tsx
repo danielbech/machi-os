@@ -139,14 +139,6 @@ export function AppSidebar() {
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
-                <SidebarMenuItem>
-                  <SidebarMenuButton asChild isActive={pathname === "/feedback"} tooltip="Feedback">
-                    <Link href="/feedback">
-                      <MessageSquarePlus />
-                      <span>Feedback</span>
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
               </SidebarMenu>
             </SidebarGroupContent>
           </SidebarGroup>
@@ -154,6 +146,14 @@ export function AppSidebar() {
 
         <SidebarFooter>
           <SidebarMenu>
+            <SidebarMenuItem>
+              <SidebarMenuButton asChild isActive={pathname === "/feedback"} tooltip="Feedback">
+                <Link href="/feedback">
+                  <MessageSquarePlus />
+                  <span>Feedback</span>
+                </Link>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
             <SidebarMenuItem>
               <SidebarMenuButton onClick={handleOpenSettings} tooltip="Settings">
                 <Settings />
