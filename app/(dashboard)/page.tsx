@@ -2,12 +2,10 @@
 
 import { useState, useCallback, useRef, KeyboardEvent, useEffect } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { loadTasksByDay, loadBacklogTasks, saveTask, updateDayTasks, deleteTask, updateBacklogTaskOrder } from "@/lib/supabase/tasks-simple";
-import { loadBacklogFolders, createBacklogFolder, updateBacklogFolder, deleteBacklogFolder } from "@/lib/supabase/backlog-folders";
+import { loadTasksByDay, saveTask, updateDayTasks, deleteTask } from "@/lib/supabase/tasks-simple";
 import { useWorkspace } from "@/lib/workspace-context";
 import { TaskEditDialog } from "@/components/task-edit-dialog";
-import { BacklogPanel } from "@/components/backlog-panel";
-import type { Task, BacklogFolder } from "@/lib/types";
+import type { Task } from "@/lib/types";
 import { TEAM_MEMBERS, COLUMN_TITLES, EMPTY_COLUMNS } from "@/lib/constants";
 import { getClientTextClassName, CLIENT_RGB_COLORS } from "@/lib/colors";
 import {
@@ -21,7 +19,7 @@ import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from "@/comp
 import { Check, Plus, Calendar, Keyboard, StickyNote } from "lucide-react";
 
 export default function BoardPage() {
-  const { activeProjectId, clients, calendarEvents, backlogOpen, toggleBacklog } = useWorkspace();
+  const { activeProjectId, clients, calendarEvents, backlogOpen, addToBacklog, backlogFolders } = useWorkspace();
 
   const [columns, setColumns] = useState<Record<string, Task[]>>({ ...EMPTY_COLUMNS });
   const [addingToColumn, setAddingToColumn] = useState<string | null>(null);
@@ -34,9 +32,6 @@ export default function BoardPage() {
   const [clipboard, setClipboard] = useState<{ task: Task; column: string } | null>(null);
   const [hoveredColumn, setHoveredColumn] = useState<string | null>(null);
   const [newCardType, setNewCardType] = useState<"task" | "note">("task");
-  const [backlogTasks, setBacklogTasks] = useState<Task[]>([]);
-  const [backlogFolders, setBacklogFolders] = useState<BacklogFolder[]>([]);
-  const [backlogDragActive, setBacklogDragActive] = useState(false);
   const [kanbanDragActive, setKanbanDragActive] = useState(false);
   const [dragOverTarget, setDragOverTarget] = useState<string | null>(null);
   const [glowingCards, setGlowingCards] = useState<Set<string>>(new Set());
@@ -52,71 +47,43 @@ export default function BoardPage() {
     }
   }, [activeProjectId]);
 
-  // Load backlog
-  const refreshBacklog = useCallback(async () => {
-    if (!activeProjectId) return;
-    try {
-      const [tasks, folders] = await Promise.all([
-        loadBacklogTasks(activeProjectId),
-        loadBacklogFolders(activeProjectId),
-      ]);
-      setBacklogTasks(tasks);
-      setBacklogFolders(folders);
-    } catch (error) {
-      console.error("Error loading backlog:", error);
-    }
-  }, [activeProjectId]);
-
   // Load tasks when active project changes
   useEffect(() => {
     if (!activeProjectId) {
       setColumns({ ...EMPTY_COLUMNS });
-      setBacklogTasks([]);
-      setBacklogFolders([]);
       return;
     }
     refreshTasks();
-    refreshBacklog();
-  }, [activeProjectId, refreshTasks, refreshBacklog]);
+  }, [activeProjectId, refreshTasks]);
 
   // Suppress realtime reloads briefly after local saves
-  const suppressBacklogReload = useRef(false);
   const suppressTaskReload = useRef(false);
 
-  // Realtime: reload when another user changes tasks or backlog folders (debounced)
+  // Realtime: reload when another user changes tasks (debounced)
   const realtimeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => {
     if (!activeProjectId) return;
 
     const supabase = createClient();
-    const reloadAll = () => {
+    const reloadTasks = () => {
       if (realtimeTimer.current) clearTimeout(realtimeTimer.current);
       realtimeTimer.current = setTimeout(() => {
         if (!suppressTaskReload.current) {
           refreshTasks();
         }
-        if (!suppressBacklogReload.current) {
-          refreshBacklog();
-        }
       }, 500);
     };
 
     const tasksChannel = supabase
-      .channel(`tasks-${activeProjectId}`)
-      .on("postgres_changes", { event: "*", schema: "public", table: "tasks" }, reloadAll)
-      .subscribe();
-
-    const foldersChannel = supabase
-      .channel(`backlog-folders-${activeProjectId}`)
-      .on("postgres_changes", { event: "*", schema: "public", table: "backlog_folders" }, reloadAll)
+      .channel(`kanban-tasks-${activeProjectId}`)
+      .on("postgres_changes", { event: "*", schema: "public", table: "tasks" }, reloadTasks)
       .subscribe();
 
     return () => {
       if (realtimeTimer.current) clearTimeout(realtimeTimer.current);
       supabase.removeChannel(tasksChannel);
-      supabase.removeChannel(foldersChannel);
     };
-  }, [activeProjectId, refreshTasks, refreshBacklog]);
+  }, [activeProjectId, refreshTasks]);
 
   // Week dates
   const getWeekDates = () => {
@@ -314,22 +281,9 @@ export default function BoardPage() {
     return () => window.removeEventListener("keydown", handleGlobalKeyDown);
   }, []);
 
-  // "." shortcut to toggle backlog panel
+  // Track which drop target the cursor is over during kanban drag
   useEffect(() => {
-    const handleDotKey = (e: globalThis.KeyboardEvent) => {
-      if (e.key !== ".") return;
-      const tag = (e.target as HTMLElement).tagName;
-      if (tag === "INPUT" || tag === "TEXTAREA" || (e.target as HTMLElement).isContentEditable) return;
-      e.preventDefault();
-      toggleBacklog();
-    };
-    window.addEventListener("keydown", handleDotKey);
-    return () => window.removeEventListener("keydown", handleDotKey);
-  }, [toggleBacklog]);
-
-  // Track which drop target the cursor is over during any drag
-  useEffect(() => {
-    if (!backlogDragActive && !kanbanDragActive) {
+    if (!kanbanDragActive) {
       setDragOverTarget(null);
       return;
     }
@@ -350,7 +304,7 @@ export default function BoardPage() {
     };
     window.addEventListener("pointermove", onPointerMove);
     return () => window.removeEventListener("pointermove", onPointerMove);
-  }, [backlogDragActive, kanbanDragActive]);
+  }, [kanbanDragActive]);
 
   const removeTask = async (taskId: string) => {
     if (!activeProjectId) return;
@@ -367,33 +321,21 @@ export default function BoardPage() {
   };
 
   const saveEditedTask = async (updatedTask: Task) => {
-    if (!activeProjectId) return;
+    if (!activeProjectId || !editingColumn) return;
     suppressTaskReload.current = true;
-    suppressBacklogReload.current = true;
 
     // Check if task was just completed (via checklist or manual toggle)
-    const wasCompleted = editingColumn
-      ? columns[editingColumn]?.find((t) => t.id === updatedTask.id)?.completed
-      : backlogTasks.find((t) => t.id === updatedTask.id)?.completed;
+    const wasCompleted = columns[editingColumn]?.find((t) => t.id === updatedTask.id)?.completed;
     const justCompleted = updatedTask.completed && !wasCompleted;
 
-    if (editingColumn) {
-      // Editing from kanban
-      const updated = { ...columns };
-      const idx = updated[editingColumn].findIndex((t) => t.id === updatedTask.id);
-      if (idx !== -1) {
-        updated[editingColumn] = [...updated[editingColumn]];
-        updated[editingColumn][idx] = { ...updatedTask, day: editingColumn };
-        setColumns(updated);
-      }
-      await saveTask(activeProjectId, { ...updatedTask, day: editingColumn });
-    } else {
-      // Editing from backlog
-      setBacklogTasks((prev) =>
-        prev.map((t) => (t.id === updatedTask.id ? updatedTask : t))
-      );
-      await saveTask(activeProjectId, updatedTask);
+    const updated = { ...columns };
+    const idx = updated[editingColumn].findIndex((t) => t.id === updatedTask.id);
+    if (idx !== -1) {
+      updated[editingColumn] = [...updated[editingColumn]];
+      updated[editingColumn][idx] = { ...updatedTask, day: editingColumn };
+      setColumns(updated);
     }
+    await saveTask(activeProjectId, { ...updatedTask, day: editingColumn });
     setEditingTask(null);
     setEditingColumn(null);
     if (justCompleted) {
@@ -408,27 +350,12 @@ export default function BoardPage() {
     }
     setTimeout(() => {
       suppressTaskReload.current = false;
-      suppressBacklogReload.current = false;
     }, 2000);
   };
 
-  // Backlog action handlers
-  const handleSendToDay = async (taskId: string, day: string) => {
-    if (!activeProjectId) return;
-    const task = backlogTasks.find((t) => t.id === taskId);
-    if (!task) return;
-    const updatedTask = { ...task, day };
-    // Remove from backlog, add to kanban
-    setBacklogTasks((prev) => prev.filter((t) => t.id !== taskId));
-    const columnItems = [...(columns[day] || []), updatedTask];
-    setColumns({ ...columns, [day]: columnItems });
-    await saveTask(activeProjectId, updatedTask);
-    await updateDayTasks(activeProjectId, day, columnItems);
-  };
-
+  // Send kanban task to backlog (via drag or action)
   const handleSendToBacklog = async (taskId: string) => {
     if (!activeProjectId) return;
-    // Find the task in kanban columns
     let task: Task | null = null;
     let sourceColumn: string | null = null;
     for (const [col, items] of Object.entries(columns)) {
@@ -440,113 +367,14 @@ export default function BoardPage() {
       }
     }
     if (!task || !sourceColumn) return;
-    const backlogTask = { ...task, day: undefined };
-    // Remove from kanban column, add to backlog
     const updatedColumnItems = columns[sourceColumn].filter((t) => t.id !== taskId);
     setColumns({ ...columns, [sourceColumn]: updatedColumnItems });
-    setBacklogTasks((prev) => [...prev, backlogTask]);
-    await saveTask(activeProjectId, backlogTask);
+    await addToBacklog(task);
     await updateDayTasks(activeProjectId, sourceColumn, updatedColumnItems);
-  };
-
-  const handleSendFolderToDay = async (folderId: string, day: string) => {
-    if (!activeProjectId) return;
-    const folderTasks = backlogTasks.filter((t) => t.folder_id === folderId);
-    if (folderTasks.length === 0) return;
-    const updatedTasks = folderTasks.map((t) => ({ ...t, day }));
-    // Remove from backlog, add to kanban
-    setBacklogTasks((prev) => prev.filter((t) => t.folder_id !== folderId));
-    const columnItems = [...(columns[day] || []), ...updatedTasks];
-    setColumns({ ...columns, [day]: columnItems });
-    for (const task of updatedTasks) {
-      await saveTask(activeProjectId, task);
-    }
-    await updateDayTasks(activeProjectId, day, columnItems);
-  };
-
-  const handleCreateBacklogTask = async (title: string, clientId: string, folderId?: string) => {
-    if (!activeProjectId) return;
-    const tempId = `task-${Date.now()}`;
-    const newTask: Task = {
-      id: tempId,
-      title,
-      client: clientId,
-      folder_id: folderId,
-      priority: "medium",
-    };
-    setBacklogTasks((prev) => [...prev, newTask]);
-    const realId = await saveTask(activeProjectId, newTask);
-    setBacklogTasks((prev) => prev.map((t) => (t.id === tempId ? { ...t, id: realId } : t)));
-  };
-
-  const handleCreateFolder = async (clientId: string, name: string) => {
-    if (!activeProjectId) return;
-    const folder = await createBacklogFolder(activeProjectId, clientId, name, backlogFolders.length);
-    if (folder) setBacklogFolders((prev) => [...prev, folder]);
-  };
-
-  const handleRenameFolder = async (folderId: string, name: string) => {
-    setBacklogFolders((prev) => prev.map((f) => (f.id === folderId ? { ...f, name } : f)));
-    await updateBacklogFolder(folderId, { name });
-  };
-
-  const handleDeleteFolder = async (folderId: string) => {
-    setBacklogFolders((prev) => prev.filter((f) => f.id !== folderId));
-    setBacklogTasks((prev) =>
-      prev.map((t) => (t.folder_id === folderId ? { ...t, folder_id: undefined } : t))
-    );
-    await deleteBacklogFolder(folderId);
-  };
-
-  const handleDeleteBacklogTask = async (taskId: string) => {
-    setBacklogTasks((prev) => prev.filter((t) => t.id !== taskId));
-    await deleteTask(taskId);
-  };
-
-  const handleReorderBacklogTasks = async (updatedTasks: Task[]) => {
-    if (!activeProjectId) return;
-    setBacklogTasks(updatedTasks);
-    // Suppress realtime reloads while we persist — the upsert triggers
-    // postgres change events that would overwrite our optimistic state
-    suppressBacklogReload.current = true;
-    await updateBacklogTaskOrder(activeProjectId, updatedTasks);
-    // Keep suppressing briefly to let any trailing realtime events pass
-    setTimeout(() => { suppressBacklogReload.current = false; }, 2000);
-  };
-
-  const handleEditBacklogTask = (task: Task) => {
-    setEditingTask(task);
-    setEditingColumn(task.day || null);
   };
 
   return (
     <main className="flex min-h-screen flex-col p-4 md:px-8 md:pt-4 bg-black/50">
-      {/* Backlog panel — fixed, slides out from sidebar */}
-      <div
-        data-backlog-panel
-        className={`fixed top-0 bottom-0 left-[3rem] w-[400px] z-[5] border-r bg-black/80 backdrop-blur-md overflow-y-auto transition-transform duration-200 ease-in-out ${
-          backlogOpen ? "translate-x-0" : "-translate-x-full"
-        } ${dragOverTarget === "backlog" ? "border-white/20 bg-white/[0.06]" : "border-white/[0.06]"}`}
-      >
-        <div className="p-4">
-          <BacklogPanel
-            tasks={backlogTasks}
-            folders={backlogFolders}
-            clients={clients}
-            onSendToDay={handleSendToDay}
-            onSendFolderToDay={handleSendFolderToDay}
-            onCreateTask={handleCreateBacklogTask}
-            onEditTask={handleEditBacklogTask}
-            onDeleteTask={handleDeleteBacklogTask}
-            onCreateFolder={handleCreateFolder}
-            onRenameFolder={handleRenameFolder}
-            onDeleteFolder={handleDeleteFolder}
-            onReorderTasks={handleReorderBacklogTasks}
-            onDragActiveChange={setBacklogDragActive}
-          />
-        </div>
-      </div>
-
       <div className={`transition-[margin] duration-200 ease-in-out ${backlogOpen ? "ml-[400px]" : ""}`}>
         <Kanban
           value={columns}

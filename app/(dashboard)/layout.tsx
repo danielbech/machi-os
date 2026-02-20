@@ -5,6 +5,7 @@ import { AuthForm } from "@/components/auth-form";
 import { AppSidebar } from "@/components/app-sidebar";
 import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { BacklogShell } from "@/components/backlog-shell";
 
 function DashboardGate({ children }: { children: React.ReactNode }) {
   const { user, loading } = useWorkspace();
@@ -22,6 +23,7 @@ function DashboardGate({ children }: { children: React.ReactNode }) {
       <SidebarProvider defaultOpen={false}>
         <div className="flex w-full animate-in fade-in duration-300">
           <AppSidebar />
+          <BacklogShell />
           <SidebarInset>
             {children}
           </SidebarInset>

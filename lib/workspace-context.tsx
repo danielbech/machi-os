@@ -1,8 +1,8 @@
 "use client";
 
-import { createContext, useContext, useState, useEffect, useCallback } from "react";
+import { createContext, useContext, useState, useEffect, useCallback, useRef } from "react";
 import type { User } from "@supabase/supabase-js";
-import type { Project, Client } from "@/lib/types";
+import type { Project, Client, Task, BacklogFolder } from "@/lib/types";
 import { createClient } from "@/lib/supabase/client";
 import { initializeUserData } from "@/lib/supabase/initialize";
 import { getUserWorkspaces } from "@/lib/supabase/workspace";
@@ -24,6 +24,8 @@ import {
   loadSharedCalendarEvents,
   type CalendarConnection,
 } from "@/lib/supabase/calendar";
+import { loadBacklogTasks, saveTask, deleteTask, updateBacklogTaskOrder } from "@/lib/supabase/tasks-simple";
+import { loadBacklogFolders, createBacklogFolder as createBacklogFolderDb, updateBacklogFolder, deleteBacklogFolder as deleteBacklogFolderDb } from "@/lib/supabase/backlog-folders";
 
 // Per-connection calendar info for the settings UI
 export interface ConnectionWithCalendars extends CalendarConnection {
@@ -51,6 +53,19 @@ interface WorkspaceContextValue {
   // Backlog panel
   backlogOpen: boolean;
   toggleBacklog: () => void;
+  // Backlog data & actions
+  backlogTasks: Task[];
+  backlogFolders: BacklogFolder[];
+  sendBacklogToDay: (taskId: string, day: string) => Promise<void>;
+  sendFolderToDay: (folderId: string, day: string) => Promise<void>;
+  addToBacklog: (task: Task) => Promise<void>;
+  createBacklogTask: (title: string, clientId: string, folderId?: string) => Promise<void>;
+  saveBacklogTask: (task: Task) => Promise<void>;
+  deleteBacklogTask: (taskId: string) => Promise<void>;
+  reorderBacklogTasks: (tasks: Task[]) => Promise<void>;
+  createFolder: (clientId: string, name: string) => Promise<void>;
+  renameFolder: (folderId: string, name: string) => Promise<void>;
+  deleteFolder: (folderId: string) => Promise<void>;
 }
 
 const WorkspaceContext = createContext<WorkspaceContextValue | null>(null);
@@ -85,6 +100,9 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
   // Backlog panel
   const [backlogOpen, setBacklogOpen] = useState(false);
   const toggleBacklog = useCallback(() => setBacklogOpen((prev) => !prev), []);
+  const [backlogTasks, setBacklogTasks] = useState<Task[]>([]);
+  const [backlogFolders, setBacklogFolders] = useState<BacklogFolder[]>([]);
+  const suppressBacklogReload = useRef(false);
 
   // Google Calendar state
   const [calendarConnections, setCalendarConnections] = useState<ConnectionWithCalendars[]>([]);
@@ -169,6 +187,146 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     refreshClients();
   }, [refreshClients]);
+
+  // --- Backlog ---
+
+  const refreshBacklog = useCallback(async () => {
+    if (!activeProjectId) return;
+    try {
+      const [tasks, folders] = await Promise.all([
+        loadBacklogTasks(activeProjectId),
+        loadBacklogFolders(activeProjectId),
+      ]);
+      setBacklogTasks(tasks);
+      setBacklogFolders(folders);
+    } catch (error) {
+      console.error("Error loading backlog:", error);
+    }
+  }, [activeProjectId]);
+
+  useEffect(() => {
+    if (!activeProjectId) {
+      setBacklogTasks([]);
+      setBacklogFolders([]);
+      return;
+    }
+    refreshBacklog();
+  }, [activeProjectId, refreshBacklog]);
+
+  // Backlog realtime
+  useEffect(() => {
+    if (!activeProjectId) return;
+    const supabase = createClient();
+    let timer: ReturnType<typeof setTimeout> | null = null;
+
+    const reload = () => {
+      if (timer) clearTimeout(timer);
+      timer = setTimeout(() => {
+        if (!suppressBacklogReload.current) refreshBacklog();
+      }, 500);
+    };
+
+    const tasksChannel = supabase
+      .channel(`backlog-tasks-${activeProjectId}`)
+      .on("postgres_changes", { event: "*", schema: "public", table: "tasks" }, reload)
+      .subscribe();
+
+    const foldersChannel = supabase
+      .channel(`backlog-folders-ctx-${activeProjectId}`)
+      .on("postgres_changes", { event: "*", schema: "public", table: "backlog_folders" }, reload)
+      .subscribe();
+
+    return () => {
+      if (timer) clearTimeout(timer);
+      supabase.removeChannel(tasksChannel);
+      supabase.removeChannel(foldersChannel);
+    };
+  }, [activeProjectId, refreshBacklog]);
+
+  // Backlog handlers
+  const sendBacklogToDay = useCallback(async (taskId: string, day: string) => {
+    if (!activeProjectId) return;
+    const task = backlogTasks.find((t) => t.id === taskId);
+    if (!task) return;
+    const updatedTask = { ...task, day };
+    setBacklogTasks((prev) => prev.filter((t) => t.id !== taskId));
+    suppressBacklogReload.current = true;
+    await saveTask(activeProjectId, updatedTask);
+    setTimeout(() => { suppressBacklogReload.current = false; }, 2000);
+  }, [activeProjectId, backlogTasks]);
+
+  const handleSendFolderToDay = useCallback(async (folderId: string, day: string) => {
+    if (!activeProjectId) return;
+    const folderTasks = backlogTasks.filter((t) => t.folder_id === folderId);
+    if (folderTasks.length === 0) return;
+    const updatedTasks = folderTasks.map((t) => ({ ...t, day }));
+    setBacklogTasks((prev) => prev.filter((t) => t.folder_id !== folderId));
+    suppressBacklogReload.current = true;
+    for (const task of updatedTasks) {
+      await saveTask(activeProjectId, task);
+    }
+    setTimeout(() => { suppressBacklogReload.current = false; }, 2000);
+  }, [activeProjectId, backlogTasks]);
+
+  const handleAddToBacklog = useCallback(async (task: Task) => {
+    if (!activeProjectId) return;
+    const backlogTask = { ...task, day: undefined };
+    setBacklogTasks((prev) => [...prev, backlogTask]);
+    suppressBacklogReload.current = true;
+    await saveTask(activeProjectId, backlogTask);
+    setTimeout(() => { suppressBacklogReload.current = false; }, 2000);
+  }, [activeProjectId]);
+
+  const handleCreateBacklogTask = useCallback(async (title: string, clientId: string, folderId?: string) => {
+    if (!activeProjectId) return;
+    const tempId = `task-${Date.now()}`;
+    const newTask: Task = { id: tempId, title, client: clientId, folder_id: folderId, priority: "medium" };
+    setBacklogTasks((prev) => [...prev, newTask]);
+    suppressBacklogReload.current = true;
+    const realId = await saveTask(activeProjectId, newTask);
+    setBacklogTasks((prev) => prev.map((t) => (t.id === tempId ? { ...t, id: realId } : t)));
+    setTimeout(() => { suppressBacklogReload.current = false; }, 2000);
+  }, [activeProjectId]);
+
+  const handleSaveBacklogTask = useCallback(async (updatedTask: Task) => {
+    if (!activeProjectId) return;
+    setBacklogTasks((prev) => prev.map((t) => (t.id === updatedTask.id ? updatedTask : t)));
+    suppressBacklogReload.current = true;
+    await saveTask(activeProjectId, updatedTask);
+    setTimeout(() => { suppressBacklogReload.current = false; }, 2000);
+  }, [activeProjectId]);
+
+  const handleDeleteBacklogTask = useCallback(async (taskId: string) => {
+    setBacklogTasks((prev) => prev.filter((t) => t.id !== taskId));
+    suppressBacklogReload.current = true;
+    await deleteTask(taskId);
+    setTimeout(() => { suppressBacklogReload.current = false; }, 2000);
+  }, []);
+
+  const handleReorderBacklogTasks = useCallback(async (updatedTasks: Task[]) => {
+    if (!activeProjectId) return;
+    setBacklogTasks(updatedTasks);
+    suppressBacklogReload.current = true;
+    await updateBacklogTaskOrder(activeProjectId, updatedTasks);
+    setTimeout(() => { suppressBacklogReload.current = false; }, 2000);
+  }, [activeProjectId]);
+
+  const handleCreateFolder = useCallback(async (clientId: string, name: string) => {
+    if (!activeProjectId) return;
+    const folder = await createBacklogFolderDb(activeProjectId, clientId, name, backlogFolders.length);
+    if (folder) setBacklogFolders((prev) => [...prev, folder]);
+  }, [activeProjectId, backlogFolders.length]);
+
+  const handleRenameFolder = useCallback(async (folderId: string, name: string) => {
+    setBacklogFolders((prev) => prev.map((f) => (f.id === folderId ? { ...f, name } : f)));
+    await updateBacklogFolder(folderId, { name });
+  }, []);
+
+  const handleDeleteFolder = useCallback(async (folderId: string) => {
+    setBacklogFolders((prev) => prev.filter((f) => f.id !== folderId));
+    setBacklogTasks((prev) => prev.map((t) => (t.folder_id === folderId ? { ...t, folder_id: undefined } : t)));
+    await deleteBacklogFolderDb(folderId);
+  }, []);
 
   // --- Google Calendar ---
 
@@ -466,6 +624,18 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
         updateSelectedCalendars: handleUpdateSelectedCalendars,
         backlogOpen,
         toggleBacklog,
+        backlogTasks,
+        backlogFolders,
+        sendBacklogToDay,
+        sendFolderToDay: handleSendFolderToDay,
+        addToBacklog: handleAddToBacklog,
+        createBacklogTask: handleCreateBacklogTask,
+        saveBacklogTask: handleSaveBacklogTask,
+        deleteBacklogTask: handleDeleteBacklogTask,
+        reorderBacklogTasks: handleReorderBacklogTasks,
+        createFolder: handleCreateFolder,
+        renameFolder: handleRenameFolder,
+        deleteFolder: handleDeleteFolder,
       }}
     >
       {children}
