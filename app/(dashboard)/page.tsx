@@ -375,7 +375,7 @@ export default function BoardPage() {
 
   return (
     <main className="flex min-h-screen flex-col p-4 md:px-8 md:pt-4 bg-black/50">
-      <div className={`transition-[margin] duration-200 ease-in-out ${backlogOpen ? "ml-[400px]" : ""}`}>
+      <div>
         <Kanban
           value={columns}
           onValueChange={async (newColumns) => {
