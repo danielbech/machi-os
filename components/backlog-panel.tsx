@@ -2,8 +2,9 @@
 
 import { useState, useEffect, KeyboardEvent } from "react";
 import { createPortal } from "react-dom";
-import type { Task, BacklogFolder, Client } from "@/lib/types";
-import { TEAM_MEMBERS, COLUMN_TITLES } from "@/lib/constants";
+import DOMPurify from "dompurify";
+import type { Task, BacklogFolder, Client, DayName, Member } from "@/lib/types";
+import { COLUMN_TITLES } from "@/lib/constants";
 import {
   DndContext,
   DragOverlay,
@@ -94,8 +95,8 @@ interface BacklogPanelProps {
   tasks: Task[];
   folders: BacklogFolder[];
   clients: Client[];
-  onSendToDay: (taskId: string, day: string) => Promise<void>;
-  onSendFolderToDay: (folderId: string, day: string) => Promise<void>;
+  onSendToDay: (taskId: string, day: DayName) => Promise<void>;
+  onSendFolderToDay: (folderId: string, day: DayName) => Promise<void>;
   onCreateTask: (title: string, clientId: string, folderId?: string) => Promise<void>;
   onEditTask: (task: Task) => void;
   onDeleteTask: (taskId: string) => Promise<void>;
@@ -105,9 +106,10 @@ interface BacklogPanelProps {
   onSaveTask: (task: Task) => Promise<void>;
   onReorderTasks: (tasks: Task[]) => Promise<void>;
   onDragActiveChange?: (active: boolean) => void;
+  teamMembers: Member[];
 }
 
-const DAYS = ["monday", "tuesday", "wednesday", "thursday", "friday"];
+const DAYS: DayName[] = ["monday", "tuesday", "wednesday", "thursday", "friday"];
 
 export function BacklogPanel({
   tasks,
@@ -124,6 +126,7 @@ export function BacklogPanel({
   onSaveTask,
   onReorderTasks,
   onDragActiveChange,
+  teamMembers,
 }: BacklogPanelProps) {
   // Manual toggle overrides (true = forced open, false = forced closed) — persisted
   const [clientToggleOverrides, setClientToggleOverrides] = useState<Record<string, boolean>>(() => {
@@ -299,7 +302,7 @@ export function BacklogPanel({
         const taskId = event.active.id as string;
         setLocalTasks(null);
         setActiveTask(null);
-        onSendToDay(taskId, day);
+        onSendToDay(taskId, day as DayName);
         return;
       }
     }
@@ -418,9 +421,9 @@ export function BacklogPanel({
                 onDeleteTask(task.id);
               } else if (key >= "1" && key <= "9") {
                 const memberIndex = parseInt(key) - 1;
-                if (memberIndex < TEAM_MEMBERS.length) {
+                if (memberIndex < teamMembers.length) {
                   e.preventDefault();
-                  const memberId = TEAM_MEMBERS[memberIndex].id;
+                  const memberId = teamMembers[memberIndex].id;
                   const assignees = task.assignees || [];
                   const isAssigned = assignees.includes(memberId);
                   const updated = isAssigned
@@ -474,7 +477,7 @@ export function BacklogPanel({
               {task.assignees && task.assignees.length > 0 && (
                 <div className="flex -space-x-1 shrink-0">
                   {task.assignees.map((assigneeId) => {
-                    const member = TEAM_MEMBERS.find((m) => m.id === assigneeId);
+                    const member = teamMembers.find((m) => m.id === assigneeId);
                     return member ? (
                       <div
                         key={member.id}
@@ -548,7 +551,7 @@ export function BacklogPanel({
               <div className="px-2 pb-2 pl-3">
                 <div
                   className="tiptap text-xs text-white/40 break-words [&_a]:text-blue-400 [&_a]:underline"
-                  dangerouslySetInnerHTML={{ __html: task.description }}
+                  dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(task.description) }}
                 />
               </div>
             )}

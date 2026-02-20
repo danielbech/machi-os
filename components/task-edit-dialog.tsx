@@ -3,7 +3,6 @@
 import { useRef } from "react";
 import type { Task, BacklogFolder, ChecklistItem } from "@/lib/types";
 import { useWorkspace } from "@/lib/workspace-context";
-import { TEAM_MEMBERS } from "@/lib/constants";
 import {
   Dialog,
   DialogContent,
@@ -30,14 +29,14 @@ interface TaskEditDialogProps {
 }
 
 export function TaskEditDialog({ task, onClose, onSave, onTaskChange, folders }: TaskEditDialogProps) {
-  const { clients } = useWorkspace();
+  const { clients, teamMembers } = useWorkspace();
   const titleRef = useRef<HTMLInputElement>(null);
   const checklistRefs = useRef<Map<string, HTMLInputElement>>(new Map());
   const activeClients = clients.filter((c) => c.active);
   const selectedClient = activeClients.find((c) => c.id === task?.client);
   const clientFolders = folders?.filter((f) => f.client_id === task?.client) || [];
   const selectedFolder = clientFolders.find((f) => f.id === task?.folder_id);
-  const assignedMembers = TEAM_MEMBERS.filter((m) => task?.assignees?.includes(m.id));
+  const assignedMembers = teamMembers.filter((m) => task?.assignees?.includes(m.id));
 
   return (
     <Dialog open={task !== null} onOpenChange={(open) => { if (!open && task) onSave(task); }}>
@@ -235,7 +234,7 @@ export function TaskEditDialog({ task, onClose, onSave, onTaskChange, folders }:
                       No assignee
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
-                    {TEAM_MEMBERS.map((member) => {
+                    {teamMembers.map((member) => {
                       const isAssigned = task.assignees?.includes(member.id) || false;
                       return (
                         <DropdownMenuCheckboxItem

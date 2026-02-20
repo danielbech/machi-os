@@ -1,9 +1,4 @@
-import type { Member } from "./types";
-
-export const TEAM_MEMBERS: Member[] = [
-  { id: "1", name: "Daniel", initials: "DB", color: "bg-blue-500", avatar: "/avatars/daniel.jpg" },
-  { id: "2", name: "Casper", initials: "C", color: "bg-green-500", avatar: "/avatars/casper.png" },
-];
+import type { Task } from "./types";
 
 export const COLUMN_TITLES: Record<string, string> = {
   monday: "Monday",
@@ -13,7 +8,7 @@ export const COLUMN_TITLES: Record<string, string> = {
   friday: "Friday",
 };
 
-export const EMPTY_COLUMNS: Record<string, []> = {
+export const EMPTY_COLUMNS: Record<string, Task[]> = {
   monday: [],
   tuesday: [],
   wednesday: [],

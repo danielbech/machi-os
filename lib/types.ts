@@ -24,18 +24,20 @@ export interface ChecklistItem {
   checked: boolean;
 }
 
+export type DayName = "monday" | "tuesday" | "wednesday" | "thursday" | "friday";
+
 export interface Task {
   id: string;
   title: string;
   description?: string;
   priority?: "low" | "medium" | "high";
   completed?: boolean;
-  assignees?: string[];
+  assignees: string[];
   client?: string;
-  day?: string;
+  day?: DayName;
   type?: "task" | "note";
   folder_id?: string;
-  checklist?: ChecklistItem[];
+  checklist: ChecklistItem[];
 }
 
 export interface BacklogFolder {
@@ -56,7 +58,9 @@ export interface Project {
 
 export interface PendingInvite {
   id: string;
+  project_id: string;
   email: string;
-  role: string;
+  role: "owner" | "admin" | "member";
+  invited_by?: string;
   created_at: string;
 }

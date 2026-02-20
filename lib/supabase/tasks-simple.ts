@@ -1,6 +1,6 @@
 import { createClient } from './client'
 import { getAreaIdForProject } from './initialize'
-import type { Task } from '../types'
+import type { Task, DayName } from '../types'
 
 // Load all tasks for a project, grouped by day
 export async function loadTasksByDay(projectId: string): Promise<Record<string, Task[]>> {
@@ -35,7 +35,7 @@ export async function loadTasksByDay(projectId: string): Promise<Record<string, 
         assignees: task.assignees || [],
         client: task.client || undefined,
         priority: task.priority || undefined,
-        day: task.day,
+        day: task.day as DayName,
         type: task.type || 'task',
         folder_id: task.folder_id || undefined,
         checklist: task.checklist || [],
@@ -111,7 +111,11 @@ export async function saveTask(projectId: string, task: Task): Promise<string> {
 // Delete a task
 export async function deleteTask(taskId: string) {
   const supabase = createClient()
-  await supabase.from('tasks').delete().eq('id', taskId)
+  const { error } = await supabase.from('tasks').delete().eq('id', taskId)
+  if (error) {
+    console.error('Error deleting task:', error)
+    throw error
+  }
 }
 
 // Update all tasks for a specific day (batch update for reordering)
@@ -209,19 +213,27 @@ export async function transitionWeek(projectId: string): Promise<{ deleted: numb
   // Delete completed tasks and all notes
   const toDelete = [...completed, ...notes]
   if (toDelete.length > 0) {
-    await supabase
+    const { error: deleteError } = await supabase
       .from('tasks')
       .delete()
       .in('id', toDelete.map(t => t.id))
+    if (deleteError) {
+      console.error('Error deleting tasks during transition:', deleteError)
+      throw deleteError
+    }
   }
 
   // Move incomplete tasks to Monday with sequential sort_order
   if (incomplete.length > 0) {
     for (let i = 0; i < incomplete.length; i++) {
-      await supabase
+      const { error: updateError } = await supabase
         .from('tasks')
         .update({ day: 'monday', sort_order: i })
         .eq('id', incomplete[i].id)
+      if (updateError) {
+        console.error('Error moving task to Monday:', updateError)
+        throw updateError
+      }
     }
   }
 
@@ -256,7 +268,7 @@ export async function loadBacklogTasks(projectId: string): Promise<Task[]> {
     assignees: task.assignees || [],
     client: task.client || undefined,
     priority: task.priority || undefined,
-    day: task.day || undefined,
+    day: (task.day as DayName) || undefined,
     type: task.type || 'task',
     folder_id: task.folder_id || undefined,
     checklist: task.checklist || [],

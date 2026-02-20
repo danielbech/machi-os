@@ -1,7 +1,6 @@
 "use client";
 
-import dynamic from "next/dynamic";
-import { type ComponentType, memo } from "react";
+import { memo, useState, useEffect, type ComponentType } from "react";
 import {
   Globe,
   Code,
@@ -59,38 +58,44 @@ const LEGACY_ICONS: Record<string, LucideIcon> = {
   gem: Gem,
 };
 
-// Cache for dynamically loaded icons
-const dynamicIconCache = new Map<string, ComponentType<LucideProps>>();
+// Module-level cache for dynamically resolved icons
+const resolvedIconCache = new Map<string, ComponentType<LucideProps> | null>();
 
-function getDynamicIcon(name: string): ComponentType<LucideProps> | null {
-  // Check legacy map first
+function kebabToPascal(name: string): string {
+  return name
+    .split("-")
+    .map((s) => s.charAt(0).toUpperCase() + s.slice(1))
+    .join("");
+}
+
+// Lazy-load a lucide icon by kebab-case name
+function useDynamicIcon(name: string): ComponentType<LucideProps> | null {
+  // Fast path: legacy icons (statically imported)
   if (LEGACY_ICONS[name]) return LEGACY_ICONS[name];
 
-  // Check cache
-  if (dynamicIconCache.has(name)) return dynamicIconCache.get(name)!;
+  // Fast path: already resolved
+  if (resolvedIconCache.has(name)) return resolvedIconCache.get(name)!;
 
-  // Dynamically import from lucide-react
-  const DynIcon = dynamic(
-    () => import("lucide-react").then((mod) => {
-      // Convert kebab-case to PascalCase: "arrow-right" -> "ArrowRight"
-      const pascalName = name
-        .split("-")
-        .map((s) => s.charAt(0).toUpperCase() + s.slice(1))
-        .join("");
-      const icon = (mod as Record<string, unknown>)[pascalName];
-      if (icon) return { default: icon as ComponentType<LucideProps> };
-      // Fallback: try with "2" suffix variations
-      return { default: (() => null) as unknown as ComponentType<LucideProps> };
-    }),
-    { ssr: false, loading: () => null }
-  );
+  const [Icon, setIcon] = useState<ComponentType<LucideProps> | null>(null);
 
-  dynamicIconCache.set(name, DynIcon);
-  return DynIcon;
+  useEffect(() => {
+    let cancelled = false;
+    import("lucide-react").then((mod) => {
+      if (cancelled) return;
+      const pascalName = kebabToPascal(name);
+      const icon = (mod as Record<string, unknown>)[pascalName] as ComponentType<LucideProps> | undefined;
+      const resolved = icon || null;
+      resolvedIconCache.set(name, resolved);
+      setIcon(() => resolved);
+    });
+    return () => { cancelled = true; };
+  }, [name]);
+
+  return Icon;
 }
 
 export const ClientIcon = memo(function ClientIcon({ icon, className }: { icon: string; className?: string }) {
-  const Icon = getDynamicIcon(icon);
+  const Icon = useDynamicIcon(icon);
   if (!Icon) return null;
   return <Icon className={className} />;
 });

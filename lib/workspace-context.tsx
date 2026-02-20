@@ -2,10 +2,10 @@
 
 import { createContext, useContext, useState, useEffect, useCallback, useRef } from "react";
 import type { User } from "@supabase/supabase-js";
-import type { Project, Client, Task, BacklogFolder } from "@/lib/types";
+import type { Project, Client, Task, BacklogFolder, DayName, Member } from "@/lib/types";
 import { createClient } from "@/lib/supabase/client";
 import { initializeUserData } from "@/lib/supabase/initialize";
-import { getUserWorkspaces } from "@/lib/supabase/workspace";
+import { getUserWorkspaces, loadTeamMembers } from "@/lib/supabase/workspace";
 import { loadClients } from "@/lib/supabase/clients";
 import {
   initiateGoogleAuth,
@@ -41,6 +41,7 @@ interface WorkspaceContextValue {
   activeProject: Project | undefined;
   clients: Client[];
   refreshClients: () => Promise<void>;
+  teamMembers: Member[];
   // Google Calendar
   googleCalendarConnected: boolean;
   calendarEvents: Record<string, CalendarEvent[]>;
@@ -56,8 +57,8 @@ interface WorkspaceContextValue {
   // Backlog data & actions
   backlogTasks: Task[];
   backlogFolders: BacklogFolder[];
-  sendBacklogToDay: (taskId: string, day: string) => Promise<void>;
-  sendFolderToDay: (folderId: string, day: string) => Promise<void>;
+  sendBacklogToDay: (taskId: string, day: DayName) => Promise<void>;
+  sendFolderToDay: (folderId: string, day: DayName) => Promise<void>;
   addToBacklog: (task: Task) => Promise<void>;
   createBacklogTask: (title: string, clientId: string, folderId?: string) => Promise<void>;
   saveBacklogTask: (task: Task) => Promise<void>;
@@ -119,6 +120,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
   const [userProjects, setUserProjects] = useState<Project[]>([]);
   const [activeProjectId, setActiveProjectIdState] = useState<string | null>(null);
   const [clients, setClients] = useState<Client[]>([]);
+  const [teamMembers, setTeamMembers] = useState<Member[]>([]);
 
   // Backlog panel
   const [backlogOpen, setBacklogOpen] = useState(() => {
@@ -228,6 +230,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     refreshClients();
+    loadTeamMembers().then(setTeamMembers).catch(() => setTeamMembers([]));
   }, [refreshClients]);
 
   // --- Backlog ---
@@ -286,7 +289,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
   }, [activeProjectId, refreshBacklog]);
 
   // Backlog handlers
-  const sendBacklogToDay = useCallback(async (taskId: string, day: string) => {
+  const sendBacklogToDay = useCallback(async (taskId: string, day: DayName) => {
     if (!activeProjectId) return;
     const task = backlogTasks.find((t) => t.id === taskId);
     if (!task) return;
@@ -297,7 +300,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     setTimeout(() => { suppressBacklogReload.current = false; }, 2000);
   }, [activeProjectId, backlogTasks]);
 
-  const handleSendFolderToDay = useCallback(async (folderId: string, day: string) => {
+  const handleSendFolderToDay = useCallback(async (folderId: string, day: DayName) => {
     if (!activeProjectId) return;
     const folderTasks = backlogTasks.filter((t) => t.folder_id === folderId);
     if (folderTasks.length === 0) return;
@@ -322,7 +325,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
   const handleCreateBacklogTask = useCallback(async (title: string, clientId: string, folderId?: string) => {
     if (!activeProjectId) return;
     const tempId = `task-${Date.now()}`;
-    const newTask: Task = { id: tempId, title, client: clientId, folder_id: folderId, priority: "medium" };
+    const newTask: Task = { id: tempId, title, client: clientId, folder_id: folderId, priority: "medium", assignees: [], checklist: [] };
     setBacklogTasks((prev) => [...prev, newTask]);
     suppressBacklogReload.current = true;
     const realId = await saveTask(activeProjectId, newTask);
@@ -692,6 +695,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
         activeProject,
         clients,
         refreshClients,
+        teamMembers,
         googleCalendarConnected,
         calendarEvents,
         syncCalendarEvents,

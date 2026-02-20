@@ -5,8 +5,8 @@ import { createClient } from "@/lib/supabase/client";
 import { loadTasksByDay, saveTask, updateDayTasks, deleteTask } from "@/lib/supabase/tasks-simple";
 import { useWorkspace } from "@/lib/workspace-context";
 import { TaskEditDialog } from "@/components/task-edit-dialog";
-import type { Task } from "@/lib/types";
-import { TEAM_MEMBERS, COLUMN_TITLES, EMPTY_COLUMNS } from "@/lib/constants";
+import type { Task, DayName } from "@/lib/types";
+import { COLUMN_TITLES, EMPTY_COLUMNS } from "@/lib/constants";
 import { getClientTextClassName, CLIENT_RGB_COLORS } from "@/lib/colors";
 import { ClientIcon } from "@/components/client-icon";
 import {
@@ -20,7 +20,7 @@ import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from "@/comp
 import { Check, Plus, Calendar, Keyboard, StickyNote } from "lucide-react";
 
 export default function BoardPage() {
-  const { activeProjectId, clients, calendarEvents, backlogOpen, addToBacklog, backlogFolders } = useWorkspace();
+  const { activeProjectId, clients, calendarEvents, backlogOpen, addToBacklog, backlogFolders, teamMembers } = useWorkspace();
 
   const [columns, setColumns] = useState<Record<string, Task[]>>({ ...EMPTY_COLUMNS });
   const [addingToColumn, setAddingToColumn] = useState<string | null>(null);
@@ -133,8 +133,10 @@ export default function BoardPage() {
     const newCard: Task = {
       id: tempId,
       title,
+      assignees: [],
+      checklist: [],
       priority: cardType === "note" ? undefined : "medium",
-      day: columnId,
+      day: columnId as DayName,
       type: cardType,
     };
     const columnItems = [...columns[columnId]];
@@ -175,7 +177,7 @@ export default function BoardPage() {
       if (idx !== -1) {
         updated[col] = [...updated[col]];
         wasCompleted = updated[col][idx].completed || false;
-        updated[col][idx] = { ...updated[col][idx], completed: !wasCompleted, day: col };
+        updated[col][idx] = { ...updated[col][idx], completed: !wasCompleted, day: col as DayName };
         updatedTask = updated[col][idx];
         break;
       }
@@ -214,7 +216,7 @@ export default function BoardPage() {
         updated[col][idx] = {
           ...task,
           assignees: isAssigned ? assignees.filter((id) => id !== memberId) : [...assignees, memberId],
-          day: col,
+          day: col as DayName,
         };
         updatedTask = updated[col][idx];
         break;
@@ -236,7 +238,7 @@ export default function BoardPage() {
         updated[col][idx] = {
           ...task,
           client: task.client === clientId ? undefined : clientId,
-          day: col,
+          day: col as DayName,
         };
         updatedTask = updated[col][idx];
         break;
@@ -253,12 +255,12 @@ export default function BoardPage() {
       id: tempId,
       title: clipboard.task.title,
       description: clipboard.task.description,
-      assignees: clipboard.task.assignees ? [...clipboard.task.assignees] : undefined,
+      assignees: [...clipboard.task.assignees],
       client: clipboard.task.client,
       priority: clipboard.task.priority,
       type: clipboard.task.type,
-      day: columnId,
-      checklist: clipboard.task.checklist ? clipboard.task.checklist.map(i => ({ ...i, id: crypto.randomUUID() })) : undefined,
+      day: columnId as DayName,
+      checklist: clipboard.task.checklist.map(i => ({ ...i, id: crypto.randomUUID() })),
     };
     const columnItems = [...columns[columnId], newCard];
     setColumns({ ...columns, [columnId]: columnItems });
@@ -341,10 +343,10 @@ export default function BoardPage() {
     const idx = updated[editingColumn].findIndex((t) => t.id === updatedTask.id);
     if (idx !== -1) {
       updated[editingColumn] = [...updated[editingColumn]];
-      updated[editingColumn][idx] = { ...updatedTask, day: editingColumn };
+      updated[editingColumn][idx] = { ...updatedTask, day: editingColumn as DayName };
       setColumns(updated);
     }
-    await saveTask(activeProjectId, { ...updatedTask, day: editingColumn });
+    await saveTask(activeProjectId, { ...updatedTask, day: editingColumn as DayName });
     setEditingTask(null);
     setEditingColumn(null);
     if (justCompleted) {
@@ -575,9 +577,9 @@ export default function BoardPage() {
                             toggleComplete(item.id);
                           } else if (key >= "1" && key <= "9") {
                             const memberIndex = parseInt(key) - 1;
-                            if (memberIndex < TEAM_MEMBERS.length) {
+                            if (memberIndex < teamMembers.length) {
                               e.preventDefault();
-                              toggleAssignee(item.id, TEAM_MEMBERS[memberIndex].id);
+                              toggleAssignee(item.id, teamMembers[memberIndex].id);
                             }
                           } else {
                             const matches = clients.filter((c) => c.slug === key.toLowerCase() && c.active);
@@ -635,7 +637,7 @@ export default function BoardPage() {
                                     item.assignees.length > 0 && (
                                       <div className="flex gap-1.5">
                                         {item.assignees.map((assigneeId) => {
-                                          const member = TEAM_MEMBERS.find((m) => m.id === assigneeId);
+                                          const member = teamMembers.find((m) => m.id === assigneeId);
                                           return member ? (
                                             <div
                                               key={member.id}
@@ -820,7 +822,7 @@ export default function BoardPage() {
                 <kbd className="px-1.5 py-0.5 rounded bg-white/10 text-[11px] font-mono text-white/50">.</kbd>
               </div>
               <div className="border-t border-white/5 my-1" />
-              {TEAM_MEMBERS.map((member, i) => (
+              {teamMembers.map((member, i) => (
                 <div key={member.id} className="flex items-center justify-between">
                   <span className="text-sm text-white/70">Assign {member.name}</span>
                   <kbd className="px-1.5 py-0.5 rounded bg-white/10 text-[11px] font-mono text-white/50">{i + 1}</kbd>

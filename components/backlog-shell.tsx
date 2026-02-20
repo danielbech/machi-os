@@ -13,6 +13,7 @@ export function BacklogShell() {
     backlogTasks,
     backlogFolders,
     clients,
+    teamMembers,
     backlogWidth,
     setBacklogWidth,
     sendBacklogToDay,
@@ -93,6 +94,7 @@ export function BacklogShell() {
             onRenameFolder={renameFolder}
             onDeleteFolder={deleteFolder}
             onReorderTasks={reorderBacklogTasks}
+            teamMembers={teamMembers}
           />
         </div>
 
