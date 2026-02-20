@@ -767,7 +767,7 @@ export function BacklogPanel({
                     setEditingProject(client);
                     setProjectDialogOpen(true);
                   }}
-                  className="opacity-0 group-hover/client:opacity-100 transition-opacity p-1 rounded hover:bg-white/[0.06] shrink-0"
+                  className="opacity-0 group-hover/client:opacity-100 transition-opacity p-1 rounded bg-white/[0.06] hover:bg-white/[0.10] shrink-0"
                   aria-label={`Edit ${client.name}`}
                 >
                   <Pencil className="size-3 text-white/20 hover:text-white/50" />
