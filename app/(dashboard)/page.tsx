@@ -410,7 +410,7 @@ export default function BoardPage() {
                 key={columnId}
                 value={columnId}
                 data-column-id={columnId}
-                className={`w-[280px] shrink-0 rounded-lg transition-all duration-150 ${dragOverTarget === columnId ? "bg-white/[0.04] ring-1 ring-white/15 ring-inset" : ""}`}
+                className={`w-[85vw] sm:w-[280px] shrink-0 rounded-lg transition-all duration-150 ${dragOverTarget === columnId ? "bg-white/[0.04] ring-1 ring-white/15 ring-inset" : ""}`}
                 onMouseEnter={() => setHoveredColumn(columnId)}
               >
                 <div className="mb-1.5 px-1">
@@ -526,7 +526,7 @@ export default function BoardPage() {
               if (!task) return null;
               if (task.type === "note") {
                 return (
-                  <div className="w-80 rounded-lg border border-amber-500/20 bg-amber-500/10 p-3 shadow-lg">
+                  <div className="w-[85vw] sm:w-80 rounded-lg border border-amber-500/20 bg-amber-500/10 p-3 shadow-lg">
                     <div className="flex items-start gap-2">
                       <StickyNote className="size-3.5 text-amber-400 mt-0.5 shrink-0" />
                       <div className="text-sm text-amber-100/90">{task.title}</div>
@@ -535,7 +535,7 @@ export default function BoardPage() {
                 );
               }
               return (
-                <div className="w-80 rounded-lg border border-white/10 bg-card p-3 shadow-lg">
+                <div className="w-[85vw] sm:w-80 rounded-lg border border-white/10 bg-card p-3 shadow-lg">
                   <div className="relative">
                     <div className={`${task.completed ? "opacity-50" : ""}`}>
                       <div className={`text-sm pr-6 ${task.completed ? "line-through" : ""}`}>{task.title}</div>

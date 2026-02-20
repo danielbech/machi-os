@@ -141,9 +141,9 @@ export default function FeedbackPage() {
 
         {/* Content */}
         <div className="flex-1 min-w-0 space-y-1">
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <span
-              className={`font-medium truncate ${
+              className={`font-medium ${
                 isResolved ? "line-through text-white/40" : "text-white"
               }`}
             >
@@ -199,7 +199,7 @@ export default function FeedbackPage() {
           <Button
             variant="ghost"
             size="icon-xs"
-            className="opacity-0 group-hover:opacity-100 text-white/40 hover:text-red-400 hover:bg-red-500/10 transition-all shrink-0"
+            className="opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 text-white/40 hover:text-red-400 hover:bg-red-500/10 transition-all shrink-0"
             onClick={() => setDeleteConfirm(ticket.id)}
             aria-label={`Delete ${ticket.title}`}
           >

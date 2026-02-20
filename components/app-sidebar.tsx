@@ -16,6 +16,7 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  useSidebar,
 } from "@/components/ui/sidebar";
 import {
   DropdownMenu,
@@ -33,6 +34,7 @@ export function AppSidebar() {
     syncCalendarEvents, calendarConnections, updateSelectedCalendars,
     backlogOpen, toggleBacklog, transitionToNextWeek, refreshTeamMembers,
   } = useWorkspace();
+  const { setOpenMobile } = useSidebar();
   const [showSettings, setShowSettings] = useState(false);
   const [workspaceMembers, setWorkspaceMembers] = useState<WorkspaceMember[]>([]);
 
@@ -119,21 +121,21 @@ export function AppSidebar() {
               <SidebarMenu>
                 <SidebarMenuItem>
                   <SidebarMenuButton asChild isActive={pathname === "/"} tooltip="Board">
-                    <Link href="/">
+                    <Link href="/" onClick={() => setOpenMobile(false)}>
                       <LayoutDashboard />
                       <span>Board</span>
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
                 <SidebarMenuItem>
-                  <SidebarMenuButton isActive={backlogOpen} tooltip="Backlog" onClick={toggleBacklog}>
+                  <SidebarMenuButton isActive={backlogOpen} tooltip="Backlog" onClick={() => { toggleBacklog(); setOpenMobile(false); }}>
                     <Inbox />
                     <span>Backlog</span>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
                 <SidebarMenuItem>
                   <SidebarMenuButton asChild isActive={pathname === "/projects"} tooltip="Projects">
-                    <Link href="/projects">
+                    <Link href="/projects" onClick={() => setOpenMobile(false)}>
                       <FolderKanban />
                       <span>Projects</span>
                     </Link>
@@ -148,14 +150,14 @@ export function AppSidebar() {
           <SidebarMenu>
             <SidebarMenuItem>
               <SidebarMenuButton asChild isActive={pathname === "/feedback"} tooltip="Feedback">
-                <Link href="/feedback">
+                <Link href="/feedback" onClick={() => setOpenMobile(false)}>
                   <MessageSquarePlus />
                   <span>Feedback</span>
                 </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
             <SidebarMenuItem>
-              <SidebarMenuButton onClick={handleOpenSettings} tooltip="Settings">
+              <SidebarMenuButton onClick={() => { handleOpenSettings(); setOpenMobile(false); }} tooltip="Settings">
                 <Settings />
                 <span>Settings</span>
               </SidebarMenuButton>
