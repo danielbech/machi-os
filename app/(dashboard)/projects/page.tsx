@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useWorkspace } from "@/lib/workspace-context";
 import { updateClientRecord, deleteClientRecord } from "@/lib/supabase/clients";
 import { getClientTextClassName, CLIENT_DOT_COLORS } from "@/lib/colors";
+import { ClientIcon } from "@/components/client-icon";
 import type { Client } from "@/lib/types";
 import { ProjectDialog } from "@/components/project-dialog";
 import {
@@ -56,7 +57,7 @@ export default function ProjectsPage() {
 
   const ClientRow = ({ client }: { client: Client }) => (
     <div className="group flex items-center gap-4 px-4 py-3 rounded-lg border border-white/5 bg-white/[0.02] hover:bg-white/[0.04] hover:border-white/10 transition-all">
-      {/* Logo / Avatar */}
+      {/* Logo / Icon / Avatar */}
       {client.logo_url ? (
         <img
           src={client.logo_url}
@@ -64,8 +65,12 @@ export default function ProjectsPage() {
           className="size-8 rounded-lg object-cover bg-white/5 shrink-0"
         />
       ) : (
-        <div className={`size-8 rounded-lg ${CLIENT_DOT_COLORS[client.color] || "bg-blue-500"} flex items-center justify-center text-white font-bold text-xs shrink-0`}>
-          {client.name.charAt(0).toUpperCase()}
+        <div className={`size-8 rounded-lg ${CLIENT_DOT_COLORS[client.color] || "bg-blue-500"} flex items-center justify-center text-white shrink-0`}>
+          {client.icon ? (
+            <ClientIcon icon={client.icon} className="size-4" />
+          ) : (
+            <span className="font-bold text-xs">{client.name.charAt(0).toUpperCase()}</span>
+          )}
         </div>
       )}
 

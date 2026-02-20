@@ -42,6 +42,7 @@ import {
   Check,
 } from "lucide-react";
 import { ProjectDialog } from "@/components/project-dialog";
+import { ClientIcon } from "@/components/client-icon";
 
 // --- Sortable task row wrapper (must be a top-level component for hooks) ---
 function SortableTaskRow({
@@ -741,9 +742,11 @@ export function BacklogPanel({
                 <ChevronRight
                   className={`size-3.5 text-white/30 transition-transform ${isCollapsed ? "" : "rotate-90"}`}
                 />
-                {client.logo_url && (
+                {client.logo_url ? (
                   <img src={client.logo_url} alt="" className="size-5 rounded-sm object-cover shrink-0" />
-                )}
+                ) : client.icon ? (
+                  <ClientIcon icon={client.icon} className="size-4 text-white/50 shrink-0" />
+                ) : null}
                 <span className="text-base font-medium text-white/80">{client.name}</span>
                 <span className="text-xs text-white/20 ml-auto">{clientTasks.length}</span>
               </button>

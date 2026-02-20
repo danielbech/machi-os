@@ -5,6 +5,7 @@ import { useWorkspace } from "@/lib/workspace-context";
 import { createClientRecord, updateClientRecord } from "@/lib/supabase/clients";
 import { uploadClientLogo, deleteClientLogo } from "@/lib/supabase/storage";
 import { getClientTextClassName, CLIENT_DOT_COLORS, COLOR_NAMES } from "@/lib/colors";
+import { PROJECT_ICONS, PROJECT_ICON_NAMES, ClientIcon } from "@/components/client-icon";
 import type { Client } from "@/lib/types";
 import {
   Dialog,
@@ -38,10 +39,12 @@ export function ProjectDialog({ open, onOpenChange, editingClient = null }: Proj
   const [formName, setFormName] = useState("");
   const [formSlug, setFormSlug] = useState("");
   const [formColor, setFormColor] = useState("blue");
+  const [formIcon, setFormIcon] = useState<string | null>(null);
   const [formLogoUrl, setFormLogoUrl] = useState("");
   const [formLogoFile, setFormLogoFile] = useState<File | null>(null);
   const [formLogoPreview, setFormLogoPreview] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [showIconPicker, setShowIconPicker] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const titleRef = useRef<HTMLInputElement>(null);
 
@@ -52,6 +55,7 @@ export function ProjectDialog({ open, onOpenChange, editingClient = null }: Proj
         setFormName(editingClient.name);
         setFormSlug(editingClient.slug);
         setFormColor(editingClient.color);
+        setFormIcon(editingClient.icon || null);
         setFormLogoUrl(editingClient.logo_url || "");
         setFormLogoFile(null);
         setFormLogoPreview(editingClient.logo_url || null);
@@ -59,10 +63,12 @@ export function ProjectDialog({ open, onOpenChange, editingClient = null }: Proj
         setFormName("");
         setFormSlug("");
         setFormColor("blue");
+        setFormIcon(null);
         setFormLogoUrl("");
         setFormLogoFile(null);
         setFormLogoPreview(null);
       }
+      setShowIconPicker(false);
     }
     onOpenChange(nextOpen);
   };
@@ -72,6 +78,7 @@ export function ProjectDialog({ open, onOpenChange, editingClient = null }: Proj
     if (!file) return;
     setFormLogoFile(file);
     setFormLogoPreview(URL.createObjectURL(file));
+    setFormIcon(null); // logo takes precedence
   };
 
   const clearLogo = () => {
@@ -106,6 +113,7 @@ export function ProjectDialog({ open, onOpenChange, editingClient = null }: Proj
           name: formName.trim(),
           slug: formSlug.trim().toLowerCase(),
           color: formColor,
+          icon: formIcon || null,
           logo_url: logoUrl,
         });
       } else {
@@ -113,6 +121,7 @@ export function ProjectDialog({ open, onOpenChange, editingClient = null }: Proj
           name: formName.trim(),
           slug: formSlug.trim().toLowerCase(),
           color: formColor,
+          icon: formIcon || undefined,
           sort_order: clients.length,
           active: true,
         });
@@ -130,6 +139,54 @@ export function ProjectDialog({ open, onOpenChange, editingClient = null }: Proj
     }
   };
 
+  // What to show in the avatar area next to the title
+  const renderAvatar = () => {
+    if (formLogoPreview) {
+      return (
+        <div className="group relative shrink-0">
+          <img
+            src={formLogoPreview}
+            alt="Logo preview"
+            className="size-10 rounded-xl object-cover bg-white/5 cursor-pointer"
+            onClick={() => setShowIconPicker(!showIconPicker)}
+          />
+          <button
+            type="button"
+            onClick={clearLogo}
+            className="absolute -top-1 -right-1 size-4 rounded-full bg-white/10 hover:bg-red-500/80 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+            aria-label="Remove logo"
+          >
+            <X className="size-2.5" />
+          </button>
+        </div>
+      );
+    }
+
+    if (formIcon) {
+      return (
+        <button
+          type="button"
+          onClick={() => setShowIconPicker(!showIconPicker)}
+          className={`size-10 rounded-xl ${CLIENT_DOT_COLORS[formColor] || "bg-blue-500"} flex items-center justify-center text-white cursor-pointer shrink-0 transition-colors`}
+          aria-label="Change icon"
+        >
+          <ClientIcon icon={formIcon} className="size-5" />
+        </button>
+      );
+    }
+
+    return (
+      <button
+        type="button"
+        onClick={() => setShowIconPicker(!showIconPicker)}
+        className={`size-10 rounded-xl ${CLIENT_DOT_COLORS[formColor] || "bg-blue-500"} flex items-center justify-center text-white font-bold text-sm cursor-pointer shrink-0 transition-colors`}
+        aria-label="Pick icon"
+      >
+        {formName.trim() ? formName.charAt(0).toUpperCase() : "?"}
+      </button>
+    );
+  };
+
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent
@@ -142,7 +199,6 @@ export function ProjectDialog({ open, onOpenChange, editingClient = null }: Proj
         <form onSubmit={(e) => { e.preventDefault(); handleSave(); }} className="space-y-5">
           {/* Name — big, freestanding, auto-focused */}
           <div className="flex items-center gap-3">
-            {/* Logo — inline with title */}
             <input
               ref={fileInputRef}
               type="file"
@@ -150,33 +206,7 @@ export function ProjectDialog({ open, onOpenChange, editingClient = null }: Proj
               onChange={handleFileSelect}
               className="hidden"
             />
-            {formLogoPreview ? (
-              <div className="group relative shrink-0">
-                <img
-                  src={formLogoPreview}
-                  alt="Logo preview"
-                  className="size-10 rounded-xl object-cover bg-white/5 cursor-pointer"
-                  onClick={() => fileInputRef.current?.click()}
-                />
-                <button
-                  type="button"
-                  onClick={clearLogo}
-                  className="absolute -top-1 -right-1 size-4 rounded-full bg-white/10 hover:bg-red-500/80 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
-                  aria-label="Remove logo"
-                >
-                  <X className="size-2.5" />
-                </button>
-              </div>
-            ) : (
-              <button
-                type="button"
-                onClick={() => fileInputRef.current?.click()}
-                className="size-10 rounded-xl border-2 border-dashed border-white/10 bg-white/[0.02] flex items-center justify-center text-white/20 hover:text-white/40 hover:border-white/20 hover:bg-white/[0.04] transition-colors cursor-pointer shrink-0"
-                aria-label="Upload logo"
-              >
-                <Upload className="size-4" />
-              </button>
-            )}
+            {renderAvatar()}
 
             <input
               ref={titleRef}
@@ -187,6 +217,55 @@ export function ProjectDialog({ open, onOpenChange, editingClient = null }: Proj
               placeholder="Project name..."
             />
           </div>
+
+          {/* Icon picker — collapsible */}
+          {showIconPicker && (
+            <div className="space-y-2">
+              <div className="grid grid-cols-8 gap-1">
+                {PROJECT_ICON_NAMES.map((name) => {
+                  const Icon = PROJECT_ICONS[name];
+                  return (
+                    <button
+                      key={name}
+                      type="button"
+                      onClick={() => {
+                        setFormIcon(formIcon === name ? null : name);
+                        setShowIconPicker(false);
+                      }}
+                      className={`flex items-center justify-center size-9 rounded-lg transition-all ${
+                        formIcon === name
+                          ? "bg-white/15 text-white ring-1 ring-white/30"
+                          : "text-white/40 hover:text-white/70 hover:bg-white/[0.06]"
+                      }`}
+                      title={name}
+                      aria-label={`Select ${name} icon`}
+                    >
+                      <Icon className="size-4" />
+                    </button>
+                  );
+                })}
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="flex items-center gap-1.5 text-xs text-white/30 hover:text-white/50 transition-colors"
+                >
+                  <Upload className="size-3" />
+                  Upload logo instead
+                </button>
+                {formIcon && (
+                  <button
+                    type="button"
+                    onClick={() => { setFormIcon(null); setShowIconPicker(false); }}
+                    className="text-xs text-white/30 hover:text-white/50 ml-auto transition-colors"
+                  >
+                    Remove icon
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
 
           {/* Key + Color — compact row */}
           <div className="flex items-center gap-4">

@@ -19,6 +19,7 @@ import {
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import { Check, ChevronDown, Circle, StickyNote, ListTodo, Folder, X, Plus } from "lucide-react";
+import { ClientIcon } from "@/components/client-icon";
 
 interface TaskEditDialogProps {
   task: Task | null;
@@ -144,9 +145,11 @@ export function TaskEditDialog({ task, onClose, onSave, onTaskChange, folders }:
                         onClick={() => onTaskChange({ ...task, client: client.id })}
                         className="flex items-center gap-2"
                       >
-                        {client.logo_url && (
+                        {client.logo_url ? (
                           <img src={client.logo_url} alt="" className="size-4 rounded-sm object-cover shrink-0" />
-                        )}
+                        ) : client.icon ? (
+                          <ClientIcon icon={client.icon} className="size-3.5 shrink-0" />
+                        ) : null}
                         <span>{client.name}</span>
                         {task.client === client.id && (
                           <Circle className="size-2 fill-white ml-auto" />

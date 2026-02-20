@@ -13,6 +13,7 @@ export interface Client {
   slug: string;
   color: string;
   logo_url?: string;
+  icon?: string;
   sort_order: number;
   active: boolean;
 }

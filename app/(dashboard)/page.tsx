@@ -8,6 +8,7 @@ import { TaskEditDialog } from "@/components/task-edit-dialog";
 import type { Task } from "@/lib/types";
 import { TEAM_MEMBERS, COLUMN_TITLES, EMPTY_COLUMNS } from "@/lib/constants";
 import { getClientTextClassName, CLIENT_RGB_COLORS } from "@/lib/colors";
+import { ClientIcon } from "@/components/client-icon";
 import {
   Kanban,
   KanbanBoard,
@@ -620,9 +621,11 @@ export default function BoardPage() {
                                       const client = clients.find((c) => c.id === item.client);
                                       return client ? (
                                         <div key={client.id} className={`flex items-center gap-1.5 ${getClientTextClassName(client.color)} text-xs font-medium`}>
-                                          {client.logo_url && (
+                                          {client.logo_url ? (
                                             <img src={client.logo_url} alt="" className="w-5 h-5 rounded-full object-cover" />
-                                          )}
+                                          ) : client.icon ? (
+                                            <ClientIcon icon={client.icon} className="size-3.5" />
+                                          ) : null}
                                           {client.name}
                                         </div>
                                       ) : <div />;
