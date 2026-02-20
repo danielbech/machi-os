@@ -326,6 +326,7 @@ export function ProjectDialog({ open, onOpenChange, editingClient = null }: Proj
             <Button
               type="submit"
               disabled={saving || !formName.trim()}
+              className="bg-white text-black hover:bg-white/90"
             >
               {saving ? "Saving..." : editingClient ? "Save" : "Add Project"}
             </Button>
