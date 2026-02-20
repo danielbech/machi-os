@@ -41,6 +41,7 @@ import {
   ListChecks,
   Check,
 } from "lucide-react";
+import { ProjectDialog } from "@/components/project-dialog";
 
 // --- Sortable task row wrapper (must be a top-level component for hooks) ---
 function SortableTaskRow({
@@ -103,7 +104,6 @@ interface BacklogPanelProps {
   onSaveTask: (task: Task) => Promise<void>;
   onReorderTasks: (tasks: Task[]) => Promise<void>;
   onDragActiveChange?: (active: boolean) => void;
-  onCreateProject: (name: string) => Promise<void>;
 }
 
 const DAYS = ["monday", "tuesday", "wednesday", "thursday", "friday"];
@@ -123,7 +123,6 @@ export function BacklogPanel({
   onSaveTask,
   onReorderTasks,
   onDragActiveChange,
-  onCreateProject,
 }: BacklogPanelProps) {
   // Manual toggle overrides (true = forced open, false = forced closed) — persisted
   const [clientToggleOverrides, setClientToggleOverrides] = useState<Record<string, boolean>>(() => {
@@ -153,8 +152,7 @@ export function BacklogPanel({
   const [renamingFolder, setRenamingFolder] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState("");
   const [expandedTasks, setExpandedTasks] = useState<Set<string>>(new Set());
-  const [addingProject, setAddingProject] = useState(false);
-  const [newProjectName, setNewProjectName] = useState("");
+  const [projectDialogOpen, setProjectDialogOpen] = useState(false);
 
   // DnD state
   const [localTasks, setLocalTasks] = useState<Task[] | null>(null);
@@ -709,10 +707,7 @@ export function BacklogPanel({
             <span className="text-xs text-white/20">{tasks.length} tasks</span>
             <button
               type="button"
-              onClick={() => {
-                setAddingProject(true);
-                setNewProjectName("");
-              }}
+              onClick={() => setProjectDialogOpen(true)}
               className="p-1 rounded text-white/20 hover:text-white/50 hover:bg-white/[0.04] transition-colors"
               aria-label="Add project"
             >
@@ -721,37 +716,9 @@ export function BacklogPanel({
           </div>
         </div>
 
-        {addingProject && (
-          <div className="mb-3 rounded-lg border border-white/[0.06] bg-white/[0.02] px-3 py-2">
-            <input
-              type="text"
-              value={newProjectName}
-              onChange={(e) => setNewProjectName(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" && newProjectName.trim()) {
-                  onCreateProject(newProjectName.trim());
-                  setAddingProject(false);
-                  setNewProjectName("");
-                } else if (e.key === "Escape") {
-                  setAddingProject(false);
-                  setNewProjectName("");
-                }
-              }}
-              onBlur={() => {
-                if (newProjectName.trim()) {
-                  onCreateProject(newProjectName.trim());
-                }
-                setAddingProject(false);
-                setNewProjectName("");
-              }}
-              placeholder="Project name..."
-              autoFocus
-              className="w-full bg-transparent text-sm outline-none placeholder:text-white/15 text-white/80"
-            />
-          </div>
-        )}
+        <ProjectDialog open={projectDialogOpen} onOpenChange={setProjectDialogOpen} />
 
-        {relevantClients.length === 0 && !addingProject && (
+        {relevantClients.length === 0 && (
           <p className="text-sm text-white/20 px-1">No projects yet. Add projects to get started.</p>
         )}
 
