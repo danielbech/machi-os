@@ -100,8 +100,16 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
   const [clients, setClients] = useState<Client[]>([]);
 
   // Backlog panel
-  const [backlogOpen, setBacklogOpen] = useState(false);
-  const toggleBacklog = useCallback(() => setBacklogOpen((prev) => !prev), []);
+  const [backlogOpen, setBacklogOpen] = useState(() => {
+    try { return localStorage.getItem("machi-backlog-open") === "true"; }
+    catch { return false; }
+  });
+  const toggleBacklog = useCallback(() => {
+    setBacklogOpen((prev) => {
+      localStorage.setItem("machi-backlog-open", String(!prev));
+      return !prev;
+    });
+  }, []);
   const [backlogTasks, setBacklogTasks] = useState<Task[]>([]);
   const [backlogFolders, setBacklogFolders] = useState<BacklogFolder[]>([]);
   const suppressBacklogReload = useRef(false);
