@@ -826,17 +826,11 @@ export default function BoardPage() {
                   <kbd className="px-1.5 py-0.5 rounded bg-white/10 text-[11px] font-mono text-white/50">{i + 1}</kbd>
                 </div>
               ))}
-              {clients.filter((c) => c.active).length > 0 && (
-                <>
-                  <div className="border-t border-white/5 my-1" />
-                  {clients.filter((c) => c.active).map((client) => (
-                    <div key={client.id} className="flex items-center justify-between">
-                      <span className="text-sm text-white/70 truncate mr-2">{client.name}</span>
-                      <kbd className="px-1.5 py-0.5 rounded bg-white/10 text-[11px] font-mono text-white/50 shrink-0">{client.slug}</kbd>
-                    </div>
-                  ))}
-                </>
-              )}
+              <div className="border-t border-white/5 my-1" />
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-white/70">Assign project</span>
+                <span className="text-[11px] text-white/40">first letter</span>
+              </div>
             </div>
           </div>
         )}
