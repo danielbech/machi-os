@@ -23,7 +23,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { LayoutDashboard, FolderKanban, Inbox, Settings, Check, ChevronDown } from "lucide-react";
+import { LayoutDashboard, FolderKanban, Inbox, Settings, Check, ChevronDown, MessageSquarePlus } from "lucide-react";
 
 export function AppSidebar() {
   const pathname = usePathname();
@@ -136,6 +136,14 @@ export function AppSidebar() {
                     <Link href="/projects">
                       <FolderKanban />
                       <span>Projects</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+                <SidebarMenuItem>
+                  <SidebarMenuButton asChild isActive={pathname === "/feedback"} tooltip="Feedback">
+                    <Link href="/feedback">
+                      <MessageSquarePlus />
+                      <span>Feedback</span>
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>

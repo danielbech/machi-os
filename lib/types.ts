@@ -64,3 +64,22 @@ export interface PendingInvite {
   invited_by?: string;
   created_at: string;
 }
+
+export type FeedbackCategory = "idea" | "bug" | "feedback";
+export type FeedbackStatus = "open" | "resolved";
+
+export interface FeedbackTicket {
+  id: string;
+  user_id: string;
+  title: string;
+  description: string;
+  category: FeedbackCategory;
+  status: FeedbackStatus;
+  created_at: string;
+  author?: {
+    display_name: string;
+    initials: string;
+    color: string;
+    avatar_url?: string;
+  };
+}
