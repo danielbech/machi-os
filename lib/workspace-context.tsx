@@ -5,7 +5,8 @@ import type { User } from "@supabase/supabase-js";
 import type { Project, Client, Task, BacklogFolder, DayName, Member } from "@/lib/types";
 import { createClient } from "@/lib/supabase/client";
 import { initializeUserData } from "@/lib/supabase/initialize";
-import { getUserWorkspaces, loadTeamMembers } from "@/lib/supabase/workspace";
+import { getUserWorkspaces } from "@/lib/supabase/workspace";
+import { loadWorkspaceProfiles } from "@/lib/supabase/profiles";
 import { loadClients } from "@/lib/supabase/clients";
 import {
   initiateGoogleAuth,
@@ -42,6 +43,7 @@ interface WorkspaceContextValue {
   clients: Client[];
   refreshClients: () => Promise<void>;
   teamMembers: Member[];
+  refreshTeamMembers: () => Promise<void>;
   // Google Calendar
   googleCalendarConnected: boolean;
   calendarEvents: Record<string, CalendarEvent[]>;
@@ -214,6 +216,20 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     return () => { cancelled = true; };
   }, [user]);
 
+  // Refresh team members (workspace profiles)
+  const refreshTeamMembers = useCallback(async () => {
+    if (!activeProjectId) {
+      setTeamMembers([]);
+      return;
+    }
+    try {
+      const members = await loadWorkspaceProfiles(activeProjectId);
+      setTeamMembers(members);
+    } catch {
+      setTeamMembers([]);
+    }
+  }, [activeProjectId]);
+
   // Load clients when active project changes
   const refreshClients = useCallback(async () => {
     if (!activeProjectId) {
@@ -230,8 +246,12 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     refreshClients();
-    loadTeamMembers().then(setTeamMembers).catch(() => setTeamMembers([]));
-  }, [refreshClients]);
+    if (activeProjectId) {
+      loadWorkspaceProfiles(activeProjectId).then(setTeamMembers).catch(() => setTeamMembers([]));
+    } else {
+      setTeamMembers([]);
+    }
+  }, [refreshClients, activeProjectId]);
 
   // --- Backlog ---
 
@@ -696,6 +716,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
         clients,
         refreshClients,
         teamMembers,
+        refreshTeamMembers,
         googleCalendarConnected,
         calendarEvents,
         syncCalendarEvents,

@@ -31,7 +31,7 @@ export function AppSidebar() {
     userProjects, activeProjectId, setActiveProjectId, activeProject, user,
     googleCalendarConnected, connectGoogleCalendar, disconnectGoogleAccount,
     syncCalendarEvents, calendarConnections, updateSelectedCalendars,
-    backlogOpen, toggleBacklog, transitionToNextWeek,
+    backlogOpen, toggleBacklog, transitionToNextWeek, refreshTeamMembers,
   } = useWorkspace();
   const [showSettings, setShowSettings] = useState(false);
   const [workspaceMembers, setWorkspaceMembers] = useState<WorkspaceMember[]>([]);
@@ -171,6 +171,7 @@ export function AppSidebar() {
           calendarConnections={calendarConnections}
           onUpdateSelectedCalendars={updateSelectedCalendars}
           onTransitionWeek={transitionToNextWeek}
+          onProfileUpdate={refreshTeamMembers}
         />
       )}
     </>

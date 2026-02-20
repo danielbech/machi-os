@@ -1,5 +1,5 @@
 import { createClient } from './client'
-import type { Project, PendingInvite, Member } from '../types'
+import type { Project, PendingInvite } from '../types'
 
 export interface WorkspaceMember {
   id: string
@@ -131,28 +131,6 @@ export async function updateMemberRole(
     console.error('Error updating member role:', error)
     throw error
   }
-}
-
-// Load team members visible to the current user
-export async function loadTeamMembers(): Promise<Member[]> {
-  const supabase = createClient()
-
-  const { data, error } = await supabase
-    .from('team_members')
-    .select('id, name, initials, color')
-    .order('created_at')
-
-  if (error) {
-    console.error('Error loading team members:', error)
-    return []
-  }
-
-  return (data || []).map((m) => ({
-    id: m.id,
-    name: m.name,
-    initials: m.initials,
-    color: m.color || 'bg-blue-500',
-  }))
 }
 
 // Get current user's role in a workspace

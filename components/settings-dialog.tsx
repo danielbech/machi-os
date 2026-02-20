@@ -1,9 +1,10 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import type { User } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/client";
 import { removeUserFromWorkspace, getPendingInvites, cancelInvite, type WorkspaceMember } from "@/lib/supabase/workspace";
+import { loadCurrentProfile, updateProfile, uploadAvatar } from "@/lib/supabase/profiles";
 import type { PendingInvite } from "@/lib/types";
 import type { ConnectionWithCalendars } from "@/lib/workspace-context";
 import {
@@ -15,7 +16,7 @@ import {
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Calendar, RefreshCw, Plus, X, ChevronDown } from "lucide-react";
+import { Calendar, RefreshCw, Plus, X, ChevronDown, Camera } from "lucide-react";
 
 interface SettingsDialogProps {
   open: boolean;
@@ -33,6 +34,8 @@ interface SettingsDialogProps {
   onUpdateSelectedCalendars: (connectionId: string, calendarIds: string[]) => Promise<void>;
   // Weekly transition
   onTransitionWeek: () => Promise<{ deleted: number; carriedOver: number }>;
+  // Profile updated callback
+  onProfileUpdate?: () => void;
 }
 
 export function SettingsDialog({
@@ -49,6 +52,7 @@ export function SettingsDialog({
   calendarConnections,
   onUpdateSelectedCalendars,
   onTransitionWeek,
+  onProfileUpdate,
 }: SettingsDialogProps) {
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteRole, setInviteRole] = useState<"admin" | "member">("member");
@@ -59,6 +63,64 @@ export function SettingsDialog({
   const [transitioning, setTransitioning] = useState(false);
   const [transitionResult, setTransitionResult] = useState<string | null>(null);
   const [expandedConnections, setExpandedConnections] = useState<Set<string>>(new Set());
+
+  // Profile state
+  const [profileDisplayName, setProfileDisplayName] = useState("");
+  const [profileInitials, setProfileInitials] = useState("");
+  const [profileColor, setProfileColor] = useState("bg-blue-500");
+  const [profileAvatarUrl, setProfileAvatarUrl] = useState<string | null>(null);
+  const [profileSaving, setProfileSaving] = useState(false);
+  const [avatarUploading, setAvatarUploading] = useState(false);
+  const avatarInputRef = useRef<HTMLInputElement>(null);
+
+  // Load profile when dialog opens
+  useEffect(() => {
+    if (!open || !user) return;
+
+    loadCurrentProfile(user.id).then((profile) => {
+      if (profile) {
+        setProfileDisplayName(profile.display_name);
+        setProfileInitials(profile.initials);
+        setProfileColor(profile.color);
+        setProfileAvatarUrl(profile.avatar_url);
+      }
+    });
+  }, [open, user]);
+
+  const handleAvatarSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !user) return;
+
+    setAvatarUploading(true);
+    try {
+      const url = await uploadAvatar(file, user.id);
+      await updateProfile(user.id, { avatar_url: url });
+      setProfileAvatarUrl(url);
+      onProfileUpdate?.();
+    } catch (err) {
+      console.error('Avatar upload failed:', err);
+    } finally {
+      setAvatarUploading(false);
+      // Reset input so re-selecting the same file triggers onChange
+      if (avatarInputRef.current) avatarInputRef.current.value = '';
+    }
+  };
+
+  const handleProfileSave = async () => {
+    if (!user) return;
+    setProfileSaving(true);
+    try {
+      await updateProfile(user.id, {
+        display_name: profileDisplayName,
+        initials: profileInitials,
+      });
+      onProfileUpdate?.();
+    } catch (err) {
+      console.error('Profile save failed:', err);
+    } finally {
+      setProfileSaving(false);
+    }
+  };
 
   // Load pending invites when dialog opens
   useEffect(() => {
@@ -160,6 +222,80 @@ export function SettingsDialog({
           {/* General Tab */}
           <TabsContent value="general" className="flex-1 min-h-0 overflow-y-auto">
             <div className="space-y-6 py-4">
+              {/* Profile */}
+              <div className="space-y-3">
+                <h3 className="text-sm font-medium">Profile</h3>
+                <div className="p-3 rounded-lg border border-white/5 bg-white/[0.02] space-y-4">
+                  {/* Avatar */}
+                  <div className="flex items-center gap-4">
+                    <button
+                      type="button"
+                      className="relative group shrink-0"
+                      onClick={() => avatarInputRef.current?.click()}
+                      disabled={avatarUploading}
+                      aria-label="Change avatar"
+                    >
+                      {profileAvatarUrl ? (
+                        <img
+                          src={profileAvatarUrl}
+                          alt={profileDisplayName}
+                          className="w-14 h-14 rounded-full object-cover"
+                        />
+                      ) : (
+                        <div className={`w-14 h-14 rounded-full ${profileColor} flex items-center justify-center text-white font-medium text-lg`}>
+                          {profileInitials || '?'}
+                        </div>
+                      )}
+                      <div className="absolute inset-0 rounded-full bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                        <Camera className="size-4 text-white" />
+                      </div>
+                      {avatarUploading && (
+                        <div className="absolute inset-0 rounded-full bg-black/60 flex items-center justify-center">
+                          <RefreshCw className="size-4 text-white animate-spin" />
+                        </div>
+                      )}
+                    </button>
+                    <input
+                      ref={avatarInputRef}
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={handleAvatarSelect}
+                    />
+                    <div className="flex-1 space-y-2">
+                      <div>
+                        <label className="text-xs text-white/40 block mb-1">Display name</label>
+                        <Input
+                          value={profileDisplayName}
+                          onChange={(e) => setProfileDisplayName(e.target.value)}
+                          placeholder="Your name"
+                          className="h-8"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-xs text-white/40 block mb-1">Initials</label>
+                        <Input
+                          value={profileInitials}
+                          onChange={(e) => setProfileInitials(e.target.value.toUpperCase().slice(0, 3))}
+                          placeholder="AB"
+                          maxLength={3}
+                          className="h-8 w-20"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="w-full justify-center border border-white/10"
+                    disabled={profileSaving}
+                    onClick={handleProfileSave}
+                  >
+                    {profileSaving ? 'Saving...' : 'Save profile'}
+                  </Button>
+                </div>
+              </div>
+
               {/* Week Transition */}
               <div className="space-y-3">
                 <h3 className="text-sm font-medium">Week Transition</h3>

@@ -1,8 +1,15 @@
 import { createClient } from './client'
+import { getOrCreateProfile } from './profiles'
 
 // Initialize default project and area for new users
 export async function initializeUserData(userId: string) {
   const supabase = createClient()
+
+  // Ensure the user has a profile
+  const { data: { user } } = await supabase.auth.getUser()
+  if (user?.email) {
+    await getOrCreateProfile(userId, user.email)
+  }
 
   // Accept any pending invites for this user
   await supabase.rpc('accept_pending_invites').then(({ error }) => {
@@ -64,17 +71,6 @@ export async function initializeUserData(userId: string) {
     throw areaError
   }
 
-  // Create default team members
-  const { error: teamError } = await supabase.from('team_members').insert([
-    { user_id: userId, name: 'Daniel', initials: 'DB', color: 'bg-blue-500' },
-    { user_id: userId, name: 'Casper', initials: 'C', color: 'bg-green-500' },
-    { user_id: userId, name: 'Jens', initials: 'J', color: 'bg-purple-500' },
-    { user_id: userId, name: 'Emil', initials: 'E', color: 'bg-orange-500' },
-  ])
-
-  if (teamError) {
-    console.error('Error creating team members:', teamError)
-  }
 }
 
 // Get area ID for a specific project
