@@ -24,6 +24,7 @@ export function BacklogShell() {
     renameFolder,
     deleteFolder,
     reorderBacklogTasks,
+    createProject,
   } = useWorkspace();
 
   const [editingTask, setEditingTask] = useState<Task | null>(null);
@@ -93,6 +94,7 @@ export function BacklogShell() {
             onRenameFolder={renameFolder}
             onDeleteFolder={deleteFolder}
             onReorderTasks={reorderBacklogTasks}
+            onCreateProject={createProject}
           />
         </div>
 

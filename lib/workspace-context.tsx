@@ -6,7 +6,7 @@ import type { Project, Client, Task, BacklogFolder } from "@/lib/types";
 import { createClient } from "@/lib/supabase/client";
 import { initializeUserData } from "@/lib/supabase/initialize";
 import { getUserWorkspaces } from "@/lib/supabase/workspace";
-import { loadClients } from "@/lib/supabase/clients";
+import { loadClients, createClientRecord } from "@/lib/supabase/clients";
 import {
   initiateGoogleAuth,
   fetchGoogleEmail,
@@ -41,6 +41,7 @@ interface WorkspaceContextValue {
   activeProject: Project | undefined;
   clients: Client[];
   refreshClients: () => Promise<void>;
+  createProject: (name: string) => Promise<void>;
   // Google Calendar
   googleCalendarConnected: boolean;
   calendarEvents: Record<string, CalendarEvent[]>;
@@ -229,6 +230,19 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     refreshClients();
   }, [refreshClients]);
+
+  const createProject = useCallback(async (name: string) => {
+    if (!activeProjectId) return;
+    const slug = name.charAt(0).toLowerCase();
+    await createClientRecord(activeProjectId, {
+      name,
+      slug,
+      color: "blue",
+      sort_order: clients.length,
+      active: true,
+    });
+    await refreshClients();
+  }, [activeProjectId, clients.length, refreshClients]);
 
   // --- Backlog ---
 
@@ -692,6 +706,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
         activeProject,
         clients,
         refreshClients,
+        createProject,
         googleCalendarConnected,
         calendarEvents,
         syncCalendarEvents,
