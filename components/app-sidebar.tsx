@@ -24,7 +24,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { LayoutDashboard, FolderKanban, Inbox, Settings, Check, ChevronDown, MessageSquarePlus } from "lucide-react";
+import { LayoutDashboard, FolderKanban, Inbox, Settings, Check, ChevronDown, MessageSquarePlus, CalendarRange } from "lucide-react";
 
 export function AppSidebar() {
   const pathname = usePathname();
@@ -138,6 +138,14 @@ export function AppSidebar() {
                     <Link href="/projects" onClick={() => setOpenMobile(false)}>
                       <FolderKanban />
                       <span>Projects</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+                <SidebarMenuItem>
+                  <SidebarMenuButton asChild isActive={pathname === "/timeline"} tooltip="Timeline">
+                    <Link href="/timeline" onClick={() => setOpenMobile(false)}>
+                      <CalendarRange />
+                      <span>Timeline</span>
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>

@@ -68,6 +68,18 @@ export interface PendingInvite {
 export type FeedbackCategory = "idea" | "bug" | "feedback";
 export type FeedbackStatus = "open" | "resolved";
 
+export interface TimelineEntry {
+  id: string;
+  project_id: string;
+  client_id: string;
+  title: string;
+  start_date: string;
+  end_date: string;
+  color: string;
+  sort_order: number;
+  created_at: string;
+}
+
 export interface FeedbackTicket {
   id: string;
   user_id: string;

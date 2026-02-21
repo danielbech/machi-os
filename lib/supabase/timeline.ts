@@ -1,0 +1,98 @@
+import { createClient } from './client'
+import type { TimelineEntry } from '../types'
+
+export async function loadTimelineEntries(projectId: string): Promise<TimelineEntry[]> {
+  const supabase = createClient()
+
+  const { data, error } = await supabase
+    .from('timeline_entries')
+    .select('id, project_id, client_id, title, start_date, end_date, color, sort_order, created_at')
+    .eq('project_id', projectId)
+    .order('sort_order')
+
+  if (error) {
+    console.error('Error loading timeline entries:', error)
+    return []
+  }
+
+  return (data || []).map(e => ({
+    id: e.id,
+    project_id: e.project_id,
+    client_id: e.client_id,
+    title: e.title,
+    start_date: e.start_date,
+    end_date: e.end_date,
+    color: e.color,
+    sort_order: e.sort_order,
+    created_at: e.created_at,
+  }))
+}
+
+export async function createTimelineEntry(
+  projectId: string,
+  entry: { client_id: string; title: string; start_date: string; end_date: string; color: string; sort_order: number }
+): Promise<TimelineEntry> {
+  const supabase = createClient()
+
+  const { data, error } = await supabase
+    .from('timeline_entries')
+    .insert({
+      project_id: projectId,
+      client_id: entry.client_id,
+      title: entry.title,
+      start_date: entry.start_date,
+      end_date: entry.end_date,
+      color: entry.color,
+      sort_order: entry.sort_order,
+    })
+    .select()
+    .single()
+
+  if (error) {
+    console.error('Error creating timeline entry:', error)
+    throw error
+  }
+
+  return {
+    id: data.id,
+    project_id: data.project_id,
+    client_id: data.client_id,
+    title: data.title,
+    start_date: data.start_date,
+    end_date: data.end_date,
+    color: data.color,
+    sort_order: data.sort_order,
+    created_at: data.created_at,
+  }
+}
+
+export async function updateTimelineEntry(
+  entryId: string,
+  updates: { title?: string; start_date?: string; end_date?: string; color?: string; sort_order?: number }
+): Promise<void> {
+  const supabase = createClient()
+
+  const { error } = await supabase
+    .from('timeline_entries')
+    .update(updates)
+    .eq('id', entryId)
+
+  if (error) {
+    console.error('Error updating timeline entry:', error)
+    throw error
+  }
+}
+
+export async function deleteTimelineEntry(entryId: string): Promise<void> {
+  const supabase = createClient()
+
+  const { error } = await supabase
+    .from('timeline_entries')
+    .delete()
+    .eq('id', entryId)
+
+  if (error) {
+    console.error('Error deleting timeline entry:', error)
+    throw error
+  }
+}

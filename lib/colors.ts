@@ -50,6 +50,19 @@ export const CLIENT_RGB_COLORS: Record<string, string> = {
   cyan: "34, 211, 238",
 };
 
+// Hex values for components that need raw hex (e.g. Gantt chart status dots)
+export const CLIENT_HEX_COLORS: Record<string, string> = {
+  white: "#ffffff",
+  blue: "#3b82f6",
+  green: "#22c55e",
+  purple: "#a855f7",
+  orange: "#f97316",
+  pink: "#ec4899",
+  red: "#ef4444",
+  yellow: "#eab308",
+  cyan: "#06b6d4",
+};
+
 export const COLOR_NAMES = Object.keys(CLIENT_COLORS);
 
 export function getClientClassName(color: string): string {
