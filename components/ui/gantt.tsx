@@ -339,7 +339,7 @@ export const GanttContentHeader: FC<GanttContentHeaderProps> = ({
       >
         {Array.from({ length: columns }).map((_, index) => (
           <div
-            className="shrink-0 border-border/50 border-b py-1 text-center text-xs"
+            className="shrink-0 border-white/[0.06] border-b py-1 text-center text-xs"
             key={`${id}-${index}`}
           >
             {renderHeaderItem(index)}
@@ -448,7 +448,7 @@ export const GanttHeader: FC<GanttHeaderProps> = ({ className }) => {
   return (
     <div
       className={cn(
-        "-space-x-px flex h-full w-max divide-x divide-border/50",
+        "-space-x-px flex h-full w-max divide-x divide-white/[0.06]",
         className
       )}
     >
@@ -522,7 +522,7 @@ export const GanttSidebarItem: FC<GanttSidebarItemProps> = ({
 
 export const GanttSidebarHeader: FC = () => (
   <div
-    className="sticky top-0 z-10 flex shrink-0 items-end justify-between gap-2.5 border-border/50 border-b bg-background/90 p-2.5 font-medium text-muted-foreground text-xs backdrop-blur-sm"
+    className="sticky top-0 z-10 flex shrink-0 items-end justify-between gap-2.5 border-white/[0.06] border-b bg-background/90 p-2.5 font-medium text-muted-foreground text-xs backdrop-blur-sm"
     style={{ height: "var(--gantt-header-height)" }}
   >
     <p className="flex-1 truncate text-left">Issues</p>
@@ -548,7 +548,7 @@ export const GanttSidebarGroup: FC<GanttSidebarGroupProps> = ({
     >
       {name}
     </p>
-    <div className="divide-y divide-border/50">{children}</div>
+    <div className="divide-y divide-white/[0.06]">{children}</div>
   </div>
 );
 
@@ -563,7 +563,7 @@ export const GanttSidebar: FC<GanttSidebarProps> = ({
 }) => (
   <div
     className={cn(
-      "sticky left-0 z-30 h-max min-h-full overflow-clip border-border/50 border-r bg-background/90 backdrop-blur-md",
+      "sticky left-0 z-30 h-max min-h-full overflow-clip border-white/[0.06] border-r bg-background/90 backdrop-blur-md",
       className
     )}
     data-roadmap-ui="gantt-sidebar"
@@ -673,7 +673,7 @@ export const GanttColumns: FC<GanttColumnsProps> = ({
 
   return (
     <div
-      className="divide grid h-full w-full divide-x divide-border/50"
+      className="divide grid h-full w-full divide-x divide-white/[0.06]"
       style={{
         gridTemplateColumns: `repeat(${columns}, var(--gantt-column-width))`,
       }}
@@ -731,7 +731,7 @@ export const GanttCreateMarkerTrigger: FC<GanttCreateMarkerTriggerProps> = ({
         >
           <PlusIcon className="text-muted-foreground" size={12} />
         </button>
-        <div className="whitespace-nowrap rounded-full border border-border/50 bg-background/90 px-2 py-1 text-foreground text-xs backdrop-blur-lg">
+        <div className="whitespace-nowrap rounded-full border border-white/[0.06] bg-background/90 px-2 py-1 text-foreground text-xs backdrop-blur-lg">
           {formatDate(date, "MMM dd, yyyy")}
         </div>
       </div>
@@ -782,7 +782,7 @@ export const GanttFeatureDragHelper: FC<GanttFeatureDragHelperProps> = ({
       {date && (
         <div
           className={cn(
-            "-translate-x-1/2 absolute top-10 hidden whitespace-nowrap rounded-lg border border-border/50 bg-background/90 px-2 py-1 text-foreground text-xs backdrop-blur-lg group-hover:block",
+            "-translate-x-1/2 absolute top-10 hidden whitespace-nowrap rounded-lg border border-white/[0.06] bg-background/90 px-2 py-1 text-foreground text-xs backdrop-blur-lg group-hover:block",
             isPressed && "block"
           )}
         >
@@ -808,7 +808,7 @@ export const GanttFeatureItemCard: FC<GanttFeatureItemCardProps> = ({
   useEffect(() => setDragging(isPressed), [isPressed, setDragging]);
 
   return (
-    <Card className="h-full w-full rounded-md bg-background p-2 text-xs shadow-sm">
+    <Card className="h-full w-full rounded-md border-white/10 bg-background p-2 text-xs shadow-sm">
       <div
         className={cn(
           "flex h-full w-full items-center justify-between gap-2 text-left",

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { parseISO, format, addDays } from "date-fns";
+import { parseISO, format, addDays, isSameDay, formatDistance } from "date-fns";
 import { useWorkspace } from "@/lib/workspace-context";
 import {
   loadTimelineEntries,
@@ -9,18 +9,21 @@ import {
   updateTimelineEntry,
   deleteTimelineEntry,
 } from "@/lib/supabase/timeline";
-import { CLIENT_HEX_COLORS } from "@/lib/colors";
+import { CLIENT_HEX_COLORS, CLIENT_DOT_COLORS } from "@/lib/colors";
+import { ClientIcon } from "@/components/client-icon";
 import type { TimelineEntry, Client } from "@/lib/types";
-import type { GanttFeature, Range } from "@/components/ui/gantt";
+import type { GanttFeature, Range, GanttMarkerProps } from "@/components/ui/gantt";
 import {
   GanttProvider,
   GanttSidebar,
-  GanttSidebarItem,
+  GanttSidebarHeader,
   GanttTimeline,
   GanttHeader,
   GanttFeatureList,
   GanttFeatureItem,
   GanttToday,
+  GanttMarker,
+  GanttCreateMarkerTrigger,
 } from "@/components/ui/gantt";
 import { Button } from "@/components/ui/button";
 import {
@@ -55,11 +58,42 @@ function toFeature(entry: TimelineEntry, clients: Client[]): GanttFeature {
   };
 }
 
+function ClientAvatar({ client, size = "sm" }: { client: Client; size?: "sm" | "xs" }) {
+  const dim = size === "sm" ? "size-6" : "size-4";
+  const textSize = size === "sm" ? "text-[9px]" : "text-[7px]";
+  const iconSize = size === "sm" ? "size-3.5" : "size-2.5";
+
+  if (client.logo_url) {
+    return (
+      <img
+        src={client.logo_url}
+        alt={client.name}
+        className={`${dim} rounded shrink-0 object-cover bg-white/5`}
+      />
+    );
+  }
+
+  return (
+    <div
+      className={`${dim} rounded ${CLIENT_DOT_COLORS[client.color] || "bg-blue-500"} flex items-center justify-center text-white shrink-0`}
+    >
+      {client.icon ? (
+        <ClientIcon icon={client.icon} className={iconSize} />
+      ) : (
+        <span className={`font-bold ${textSize}`}>
+          {client.name.charAt(0).toUpperCase()}
+        </span>
+      )}
+    </div>
+  );
+}
+
 export default function TimelinePage() {
   const { activeProjectId, clients } = useWorkspace();
   const [entries, setEntries] = useState<TimelineEntry[]>([]);
   const [range, setRange] = useState<Range>("monthly");
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [markers, setMarkers] = useState<GanttMarkerProps[]>([]);
 
   const activeClients = clients.filter((c) => c.active);
   const clientsOnTimeline = new Set(entries.map((e) => e.client_id));
@@ -68,6 +102,8 @@ export default function TimelinePage() {
   );
 
   const features = entries.map((e) => toFeature(e, clients));
+
+  const clientMap = new Map(clients.map((c) => [c.id, c]));
 
   const loadEntries = useCallback(async () => {
     if (!activeProjectId) return;
@@ -151,6 +187,21 @@ export default function TimelinePage() {
     }
   };
 
+  const handleCreateMarker = (date: Date) => {
+    setMarkers((prev) => [
+      ...prev,
+      {
+        id: `marker-${Date.now()}`,
+        date,
+        label: format(date, "MMM d"),
+      },
+    ]);
+  };
+
+  const handleRemoveMarker = (id: string) => {
+    setMarkers((prev) => prev.filter((m) => m.id !== id));
+  };
+
   const RANGE_OPTIONS: { value: Range; label: string }[] = [
     { value: "daily", label: "Daily" },
     { value: "monthly", label: "Monthly" },
@@ -201,18 +252,52 @@ export default function TimelinePage() {
           </div>
         </div>
       ) : (
-        <div className="flex-1 min-h-0 h-[calc(100vh-160px)] rounded-lg border border-white/5 overflow-hidden">
+        <div className="flex-1 min-h-0 h-[calc(100vh-160px)] rounded-lg border border-white/[0.06] overflow-hidden">
           <GanttProvider range={range}>
             <GanttSidebar>
-              {features.map((feature) => (
-                <GanttSidebarItem key={feature.id} feature={feature} />
-              ))}
+              {entries.map((entry) => {
+                const client = clientMap.get(entry.client_id);
+                const feature = features.find((f) => f.id === entry.id);
+                if (!feature) return null;
+
+                const tempEndAt =
+                  feature.endAt && isSameDay(feature.startAt, feature.endAt)
+                    ? addDays(feature.endAt, 1)
+                    : feature.endAt;
+                const duration = tempEndAt
+                  ? formatDistance(feature.startAt, tempEndAt)
+                  : `${formatDistance(feature.startAt, new Date())} so far`;
+
+                return (
+                  <div
+                    key={entry.id}
+                    className="relative flex items-center gap-2.5 p-2.5 text-xs hover:bg-secondary"
+                    style={{ height: "var(--gantt-row-height)" }}
+                  >
+                    {client ? (
+                      <ClientAvatar client={client} size="sm" />
+                    ) : (
+                      <div
+                        className="h-2 w-2 shrink-0 rounded-full"
+                        style={{ backgroundColor: feature.status.color }}
+                      />
+                    )}
+                    <p className="pointer-events-none flex-1 truncate text-left font-medium">
+                      {feature.name}
+                    </p>
+                    <p className="pointer-events-none text-muted-foreground">
+                      {duration}
+                    </p>
+                  </div>
+                );
+              })}
             </GanttSidebar>
             <GanttTimeline>
               <GanttHeader />
               <GanttFeatureList>
                 {features.map((feature) => {
                   const entry = entries.find((e) => e.id === feature.id);
+                  const client = entry ? clientMap.get(entry.client_id) : undefined;
                   return (
                     <ContextMenu key={feature.id}>
                       <ContextMenuTrigger asChild>
@@ -221,12 +306,16 @@ export default function TimelinePage() {
                             {...feature}
                             onMove={handleMove}
                           >
-                            <div
-                              className="h-2 w-2 shrink-0 rounded-full"
-                              style={{
-                                backgroundColor: feature.status.color,
-                              }}
-                            />
+                            {client ? (
+                              <ClientAvatar client={client} size="xs" />
+                            ) : (
+                              <div
+                                className="h-2 w-2 shrink-0 rounded-full"
+                                style={{
+                                  backgroundColor: feature.status.color,
+                                }}
+                              />
+                            )}
                             <p className="flex-1 truncate text-xs">
                               {feature.name}
                             </p>
@@ -248,6 +337,14 @@ export default function TimelinePage() {
                   );
                 })}
               </GanttFeatureList>
+              <GanttCreateMarkerTrigger onCreateMarker={handleCreateMarker} />
+              {markers.map((marker) => (
+                <GanttMarker
+                  key={marker.id}
+                  {...marker}
+                  onRemove={handleRemoveMarker}
+                />
+              ))}
               <GanttToday />
             </GanttTimeline>
           </GanttProvider>
@@ -272,14 +369,7 @@ export default function TimelinePage() {
                   onClick={() => handleAddClient(client)}
                   className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left hover:bg-white/5 transition-colors"
                 >
-                  <div
-                    className="h-2.5 w-2.5 rounded-full shrink-0"
-                    style={{
-                      backgroundColor:
-                        CLIENT_HEX_COLORS[client.color] ||
-                        CLIENT_HEX_COLORS.blue,
-                    }}
-                  />
+                  <ClientAvatar client={client} size="sm" />
                   <span className="text-sm font-medium">{client.name}</span>
                 </button>
               ))
