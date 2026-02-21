@@ -27,7 +27,7 @@ import {
 } from "date-fns";
 import { atom, useAtom } from "jotai";
 import throttle from "lodash.throttle";
-import { PlusIcon, TrashIcon } from "lucide-react";
+import { PlusIcon } from "lucide-react";
 import type {
   CSSProperties,
   FC,
@@ -48,12 +48,6 @@ import {
   useState,
 } from "react";
 import { Card } from "@/components/ui/card";
-import {
-  ContextMenu,
-  ContextMenuContent,
-  ContextMenuItem,
-  ContextMenuTrigger,
-} from "@/components/ui/context-menu";
 import { cn } from "@/lib/utils";
 
 const draggingAtom = atom(false);
@@ -1112,32 +1106,21 @@ export const GanttMarker: FC<
         transform: `translateX(calc(var(--gantt-column-width) * ${offset} + ${innerOffset}px))`,
       }}
     >
-      <ContextMenu>
-        <ContextMenuTrigger asChild>
-          <div
-            className={cn(
-              "group pointer-events-auto sticky top-0 flex select-auto flex-col flex-nowrap items-center justify-center whitespace-nowrap rounded-b-md border border-white/[0.06] bg-white/10 px-2 py-1 text-foreground text-xs backdrop-blur-sm",
-              className
-            )}
-          >
-            {label}
-            <span className="max-h-[0] overflow-hidden opacity-80 transition-all group-hover:max-h-[2rem]">
-              {formatDate(date, "MMM dd, yyyy")}
-            </span>
-          </div>
-        </ContextMenuTrigger>
-        <ContextMenuContent>
-          {onRemove ? (
-            <ContextMenuItem
-              className="flex items-center gap-2 text-destructive"
-              onClick={handleRemove}
-            >
-              <TrashIcon size={16} />
-              Remove marker
-            </ContextMenuItem>
-          ) : null}
-        </ContextMenuContent>
-      </ContextMenu>
+      <div
+        className={cn(
+          "group pointer-events-auto sticky top-0 flex select-auto flex-col flex-nowrap items-center justify-center whitespace-nowrap rounded-b-md border border-white/[0.06] bg-white/10 px-2 py-1 text-foreground text-xs backdrop-blur-sm cursor-pointer hover:bg-white/15 transition-colors",
+          className
+        )}
+        onClick={handleRemove}
+        role="button"
+        tabIndex={0}
+        onKeyDown={(e) => e.key === "Enter" && handleRemove()}
+      >
+        {label}
+        <span className="max-h-[0] overflow-hidden opacity-80 transition-all group-hover:max-h-[2rem]">
+          {formatDate(date, "MMM dd, yyyy")}
+        </span>
+      </div>
       <div className="h-full w-px bg-white/20" />
     </div>
   );
