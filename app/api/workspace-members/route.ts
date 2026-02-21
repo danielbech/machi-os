@@ -69,13 +69,29 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    const members = (memberships || []).map((m) => ({
-      id: m.id,
-      user_id: m.user_id,
-      role: m.role,
-      created_at: m.created_at,
-      email: emailMap[m.user_id] || null,
-    }));
+    // Fetch profiles for avatar/display_name
+    const { data: profiles } = await admin
+      .from("profiles")
+      .select("user_id, display_name, avatar_url, color")
+      .in("user_id", userIds);
+
+    const profileMap = new Map(
+      (profiles || []).map((p: any) => [p.user_id, p])
+    );
+
+    const members = (memberships || []).map((m) => {
+      const profile = profileMap.get(m.user_id);
+      return {
+        id: m.id,
+        user_id: m.user_id,
+        role: m.role,
+        created_at: m.created_at,
+        email: emailMap[m.user_id] || null,
+        display_name: profile?.display_name || null,
+        avatar_url: profile?.avatar_url || null,
+        color: profile?.color || null,
+      };
+    });
 
     return NextResponse.json({ members });
   } catch (err) {

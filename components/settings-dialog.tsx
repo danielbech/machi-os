@@ -16,7 +16,7 @@ import {
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Calendar, RefreshCw, Plus, X, ChevronDown, Camera } from "lucide-react";
+import { Calendar, RefreshCw, Plus, X, ChevronDown, Camera, User as UserIcon } from "lucide-react";
 
 interface SettingsDialogProps {
   open: boolean;
@@ -215,8 +215,8 @@ export function SettingsDialog({
         <Tabs defaultValue="general" className="flex-1 min-h-0 flex flex-col">
           <TabsList variant="line" className="border-b border-white/5 px-0">
             <TabsTrigger value="general" className="text-white/40 data-[state=active]:text-white after:bg-white">General</TabsTrigger>
+            <TabsTrigger value="workspace" className="text-white/40 data-[state=active]:text-white after:bg-white">Workspace</TabsTrigger>
             <TabsTrigger value="calendar" className="text-white/40 data-[state=active]:text-white after:bg-white">Calendar</TabsTrigger>
-            <TabsTrigger value="team" className="text-white/40 data-[state=active]:text-white after:bg-white">Team</TabsTrigger>
           </TabsList>
 
           {/* General Tab */}
@@ -471,9 +471,70 @@ export function SettingsDialog({
             </div>
           </TabsContent>
 
-          {/* Team Tab */}
-          <TabsContent value="team" className="flex-1 min-h-0 overflow-y-auto">
+          {/* Workspace Tab */}
+          <TabsContent value="workspace" className="flex-1 min-h-0 overflow-y-auto">
             <div className="space-y-3 py-4">
+              {/* Members list */}
+              <div className="space-y-2">
+                <div className="text-xs text-white/40 px-1">Members</div>
+                {workspaceMembers.map((member) => (
+                  <div
+                    key={member.id}
+                    className="flex items-center gap-3 p-3 rounded-lg border border-white/5 bg-white/[0.02]"
+                  >
+                    {member.avatar_url ? (
+                      <img
+                        src={member.avatar_url}
+                        alt={member.display_name || ''}
+                        className="size-8 rounded-full object-cover shrink-0"
+                      />
+                    ) : (
+                      <div className="size-8 rounded-full bg-white/[0.06] flex items-center justify-center shrink-0">
+                        <UserIcon className="size-4 text-white/30" />
+                      </div>
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <div className="text-sm font-medium flex items-center gap-2">
+                        <span className="truncate">{member.display_name || member.email || member.user_id}</span>
+                        {member.role === 'owner' && (
+                          <span className="text-xs px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-400 shrink-0">
+                            Owner
+                          </span>
+                        )}
+                        {member.role === 'admin' && (
+                          <span className="text-xs px-1.5 py-0.5 rounded bg-purple-500/20 text-purple-400 shrink-0">
+                            Admin
+                          </span>
+                        )}
+                      </div>
+                      {member.display_name && member.email && (
+                        <div className="text-xs text-white/40 truncate">{member.email}</div>
+                      )}
+                    </div>
+                    {member.role !== 'owner' && (
+                      <Button
+                        size="sm"
+                        variant="destructive-ghost"
+                        className="shrink-0"
+                        onClick={async () => {
+                          if (confirm('Remove this member from the workspace?')) {
+                            try {
+                              await removeUserFromWorkspace(member.id);
+                              onMembersChange(workspaceMembers.filter(m => m.id !== member.id));
+                            } catch (error) {
+                              console.error('Failed to remove member:', error);
+                              alert('Failed to remove member');
+                            }
+                          }
+                        }}
+                      >
+                        Remove
+                      </Button>
+                    )}
+                  </div>
+                ))}
+              </div>
+
               {/* Invite form */}
               <div className="p-3 rounded-lg border border-white/5 bg-white/[0.02] space-y-3">
                 <div className="text-xs text-white/40">
@@ -509,54 +570,6 @@ export function SettingsDialog({
                     {inviteMessage.text}
                   </div>
                 )}
-              </div>
-
-              {/* Members list */}
-              <div className="space-y-2">
-                {workspaceMembers.map((member) => (
-                  <div
-                    key={member.id}
-                    className="flex items-center justify-between p-3 rounded-lg border border-white/5 bg-white/[0.02]"
-                  >
-                    <div>
-                      <div className="text-sm font-medium">
-                        {member.email || member.user_id}
-                        {member.role === 'owner' && (
-                          <span className="ml-2 text-xs px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-400">
-                            Owner
-                          </span>
-                        )}
-                        {member.role === 'admin' && (
-                          <span className="ml-2 text-xs px-1.5 py-0.5 rounded bg-purple-500/20 text-purple-400">
-                            Admin
-                          </span>
-                        )}
-                      </div>
-                      <div className="text-xs text-white/40">
-                        Joined {new Date(member.created_at).toLocaleDateString()}
-                      </div>
-                    </div>
-                    {member.role !== 'owner' && (
-                      <Button
-                        size="sm"
-                        variant="destructive-ghost"
-                        onClick={async () => {
-                          if (confirm('Remove this member from the workspace?')) {
-                            try {
-                              await removeUserFromWorkspace(member.id);
-                              onMembersChange(workspaceMembers.filter(m => m.id !== member.id));
-                            } catch (error) {
-                              console.error('Failed to remove member:', error);
-                              alert('Failed to remove member');
-                            }
-                          }
-                        }}
-                      >
-                        Remove
-                      </Button>
-                    )}
-                  </div>
-                ))}
               </div>
 
               {/* Pending invites */}

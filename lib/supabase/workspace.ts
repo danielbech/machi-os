@@ -7,6 +7,9 @@ export interface WorkspaceMember {
   role: 'owner' | 'admin' | 'member'
   created_at: string
   email?: string
+  display_name?: string
+  avatar_url?: string | null
+  color?: string
 }
 
 // Get all workspaces the current user is a member of
