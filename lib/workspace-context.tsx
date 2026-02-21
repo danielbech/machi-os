@@ -81,6 +81,7 @@ interface WorkspaceContextValue {
   weekMode: WeekMode;
   setWeekMode: (mode: WeekMode) => Promise<void>;
   weekDays: DayName[];
+  refreshWorkspaces: () => Promise<void>;
 }
 
 const WorkspaceContext = createContext<WorkspaceContextValue | null>(null);
@@ -191,6 +192,18 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     setActiveProjectIdState(id);
     localStorage.setItem("machi-active-project", id);
   }, []);
+
+  const refreshWorkspaces = useCallback(async () => {
+    const projects = await getUserWorkspaces();
+    setUserProjects(projects);
+    // If active project was deleted, switch to first available
+    const activeStillExists = projects.find((p) => p.id === activeProjectId);
+    if (!activeStillExists && projects.length > 0) {
+      const newId = projects[0].id;
+      setActiveProjectIdState(newId);
+      localStorage.setItem("machi-active-project", newId);
+    }
+  }, [activeProjectId]);
 
   // Auth check
   useEffect(() => {
@@ -828,6 +841,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
         weekMode,
         setWeekMode,
         weekDays,
+        refreshWorkspaces,
       }}
     >
       {children}

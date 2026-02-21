@@ -163,3 +163,21 @@ export async function getCurrentUserRole(projectId: string): Promise<string | nu
 
   return data?.role || null
 }
+
+// Update workspace name and/or color
+export async function updateWorkspace(
+  projectId: string,
+  updates: { name?: string; color?: string }
+): Promise<void> {
+  const supabase = createClient()
+
+  const { error } = await supabase
+    .from('projects')
+    .update(updates)
+    .eq('id', projectId)
+
+  if (error) {
+    console.error('Error updating workspace:', error)
+    throw error
+  }
+}

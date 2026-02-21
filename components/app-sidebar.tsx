@@ -24,7 +24,9 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { LayoutDashboard, FolderKanban, Inbox, Settings, Check, ChevronDown, MessageSquarePlus, CalendarRange } from "lucide-react";
+import { DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
+import { CreateWorkspaceDialog } from "@/components/create-workspace-dialog";
+import { LayoutDashboard, FolderKanban, Inbox, Settings, Check, ChevronDown, MessageSquarePlus, CalendarRange, Plus } from "lucide-react";
 
 export function AppSidebar() {
   const pathname = usePathname();
@@ -34,9 +36,11 @@ export function AppSidebar() {
     syncCalendarEvents, calendarConnections, updateSelectedCalendars,
     backlogOpen, toggleBacklog, transitionToNextWeek, refreshTeamMembers,
     weekMode, setWeekMode, transitionDay, transitionHour, setTransitionSchedule,
+    refreshWorkspaces,
   } = useWorkspace();
   const { setOpenMobile } = useSidebar();
   const [showSettings, setShowSettings] = useState(false);
+  const [showCreateWorkspace, setShowCreateWorkspace] = useState(false);
   const [workspaceMembers, setWorkspaceMembers] = useState<WorkspaceMember[]>([]);
 
   const handleOpenSettings = async () => {
@@ -60,58 +64,51 @@ export function AppSidebar() {
         <SidebarHeader>
           <SidebarMenu>
             <SidebarMenuItem>
-              {userProjects.length > 1 ? (
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <SidebarMenuButton size="lg" className="cursor-pointer">
-                      <div
-                        className="group flex aspect-square size-8 items-center justify-center rounded-lg"
-                        style={{ backgroundColor: activeProject?.color || "#3b82f6" }}
-                      >
-                        <img src="/logo.svg" alt="Machi OS" className="size-6 invert transition-transform duration-200 group-hover:scale-110" />
-                      </div>
-                      <div className="flex flex-col gap-0.5 leading-none">
-                        <span className="font-semibold">{activeProject?.name || "Machi OS"}</span>
-                        <span className="text-xs text-sidebar-foreground/60">Workspace</span>
-                      </div>
-                      <ChevronDown className="ml-auto size-4 opacity-50" />
-                    </SidebarMenuButton>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="start" className="min-w-[200px]">
-                    {userProjects.map((project) => (
-                      <DropdownMenuItem
-                        key={project.id}
-                        onClick={() => setActiveProjectId(project.id)}
-                        className="flex items-center gap-2"
-                      >
-                        <span
-                          className="inline-block w-2.5 h-2.5 rounded-full shrink-0"
-                          style={{ backgroundColor: project.color }}
-                        />
-                        <span className={project.id === activeProjectId ? "font-semibold" : ""}>
-                          {project.name}
-                        </span>
-                        {project.id === activeProjectId && (
-                          <Check className="size-4 ml-auto text-white/60" />
-                        )}
-                      </DropdownMenuItem>
-                    ))}
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              ) : (
-                <SidebarMenuButton size="lg" className="pointer-events-none">
-                  <div
-                    className="group flex aspect-square size-8 items-center justify-center rounded-lg"
-                    style={{ backgroundColor: activeProject?.color || "#3b82f6" }}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <SidebarMenuButton size="lg" className="cursor-pointer">
+                    <div
+                      className="group flex aspect-square size-8 items-center justify-center rounded-lg"
+                      style={{ backgroundColor: activeProject?.color || "#3b82f6" }}
+                    >
+                      <img src="/logo.svg" alt="Machi OS" className="size-6 invert transition-transform duration-200 group-hover:scale-110" />
+                    </div>
+                    <div className="flex flex-col gap-0.5 leading-none">
+                      <span className="font-semibold">{activeProject?.name || "Machi OS"}</span>
+                      <span className="text-xs text-sidebar-foreground/60">Workspace</span>
+                    </div>
+                    <ChevronDown className="ml-auto size-4 opacity-50" />
+                  </SidebarMenuButton>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start" className="min-w-[200px]">
+                  {userProjects.map((project) => (
+                    <DropdownMenuItem
+                      key={project.id}
+                      onClick={() => setActiveProjectId(project.id)}
+                      className="flex items-center gap-2"
+                    >
+                      <span
+                        className="inline-block w-2.5 h-2.5 rounded-full shrink-0"
+                        style={{ backgroundColor: project.color }}
+                      />
+                      <span className={project.id === activeProjectId ? "font-semibold" : ""}>
+                        {project.name}
+                      </span>
+                      {project.id === activeProjectId && (
+                        <Check className="size-4 ml-auto text-white/60" />
+                      )}
+                    </DropdownMenuItem>
+                  ))}
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    onClick={() => setShowCreateWorkspace(true)}
+                    className="flex items-center gap-2"
                   >
-                    <img src="/logo.svg" alt="Machi OS" className="size-6 invert transition-transform duration-200 group-hover:scale-110" />
-                  </div>
-                  <div className="flex flex-col gap-0.5 leading-none">
-                    <span className="font-semibold">{activeProject?.name || "Machi OS"}</span>
-                    <span className="text-xs text-sidebar-foreground/60">Workspace</span>
-                  </div>
-                </SidebarMenuButton>
-              )}
+                    <Plus className="size-4" />
+                    <span>New workspace</span>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </SidebarMenuItem>
           </SidebarMenu>
         </SidebarHeader>
@@ -196,8 +193,16 @@ export function AppSidebar() {
           weekMode={weekMode}
           onWeekModeChange={setWeekMode}
           onProfileUpdate={refreshTeamMembers}
+          activeProject={activeProject}
+          refreshWorkspaces={refreshWorkspaces}
+          userProjectCount={userProjects.length}
         />
       )}
+
+      <CreateWorkspaceDialog
+        open={showCreateWorkspace}
+        onOpenChange={setShowCreateWorkspace}
+      />
     </>
   );
 }

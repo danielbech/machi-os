@@ -3,9 +3,10 @@
 import { useState, useEffect, useRef } from "react";
 import type { User } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/client";
-import { removeUserFromWorkspace, getPendingInvites, cancelInvite, type WorkspaceMember } from "@/lib/supabase/workspace";
+import { removeUserFromWorkspace, getPendingInvites, cancelInvite, updateWorkspace, type WorkspaceMember } from "@/lib/supabase/workspace";
 import { loadCurrentProfile, updateProfile, uploadAvatar } from "@/lib/supabase/profiles";
-import type { PendingInvite, WeekMode } from "@/lib/types";
+import { WORKSPACE_COLORS } from "@/lib/colors";
+import type { PendingInvite, WeekMode, Project } from "@/lib/types";
 import type { ConnectionWithCalendars } from "@/lib/workspace-context";
 import {
   Dialog,
@@ -16,7 +17,7 @@ import {
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Calendar, RefreshCw, Plus, X, ChevronDown, Camera, User as UserIcon } from "lucide-react";
+import { Calendar, RefreshCw, Plus, X, ChevronDown, Camera, User as UserIcon, Trash2 } from "lucide-react";
 
 interface SettingsDialogProps {
   open: boolean;
@@ -42,6 +43,10 @@ interface SettingsDialogProps {
   onWeekModeChange: (mode: WeekMode) => Promise<void>;
   // Profile updated callback
   onProfileUpdate?: () => void;
+  // Workspace management
+  activeProject?: Project;
+  refreshWorkspaces?: () => Promise<void>;
+  userProjectCount: number;
 }
 
 export function SettingsDialog({
@@ -64,6 +69,9 @@ export function SettingsDialog({
   weekMode,
   onWeekModeChange,
   onProfileUpdate,
+  activeProject,
+  refreshWorkspaces,
+  userProjectCount,
 }: SettingsDialogProps) {
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteRole, setInviteRole] = useState<"admin" | "member">("member");
@@ -83,6 +91,24 @@ export function SettingsDialog({
   const [profileSaving, setProfileSaving] = useState(false);
   const [avatarUploading, setAvatarUploading] = useState(false);
   const avatarInputRef = useRef<HTMLInputElement>(null);
+
+  // Workspace settings state
+  const [wsName, setWsName] = useState("");
+  const [wsColor, setWsColor] = useState("");
+  const [wsSaving, setWsSaving] = useState(false);
+  const [deleteConfirmName, setDeleteConfirmName] = useState("");
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+
+  // Sync workspace settings when dialog opens or active project changes
+  useEffect(() => {
+    if (open && activeProject) {
+      setWsName(activeProject.name);
+      setWsColor(activeProject.color);
+      setDeleteConfirmName("");
+      setDeleteError(null);
+    }
+  }, [open, activeProject]);
 
   // Load profile when dialog opens
   useEffect(() => {
@@ -545,6 +571,66 @@ export function SettingsDialog({
           {/* Workspace Tab */}
           <TabsContent value="workspace" className="flex-1 min-h-0 overflow-y-auto">
             <div className="space-y-3 py-4">
+              {/* Workspace settings */}
+              {activeProject && (
+                <div className="space-y-3">
+                  <div className="text-xs text-white/40 px-1">Workspace settings</div>
+                  <div className="p-3 rounded-lg border border-white/5 bg-white/[0.02] space-y-3">
+                    <div>
+                      <label className="text-xs text-white/40 block mb-1">Name</label>
+                      <Input
+                        value={wsName}
+                        onChange={(e) => setWsName(e.target.value)}
+                        placeholder="Workspace name"
+                        className="h-8"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-xs text-white/40 block mb-1">Color</label>
+                      <div className="flex gap-2 flex-wrap">
+                        {WORKSPACE_COLORS.map((c) => (
+                          <button
+                            key={c}
+                            type="button"
+                            onClick={() => setWsColor(c)}
+                            className="w-6 h-6 rounded-full transition-all"
+                            style={{
+                              backgroundColor: c,
+                              outline: wsColor === c ? "2px solid white" : "2px solid transparent",
+                              outlineOffset: "2px",
+                            }}
+                            aria-label={`Select color ${c}`}
+                          />
+                        ))}
+                      </div>
+                    </div>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="w-full justify-center border border-white/10"
+                      disabled={wsSaving || (!wsName.trim()) || (wsName === activeProject.name && wsColor === activeProject.color)}
+                      onClick={async () => {
+                        if (!activeProjectId) return;
+                        setWsSaving(true);
+                        try {
+                          await updateWorkspace(activeProjectId, {
+                            ...(wsName !== activeProject.name && { name: wsName.trim() }),
+                            ...(wsColor !== activeProject.color && { color: wsColor }),
+                          });
+                          await refreshWorkspaces?.();
+                        } catch (err) {
+                          console.error("Failed to update workspace:", err);
+                        } finally {
+                          setWsSaving(false);
+                        }
+                      }}
+                    >
+                      {wsSaving ? "Saving..." : "Save changes"}
+                    </Button>
+                  </div>
+                </div>
+              )}
+
               {/* Members list */}
               <div className="space-y-2">
                 <div className="text-xs text-white/40 px-1">Members</div>
@@ -668,6 +754,66 @@ export function SettingsDialog({
                       </Button>
                     </div>
                   ))}
+                </div>
+              )}
+
+              {/* Delete workspace */}
+              {activeProject && activeProject.role === "owner" && userProjectCount > 1 && (
+                <div className="space-y-3 pt-3">
+                  <div className="text-xs text-white/40 px-1">Danger zone</div>
+                  <div className="p-3 rounded-lg border border-red-500/20 bg-red-500/[0.03] space-y-3">
+                    <div className="flex items-center gap-2">
+                      <Trash2 className="size-4 text-red-400 shrink-0" />
+                      <div>
+                        <div className="text-sm font-medium text-red-400">Delete workspace</div>
+                        <div className="text-xs text-white/40">
+                          This will permanently delete all tasks, clients, calendar data, and members.
+                        </div>
+                      </div>
+                    </div>
+                    <div>
+                      <label className="text-xs text-white/40 block mb-1">
+                        Type <span className="font-mono text-white/60">{activeProject.name}</span> to confirm
+                      </label>
+                      <Input
+                        value={deleteConfirmName}
+                        onChange={(e) => setDeleteConfirmName(e.target.value)}
+                        placeholder={activeProject.name}
+                        className="h-8"
+                      />
+                    </div>
+                    {deleteError && <div className="text-xs text-red-400">{deleteError}</div>}
+                    <Button
+                      size="sm"
+                      variant="destructive"
+                      className="w-full"
+                      disabled={deleting || deleteConfirmName !== activeProject.name}
+                      onClick={async () => {
+                        setDeleting(true);
+                        setDeleteError(null);
+                        try {
+                          const res = await fetch("/api/workspace", {
+                            method: "DELETE",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({ projectId: activeProject.id }),
+                          });
+                          const data = await res.json();
+                          if (!res.ok) {
+                            setDeleteError(data.error || "Failed to delete");
+                            return;
+                          }
+                          onOpenChange(false);
+                          await refreshWorkspaces?.();
+                        } catch {
+                          setDeleteError("Network error");
+                        } finally {
+                          setDeleting(false);
+                        }
+                      }}
+                    >
+                      {deleting ? "Deleting..." : "Delete workspace permanently"}
+                    </Button>
+                  </div>
                 </div>
               )}
             </div>
