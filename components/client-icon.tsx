@@ -1,6 +1,6 @@
 "use client";
 
-import { memo, useState, useEffect, type ComponentType } from "react";
+import { memo } from "react";
 import {
   Globe,
   Code,
@@ -27,10 +27,10 @@ import {
   Plane,
   Gem,
   type LucideIcon,
-  type LucideProps,
 } from "lucide-react";
+import { DynamicIcon, type IconName } from "lucide-react/dynamic";
 
-// Legacy icon map — keeps old icon names working
+// Legacy icon map — keeps old short names working
 const LEGACY_ICONS: Record<string, LucideIcon> = {
   globe: Globe,
   code: Code,
@@ -58,46 +58,13 @@ const LEGACY_ICONS: Record<string, LucideIcon> = {
   gem: Gem,
 };
 
-// Module-level cache for dynamically resolved icons
-const resolvedIconCache = new Map<string, ComponentType<LucideProps> | null>();
-
-function kebabToPascal(name: string): string {
-  return name
-    .split("-")
-    .map((s) => s.charAt(0).toUpperCase() + s.slice(1))
-    .join("");
-}
-
-// Lazy-load a lucide icon by kebab-case name
-function useDynamicIcon(name: string): ComponentType<LucideProps> | null {
-  // Fast path: legacy icons (statically imported)
-  if (LEGACY_ICONS[name]) return LEGACY_ICONS[name];
-
-  // Fast path: already resolved
-  if (resolvedIconCache.has(name)) return resolvedIconCache.get(name)!;
-
-  const [Icon, setIcon] = useState<ComponentType<LucideProps> | null>(null);
-
-  useEffect(() => {
-    let cancelled = false;
-    import("lucide-react").then((mod) => {
-      if (cancelled) return;
-      const pascalName = kebabToPascal(name);
-      const icon = (mod as Record<string, unknown>)[pascalName] as ComponentType<LucideProps> | undefined;
-      const resolved = icon || null;
-      resolvedIconCache.set(name, resolved);
-      setIcon(() => resolved);
-    });
-    return () => { cancelled = true; };
-  }, [name]);
-
-  return Icon;
-}
-
 export const ClientIcon = memo(function ClientIcon({ icon, className }: { icon: string; className?: string }) {
-  const Icon = useDynamicIcon(icon);
-  if (!Icon) return null;
-  return <Icon className={className} />;
+  // Fast path: legacy short names (statically imported)
+  const Legacy = LEGACY_ICONS[icon];
+  if (Legacy) return <Legacy className={className} />;
+
+  // Dynamic path: load any lucide icon by kebab-case name
+  return <DynamicIcon name={icon as IconName} className={className} />;
 });
 
 // Re-export for backward compat
