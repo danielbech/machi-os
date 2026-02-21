@@ -34,6 +34,9 @@ interface SettingsDialogProps {
   onUpdateSelectedCalendars: (connectionId: string, calendarIds: string[]) => Promise<void>;
   // Weekly transition
   onTransitionWeek: () => Promise<{ deleted: number; carriedOver: number }>;
+  transitionDay: number;
+  transitionHour: number;
+  onSetTransitionSchedule: (day: number, hour: number) => Promise<void>;
   // Week mode
   weekMode: WeekMode;
   onWeekModeChange: (mode: WeekMode) => Promise<void>;
@@ -55,6 +58,9 @@ export function SettingsDialog({
   calendarConnections,
   onUpdateSelectedCalendars,
   onTransitionWeek,
+  transitionDay,
+  transitionHour,
+  onSetTransitionSchedule,
   weekMode,
   onWeekModeChange,
   onProfileUpdate,
@@ -330,7 +336,33 @@ export function SettingsDialog({
                 <h3 className="text-sm font-medium">Week Transition</h3>
                 <div className="p-3 rounded-lg border border-white/5 bg-white/[0.02] space-y-3">
                   <div className="text-xs text-white/40">
-                    Archive completed tasks and move incomplete tasks to Monday. Runs automatically every Friday at 17:00.
+                    Archive completed tasks and move incomplete tasks to Monday.
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-white/50">Auto-transition:</span>
+                    <select
+                      value={transitionDay}
+                      onChange={(e) => onSetTransitionSchedule(Number(e.target.value), transitionHour)}
+                      className="px-2 py-1 rounded-md border border-white/10 bg-white/[0.02] text-sm outline-none focus:border-white/30 focus:ring-1 focus:ring-white/20"
+                    >
+                      <option value={1}>Monday</option>
+                      <option value={2}>Tuesday</option>
+                      <option value={3}>Wednesday</option>
+                      <option value={4}>Thursday</option>
+                      <option value={5}>Friday</option>
+                      <option value={6}>Saturday</option>
+                      <option value={0}>Sunday</option>
+                    </select>
+                    <span className="text-xs text-white/50">at</span>
+                    <select
+                      value={transitionHour}
+                      onChange={(e) => onSetTransitionSchedule(transitionDay, Number(e.target.value))}
+                      className="px-2 py-1 rounded-md border border-white/10 bg-white/[0.02] text-sm outline-none focus:border-white/30 focus:ring-1 focus:ring-white/20"
+                    >
+                      {Array.from({ length: 24 }, (_, i) => (
+                        <option key={i} value={i}>{String(i).padStart(2, '0')}:00</option>
+                      ))}
+                    </select>
                   </div>
                   <Button
                     size="sm"

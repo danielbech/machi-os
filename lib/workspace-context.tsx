@@ -73,6 +73,10 @@ interface WorkspaceContextValue {
   setBacklogWidth: (width: number) => void;
   // Weekly transition
   transitionToNextWeek: () => Promise<{ deleted: number; carriedOver: number }>;
+  transitionDay: number;
+  transitionHour: number;
+  setTransitionSchedule: (day: number, hour: number) => Promise<void>;
+  displayMonday: Date;
   // Week mode
   weekMode: WeekMode;
   setWeekMode: (mode: WeekMode) => Promise<void>;
@@ -98,22 +102,33 @@ function getCurrentMonday() {
   return monday;
 }
 
-// Helper: check if we should show next week (transition ran + still Fri/Sat/Sun)
-function isTransitionedToNextWeek() {
+// Helper: check if we should show next week (transition ran + still on/after transition day)
+function isTransitionedToNextWeek(transitionDay: number) {
   if (typeof window === "undefined") return false;
   const monday = getCurrentMonday();
   const marker = localStorage.getItem("machi-last-transition");
   const currentDay = new Date().getDay();
-  return marker === monday.toISOString() && (currentDay === 5 || currentDay === 6 || currentDay === 0);
+  // Post-transition window: from transitionDay through Sunday
+  // If transitionDay === 0 (Sunday), only Sunday qualifies
+  const inPostTransitionWindow = transitionDay === 0
+    ? currentDay === 0
+    : currentDay >= transitionDay || currentDay === 0;
+  return marker === monday.toISOString() && inPostTransitionWindow;
+}
+
+// Helper: get the display week's Monday, accounting for transition offset
+function getDisplayMonday(transitionDay: number) {
+  const monday = getCurrentMonday();
+  if (isTransitionedToNextWeek(transitionDay)) {
+    monday.setDate(monday.getDate() + 7);
+  }
+  return monday;
 }
 
 // Helper: get display week's Monday and end-of-week date
-// After weekly transition (Fri/Sat/Sun), returns next week's range
-function getWeekRange(weekMode: WeekMode = "5-day") {
-  const monday = getCurrentMonday();
-  if (isTransitionedToNextWeek()) {
-    monday.setDate(monday.getDate() + 7);
-  }
+// After weekly transition, returns next week's range
+function getWeekRange(weekMode: WeekMode = "5-day", transitionDay: number = 5) {
+  const monday = getDisplayMonday(transitionDay);
   const endDay = new Date(monday);
   endDay.setDate(monday.getDate() + (weekMode === "7-day" ? 6 : 4));
   endDay.setHours(23, 59, 59, 999);
@@ -130,6 +145,10 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
 
   // Week mode
   const [weekMode, setWeekModeState] = useState<WeekMode>("5-day");
+
+  // Transition schedule
+  const [transitionDay, setTransitionDayState] = useState(5);
+  const [transitionHour, setTransitionHourState] = useState(17);
 
   const ALL_FIVE_DAYS: DayName[] = ["monday", "tuesday", "wednesday", "thursday", "friday"];
   const ALL_SEVEN_DAYS: DayName[] = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"];
@@ -227,23 +246,50 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     return () => { cancelled = true; };
   }, [user]);
 
-  // Sync weekMode from active project
+  // Sync weekMode + transition schedule from active project
   useEffect(() => {
     const project = userProjects.find((p) => p.id === activeProjectId);
     if (project) {
       setWeekModeState(project.week_mode || "5-day");
+      setTransitionDayState(project.transition_day ?? 5);
+      setTransitionHourState(project.transition_hour ?? 17);
     }
   }, [activeProjectId, userProjects]);
 
-  // setWeekMode: update Supabase + local state
+  // setWeekMode: update Supabase + local state, auto-adjust transition day
   const setWeekMode = useCallback(async (mode: WeekMode) => {
     setWeekModeState(mode);
     if (!activeProjectId) return;
     const supabase = createClient();
-    await supabase.from("projects").update({ week_mode: mode }).eq("id", activeProjectId);
-    // Update local project list
+    const updates: Record<string, any> = { week_mode: mode };
+
+    // Auto-adjust transition day if it matches the previous mode's default
+    let newTransitionDay = transitionDay;
+    if (transitionDay === 5 && mode === "7-day") {
+      newTransitionDay = 0; // Friday → Sunday
+      updates.transition_day = 0;
+      setTransitionDayState(0);
+    } else if (transitionDay === 0 && mode === "5-day") {
+      newTransitionDay = 5; // Sunday → Friday
+      updates.transition_day = 5;
+      setTransitionDayState(5);
+    }
+
+    await supabase.from("projects").update(updates).eq("id", activeProjectId);
     setUserProjects((prev) =>
-      prev.map((p) => (p.id === activeProjectId ? { ...p, week_mode: mode } : p))
+      prev.map((p) => (p.id === activeProjectId ? { ...p, week_mode: mode, transition_day: newTransitionDay } : p))
+    );
+  }, [activeProjectId, transitionDay]);
+
+  // setTransitionSchedule: update day + hour in Supabase + local state
+  const setTransitionSchedule = useCallback(async (day: number, hour: number) => {
+    setTransitionDayState(day);
+    setTransitionHourState(hour);
+    if (!activeProjectId) return;
+    const supabase = createClient();
+    await supabase.from("projects").update({ transition_day: day, transition_hour: hour }).eq("id", activeProjectId);
+    setUserProjects((prev) =>
+      prev.map((p) => (p.id === activeProjectId ? { ...p, transition_day: day, transition_hour: hour } : p))
     );
   }, [activeProjectId]);
 
@@ -439,13 +485,13 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     return result;
   }, [activeProjectId]);
 
-  // Auto-trigger: every 60s check if it's Friday >= 17:00 and hasn't run this week
+  // Auto-trigger: every 60s check if it's transition day >= transition hour and hasn't run this week
   useEffect(() => {
     if (!activeProjectId) return;
 
     const check = () => {
       const now = new Date();
-      if (now.getDay() !== 5 || now.getHours() < 17) return; // not Friday >= 17:00
+      if (now.getDay() !== transitionDay || now.getHours() < transitionHour) return;
 
       const monday = getCurrentMonday();
       const marker = localStorage.getItem("machi-last-transition");
@@ -457,13 +503,13 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     check(); // run immediately on mount
     const interval = setInterval(check, 60 * 1000);
     return () => clearInterval(interval);
-  }, [activeProjectId, transitionToNextWeek]);
+  }, [activeProjectId, transitionToNextWeek, transitionDay, transitionHour]);
 
   // --- Google Calendar ---
 
   // Load shared events from Supabase and group by day
   const loadSharedEvents = useCallback(async (projectId: string, mode: WeekMode = "5-day") => {
-    const { monday, friday } = getWeekRange(mode);
+    const { monday, friday } = getWeekRange(mode, transitionDay);
     const dbEvents = await loadSharedCalendarEvents(projectId, monday, friday);
 
     // Deduplicate events shared across multiple users' calendars
@@ -499,7 +545,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     });
 
     setCalendarEvents(grouped);
-  }, []);
+  }, [transitionDay]);
 
   // Sync all of the current user's Google Calendar connections to DB
   const syncCalendarEvents = useCallback(async () => {
@@ -509,7 +555,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
       const connections = await getCalendarConnections(activeProjectId);
       if (connections.length === 0) return;
 
-      const { monday, friday } = getWeekRange(weekMode);
+      const { monday, friday } = getWeekRange(weekMode, transitionDay);
       const updatedConnections: ConnectionWithCalendars[] = [];
 
       for (const conn of connections) {
@@ -559,7 +605,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     } catch (error) {
       console.error("Failed to sync calendar events:", error);
     }
-  }, [activeProjectId, user, weekMode, loadSharedEvents]);
+  }, [activeProjectId, user, weekMode, transitionDay, loadSharedEvents]);
 
   // Check calendar connections + load shared events on project change
   useEffect(() => {
@@ -631,7 +677,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
 
           // Sync events for this connection
           if (user) {
-            const { monday, friday } = getWeekRange(weekMode);
+            const { monday, friday } = getWeekRange(weekMode, transitionDay);
             const { flat: allEvents } = await getEventsGroupedByDay(
               accessToken, monday, friday, allCalendarIds
             );
@@ -682,7 +728,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     };
     window.addEventListener("message", handleMessage);
     return () => window.removeEventListener("message", handleMessage);
-  }, [activeProjectId, user, weekMode, loadSharedEvents]);
+  }, [activeProjectId, user, weekMode, transitionDay, loadSharedEvents]);
 
   // Auto-sync every 30 minutes
   useEffect(() => {
@@ -694,12 +740,12 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
   // Week change detection
   useEffect(() => {
     if (!googleCalendarConnected) return;
-    const { monday } = getWeekRange(weekMode);
+    const { monday } = getWeekRange(weekMode, transitionDay);
     const weekStart = monday.toISOString();
     if (currentWeekStart && currentWeekStart !== weekStart) syncCalendarEvents();
     setCurrentWeekStart(weekStart);
     const interval = setInterval(() => {
-      const { monday: nowMonday } = getWeekRange(weekMode);
+      const { monday: nowMonday } = getWeekRange(weekMode, transitionDay);
       const newWeekStart = nowMonday.toISOString();
       if (newWeekStart !== weekStart) {
         setCurrentWeekStart(newWeekStart);
@@ -736,6 +782,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
   }, [syncCalendarEvents]);
 
   const activeProject = userProjects.find((p) => p.id === activeProjectId);
+  const displayMonday = getDisplayMonday(transitionDay);
 
   return (
     <WorkspaceContext.Provider
@@ -774,6 +821,10 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
         backlogWidth,
         setBacklogWidth,
         transitionToNextWeek,
+        transitionDay,
+        transitionHour,
+        setTransitionSchedule,
+        displayMonday,
         weekMode,
         setWeekMode,
         weekDays,

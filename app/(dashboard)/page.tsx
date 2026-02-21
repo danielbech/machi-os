@@ -20,7 +20,7 @@ import {
 import { Check, Plus, StickyNote } from "lucide-react";
 
 export default function BoardPage() {
-  const { activeProjectId, clients, calendarEvents, backlogOpen, addToBacklog, backlogFolders, teamMembers, weekMode, weekDays } = useWorkspace();
+  const { activeProjectId, clients, calendarEvents, backlogOpen, addToBacklog, backlogFolders, teamMembers, weekMode, weekDays, displayMonday } = useWorkspace();
 
   const columnTitles = getColumnTitles(weekMode);
   const [columns, setColumns] = useState<Record<string, Task[]>>(() => getEmptyColumns(weekMode));
@@ -92,21 +92,9 @@ export default function BoardPage() {
     };
   }, [activeProjectId, refreshTasks]);
 
-  // Week dates — after transition, show next week's dates
+  // Week dates — uses displayMonday from context (accounts for post-transition offset)
   const getWeekDates = () => {
-    const today = new Date();
-    const currentDay = today.getDay();
-    const monday = new Date(today);
-    const offset = currentDay === 0 ? -6 : 1 - currentDay;
-    monday.setDate(today.getDate() + offset);
-    monday.setHours(0, 0, 0, 0);
-
-    // If transition already ran this week and it's still Fri/Sat/Sun, show next week
-    const marker = localStorage.getItem("machi-last-transition");
-    if (marker === monday.toISOString() && (currentDay === 5 || currentDay === 6 || currentDay === 0)) {
-      monday.setDate(monday.getDate() + 7);
-    }
-
+    const monday = new Date(displayMonday);
     const dayOffsets: Record<string, number> = {
       monday: 0, tuesday: 1, wednesday: 2, thursday: 3,
       friday: 4, saturday: 5, sunday: 6,

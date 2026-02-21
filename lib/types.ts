@@ -56,6 +56,8 @@ export interface Project {
   color: string;
   role: 'owner' | 'admin' | 'member';
   week_mode: WeekMode;
+  transition_day: number;
+  transition_hour: number;
 }
 
 export interface PendingInvite {

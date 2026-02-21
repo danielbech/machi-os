@@ -33,7 +33,7 @@ export function AppSidebar() {
     googleCalendarConnected, connectGoogleCalendar, disconnectGoogleAccount,
     syncCalendarEvents, calendarConnections, updateSelectedCalendars,
     backlogOpen, toggleBacklog, transitionToNextWeek, refreshTeamMembers,
-    weekMode, setWeekMode,
+    weekMode, setWeekMode, transitionDay, transitionHour, setTransitionSchedule,
   } = useWorkspace();
   const { setOpenMobile } = useSidebar();
   const [showSettings, setShowSettings] = useState(false);
@@ -190,6 +190,9 @@ export function AppSidebar() {
           calendarConnections={calendarConnections}
           onUpdateSelectedCalendars={updateSelectedCalendars}
           onTransitionWeek={transitionToNextWeek}
+          transitionDay={transitionDay}
+          transitionHour={transitionHour}
+          onSetTransitionSchedule={setTransitionSchedule}
           weekMode={weekMode}
           onWeekModeChange={setWeekMode}
           onProfileUpdate={refreshTeamMembers}
