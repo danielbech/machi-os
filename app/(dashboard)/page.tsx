@@ -10,7 +10,7 @@ import { BoardCalendarEvent } from "@/components/board-calendar-event";
 import { BoardShortcuts } from "@/components/board-shortcuts";
 import { BoardAddCard } from "@/components/board-add-card";
 import type { Task, DayName } from "@/lib/types";
-import { COLUMN_TITLES, EMPTY_COLUMNS } from "@/lib/constants";
+import { getColumnTitles, getEmptyColumns } from "@/lib/constants";
 import {
   Kanban,
   KanbanBoard,
@@ -20,9 +20,10 @@ import {
 import { Check, Plus, StickyNote } from "lucide-react";
 
 export default function BoardPage() {
-  const { activeProjectId, clients, calendarEvents, backlogOpen, addToBacklog, backlogFolders, teamMembers } = useWorkspace();
+  const { activeProjectId, clients, calendarEvents, backlogOpen, addToBacklog, backlogFolders, teamMembers, weekMode, weekDays } = useWorkspace();
 
-  const [columns, setColumns] = useState<Record<string, Task[]>>({ ...EMPTY_COLUMNS });
+  const columnTitles = getColumnTitles(weekMode);
+  const [columns, setColumns] = useState<Record<string, Task[]>>(() => getEmptyColumns(weekMode));
   const [addingToColumn, setAddingToColumn] = useState<string | null>(null);
   const [addingAtIndex, setAddingAtIndex] = useState<number | null>(null);
   const [newCardTitle, setNewCardTitle] = useState("");
@@ -42,20 +43,25 @@ export default function BoardPage() {
     if (!activeProjectId) return;
     try {
       const tasks = await loadTasksByDay(activeProjectId);
-      setColumns(tasks);
+      // Filter to only show active days based on weekMode
+      const filtered: Record<string, Task[]> = {};
+      for (const day of weekDays) {
+        filtered[day] = tasks[day] || [];
+      }
+      setColumns(filtered);
     } catch (error) {
       console.error("Error loading tasks:", error);
     }
-  }, [activeProjectId]);
+  }, [activeProjectId, weekDays]);
 
   // Load tasks when active project changes
   useEffect(() => {
     if (!activeProjectId) {
-      setColumns({ ...EMPTY_COLUMNS });
+      setColumns(getEmptyColumns(weekMode));
       return;
     }
     refreshTasks();
-  }, [activeProjectId, refreshTasks]);
+  }, [activeProjectId, weekMode, refreshTasks]);
 
   // Suppress realtime reloads briefly after local saves
   const suppressTaskReload = useRef(false);
@@ -101,11 +107,14 @@ export default function BoardPage() {
       monday.setDate(monday.getDate() + 7);
     }
 
+    const dayOffsets: Record<string, number> = {
+      monday: 0, tuesday: 1, wednesday: 2, thursday: 3,
+      friday: 4, saturday: 5, sunday: 6,
+    };
     const weekDates: Record<string, string> = {};
-    const days = ["monday", "tuesday", "wednesday", "thursday", "friday"];
-    days.forEach((day, index) => {
+    weekDays.forEach((day) => {
       const date = new Date(monday);
-      date.setDate(monday.getDate() + index);
+      date.setDate(monday.getDate() + dayOffsets[day]);
       weekDates[day] = date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
     });
     return weekDates;
@@ -416,7 +425,7 @@ export default function BoardPage() {
                 <div className="mb-1.5 px-1">
                   <div className="flex items-baseline gap-2">
                     <h2 className={`font-semibold ${columnId === todayName ? "text-white" : ""}`}>
-                      {COLUMN_TITLES[columnId] || columnId}
+                      {columnTitles[columnId] || columnId}
                     </h2>
                     <span className="text-xs text-white/40">{weekDates[columnId]}</span>
                     {columnId === todayName && (
@@ -428,8 +437,8 @@ export default function BoardPage() {
                 <div className="flex flex-col overflow-y-auto pr-1">
                   {/* Calendar Events */}
                   {calendarEvents[columnId]?.map((event) => {
-                    const dayIndex = ["monday", "tuesday", "wednesday", "thursday", "friday"].indexOf(columnId);
-                    const todayIndex = ["monday", "tuesday", "wednesday", "thursday", "friday"].indexOf(todayName);
+                    const dayIndex = weekDays.indexOf(columnId as DayName);
+                    const todayIndex = weekDays.indexOf(todayName as DayName);
                     return (
                       <BoardCalendarEvent key={event.id} event={event} isPast={dayIndex < todayIndex} />
                     );

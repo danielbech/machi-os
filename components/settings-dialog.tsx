@@ -5,7 +5,7 @@ import type { User } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/client";
 import { removeUserFromWorkspace, getPendingInvites, cancelInvite, type WorkspaceMember } from "@/lib/supabase/workspace";
 import { loadCurrentProfile, updateProfile, uploadAvatar } from "@/lib/supabase/profiles";
-import type { PendingInvite } from "@/lib/types";
+import type { PendingInvite, WeekMode } from "@/lib/types";
 import type { ConnectionWithCalendars } from "@/lib/workspace-context";
 import {
   Dialog,
@@ -34,6 +34,9 @@ interface SettingsDialogProps {
   onUpdateSelectedCalendars: (connectionId: string, calendarIds: string[]) => Promise<void>;
   // Weekly transition
   onTransitionWeek: () => Promise<{ deleted: number; carriedOver: number }>;
+  // Week mode
+  weekMode: WeekMode;
+  onWeekModeChange: (mode: WeekMode) => Promise<void>;
   // Profile updated callback
   onProfileUpdate?: () => void;
 }
@@ -52,6 +55,8 @@ export function SettingsDialog({
   calendarConnections,
   onUpdateSelectedCalendars,
   onTransitionWeek,
+  weekMode,
+  onWeekModeChange,
   onProfileUpdate,
 }: SettingsDialogProps) {
   const [inviteEmail, setInviteEmail] = useState("");
@@ -283,6 +288,40 @@ export function SettingsDialog({
                   >
                     {profileSaving ? 'Saving...' : 'Save profile'}
                   </Button>
+                </div>
+              </div>
+
+              {/* Week Mode */}
+              <div className="space-y-3">
+                <h3 className="text-sm font-medium">Week Mode</h3>
+                <div className="p-3 rounded-lg border border-white/5 bg-white/[0.02] space-y-3">
+                  <div className="text-xs text-white/40">
+                    Choose how many days to show on the board.
+                  </div>
+                  <div className="flex gap-1 p-1 rounded-lg bg-white/[0.04]">
+                    <button
+                      type="button"
+                      onClick={() => onWeekModeChange("5-day")}
+                      className={`flex-1 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+                        weekMode === "5-day"
+                          ? "bg-white/10 text-white"
+                          : "text-white/40 hover:text-white/60"
+                      }`}
+                    >
+                      5-day work week
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => onWeekModeChange("7-day")}
+                      className={`flex-1 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+                        weekMode === "7-day"
+                          ? "bg-white/10 text-white"
+                          : "text-white/40 hover:text-white/60"
+                      }`}
+                    >
+                      7-day full week
+                    </button>
+                  </div>
                 </div>
               </div>
 

@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useState, useEffect, useCallback, useRef } from "react";
 import type { User } from "@supabase/supabase-js";
-import type { Project, Client, Task, BacklogFolder, DayName, Member } from "@/lib/types";
+import type { Project, Client, Task, BacklogFolder, DayName, Member, WeekMode } from "@/lib/types";
 import { createClient } from "@/lib/supabase/client";
 import { initializeUserData } from "@/lib/supabase/initialize";
 import { getUserWorkspaces } from "@/lib/supabase/workspace";
@@ -73,6 +73,10 @@ interface WorkspaceContextValue {
   setBacklogWidth: (width: number) => void;
   // Weekly transition
   transitionToNextWeek: () => Promise<{ deleted: number; carriedOver: number }>;
+  // Week mode
+  weekMode: WeekMode;
+  setWeekMode: (mode: WeekMode) => Promise<void>;
+  weekDays: DayName[];
 }
 
 const WorkspaceContext = createContext<WorkspaceContextValue | null>(null);
@@ -103,17 +107,17 @@ function isTransitionedToNextWeek() {
   return marker === monday.toISOString() && (currentDay === 5 || currentDay === 6 || currentDay === 0);
 }
 
-// Helper: get display week's Monday and Friday
+// Helper: get display week's Monday and end-of-week date
 // After weekly transition (Fri/Sat/Sun), returns next week's range
-function getWeekRange() {
+function getWeekRange(weekMode: WeekMode = "5-day") {
   const monday = getCurrentMonday();
   if (isTransitionedToNextWeek()) {
     monday.setDate(monday.getDate() + 7);
   }
-  const friday = new Date(monday);
-  friday.setDate(monday.getDate() + 4);
-  friday.setHours(23, 59, 59, 999);
-  return { monday, friday };
+  const endDay = new Date(monday);
+  endDay.setDate(monday.getDate() + (weekMode === "7-day" ? 6 : 4));
+  endDay.setHours(23, 59, 59, 999);
+  return { monday, friday: endDay };
 }
 
 export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
@@ -123,6 +127,13 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
   const [activeProjectId, setActiveProjectIdState] = useState<string | null>(null);
   const [clients, setClients] = useState<Client[]>([]);
   const [teamMembers, setTeamMembers] = useState<Member[]>([]);
+
+  // Week mode
+  const [weekMode, setWeekModeState] = useState<WeekMode>("5-day");
+
+  const ALL_FIVE_DAYS: DayName[] = ["monday", "tuesday", "wednesday", "thursday", "friday"];
+  const ALL_SEVEN_DAYS: DayName[] = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"];
+  const weekDays = weekMode === "7-day" ? ALL_SEVEN_DAYS : ALL_FIVE_DAYS;
 
   // Backlog panel
   const [backlogOpen, setBacklogOpen] = useState(() => {
@@ -215,6 +226,26 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     loadWorkspaces();
     return () => { cancelled = true; };
   }, [user]);
+
+  // Sync weekMode from active project
+  useEffect(() => {
+    const project = userProjects.find((p) => p.id === activeProjectId);
+    if (project) {
+      setWeekModeState(project.week_mode || "5-day");
+    }
+  }, [activeProjectId, userProjects]);
+
+  // setWeekMode: update Supabase + local state
+  const setWeekMode = useCallback(async (mode: WeekMode) => {
+    setWeekModeState(mode);
+    if (!activeProjectId) return;
+    const supabase = createClient();
+    await supabase.from("projects").update({ week_mode: mode }).eq("id", activeProjectId);
+    // Update local project list
+    setUserProjects((prev) =>
+      prev.map((p) => (p.id === activeProjectId ? { ...p, week_mode: mode } : p))
+    );
+  }, [activeProjectId]);
 
   // Refresh team members (workspace profiles)
   const refreshTeamMembers = useCallback(async () => {
@@ -431,8 +462,8 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
   // --- Google Calendar ---
 
   // Load shared events from Supabase and group by day
-  const loadSharedEvents = useCallback(async (projectId: string) => {
-    const { monday, friday } = getWeekRange();
+  const loadSharedEvents = useCallback(async (projectId: string, mode: WeekMode = "5-day") => {
+    const { monday, friday } = getWeekRange(mode);
     const dbEvents = await loadSharedCalendarEvents(projectId, monday, friday);
 
     // Deduplicate events shared across multiple users' calendars
@@ -443,14 +474,16 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
       return true;
     });
 
-    const days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday'];
+    const allDays = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+    const maxDay = mode === "7-day" ? 6 : 5;
     const grouped: Record<string, CalendarEvent[]> = {};
 
     uniqueEvents.forEach(e => {
       const eventDate = new Date(e.start_time);
       const dayOfWeek = eventDate.getDay();
-      if (dayOfWeek >= 1 && dayOfWeek <= 5) {
-        const dayName = days[dayOfWeek - 1];
+      // dayOfWeek: 0=Sun, 1=Mon...6=Sat
+      if (mode === "7-day" ? (dayOfWeek >= 0 && dayOfWeek <= 6) : (dayOfWeek >= 1 && dayOfWeek <= 5)) {
+        const dayName = allDays[dayOfWeek];
         if (!grouped[dayName]) grouped[dayName] = [];
         grouped[dayName].push({
           id: e.google_event_id,
@@ -476,7 +509,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
       const connections = await getCalendarConnections(activeProjectId);
       if (connections.length === 0) return;
 
-      const { monday, friday } = getWeekRange();
+      const { monday, friday } = getWeekRange(weekMode);
       const updatedConnections: ConnectionWithCalendars[] = [];
 
       for (const conn of connections) {
@@ -522,11 +555,11 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
       }
 
       setCalendarConnections(updatedConnections);
-      await loadSharedEvents(activeProjectId);
+      await loadSharedEvents(activeProjectId, weekMode);
     } catch (error) {
       console.error("Failed to sync calendar events:", error);
     }
-  }, [activeProjectId, user, loadSharedEvents]);
+  }, [activeProjectId, user, weekMode, loadSharedEvents]);
 
   // Check calendar connections + load shared events on project change
   useEffect(() => {
@@ -541,7 +574,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     async function checkConnections() {
       try {
         // Load shared events regardless of own connections
-        await loadSharedEvents(activeProjectId!);
+        await loadSharedEvents(activeProjectId!, weekMode);
 
         // Check own connections
         const connections = await getCalendarConnections(activeProjectId!);
@@ -573,7 +606,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
 
     checkConnections();
     return () => { cancelled = true; };
-  }, [activeProjectId, user, loadSharedEvents, transitionCount]);
+  }, [activeProjectId, user, weekMode, loadSharedEvents, transitionCount]);
 
   // Listen for OAuth callback messages
   useEffect(() => {
@@ -598,7 +631,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
 
           // Sync events for this connection
           if (user) {
-            const { monday, friday } = getWeekRange();
+            const { monday, friday } = getWeekRange(weekMode);
             const { flat: allEvents } = await getEventsGroupedByDay(
               accessToken, monday, friday, allCalendarIds
             );
@@ -617,7 +650,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
                 attendees: e.attendees,
               }))
             );
-            await loadSharedEvents(activeProjectId);
+            await loadSharedEvents(activeProjectId, weekMode);
           }
 
           // Update local state — add or replace the connection
@@ -649,7 +682,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     };
     window.addEventListener("message", handleMessage);
     return () => window.removeEventListener("message", handleMessage);
-  }, [activeProjectId, user, loadSharedEvents]);
+  }, [activeProjectId, user, weekMode, loadSharedEvents]);
 
   // Auto-sync every 30 minutes
   useEffect(() => {
@@ -661,12 +694,12 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
   // Week change detection
   useEffect(() => {
     if (!googleCalendarConnected) return;
-    const { monday } = getWeekRange();
+    const { monday } = getWeekRange(weekMode);
     const weekStart = monday.toISOString();
     if (currentWeekStart && currentWeekStart !== weekStart) syncCalendarEvents();
     setCurrentWeekStart(weekStart);
     const interval = setInterval(() => {
-      const { monday: nowMonday } = getWeekRange();
+      const { monday: nowMonday } = getWeekRange(weekMode);
       const newWeekStart = nowMonday.toISOString();
       if (newWeekStart !== weekStart) {
         setCurrentWeekStart(newWeekStart);
@@ -688,9 +721,9 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     }
     setCalendarConnections(prev => prev.filter(c => c.id !== connectionId));
     if (activeProjectId) {
-      await loadSharedEvents(activeProjectId);
+      await loadSharedEvents(activeProjectId, weekMode);
     }
-  }, [activeProjectId, loadSharedEvents]);
+  }, [activeProjectId, weekMode, loadSharedEvents]);
 
   const handleUpdateSelectedCalendars = useCallback(async (connectionId: string, calendarIds: string[]) => {
     // Update local state immediately
@@ -741,6 +774,9 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
         backlogWidth,
         setBacklogWidth,
         transitionToNextWeek,
+        weekMode,
+        setWeekMode,
+        weekDays,
       }}
     >
       {children}

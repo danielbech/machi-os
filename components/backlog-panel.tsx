@@ -4,7 +4,8 @@ import { useState, useEffect, KeyboardEvent } from "react";
 import { createPortal } from "react-dom";
 import DOMPurify from "dompurify";
 import type { Task, BacklogFolder, Client, DayName, Member } from "@/lib/types";
-import { COLUMN_TITLES } from "@/lib/constants";
+import { getColumnTitles } from "@/lib/constants";
+import type { WeekMode } from "@/lib/types";
 import {
   DndContext,
   DragOverlay,
@@ -107,9 +108,11 @@ interface BacklogPanelProps {
   onReorderTasks: (tasks: Task[]) => Promise<void>;
   onDragActiveChange?: (active: boolean) => void;
   teamMembers: Member[];
+  weekMode?: WeekMode;
 }
 
-const DAYS: DayName[] = ["monday", "tuesday", "wednesday", "thursday", "friday"];
+const FIVE_DAYS: DayName[] = ["monday", "tuesday", "wednesday", "thursday", "friday"];
+const SEVEN_DAYS: DayName[] = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"];
 
 export function BacklogPanel({
   tasks,
@@ -127,7 +130,10 @@ export function BacklogPanel({
   onReorderTasks,
   onDragActiveChange,
   teamMembers,
+  weekMode = "5-day",
 }: BacklogPanelProps) {
+  const DAYS = weekMode === "7-day" ? SEVEN_DAYS : FIVE_DAYS;
+  const COLUMN_TITLES = getColumnTitles(weekMode);
   // Manual toggle overrides (true = forced open, false = forced closed) — persisted
   const [clientToggleOverrides, setClientToggleOverrides] = useState<Record<string, boolean>>(() => {
     try {

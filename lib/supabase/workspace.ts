@@ -26,7 +26,8 @@ export async function getUserWorkspaces(): Promise<Project[]> {
       projects:project_id (
         id,
         name,
-        color
+        color,
+        week_mode
       )
     `)
     .eq('user_id', user.id)
@@ -44,6 +45,7 @@ export async function getUserWorkspaces(): Promise<Project[]> {
       name: d.projects.name,
       color: d.projects.color,
       role: d.role,
+      week_mode: d.projects.week_mode || '5-day',
     }))
 }
 

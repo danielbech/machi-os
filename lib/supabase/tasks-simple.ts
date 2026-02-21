@@ -23,6 +23,8 @@ export async function loadTasksByDay(projectId: string): Promise<Record<string, 
     wednesday: [],
     thursday: [],
     friday: [],
+    saturday: [],
+    sunday: [],
   }
 
   tasks.forEach(task => {

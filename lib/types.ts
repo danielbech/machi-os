@@ -24,7 +24,8 @@ export interface ChecklistItem {
   checked: boolean;
 }
 
-export type DayName = "monday" | "tuesday" | "wednesday" | "thursday" | "friday";
+export type DayName = "monday" | "tuesday" | "wednesday" | "thursday" | "friday" | "saturday" | "sunday";
+export type WeekMode = "5-day" | "7-day";
 
 export interface Task {
   id: string;
@@ -54,6 +55,7 @@ export interface Project {
   name: string;
   color: string;
   role: 'owner' | 'admin' | 'member';
+  week_mode: WeekMode;
 }
 
 export interface PendingInvite {

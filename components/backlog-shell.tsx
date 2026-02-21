@@ -18,6 +18,7 @@ export function BacklogShell() {
     teamMembers,
     backlogWidth,
     setBacklogWidth,
+    weekMode,
     sendBacklogToDay,
     sendFolderToDay,
     createBacklogTask,
@@ -108,6 +109,7 @@ export function BacklogShell() {
             onDeleteFolder={deleteFolder}
             onReorderTasks={reorderBacklogTasks}
             teamMembers={teamMembers}
+            weekMode={weekMode}
           />
         </div>
 
