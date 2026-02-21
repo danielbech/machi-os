@@ -2,9 +2,14 @@ import { createClient } from './client'
 import { getAreaIdForProject } from './initialize'
 import type { BacklogFolder } from '../types'
 
-export async function loadBacklogFolders(projectId: string): Promise<BacklogFolder[]> {
+async function resolveAreaId(projectId: string, areaId?: string | null): Promise<string | null> {
+  if (areaId) return areaId
+  return getAreaIdForProject(projectId)
+}
+
+export async function loadBacklogFolders(projectId: string, cachedAreaId?: string | null): Promise<BacklogFolder[]> {
   const supabase = createClient()
-  const areaId = await getAreaIdForProject(projectId)
+  const areaId = await resolveAreaId(projectId, cachedAreaId)
   if (!areaId) return []
 
   const { data, error } = await supabase
@@ -25,10 +30,11 @@ export async function createBacklogFolder(
   projectId: string,
   clientId: string,
   name: string,
-  sortOrder: number = 0
+  sortOrder: number = 0,
+  cachedAreaId?: string | null
 ): Promise<BacklogFolder | null> {
   const supabase = createClient()
-  const areaId = await getAreaIdForProject(projectId)
+  const areaId = await resolveAreaId(projectId, cachedAreaId)
   if (!areaId) return null
 
   const { data, error } = await supabase

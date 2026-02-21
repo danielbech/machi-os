@@ -2,10 +2,15 @@ import { createClient } from './client'
 import { getAreaIdForProject } from './initialize'
 import type { Task, DayName } from '../types'
 
+async function resolveAreaId(projectId: string, areaId?: string | null): Promise<string | null> {
+  if (areaId) return areaId
+  return getAreaIdForProject(projectId)
+}
+
 // Load all tasks for a project, grouped by day
-export async function loadTasksByDay(projectId: string): Promise<Record<string, Task[]>> {
+export async function loadTasksByDay(projectId: string, cachedAreaId?: string | null): Promise<Record<string, Task[]>> {
   const supabase = createClient()
-  const areaId = await getAreaIdForProject(projectId)
+  const areaId = await resolveAreaId(projectId, cachedAreaId)
 
   if (!areaId) return {}
 
@@ -49,9 +54,9 @@ export async function loadTasksByDay(projectId: string): Promise<Record<string, 
 }
 
 // Save a task (create or update)
-export async function saveTask(projectId: string, task: Task): Promise<string> {
+export async function saveTask(projectId: string, task: Task, cachedAreaId?: string | null): Promise<string> {
   const supabase = createClient()
-  const areaId = await getAreaIdForProject(projectId)
+  const areaId = await resolveAreaId(projectId, cachedAreaId)
 
   if (!areaId) {
     throw new Error('No area found for project')
@@ -121,9 +126,9 @@ export async function deleteTask(taskId: string) {
 }
 
 // Update all tasks for a specific day (batch update for reordering)
-export async function updateDayTasks(projectId: string, day: string, tasks: Task[]) {
+export async function updateDayTasks(projectId: string, day: string, tasks: Task[], cachedAreaId?: string | null) {
   const supabase = createClient()
-  const areaId = await getAreaIdForProject(projectId)
+  const areaId = await resolveAreaId(projectId, cachedAreaId)
   if (!areaId) return
 
   const updates = tasks
@@ -157,9 +162,9 @@ export async function updateDayTasks(projectId: string, day: string, tasks: Task
 }
 
 // Batch update backlog task order (sort_order + folder_id)
-export async function updateBacklogTaskOrder(projectId: string, tasks: Task[]) {
+export async function updateBacklogTaskOrder(projectId: string, tasks: Task[], cachedAreaId?: string | null) {
   const supabase = createClient()
-  const areaId = await getAreaIdForProject(projectId)
+  const areaId = await resolveAreaId(projectId, cachedAreaId)
   if (!areaId) return
 
   const updates = tasks
@@ -193,9 +198,9 @@ export async function updateBacklogTaskOrder(projectId: string, tasks: Task[]) {
 }
 
 // Transition week: delete completed board tasks, move incomplete to Monday
-export async function transitionWeek(projectId: string): Promise<{ deleted: number; carriedOver: number }> {
+export async function transitionWeek(projectId: string, cachedAreaId?: string | null): Promise<{ deleted: number; carriedOver: number }> {
   const supabase = createClient()
-  const areaId = await getAreaIdForProject(projectId)
+  const areaId = await resolveAreaId(projectId, cachedAreaId)
 
   if (!areaId) return { deleted: 0, carriedOver: 0 }
 
@@ -225,17 +230,27 @@ export async function transitionWeek(projectId: string): Promise<{ deleted: numb
     }
   }
 
-  // Move incomplete tasks to Monday with sequential sort_order
+  // Move incomplete tasks to Monday with sequential sort_order (batch upsert)
   if (incomplete.length > 0) {
-    for (let i = 0; i < incomplete.length; i++) {
-      const { error: updateError } = await supabase
-        .from('tasks')
-        .update({ day: 'monday', sort_order: i })
-        .eq('id', incomplete[i].id)
-      if (updateError) {
-        console.error('Error moving task to Monday:', updateError)
-        throw updateError
-      }
+    const updates = incomplete.map((t, i) => ({
+      id: t.id,
+      area_id: areaId,
+      title: t.title,
+      description: t.description || null,
+      day: 'monday',
+      completed: false,
+      sort_order: i,
+      assignees: t.assignees || [],
+      client: t.client || null,
+      priority: t.priority || null,
+      type: t.type || 'task',
+      folder_id: t.folder_id || null,
+      checklist: t.checklist || [],
+    }))
+    const { error: updateError } = await supabase.from('tasks').upsert(updates)
+    if (updateError) {
+      console.error('Error moving tasks to Monday:', updateError)
+      throw updateError
     }
   }
 
@@ -243,9 +258,9 @@ export async function transitionWeek(projectId: string): Promise<{ deleted: numb
 }
 
 // Load backlog tasks (have a client, NOT on the kanban)
-export async function loadBacklogTasks(projectId: string): Promise<Task[]> {
+export async function loadBacklogTasks(projectId: string, cachedAreaId?: string | null): Promise<Task[]> {
   const supabase = createClient()
-  const areaId = await getAreaIdForProject(projectId)
+  const areaId = await resolveAreaId(projectId, cachedAreaId)
 
   if (!areaId) return []
 

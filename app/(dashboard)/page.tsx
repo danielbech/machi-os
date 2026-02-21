@@ -20,7 +20,7 @@ import {
 import { Check, Plus, StickyNote } from "lucide-react";
 
 export default function BoardPage() {
-  const { activeProjectId, clients, calendarEvents, backlogOpen, addToBacklog, backlogFolders, teamMembers, weekMode, weekDays, displayMonday } = useWorkspace();
+  const { activeProjectId, clients, calendarEvents, backlogOpen, addToBacklog, backlogFolders, teamMembers, weekMode, weekDays, displayMonday, areaId } = useWorkspace();
 
   const columnTitles = getColumnTitles(weekMode);
   const [columns, setColumns] = useState<Record<string, Task[]>>(() => getEmptyColumns(weekMode));
@@ -42,7 +42,7 @@ export default function BoardPage() {
   const refreshTasks = useCallback(async () => {
     if (!activeProjectId) return;
     try {
-      const tasks = await loadTasksByDay(activeProjectId);
+      const tasks = await loadTasksByDay(activeProjectId, areaId);
       // Filter to only show active days based on weekMode
       const filtered: Record<string, Task[]> = {};
       for (const day of weekDays) {
@@ -52,7 +52,7 @@ export default function BoardPage() {
     } catch (error) {
       console.error("Error loading tasks:", error);
     }
-  }, [activeProjectId, weekDays]);
+  }, [activeProjectId, weekDays, areaId]);
 
   // Load tasks when active project changes
   useEffect(() => {
@@ -62,6 +62,10 @@ export default function BoardPage() {
     }
     refreshTasks();
   }, [activeProjectId, weekMode, refreshTasks]);
+
+  // Track previous columns for diffing on drag
+  const prevColumnsRef = useRef(columns);
+  useEffect(() => { prevColumnsRef.current = columns; }, [columns]);
 
   // Suppress realtime reloads briefly after local saves
   const suppressTaskReload = useRef(false);
@@ -143,14 +147,14 @@ export default function BoardPage() {
       columnItems.push(newCard);
     }
     setColumns({ ...columns, [columnId]: columnItems });
-    const realId = await saveTask(activeProjectId, newCard);
+    const realId = await saveTask(activeProjectId, newCard, areaId);
     const updatedItems = columnItems.map((item) =>
       item.id === tempId ? { ...item, id: realId } : item
     );
     setColumns({ ...columns, [columnId]: updatedItems });
     setNewlyCreatedCardId(realId);
     // Persist correct sort order for the whole column
-    await updateDayTasks(activeProjectId, columnId, updatedItems);
+    await updateDayTasks(activeProjectId, columnId, updatedItems, areaId);
   };
 
   const toggleComplete = async (taskId: string) => {
@@ -185,7 +189,7 @@ export default function BoardPage() {
         return next;
       });
     }
-    if (updatedTask) await saveTask(activeProjectId, updatedTask);
+    if (updatedTask) await saveTask(activeProjectId, updatedTask, areaId);
   };
 
   const toggleAssignee = async (taskId: string, memberId: string) => {
@@ -209,7 +213,7 @@ export default function BoardPage() {
       }
     }
     setColumns(updated);
-    if (updatedTask) await saveTask(activeProjectId, updatedTask);
+    if (updatedTask) await saveTask(activeProjectId, updatedTask, areaId);
   };
 
   const toggleClient = async (taskId: string, clientId: string) => {
@@ -231,7 +235,7 @@ export default function BoardPage() {
       }
     }
     setColumns(updated);
-    if (updatedTask) await saveTask(activeProjectId, updatedTask);
+    if (updatedTask) await saveTask(activeProjectId, updatedTask, areaId);
   };
 
   const pasteTask = async (columnId: string) => {
@@ -250,13 +254,13 @@ export default function BoardPage() {
     };
     const columnItems = [...columns[columnId], newCard];
     setColumns({ ...columns, [columnId]: columnItems });
-    const realId = await saveTask(activeProjectId, newCard);
+    const realId = await saveTask(activeProjectId, newCard, areaId);
     const updatedItems = columnItems.map((item) =>
       item.id === tempId ? { ...item, id: realId } : item
     );
     setColumns({ ...columns, [columnId]: updatedItems });
     setNewlyCreatedCardId(realId);
-    await updateDayTasks(activeProjectId, columnId, updatedItems);
+    await updateDayTasks(activeProjectId, columnId, updatedItems, areaId);
   };
 
   // Global paste shortcut — paste into whichever column is hovered
@@ -332,7 +336,7 @@ export default function BoardPage() {
       updated[editingColumn][idx] = { ...updatedTask, day: editingColumn as DayName };
       setColumns(updated);
     }
-    await saveTask(activeProjectId, { ...updatedTask, day: editingColumn as DayName });
+    await saveTask(activeProjectId, { ...updatedTask, day: editingColumn as DayName }, areaId);
     setEditingTask(null);
     setEditingColumn(null);
     if (justCompleted) {
@@ -367,7 +371,7 @@ export default function BoardPage() {
     const updatedColumnItems = columns[sourceColumn].filter((t) => t.id !== taskId);
     setColumns({ ...columns, [sourceColumn]: updatedColumnItems });
     await addToBacklog(task);
-    await updateDayTasks(activeProjectId, sourceColumn, updatedColumnItems);
+    await updateDayTasks(activeProjectId, sourceColumn, updatedColumnItems, areaId);
   };
 
   return (
@@ -376,11 +380,18 @@ export default function BoardPage() {
         <Kanban
           value={columns}
           onValueChange={async (newColumns) => {
+            const prev = prevColumnsRef.current;
             setColumns(newColumns);
             if (activeProjectId) {
-              for (const [day, tasks] of Object.entries(newColumns)) {
-                await updateDayTasks(activeProjectId, day, tasks);
-              }
+              // Only persist columns that actually changed
+              const updates = Object.entries(newColumns).filter(([day, tasks]) => {
+                const prevTasks = prev[day];
+                if (!prevTasks || prevTasks.length !== tasks.length) return true;
+                return tasks.some((t, i) => t.id !== prevTasks[i].id);
+              });
+              await Promise.all(
+                updates.map(([day, tasks]) => updateDayTasks(activeProjectId, day, tasks, areaId))
+              );
             }
           }}
           getItemValue={(item) => item.id}

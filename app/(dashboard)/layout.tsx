@@ -7,6 +7,7 @@ import { SidebarProvider, SidebarInset, SidebarTrigger } from "@/components/ui/s
 import { useIsMobile } from "@/hooks/use-mobile";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { BacklogShell } from "@/components/backlog-shell";
+import { ErrorBoundary } from "@/components/error-boundary";
 
 function DashboardGate({ children }: { children: React.ReactNode }) {
   const { user, loading, backlogOpen, backlogWidth } = useWorkspace();
@@ -42,8 +43,10 @@ function DashboardGate({ children }: { children: React.ReactNode }) {
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   return (
-    <WorkspaceProvider>
-      <DashboardGate>{children}</DashboardGate>
-    </WorkspaceProvider>
+    <ErrorBoundary>
+      <WorkspaceProvider>
+        <DashboardGate>{children}</DashboardGate>
+      </WorkspaceProvider>
+    </ErrorBoundary>
   );
 }

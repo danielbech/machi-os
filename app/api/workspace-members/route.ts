@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createServerClient } from "@supabase/ssr";
+import { authenticateRoute } from "@/lib/supabase/route-auth";
 import { createAdminClient } from "@/lib/supabase/server";
 
 export async function GET(request: NextRequest) {
@@ -9,27 +9,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Missing projectId" }, { status: 400 });
     }
 
-    // Authenticate caller
-    const response = NextResponse.next();
-    const supabase = createServerClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      {
-        cookies: {
-          getAll: () => request.cookies.getAll(),
-          setAll: (cookiesToSet) => {
-            cookiesToSet.forEach(({ name, value, options }) => {
-              response.cookies.set(name, value, options);
-            });
-          },
-        },
-      }
-    );
-
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-    if (authError || !user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    const { supabase, user } = await authenticateRoute(request);
 
     // Verify caller is a member of this workspace
     const { data: callerMembership } = await supabase
@@ -55,7 +35,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Failed to fetch members" }, { status: 500 });
     }
 
-    // Resolve user IDs to emails — fetch each member individually
+    // Resolve user IDs to emails
     const userIds = (memberships || []).map((m) => m.user_id);
     const emailMap: Record<string, string> = {};
 
@@ -95,6 +75,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ members });
   } catch (err) {
+    if (err instanceof NextResponse) return err;
     console.error("Workspace members route error:", err);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }

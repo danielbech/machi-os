@@ -1,10 +1,10 @@
 "use client";
 
-import { createContext, useContext, useState, useEffect, useCallback, useRef } from "react";
+import { createContext, useContext, useState, useEffect, useCallback, useRef, useMemo } from "react";
 import type { User } from "@supabase/supabase-js";
 import type { Project, Client, Task, BacklogFolder, DayName, Member, WeekMode } from "@/lib/types";
 import { createClient } from "@/lib/supabase/client";
-import { initializeUserData } from "@/lib/supabase/initialize";
+import { initializeUserData, getAreaIdForProject } from "@/lib/supabase/initialize";
 import { getUserWorkspaces } from "@/lib/supabase/workspace";
 import { loadWorkspaceProfiles } from "@/lib/supabase/profiles";
 import { loadClients } from "@/lib/supabase/clients";
@@ -82,6 +82,7 @@ interface WorkspaceContextValue {
   setWeekMode: (mode: WeekMode) => Promise<void>;
   weekDays: DayName[];
   refreshWorkspaces: () => Promise<void>;
+  areaId: string | null;
 }
 
 const WorkspaceContext = createContext<WorkspaceContextValue | null>(null);
@@ -143,6 +144,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
   const [activeProjectId, setActiveProjectIdState] = useState<string | null>(null);
   const [clients, setClients] = useState<Client[]>([]);
   const [teamMembers, setTeamMembers] = useState<Member[]>([]);
+  const [areaId, setAreaId] = useState<string | null>(null);
 
   // Week mode
   const [weekMode, setWeekModeState] = useState<WeekMode>("5-day");
@@ -338,8 +340,10 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     refreshClients();
     if (activeProjectId) {
       loadWorkspaceProfiles(activeProjectId).then(setTeamMembers).catch(() => setTeamMembers([]));
+      getAreaIdForProject(activeProjectId).then(setAreaId);
     } else {
       setTeamMembers([]);
+      setAreaId(null);
     }
   }, [refreshClients, activeProjectId]);
 
@@ -349,15 +353,15 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     if (!activeProjectId) return;
     try {
       const [tasks, folders] = await Promise.all([
-        loadBacklogTasks(activeProjectId),
-        loadBacklogFolders(activeProjectId),
+        loadBacklogTasks(activeProjectId, areaId),
+        loadBacklogFolders(activeProjectId, areaId),
       ]);
       setBacklogTasks(tasks);
       setBacklogFolders(folders);
     } catch (error) {
       console.error("Error loading backlog:", error);
     }
-  }, [activeProjectId]);
+  }, [activeProjectId, areaId]);
 
   useEffect(() => {
     if (!activeProjectId) {
@@ -406,9 +410,9 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     const updatedTask = { ...task, day };
     setBacklogTasks((prev) => prev.filter((t) => t.id !== taskId));
     suppressBacklogReload.current = true;
-    await saveTask(activeProjectId, updatedTask);
+    await saveTask(activeProjectId, updatedTask, areaId);
     setTimeout(() => { suppressBacklogReload.current = false; }, 2000);
-  }, [activeProjectId, backlogTasks]);
+  }, [activeProjectId, backlogTasks, areaId]);
 
   const handleSendFolderToDay = useCallback(async (folderId: string, day: DayName) => {
     if (!activeProjectId) return;
@@ -417,20 +421,18 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     const updatedTasks = folderTasks.map((t) => ({ ...t, day }));
     setBacklogTasks((prev) => prev.filter((t) => t.folder_id !== folderId));
     suppressBacklogReload.current = true;
-    for (const task of updatedTasks) {
-      await saveTask(activeProjectId, task);
-    }
+    await Promise.all(updatedTasks.map((task) => saveTask(activeProjectId, task, areaId)));
     setTimeout(() => { suppressBacklogReload.current = false; }, 2000);
-  }, [activeProjectId, backlogTasks]);
+  }, [activeProjectId, backlogTasks, areaId]);
 
   const handleAddToBacklog = useCallback(async (task: Task) => {
     if (!activeProjectId) return;
     const backlogTask = { ...task, day: undefined };
     setBacklogTasks((prev) => [...prev, backlogTask]);
     suppressBacklogReload.current = true;
-    await saveTask(activeProjectId, backlogTask);
+    await saveTask(activeProjectId, backlogTask, areaId);
     setTimeout(() => { suppressBacklogReload.current = false; }, 2000);
-  }, [activeProjectId]);
+  }, [activeProjectId, areaId]);
 
   const handleCreateBacklogTask = useCallback(async (title: string, clientId: string, folderId?: string) => {
     if (!activeProjectId) return;
@@ -438,18 +440,18 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     const newTask: Task = { id: tempId, title, client: clientId, folder_id: folderId, priority: "medium", assignees: [], checklist: [] };
     setBacklogTasks((prev) => [...prev, newTask]);
     suppressBacklogReload.current = true;
-    const realId = await saveTask(activeProjectId, newTask);
+    const realId = await saveTask(activeProjectId, newTask, areaId);
     setBacklogTasks((prev) => prev.map((t) => (t.id === tempId ? { ...t, id: realId } : t)));
     setTimeout(() => { suppressBacklogReload.current = false; }, 2000);
-  }, [activeProjectId]);
+  }, [activeProjectId, areaId]);
 
   const handleSaveBacklogTask = useCallback(async (updatedTask: Task) => {
     if (!activeProjectId) return;
     setBacklogTasks((prev) => prev.map((t) => (t.id === updatedTask.id ? updatedTask : t)));
     suppressBacklogReload.current = true;
-    await saveTask(activeProjectId, updatedTask);
+    await saveTask(activeProjectId, updatedTask, areaId);
     setTimeout(() => { suppressBacklogReload.current = false; }, 2000);
-  }, [activeProjectId]);
+  }, [activeProjectId, areaId]);
 
   const handleDeleteBacklogTask = useCallback(async (taskId: string) => {
     setBacklogTasks((prev) => prev.filter((t) => t.id !== taskId));
@@ -462,15 +464,15 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     if (!activeProjectId) return;
     setBacklogTasks(updatedTasks);
     suppressBacklogReload.current = true;
-    await updateBacklogTaskOrder(activeProjectId, updatedTasks);
+    await updateBacklogTaskOrder(activeProjectId, updatedTasks, areaId);
     setTimeout(() => { suppressBacklogReload.current = false; }, 2000);
-  }, [activeProjectId]);
+  }, [activeProjectId, areaId]);
 
   const handleCreateFolder = useCallback(async (clientId: string, name: string) => {
     if (!activeProjectId) return;
-    const folder = await createBacklogFolderDb(activeProjectId, clientId, name, backlogFolders.length);
+    const folder = await createBacklogFolderDb(activeProjectId, clientId, name, backlogFolders.length, areaId);
     if (folder) setBacklogFolders((prev) => [...prev, folder]);
-  }, [activeProjectId, backlogFolders.length]);
+  }, [activeProjectId, backlogFolders.length, areaId]);
 
   const handleRenameFolder = useCallback(async (folderId: string, name: string) => {
     setBacklogFolders((prev) => prev.map((f) => (f.id === folderId ? { ...f, name } : f)));
@@ -489,14 +491,14 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
 
   const transitionToNextWeek = useCallback(async () => {
     if (!activeProjectId) return { deleted: 0, carriedOver: 0 };
-    const result = await transitionWeek(activeProjectId);
+    const result = await transitionWeek(activeProjectId, areaId);
     // Store marker using raw Monday so auto-trigger won't re-run this week
     const monday = getCurrentMonday();
     localStorage.setItem("machi-last-transition", monday.toISOString());
     // Bump counter to trigger calendar re-fetch with new week range
     setTransitionCount((c) => c + 1);
     return result;
-  }, [activeProjectId]);
+  }, [activeProjectId, areaId]);
 
   // Auto-trigger: every 60s check if it's transition day >= transition hour and hasn't run this week
   useEffect(() => {
@@ -797,53 +799,66 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
   const activeProject = userProjects.find((p) => p.id === activeProjectId);
   const displayMonday = getDisplayMonday(transitionDay);
 
+  const value = useMemo(() => ({
+    user,
+    loading,
+    userProjects,
+    activeProjectId,
+    setActiveProjectId,
+    activeProject,
+    clients,
+    refreshClients,
+    teamMembers,
+    refreshTeamMembers,
+    googleCalendarConnected,
+    calendarEvents,
+    syncCalendarEvents,
+    connectGoogleCalendar,
+    disconnectGoogleAccount,
+    calendarConnections,
+    updateSelectedCalendars: handleUpdateSelectedCalendars,
+    backlogOpen,
+    toggleBacklog,
+    backlogTasks,
+    backlogFolders,
+    sendBacklogToDay,
+    sendFolderToDay: handleSendFolderToDay,
+    addToBacklog: handleAddToBacklog,
+    createBacklogTask: handleCreateBacklogTask,
+    saveBacklogTask: handleSaveBacklogTask,
+    deleteBacklogTask: handleDeleteBacklogTask,
+    reorderBacklogTasks: handleReorderBacklogTasks,
+    createFolder: handleCreateFolder,
+    renameFolder: handleRenameFolder,
+    deleteFolder: handleDeleteFolder,
+    backlogWidth,
+    setBacklogWidth,
+    transitionToNextWeek,
+    transitionDay,
+    transitionHour,
+    setTransitionSchedule,
+    displayMonday,
+    weekMode,
+    setWeekMode,
+    weekDays,
+    refreshWorkspaces,
+    areaId,
+  }), [
+    user, loading, userProjects, activeProjectId, setActiveProjectId,
+    activeProject, clients, refreshClients, teamMembers, refreshTeamMembers,
+    googleCalendarConnected, calendarEvents, syncCalendarEvents,
+    connectGoogleCalendar, disconnectGoogleAccount, calendarConnections,
+    handleUpdateSelectedCalendars, backlogOpen, toggleBacklog, backlogTasks,
+    backlogFolders, sendBacklogToDay, handleSendFolderToDay,
+    handleAddToBacklog, handleCreateBacklogTask, handleSaveBacklogTask,
+    handleDeleteBacklogTask, handleReorderBacklogTasks, handleCreateFolder,
+    handleRenameFolder, handleDeleteFolder, backlogWidth, setBacklogWidth,
+    transitionToNextWeek, transitionDay, transitionHour, setTransitionSchedule,
+    displayMonday, weekMode, setWeekMode, weekDays, refreshWorkspaces, areaId,
+  ]);
+
   return (
-    <WorkspaceContext.Provider
-      value={{
-        user,
-        loading,
-        userProjects,
-        activeProjectId,
-        setActiveProjectId,
-        activeProject,
-        clients,
-        refreshClients,
-        teamMembers,
-        refreshTeamMembers,
-        googleCalendarConnected,
-        calendarEvents,
-        syncCalendarEvents,
-        connectGoogleCalendar,
-        disconnectGoogleAccount,
-        calendarConnections,
-        updateSelectedCalendars: handleUpdateSelectedCalendars,
-        backlogOpen,
-        toggleBacklog,
-        backlogTasks,
-        backlogFolders,
-        sendBacklogToDay,
-        sendFolderToDay: handleSendFolderToDay,
-        addToBacklog: handleAddToBacklog,
-        createBacklogTask: handleCreateBacklogTask,
-        saveBacklogTask: handleSaveBacklogTask,
-        deleteBacklogTask: handleDeleteBacklogTask,
-        reorderBacklogTasks: handleReorderBacklogTasks,
-        createFolder: handleCreateFolder,
-        renameFolder: handleRenameFolder,
-        deleteFolder: handleDeleteFolder,
-        backlogWidth,
-        setBacklogWidth,
-        transitionToNextWeek,
-        transitionDay,
-        transitionHour,
-        setTransitionSchedule,
-        displayMonday,
-        weekMode,
-        setWeekMode,
-        weekDays,
-        refreshWorkspaces,
-      }}
-    >
+    <WorkspaceContext.Provider value={value}>
       {children}
     </WorkspaceContext.Provider>
   );

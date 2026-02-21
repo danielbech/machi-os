@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createServerClient } from "@supabase/ssr";
+import { authenticateRoute } from "@/lib/supabase/route-auth";
 import { createAdminClient } from "@/lib/supabase/server";
 
 export async function POST(request: NextRequest) {
@@ -10,28 +10,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Name is required" }, { status: 400 });
     }
 
-    // Auth check via cookies
-    const response = NextResponse.next();
-    const supabase = createServerClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      {
-        cookies: {
-          getAll: () => request.cookies.getAll(),
-          setAll: (cookiesToSet) => {
-            cookiesToSet.forEach(({ name, value, options }) => {
-              response.cookies.set(name, value, options);
-            });
-          },
-        },
-      }
-    );
-
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-    if (authError || !user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
+    const { user } = await authenticateRoute(request);
     const admin = createAdminClient();
 
     // Create project
@@ -53,7 +32,6 @@ export async function POST(request: NextRequest) {
 
     if (membershipError) {
       console.error("Create membership error:", membershipError);
-      // Rollback: delete project
       await admin.from("projects").delete().eq("id", project.id);
       return NextResponse.json({ error: "Failed to create workspace" }, { status: 500 });
     }
@@ -65,13 +43,13 @@ export async function POST(request: NextRequest) {
 
     if (areaError) {
       console.error("Create area error:", areaError);
-      // Rollback: delete project (CASCADE handles membership)
       await admin.from("projects").delete().eq("id", project.id);
       return NextResponse.json({ error: "Failed to create workspace" }, { status: 500 });
     }
 
     return NextResponse.json({ project });
   } catch (err) {
+    if (err instanceof NextResponse) return err;
     console.error("Create workspace error:", err);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
@@ -85,27 +63,7 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: "Missing projectId" }, { status: 400 });
     }
 
-    // Auth check via cookies
-    const response = NextResponse.next();
-    const supabase = createServerClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      {
-        cookies: {
-          getAll: () => request.cookies.getAll(),
-          setAll: (cookiesToSet) => {
-            cookiesToSet.forEach(({ name, value, options }) => {
-              response.cookies.set(name, value, options);
-            });
-          },
-        },
-      }
-    );
-
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-    if (authError || !user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    const { supabase, user } = await authenticateRoute(request);
 
     // Verify caller is owner
     const { data: membership } = await supabase
@@ -143,6 +101,7 @@ export async function DELETE(request: NextRequest) {
 
     return NextResponse.json({ success: true });
   } catch (err) {
+    if (err instanceof NextResponse) return err;
     console.error("Delete workspace error:", err);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createServerClient } from "@supabase/ssr";
+import { authenticateRoute } from "@/lib/supabase/route-auth";
 import { createAdminClient } from "@/lib/supabase/server";
 
 export async function POST(request: NextRequest) {
@@ -14,27 +14,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Invalid role" }, { status: 400 });
     }
 
-    // Create authenticated client from request cookies to verify caller
-    const response = NextResponse.next();
-    const supabase = createServerClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      {
-        cookies: {
-          getAll: () => request.cookies.getAll(),
-          setAll: (cookiesToSet) => {
-            cookiesToSet.forEach(({ name, value, options }) => {
-              response.cookies.set(name, value, options);
-            });
-          },
-        },
-      }
-    );
-
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-    if (authError || !user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    const { supabase, user } = await authenticateRoute(request);
 
     // Verify caller is owner or admin of this project
     const { data: membership } = await supabase
@@ -114,6 +94,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ status: "invited", message: "Invite sent — will be accepted when they sign up" });
   } catch (err) {
+    if (err instanceof NextResponse) return err;
     console.error("Invite route error:", err);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
