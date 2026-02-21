@@ -1116,7 +1116,7 @@ export const GanttMarker: FC<
         <ContextMenuTrigger asChild>
           <div
             className={cn(
-              "group pointer-events-auto sticky top-0 flex select-auto flex-col flex-nowrap items-center justify-center whitespace-nowrap rounded-b-md bg-card px-2 py-1 text-foreground text-xs",
+              "group pointer-events-auto sticky top-0 flex select-auto flex-col flex-nowrap items-center justify-center whitespace-nowrap rounded-b-md border border-white/[0.06] bg-white/10 px-2 py-1 text-foreground text-xs backdrop-blur-sm",
               className
             )}
           >
@@ -1138,7 +1138,7 @@ export const GanttMarker: FC<
           ) : null}
         </ContextMenuContent>
       </ContextMenu>
-      <div className={cn("h-full w-px bg-card", className)} />
+      <div className="h-full w-px bg-white/20" />
     </div>
   );
 });

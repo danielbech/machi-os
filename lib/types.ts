@@ -80,6 +80,14 @@ export interface TimelineEntry {
   created_at: string;
 }
 
+export interface TimelineMarker {
+  id: string;
+  project_id: string;
+  label: string;
+  date: string;
+  created_at: string;
+}
+
 export interface FeedbackTicket {
   id: string;
   user_id: string;

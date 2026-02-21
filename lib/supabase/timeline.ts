@@ -1,5 +1,5 @@
 import { createClient } from './client'
-import type { TimelineEntry } from '../types'
+import type { TimelineEntry, TimelineMarker } from '../types'
 
 export async function loadTimelineEntries(projectId: string): Promise<TimelineEntry[]> {
   const supabase = createClient()
@@ -93,6 +93,75 @@ export async function deleteTimelineEntry(entryId: string): Promise<void> {
 
   if (error) {
     console.error('Error deleting timeline entry:', error)
+    throw error
+  }
+}
+
+// --- Markers ---
+
+export async function loadTimelineMarkers(projectId: string): Promise<TimelineMarker[]> {
+  const supabase = createClient()
+
+  const { data, error } = await supabase
+    .from('timeline_markers')
+    .select('id, project_id, label, date, created_at')
+    .eq('project_id', projectId)
+    .order('date')
+
+  if (error) {
+    console.error('Error loading timeline markers:', error)
+    return []
+  }
+
+  return (data || []).map(m => ({
+    id: m.id,
+    project_id: m.project_id,
+    label: m.label,
+    date: m.date,
+    created_at: m.created_at,
+  }))
+}
+
+export async function createTimelineMarker(
+  projectId: string,
+  marker: { label: string; date: string }
+): Promise<TimelineMarker> {
+  const supabase = createClient()
+
+  const { data, error } = await supabase
+    .from('timeline_markers')
+    .insert({
+      project_id: projectId,
+      label: marker.label,
+      date: marker.date,
+    })
+    .select()
+    .single()
+
+  if (error) {
+    console.error('Error creating timeline marker:', error)
+    throw error
+  }
+
+  return {
+    id: data.id,
+    project_id: data.project_id,
+    label: data.label,
+    date: data.date,
+    created_at: data.created_at,
+  }
+}
+
+export async function deleteTimelineMarker(markerId: string): Promise<void> {
+  const supabase = createClient()
+
+  const { error } = await supabase
+    .from('timeline_markers')
+    .delete()
+    .eq('id', markerId)
+
+  if (error) {
+    console.error('Error deleting timeline marker:', error)
     throw error
   }
 }

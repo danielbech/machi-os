@@ -8,15 +8,17 @@ import {
   createTimelineEntry,
   updateTimelineEntry,
   deleteTimelineEntry,
+  loadTimelineMarkers,
+  createTimelineMarker,
+  deleteTimelineMarker,
 } from "@/lib/supabase/timeline";
 import { CLIENT_HEX_COLORS, CLIENT_DOT_COLORS } from "@/lib/colors";
 import { ClientIcon } from "@/components/client-icon";
-import type { TimelineEntry, Client } from "@/lib/types";
-import type { GanttFeature, Range, GanttMarkerProps } from "@/components/ui/gantt";
+import type { TimelineEntry, TimelineMarker, Client } from "@/lib/types";
+import type { GanttFeature, Range } from "@/components/ui/gantt";
 import {
   GanttProvider,
   GanttSidebar,
-  GanttSidebarHeader,
   GanttTimeline,
   GanttHeader,
   GanttFeatureList,
@@ -93,7 +95,7 @@ export default function TimelinePage() {
   const [entries, setEntries] = useState<TimelineEntry[]>([]);
   const [range, setRange] = useState<Range>("monthly");
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [markers, setMarkers] = useState<GanttMarkerProps[]>([]);
+  const [markers, setMarkers] = useState<TimelineMarker[]>([]);
 
   const activeClients = clients.filter((c) => c.active);
   const clientsOnTimeline = new Set(entries.map((e) => e.client_id));
@@ -107,8 +109,12 @@ export default function TimelinePage() {
 
   const loadEntries = useCallback(async () => {
     if (!activeProjectId) return;
-    const data = await loadTimelineEntries(activeProjectId);
-    setEntries(data);
+    const [entryData, markerData] = await Promise.all([
+      loadTimelineEntries(activeProjectId),
+      loadTimelineMarkers(activeProjectId),
+    ]);
+    setEntries(entryData);
+    setMarkers(markerData);
   }, [activeProjectId]);
 
   useEffect(() => {
@@ -187,19 +193,43 @@ export default function TimelinePage() {
     }
   };
 
-  const handleCreateMarker = (date: Date) => {
-    setMarkers((prev) => [
-      ...prev,
-      {
-        id: `marker-${Date.now()}`,
-        date,
-        label: format(date, "MMM d"),
-      },
-    ]);
+  const handleCreateMarker = async (date: Date) => {
+    if (!activeProjectId) return;
+    const dateStr = format(date, "yyyy-MM-dd");
+    const label = format(date, "MMM d");
+
+    const optimistic: TimelineMarker = {
+      id: `temp-${Date.now()}`,
+      project_id: activeProjectId,
+      label,
+      date: dateStr,
+      created_at: new Date().toISOString(),
+    };
+
+    setMarkers((prev) => [...prev, optimistic]);
+
+    try {
+      const created = await createTimelineMarker(activeProjectId, {
+        label,
+        date: dateStr,
+      });
+      setMarkers((prev) =>
+        prev.map((m) => (m.id === optimistic.id ? created : m))
+      );
+    } catch {
+      setMarkers((prev) => prev.filter((m) => m.id !== optimistic.id));
+    }
   };
 
-  const handleRemoveMarker = (id: string) => {
+  const handleRemoveMarker = async (id: string) => {
+    const previous = markers;
     setMarkers((prev) => prev.filter((m) => m.id !== id));
+
+    try {
+      await deleteTimelineMarker(id);
+    } catch {
+      setMarkers(previous);
+    }
   };
 
   const RANGE_OPTIONS: { value: Range; label: string }[] = [
@@ -341,7 +371,9 @@ export default function TimelinePage() {
               {markers.map((marker) => (
                 <GanttMarker
                   key={marker.id}
-                  {...marker}
+                  id={marker.id}
+                  date={parseISO(marker.date)}
+                  label={marker.label}
                   onRemove={handleRemoveMarker}
                 />
               ))}
