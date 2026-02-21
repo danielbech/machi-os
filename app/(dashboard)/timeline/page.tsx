@@ -36,19 +36,13 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import {
-  ContextMenu,
-  ContextMenuContent,
-  ContextMenuItem,
-  ContextMenuTrigger,
-} from "@/components/ui/context-menu";
-import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Plus, Trash2, CalendarPlus, Pencil, MoreHorizontal } from "lucide-react";
+import { Plus, Trash2, CalendarPlus, Pencil } from "lucide-react";
 
 function toFeature(entry: TimelineEntry, clients: Client[]): GanttFeature {
   const client = entry.client_id
@@ -446,46 +440,28 @@ export default function TimelinePage() {
                   : `${formatDistance(feature.startAt, new Date())} so far`;
 
                 return (
-                  <DropdownMenu key={entry.id}>
-                    <DropdownMenuTrigger asChild>
-                      <button
-                        className="group relative flex w-full items-center gap-2.5 p-2.5 text-xs hover:bg-secondary cursor-pointer text-left outline-none"
-                        style={{ height: "var(--gantt-row-height)" }}
-                      >
-                        {entry.type === "event" ? (
-                          <EventDot color={entry.color} size="sm" />
-                        ) : client ? (
-                          <ClientAvatar client={client} size="sm" />
-                        ) : (
-                          <div
-                            className="h-2 w-2 shrink-0 rounded-full"
-                            style={{ backgroundColor: feature.status.color }}
-                          />
-                        )}
-                        <p className="flex-1 truncate text-left font-medium">
-                          {feature.name}
-                        </p>
-                        <p className="text-muted-foreground group-hover:hidden">
-                          {duration}
-                        </p>
-                        <MoreHorizontal className="size-3.5 text-muted-foreground hidden group-hover:block" />
-                      </button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="start" side="bottom">
-                      <DropdownMenuItem onClick={() => openEditDialog(entry)}>
-                        <Pencil className="size-4" />
-                        Edit
-                      </DropdownMenuItem>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem
-                        className="text-destructive"
-                        onClick={() => handleRemove(entry.id)}
-                      >
-                        <Trash2 className="size-4" />
-                        Remove from timeline
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
+                  <div
+                    key={entry.id}
+                    className="relative flex items-center gap-2.5 p-2.5 text-xs"
+                    style={{ height: "var(--gantt-row-height)" }}
+                  >
+                    {entry.type === "event" ? (
+                      <EventDot color={entry.color} size="sm" />
+                    ) : client ? (
+                      <ClientAvatar client={client} size="sm" />
+                    ) : (
+                      <div
+                        className="h-2 w-2 shrink-0 rounded-full"
+                        style={{ backgroundColor: feature.status.color }}
+                      />
+                    )}
+                    <p className="flex-1 truncate text-left font-medium">
+                      {feature.name}
+                    </p>
+                    <p className="text-muted-foreground">
+                      {duration}
+                    </p>
+                  </div>
                 );
               })}
             </GanttSidebar>
@@ -499,8 +475,8 @@ export default function TimelinePage() {
                       ? clientMap.get(entry.client_id)
                       : undefined;
                   return (
-                    <ContextMenu key={feature.id}>
-                      <ContextMenuTrigger asChild>
+                    <DropdownMenu key={feature.id}>
+                      <DropdownMenuTrigger asChild>
                         <div>
                           <GanttFeatureItem
                             {...feature}
@@ -523,17 +499,22 @@ export default function TimelinePage() {
                             </p>
                           </GanttFeatureItem>
                         </div>
-                      </ContextMenuTrigger>
-                      <ContextMenuContent>
-                        <ContextMenuItem
-                          className="flex items-center gap-2 text-destructive"
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent>
+                        <DropdownMenuItem onClick={() => entry && openEditDialog(entry)}>
+                          <Pencil className="size-4" />
+                          Edit
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem
+                          className="text-destructive"
                           onClick={() => entry && handleRemove(entry.id)}
                         >
                           <Trash2 className="size-4" />
                           Remove from timeline
-                        </ContextMenuItem>
-                      </ContextMenuContent>
-                    </ContextMenu>
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   );
                 })}
               </GanttFeatureList>

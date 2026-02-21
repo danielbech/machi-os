@@ -808,7 +808,7 @@ export const GanttFeatureItemCard: FC<GanttFeatureItemCardProps> = ({
   useEffect(() => setDragging(isPressed), [isPressed, setDragging]);
 
   return (
-    <Card className="h-full w-full rounded-md border-white/10 bg-background p-2 text-xs shadow-sm">
+    <Card className="h-full w-full rounded-md border-white/10 hover:border-white/20 bg-background p-2 text-xs shadow-sm transition-colors cursor-pointer">
       <div
         className={cn(
           "flex h-full w-full items-center justify-between gap-2 text-left",
