@@ -134,18 +134,18 @@ export function AppSidebar() {
                   </SidebarMenuButton>
                 </SidebarMenuItem>
                 <SidebarMenuItem>
-                  <SidebarMenuButton asChild isActive={pathname === "/projects"} tooltip="Projects">
-                    <Link href="/projects" onClick={() => setOpenMobile(false)}>
-                      <FolderKanban />
-                      <span>Projects</span>
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-                <SidebarMenuItem>
                   <SidebarMenuButton asChild isActive={pathname === "/timeline"} tooltip="Timeline">
                     <Link href="/timeline" onClick={() => setOpenMobile(false)}>
                       <CalendarRange />
                       <span>Timeline</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+                <SidebarMenuItem>
+                  <SidebarMenuButton asChild isActive={pathname === "/projects"} tooltip="Projects">
+                    <Link href="/projects" onClick={() => setOpenMobile(false)}>
+                      <FolderKanban />
+                      <span>Projects</span>
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
