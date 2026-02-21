@@ -239,7 +239,7 @@ export default function TimelinePage() {
   ];
 
   return (
-    <main className="flex min-h-screen flex-col p-4 md:p-8 bg-black/50">
+    <main className="flex min-h-screen flex-col p-4 md:p-8 bg-black/50 overflow-hidden">
       <div className="mb-6 flex items-center justify-between">
         <h1 className="text-2xl font-bold">Timeline</h1>
         <div className="flex items-center gap-3">
