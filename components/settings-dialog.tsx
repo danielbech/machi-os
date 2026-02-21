@@ -272,16 +272,6 @@ export function SettingsDialog({
                           className="h-8"
                         />
                       </div>
-                      <div>
-                        <label className="text-xs text-white/40 block mb-1">Initials</label>
-                        <Input
-                          value={profileInitials}
-                          onChange={(e) => setProfileInitials(e.target.value.toUpperCase().slice(0, 3))}
-                          placeholder="AB"
-                          maxLength={3}
-                          className="h-8 w-20"
-                        />
-                      </div>
                     </div>
                   </div>
                   <Button
