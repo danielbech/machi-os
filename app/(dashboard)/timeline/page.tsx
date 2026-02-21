@@ -42,7 +42,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Plus, Trash2, CalendarPlus, Pencil } from "lucide-react";
+import { Plus, Trash2, CalendarPlus, Pencil, MoreHorizontal } from "lucide-react";
 
 function toFeature(entry: TimelineEntry, clients: Client[]): GanttFeature {
   const client = entry.client_id
@@ -475,46 +475,52 @@ export default function TimelinePage() {
                       ? clientMap.get(entry.client_id)
                       : undefined;
                   return (
-                    <DropdownMenu key={feature.id}>
-                      <DropdownMenuTrigger asChild>
-                        <div>
-                          <GanttFeatureItem
-                            {...feature}
-                            onMove={handleMove}
+                    <GanttFeatureItem
+                      key={feature.id}
+                      {...feature}
+                      onMove={handleMove}
+                    >
+                      {entry?.type === "event" ? (
+                        <EventDot color={entry.color} size="xs" />
+                      ) : client ? (
+                        <ClientAvatar client={client} size="xs" />
+                      ) : (
+                        <div
+                          className="h-2 w-2 shrink-0 rounded-full"
+                          style={{
+                            backgroundColor: feature.status.color,
+                          }}
+                        />
+                      )}
+                      <p className="flex-1 truncate text-xs">
+                        {feature.name}
+                      </p>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <button
+                            className="shrink-0 rounded p-0.5 text-white/30 hover:text-white/60 hover:bg-white/10 transition-colors"
+                            onPointerDown={(e) => e.stopPropagation()}
+                            aria-label="Entry options"
                           >
-                            {entry?.type === "event" ? (
-                              <EventDot color={entry.color} size="xs" />
-                            ) : client ? (
-                              <ClientAvatar client={client} size="xs" />
-                            ) : (
-                              <div
-                                className="h-2 w-2 shrink-0 rounded-full"
-                                style={{
-                                  backgroundColor: feature.status.color,
-                                }}
-                              />
-                            )}
-                            <p className="flex-1 truncate text-xs">
-                              {feature.name}
-                            </p>
-                          </GanttFeatureItem>
-                        </div>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent>
-                        <DropdownMenuItem onClick={() => entry && openEditDialog(entry)}>
-                          <Pencil className="size-4" />
-                          Edit
-                        </DropdownMenuItem>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem
-                          className="text-destructive"
-                          onClick={() => entry && handleRemove(entry.id)}
-                        >
-                          <Trash2 className="size-4" />
-                          Remove from timeline
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
+                            <MoreHorizontal className="size-3.5" />
+                          </button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={() => entry && openEditDialog(entry)}>
+                            <Pencil className="size-4" />
+                            Edit
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem
+                            className="text-destructive"
+                            onClick={() => entry && handleRemove(entry.id)}
+                          >
+                            <Trash2 className="size-4" />
+                            Remove from timeline
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </GanttFeatureItem>
                   );
                 })}
               </GanttFeatureList>
