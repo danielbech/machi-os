@@ -41,7 +41,14 @@ import {
   ContextMenuItem,
   ContextMenuTrigger,
 } from "@/components/ui/context-menu";
-import { Plus, Trash2, CalendarPlus } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Plus, Trash2, CalendarPlus, Pencil, MoreHorizontal } from "lucide-react";
 
 function toFeature(entry: TimelineEntry, clients: Client[]): GanttFeature {
   const client = entry.client_id
@@ -135,6 +142,14 @@ export default function TimelinePage() {
   );
   const [eventColor, setEventColor] = useState("blue");
   const [eventSubmitting, setEventSubmitting] = useState(false);
+
+  // Edit form state
+  const [editingEntry, setEditingEntry] = useState<TimelineEntry | null>(null);
+  const [editTitle, setEditTitle] = useState("");
+  const [editStartDate, setEditStartDate] = useState("");
+  const [editEndDate, setEditEndDate] = useState("");
+  const [editColor, setEditColor] = useState("blue");
+  const [editSaving, setEditSaving] = useState(false);
 
   const activeClients = clients.filter((c) => c.active);
   const clientsOnTimeline = new Set(
@@ -277,6 +292,39 @@ export default function TimelinePage() {
     }
   };
 
+  const openEditDialog = (entry: TimelineEntry) => {
+    const client = entry.client_id ? clientMap.get(entry.client_id) : undefined;
+    setEditingEntry(entry);
+    setEditTitle(entry.title || client?.name || "");
+    setEditStartDate(entry.start_date);
+    setEditEndDate(entry.end_date);
+    setEditColor(entry.color);
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editingEntry) return;
+    setEditSaving(true);
+
+    const updates = {
+      title: editTitle.trim(),
+      start_date: editStartDate,
+      end_date: editEndDate,
+      color: editColor,
+    };
+
+    setEntries((prev) =>
+      prev.map((e) => (e.id === editingEntry.id ? { ...e, ...updates } : e))
+    );
+    setEditingEntry(null);
+    setEditSaving(false);
+
+    try {
+      await updateTimelineEntry(editingEntry.id, updates);
+    } catch {
+      await loadEntries();
+    }
+  };
+
   const handleCreateMarker = async (date: Date) => {
     if (!activeProjectId) return;
     const dateStr = format(date, "yyyy-MM-dd");
@@ -398,28 +446,46 @@ export default function TimelinePage() {
                   : `${formatDistance(feature.startAt, new Date())} so far`;
 
                 return (
-                  <div
-                    key={entry.id}
-                    className="relative flex items-center gap-2.5 p-2.5 text-xs hover:bg-secondary"
-                    style={{ height: "var(--gantt-row-height)" }}
-                  >
-                    {entry.type === "event" ? (
-                      <EventDot color={entry.color} size="sm" />
-                    ) : client ? (
-                      <ClientAvatar client={client} size="sm" />
-                    ) : (
-                      <div
-                        className="h-2 w-2 shrink-0 rounded-full"
-                        style={{ backgroundColor: feature.status.color }}
-                      />
-                    )}
-                    <p className="pointer-events-none flex-1 truncate text-left font-medium">
-                      {feature.name}
-                    </p>
-                    <p className="pointer-events-none text-muted-foreground">
-                      {duration}
-                    </p>
-                  </div>
+                  <DropdownMenu key={entry.id}>
+                    <DropdownMenuTrigger asChild>
+                      <button
+                        className="group relative flex w-full items-center gap-2.5 p-2.5 text-xs hover:bg-secondary cursor-pointer text-left outline-none"
+                        style={{ height: "var(--gantt-row-height)" }}
+                      >
+                        {entry.type === "event" ? (
+                          <EventDot color={entry.color} size="sm" />
+                        ) : client ? (
+                          <ClientAvatar client={client} size="sm" />
+                        ) : (
+                          <div
+                            className="h-2 w-2 shrink-0 rounded-full"
+                            style={{ backgroundColor: feature.status.color }}
+                          />
+                        )}
+                        <p className="flex-1 truncate text-left font-medium">
+                          {feature.name}
+                        </p>
+                        <p className="text-muted-foreground group-hover:hidden">
+                          {duration}
+                        </p>
+                        <MoreHorizontal className="size-3.5 text-muted-foreground hidden group-hover:block" />
+                      </button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="start" side="bottom">
+                      <DropdownMenuItem onClick={() => openEditDialog(entry)}>
+                        <Pencil className="size-4" />
+                        Edit
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem
+                        className="text-destructive"
+                        onClick={() => handleRemove(entry.id)}
+                      >
+                        <Trash2 className="size-4" />
+                        Remove from timeline
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 );
               })}
             </GanttSidebar>
@@ -511,6 +577,74 @@ export default function TimelinePage() {
               ))
             )}
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Entry Dialog */}
+      <Dialog open={!!editingEntry} onOpenChange={(open) => !open && setEditingEntry(null)}>
+        <DialogContent className="sm:max-w-[400px]">
+          <DialogHeader>
+            <DialogTitle>Edit {editingEntry?.type === "event" ? "Event" : "Project"}</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={(e) => { e.preventDefault(); handleSaveEdit(); }} className="space-y-4 pt-2">
+            <div className="space-y-1.5">
+              <label className="text-xs text-white/40">Title</label>
+              <Input
+                value={editTitle}
+                onChange={(e) => setEditTitle(e.target.value)}
+                autoFocus
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <label className="text-xs text-white/40">Start date</label>
+                <Input
+                  type="date"
+                  value={editStartDate}
+                  onChange={(e) => setEditStartDate(e.target.value)}
+                  className="[color-scheme:dark]"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-xs text-white/40">End date</label>
+                <Input
+                  type="date"
+                  value={editEndDate}
+                  onChange={(e) => setEditEndDate(e.target.value)}
+                  className="[color-scheme:dark]"
+                />
+              </div>
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-xs text-white/40">Color</label>
+              <div className="flex gap-2">
+                {COLOR_NAMES.map((name) => (
+                  <button
+                    key={name}
+                    type="button"
+                    onClick={() => setEditColor(name)}
+                    className={`size-6 rounded-full ${CLIENT_DOT_COLORS[name]} transition-all ${
+                      editColor === name
+                        ? "ring-2 ring-white ring-offset-2 ring-offset-black scale-110"
+                        : "opacity-50 hover:opacity-80"
+                    }`}
+                    aria-label={name}
+                  />
+                ))}
+              </div>
+            </div>
+            <div className="flex justify-end gap-2 pt-2">
+              <Button variant="ghost" type="button" onClick={() => setEditingEntry(null)}>
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                disabled={!editTitle.trim() || !editStartDate || !editEndDate || editSaving}
+              >
+                {editSaving ? "Saving..." : "Save"}
+              </Button>
+            </div>
+          </form>
         </DialogContent>
       </Dialog>
 
