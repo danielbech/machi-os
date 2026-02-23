@@ -58,7 +58,7 @@ export function AuthForm() {
           hoverDampness={0.25}
           rayCount={0}
           mixBlendMode="lighten"
-          colors={['#ff007a', '#4d3dff', '#ffffff']}
+          colors={['#2DA07D', '#FF7300', '#D2AA1A']}
         />
       </div>
       <Card className="relative z-10 w-full max-w-md border-white/10 bg-black/60 backdrop-blur-xl">
