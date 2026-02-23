@@ -58,10 +58,10 @@ export function AuthForm() {
           hoverDampness={0.25}
           rayCount={0}
           mixBlendMode="lighten"
-          colors={['#2DA07D', '#FF7300', '#D2AA1A']}
+          colors={['#A0492D', '#FF7300', '#D2AA1A']}
         />
       </div>
-      <Card className="relative z-10 w-full max-w-md border-white/10 bg-black/60 backdrop-blur-xl">
+      <Card className="relative z-10 w-full max-w-md border-white/[0.08] bg-white/[0.04] backdrop-blur-2xl shadow-2xl">
         <CardHeader>
           <div className="flex items-center gap-3 mb-2">
             <img src="/logo.svg" alt="Machi OS" className="w-10 h-10" />
