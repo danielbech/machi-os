@@ -801,62 +801,166 @@ export type GanttDragCreateProps = {
 export const GanttDragCreate: FC<GanttDragCreateProps> = ({ className }) => {
   const gantt = useContext(GanttContext);
   const [featureDragging] = useGanttDragging();
-  const [scrollX] = useGanttScrollX();
-  const [mousePosition, mouseRef] = useMouse<HTMLDivElement>();
   const [dragging, setDragging] = useState(false);
   const [startX, setStartX] = useState<number | null>(null);
   const [currentX, setCurrentX] = useState(0);
+  const [hoverX, setHoverX] = useState(0);
+  const [hoverY, setHoverY] = useState(0);
+  const [isHovering, setIsHovering] = useState(false);
+  const [dragRowTop, setDragRowTop] = useState(0);
+  const [dragRowHeight, setDragRowHeight] = useState(36);
+
+  // Find the feature-list element to compute row-relative Y
+  const featureListRef = useRef<HTMLElement | null>(null);
+
+  useEffect(() => {
+    const container = gantt.ref?.current;
+    if (!container) return;
+    const el = container.querySelector(
+      '[data-gantt-drag-area]'
+    ) as HTMLElement | null;
+    featureListRef.current = el;
+  });
 
   const getRelativeX = useCallback(
     (clientX: number) => {
-      const ganttRect = gantt.ref?.current?.getBoundingClientRect();
-      return clientX - (ganttRect?.left ?? 0) + scrollX - gantt.sidebarWidth;
+      const container = gantt.ref?.current;
+      if (!container) return 0;
+      const rect = container.getBoundingClientRect();
+      return clientX - rect.left + container.scrollLeft - gantt.sidebarWidth;
     },
-    [gantt.ref, gantt.sidebarWidth, scrollX]
+    [gantt.ref, gantt.sidebarWidth]
   );
 
-  const hoverX = useThrottle(
-    mousePosition.x
-      ? getRelativeX(mousePosition.x)
-      : 0,
-    10
+  // Given a clientY, find which row element the mouse is in and return its top/height
+  const getRowBounds = useCallback(
+    (clientY: number) => {
+      const fl = featureListRef.current;
+      if (!fl) return { top: 0, height: gantt.rowHeight };
+      const children = fl.children;
+      for (let i = 0; i < children.length; i++) {
+        const child = children[i] as HTMLElement;
+        const rect = child.getBoundingClientRect();
+        if (clientY >= rect.top && clientY <= rect.bottom) {
+          const flRect = fl.getBoundingClientRect();
+          return {
+            top: rect.top - flRect.top,
+            height: rect.height,
+          };
+        }
+      }
+      // Fallback: snap to rowHeight grid
+      const container = gantt.ref?.current;
+      if (!container) return { top: 0, height: gantt.rowHeight };
+      const flRect = fl.getBoundingClientRect();
+      const relY = clientY - flRect.top;
+      const row = Math.max(0, Math.floor(relY / gantt.rowHeight));
+      return { top: row * gantt.rowHeight, height: gantt.rowHeight };
+    },
+    [gantt.ref, gantt.rowHeight]
   );
 
-  const handleMouseDown = useCallback(
-    (e: React.MouseEvent) => {
+  // Hover tracking via the gantt scroll container
+  useEffect(() => {
+    const container = gantt.ref?.current;
+    if (!container || featureDragging) {
+      setIsHovering(false);
+      return;
+    }
+
+    const handleMouseMove = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      // Don't show hover on feature items, buttons, sidebar, or header
+      if (
+        target.closest("[data-gantt-item]") ||
+        target.closest("button") ||
+        target.closest('[data-roadmap-ui="gantt-sidebar"]')
+      ) {
+        setIsHovering(false);
+        return;
+      }
+
+      const relX = getRelativeX(e.clientX);
+      const { top, height } = getRowBounds(e.clientY);
+
+      if (relX > 0 && featureListRef.current) {
+        const flRect = featureListRef.current.getBoundingClientRect();
+        if (e.clientY >= flRect.top && e.clientY <= flRect.bottom) {
+          setHoverX(relX);
+          setHoverY(top);
+          setIsHovering(true);
+          return;
+        }
+      }
+      setIsHovering(false);
+    };
+
+    const handleMouseLeave = () => setIsHovering(false);
+
+    container.addEventListener("mousemove", handleMouseMove);
+    container.addEventListener("mouseleave", handleMouseLeave);
+    return () => {
+      container.removeEventListener("mousemove", handleMouseMove);
+      container.removeEventListener("mouseleave", handleMouseLeave);
+    };
+  }, [gantt.ref, gantt.sidebarWidth, gantt.headerHeight, featureDragging, getRelativeX, getRowBounds]);
+
+  // Mousedown on empty timeline area to start drag
+  useEffect(() => {
+    const container = gantt.ref?.current;
+    if (!container || featureDragging) return;
+
+    const handleMouseDown = (e: MouseEvent) => {
       if (e.button !== 0) return;
-      const x = getRelativeX(e.clientX);
-      setStartX(x);
-      setCurrentX(x);
-      setDragging(true);
-    },
-    [getRelativeX]
-  );
+      const target = e.target as HTMLElement;
+      // Don't start drag on feature items, buttons, sidebar
+      if (
+        target.closest("[data-gantt-item]") ||
+        target.closest("button") ||
+        target.closest('[data-roadmap-ui="gantt-sidebar"]')
+      )
+        return;
 
+      const relX = getRelativeX(e.clientX);
+      if (relX <= 0) return;
+
+      // Only start if within the feature list area
+      if (!featureListRef.current) return;
+      const flRect = featureListRef.current.getBoundingClientRect();
+      if (e.clientY < flRect.top || e.clientY > flRect.bottom) return;
+
+      const { top, height } = getRowBounds(e.clientY);
+      setStartX(relX);
+      setCurrentX(relX);
+      setDragRowTop(top);
+      setDragRowHeight(height);
+      setDragging(true);
+      setIsHovering(false);
+    };
+
+    container.addEventListener("mousedown", handleMouseDown);
+    return () => container.removeEventListener("mousedown", handleMouseDown);
+  }, [gantt.ref, gantt.sidebarWidth, gantt.headerHeight, featureDragging, getRelativeX, getRowBounds]);
+
+  // Drag move / up (document-level so drag works outside timeline)
   useEffect(() => {
     if (!dragging) return;
 
     const handlePointerMove = (e: PointerEvent) => {
-      const ganttRect = gantt.ref?.current?.getBoundingClientRect();
-      const x =
-        e.clientX - (ganttRect?.left ?? 0) + scrollX - gantt.sidebarWidth;
-      setCurrentX(x);
+      setCurrentX(getRelativeX(e.clientX));
     };
 
     const handlePointerUp = (e: PointerEvent) => {
       if (startX === null) return;
-      const ganttRect = gantt.ref?.current?.getBoundingClientRect();
-      const finalX =
-        e.clientX - (ganttRect?.left ?? 0) + scrollX - gantt.sidebarWidth;
+      const finalX = getRelativeX(e.clientX);
 
       const x1 = Math.min(startX, finalX);
       const x2 = Math.max(startX, finalX);
 
-      // Only trigger if dragged at least a few pixels
       if (x2 - x1 > 5) {
-        const startDate = getDateByMousePosition(gantt, x1);
-        const endDate = getDateByMousePosition(gantt, x2);
-        gantt.onAddItemRange?.(startDate, endDate);
+        const d1 = getDateByMousePosition(gantt, x1);
+        const d2 = getDateByMousePosition(gantt, x2);
+        gantt.onAddItemRange?.(d1, d2);
       }
 
       setDragging(false);
@@ -869,7 +973,7 @@ export const GanttDragCreate: FC<GanttDragCreateProps> = ({ className }) => {
       document.removeEventListener("pointermove", handlePointerMove);
       document.removeEventListener("pointerup", handlePointerUp);
     };
-  }, [dragging, startX, gantt, scrollX]);
+  }, [dragging, startX, gantt, getRelativeX]);
 
   if (featureDragging) return null;
 
@@ -882,22 +986,16 @@ export const GanttDragCreate: FC<GanttDragCreateProps> = ({ className }) => {
         "pointer-events-none absolute top-0 left-0 h-full w-full select-none overflow-visible",
         className
       )}
-      ref={mouseRef}
       style={{ marginTop: "var(--gantt-header-height)" }}
     >
-      {/* Tracking layer for mousedown */}
-      <div
-        className="pointer-events-auto absolute inset-0 cursor-crosshair"
-        onMouseDown={handleMouseDown}
-      />
-
-      {/* Hover indicator */}
-      {!dragging && hoverX > 0 && (
+      {/* Hover indicator — contained within the row */}
+      {!dragging && isHovering && hoverX > 0 && (
         <div
-          className="pointer-events-none absolute top-0 flex flex-col items-center"
+          className="pointer-events-none absolute flex flex-col items-center"
           style={{
             left: hoverX,
-            height: "100%",
+            top: hoverY,
+            height: gantt.rowHeight,
           }}
         >
           <div className="h-full w-px border-l border-dashed border-white/20" />
@@ -907,25 +1005,23 @@ export const GanttDragCreate: FC<GanttDragCreateProps> = ({ className }) => {
         </div>
       )}
 
-      {/* Selection rectangle */}
+      {/* Selection rectangle — contained within the row */}
       {dragging && startX !== null && (
         <div
-          className="pointer-events-none absolute top-0 rounded border border-dashed border-white/30 bg-white/[0.04]"
+          className="pointer-events-none absolute rounded border border-dashed border-white/30 bg-white/[0.04]"
           style={{
             left: selLeft,
             width: selWidth,
-            height: "100%",
+            top: dragRowTop,
+            height: dragRowHeight,
           }}
         >
           {selWidth > 60 && (
             <>
-              <div className="absolute -bottom-6 left-0 whitespace-nowrap rounded-md bg-background/90 px-1.5 py-0.5 text-[10px] text-white/60 backdrop-blur-sm border border-white/10">
-                {format(
-                  getDateByMousePosition(gantt, selLeft),
-                  "MMM dd"
-                )}
+              <div className="absolute -bottom-5 left-0 whitespace-nowrap rounded-md bg-background/90 px-1.5 py-0.5 text-[10px] text-white/60 backdrop-blur-sm border border-white/10">
+                {format(getDateByMousePosition(gantt, selLeft), "MMM dd")}
               </div>
-              <div className="absolute -bottom-6 right-0 whitespace-nowrap rounded-md bg-background/90 px-1.5 py-0.5 text-[10px] text-white/60 backdrop-blur-sm border border-white/10">
+              <div className="absolute -bottom-5 right-0 whitespace-nowrap rounded-md bg-background/90 px-1.5 py-0.5 text-[10px] text-white/60 backdrop-blur-sm border border-white/10">
                 {format(
                   getDateByMousePosition(gantt, selLeft + selWidth),
                   "MMM dd"
@@ -1134,6 +1230,7 @@ export const GanttFeatureItem: FC<GanttFeatureItemProps> = ({
     >
       <div
         className="pointer-events-auto absolute top-0.5"
+        data-gantt-item
         style={{
           height: "calc(var(--gantt-row-height) - 4px)",
           width: Math.round(width),
@@ -1283,6 +1380,7 @@ export const GanttFeatureList: FC<GanttFeatureListProps> = ({
 }) => (
   <div
     className={cn("absolute top-0 left-0 h-full w-max space-y-4", className)}
+    data-gantt-drag-area
     style={{ marginTop: "var(--gantt-header-height)" }}
   >
     {children}
