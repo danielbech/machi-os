@@ -1251,13 +1251,45 @@ export const GanttProvider: FC<GanttProviderProps> = ({
     [zoom, columnWidth, sidebarWidth]
   );
 
+  // Scroll to center today on mount and when range changes
   useEffect(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollLeft =
-        scrollRef.current.scrollWidth / 2 - scrollRef.current.clientWidth / 2;
-      setScrollX(scrollRef.current.scrollLeft);
-    }
-  }, [setScrollX]);
+    requestAnimationFrame(() => {
+      const scrollElement = scrollRef.current;
+      if (!scrollElement) return;
+
+      const sidebar = scrollElement.querySelector(
+        '[data-roadmap-ui="gantt-sidebar"]'
+      );
+      const sw = sidebar ? sidebar.getBoundingClientRect().width : 0;
+      const today = new Date();
+      const startDate = new Date(
+        timelineData[0]?.year ?? today.getFullYear(),
+        0,
+        1
+      );
+      const ctx: GanttContextProps = {
+        zoom,
+        range,
+        columnWidth,
+        sidebarWidth: sw,
+        headerHeight,
+        rowHeight,
+        onAddItem,
+        placeholderLength: 2,
+        timelineData,
+        ref: scrollRef,
+      };
+      const todayOffset = getOffset(today, startDate, ctx);
+      const viewportCenter = (scrollElement.clientWidth - sw) / 2;
+
+      scrollElement.scrollLeft = Math.max(
+        0,
+        todayOffset - viewportCenter + sw
+      );
+      setScrollX(scrollElement.scrollLeft);
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [range]);
 
   useEffect(() => {
     const updateSidebarWidth = () => {
