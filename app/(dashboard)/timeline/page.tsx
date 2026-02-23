@@ -123,8 +123,8 @@ export default function TimelinePage() {
   const [entries, setEntries] = useState<TimelineEntry[]>([]);
   const [initialLoading, setInitialLoading] = useState(true);
   const [range, setRange] = useState<Range>("monthly");
-  const [projectDialogOpen, setProjectDialogOpen] = useState(false);
-  const [eventDialogOpen, setEventDialogOpen] = useState(false);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [dialogTab, setDialogTab] = useState<"project" | "event">("project");
   const [markers, setMarkers] = useState<TimelineMarker[]>([]);
 
   // Event form state
@@ -192,7 +192,7 @@ export default function TimelinePage() {
     };
 
     setEntries((prev) => [...prev, optimisticEntry]);
-    setProjectDialogOpen(false);
+    setDialogOpen(false);
 
     try {
       const created = await createTimelineEntry(activeProjectId, {
@@ -229,7 +229,7 @@ export default function TimelinePage() {
     };
 
     setEntries((prev) => [...prev, optimisticEntry]);
-    setEventDialogOpen(false);
+    setDialogOpen(false);
     setEventTitle("");
     setEventStartDate(format(new Date(), "yyyy-MM-dd"));
     setEventEndDate(format(addDays(new Date(), 7), "yyyy-MM-dd"));
@@ -398,13 +398,9 @@ export default function TimelinePage() {
               </button>
             ))}
           </div>
-          <Button variant="ghost" onClick={() => setEventDialogOpen(true)}>
-            <CalendarPlus className="size-4" />
-            Add Event
-          </Button>
-          <Button onClick={() => setProjectDialogOpen(true)}>
+          <Button onClick={() => setDialogOpen(true)}>
             <Plus className="size-4" />
-            Add Project
+            Add to Timeline
           </Button>
         </div>
       </div>
@@ -415,23 +411,13 @@ export default function TimelinePage() {
             <div className="text-white/40 text-sm">
               No items on the timeline
             </div>
-            <div className="flex items-center justify-center gap-3">
-              <Button
-                variant="link"
-                onClick={() => setProjectDialogOpen(true)}
-                className="text-white/60 hover:text-white"
-              >
-                Add a project
-              </Button>
-              <span className="text-white/20">or</span>
-              <Button
-                variant="link"
-                onClick={() => setEventDialogOpen(true)}
-                className="text-white/60 hover:text-white"
-              >
-                Add an event
-              </Button>
-            </div>
+            <Button
+              variant="link"
+              onClick={() => setDialogOpen(true)}
+              className="text-white/60 hover:text-white"
+            >
+              Add to timeline
+            </Button>
           </div>
         </div>
       ) : (
@@ -554,30 +540,133 @@ export default function TimelinePage() {
         </div>
       )}
 
-      {/* Add Project Dialog */}
-      <Dialog open={projectDialogOpen} onOpenChange={setProjectDialogOpen}>
+      {/* Add to Timeline Dialog */}
+      <Dialog
+        open={dialogOpen}
+        onOpenChange={(open) => {
+          setDialogOpen(open);
+          if (!open) {
+            setDialogTab("project");
+            setEventTitle("");
+            setEventStartDate(format(new Date(), "yyyy-MM-dd"));
+            setEventEndDate(format(addDays(new Date(), 7), "yyyy-MM-dd"));
+            setEventColor("blue");
+          }
+        }}
+      >
         <DialogContent className="sm:max-w-[400px]">
           <DialogHeader>
-            <DialogTitle>Add Project to Timeline</DialogTitle>
+            <DialogTitle>Add to Timeline</DialogTitle>
           </DialogHeader>
-          <div className="space-y-1 pt-2">
-            {availableClients.length === 0 ? (
-              <p className="text-sm text-white/40 py-4 text-center">
-                All active projects are already on the timeline.
-              </p>
-            ) : (
-              availableClients.map((client) => (
-                <button
-                  key={client.id}
-                  onClick={() => handleAddClient(client)}
-                  className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left hover:bg-white/5 transition-colors"
-                >
-                  <ClientAvatar client={client} size="sm" />
-                  <span className="text-sm font-medium">{client.name}</span>
-                </button>
-              ))
-            )}
+
+          <div className="flex gap-1 rounded-lg bg-white/5 p-1">
+            <button
+              onClick={() => setDialogTab("project")}
+              className={`flex-1 px-3 py-1 rounded-md text-sm font-medium transition-all ${
+                dialogTab === "project"
+                  ? "bg-white/10 text-white"
+                  : "text-white/40 hover:text-white/60"
+              }`}
+            >
+              Project
+            </button>
+            <button
+              onClick={() => setDialogTab("event")}
+              className={`flex-1 px-3 py-1 rounded-md text-sm font-medium transition-all ${
+                dialogTab === "event"
+                  ? "bg-white/10 text-white"
+                  : "text-white/40 hover:text-white/60"
+              }`}
+            >
+              Event
+            </button>
           </div>
+
+          {dialogTab === "project" ? (
+            <div className="space-y-1 pt-2">
+              {availableClients.length === 0 ? (
+                <p className="text-sm text-white/40 py-4 text-center">
+                  All active projects are already on the timeline.
+                </p>
+              ) : (
+                availableClients.map((client) => (
+                  <button
+                    key={client.id}
+                    onClick={() => handleAddClient(client)}
+                    className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left hover:bg-white/5 transition-colors"
+                  >
+                    <ClientAvatar client={client} size="sm" />
+                    <span className="text-sm font-medium">{client.name}</span>
+                  </button>
+                ))
+              )}
+            </div>
+          ) : (
+            <div className="space-y-4 pt-2">
+              <Input
+                placeholder="Event name (e.g. Holiday, Workshop)"
+                value={eventTitle}
+                onChange={(e) => setEventTitle(e.target.value)}
+                autoFocus
+              />
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <label className="text-xs text-white/40">Start date</label>
+                  <Input
+                    type="date"
+                    value={eventStartDate}
+                    onChange={(e) => setEventStartDate(e.target.value)}
+                    className="[color-scheme:dark]"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-xs text-white/40">End date</label>
+                  <Input
+                    type="date"
+                    value={eventEndDate}
+                    onChange={(e) => setEventEndDate(e.target.value)}
+                    className="[color-scheme:dark]"
+                  />
+                </div>
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-xs text-white/40">Color</label>
+                <div className="flex gap-2">
+                  {COLOR_NAMES.map((name) => (
+                    <button
+                      key={name}
+                      onClick={() => setEventColor(name)}
+                      className={`size-6 rounded-full ${CLIENT_DOT_COLORS[name]} transition-all ${
+                        eventColor === name
+                          ? "ring-2 ring-white ring-offset-2 ring-offset-black scale-110"
+                          : "opacity-50 hover:opacity-80"
+                      }`}
+                      aria-label={name}
+                    />
+                  ))}
+                </div>
+              </div>
+              <div className="flex justify-end gap-2 pt-2">
+                <Button
+                  variant="ghost"
+                  onClick={() => setDialogOpen(false)}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handleAddEvent}
+                  disabled={
+                    !eventTitle.trim() ||
+                    !eventStartDate ||
+                    !eventEndDate ||
+                    eventSubmitting
+                  }
+                >
+                  {eventSubmitting ? "Adding..." : "Add Event"}
+                </Button>
+              </div>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
 
@@ -649,78 +738,6 @@ export default function TimelinePage() {
         </DialogContent>
       </Dialog>
 
-      {/* Add Event Dialog */}
-      <Dialog open={eventDialogOpen} onOpenChange={setEventDialogOpen}>
-        <DialogContent className="sm:max-w-[400px]">
-          <DialogHeader>
-            <DialogTitle>Add Event</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4 pt-2">
-            <Input
-              placeholder="Event name (e.g. Holiday, Workshop)"
-              value={eventTitle}
-              onChange={(e) => setEventTitle(e.target.value)}
-              autoFocus
-            />
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1.5">
-                <label className="text-xs text-white/40">Start date</label>
-                <Input
-                  type="date"
-                  value={eventStartDate}
-                  onChange={(e) => setEventStartDate(e.target.value)}
-                  className="[color-scheme:dark]"
-                />
-              </div>
-              <div className="space-y-1.5">
-                <label className="text-xs text-white/40">End date</label>
-                <Input
-                  type="date"
-                  value={eventEndDate}
-                  onChange={(e) => setEventEndDate(e.target.value)}
-                  className="[color-scheme:dark]"
-                />
-              </div>
-            </div>
-            <div className="space-y-1.5">
-              <label className="text-xs text-white/40">Color</label>
-              <div className="flex gap-2">
-                {COLOR_NAMES.map((name) => (
-                  <button
-                    key={name}
-                    onClick={() => setEventColor(name)}
-                    className={`size-6 rounded-full ${CLIENT_DOT_COLORS[name]} transition-all ${
-                      eventColor === name
-                        ? "ring-2 ring-white ring-offset-2 ring-offset-black scale-110"
-                        : "opacity-50 hover:opacity-80"
-                    }`}
-                    aria-label={name}
-                  />
-                ))}
-              </div>
-            </div>
-            <div className="flex justify-end gap-2 pt-2">
-              <Button
-                variant="ghost"
-                onClick={() => setEventDialogOpen(false)}
-              >
-                Cancel
-              </Button>
-              <Button
-                onClick={handleAddEvent}
-                disabled={
-                  !eventTitle.trim() ||
-                  !eventStartDate ||
-                  !eventEndDate ||
-                  eventSubmitting
-                }
-              >
-                {eventSubmitting ? "Adding..." : "Add Event"}
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
     </main>
   );
 }
