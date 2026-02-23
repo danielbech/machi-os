@@ -848,11 +848,13 @@ export const GanttFeatureDragHelper: FC<GanttFeatureDragHelperProps> = ({
 
 export type GanttFeatureItemCardProps = Pick<GanttFeature, "id"> & {
   children?: ReactNode;
+  accentColor?: string;
 };
 
 export const GanttFeatureItemCard: FC<GanttFeatureItemCardProps> = ({
   id,
   children,
+  accentColor,
 }) => {
   const [, setDragging] = useGanttDragging();
   const { attributes, listeners, setNodeRef } = useDraggable({ id });
@@ -861,10 +863,23 @@ export const GanttFeatureItemCard: FC<GanttFeatureItemCardProps> = ({
   useEffect(() => setDragging(isPressed), [isPressed, setDragging]);
 
   return (
-    <Card className="h-full w-full rounded-md border-white/10 hover:border-white/20 bg-background p-2 text-xs shadow-sm transition-colors cursor-pointer">
+    <Card
+      className="relative h-full w-full rounded-md border-white/10 hover:border-white/20 bg-background p-2 text-xs shadow-sm transition-colors cursor-pointer overflow-hidden"
+      style={
+        accentColor
+          ? { borderLeftWidth: 2, borderLeftColor: accentColor }
+          : undefined
+      }
+    >
+      {accentColor && (
+        <div
+          className="absolute inset-0 pointer-events-none"
+          style={{ backgroundColor: accentColor, opacity: 0.05 }}
+        />
+      )}
       <div
         className={cn(
-          "flex h-full w-full items-center justify-between gap-2 text-left",
+          "relative flex h-full w-full items-center justify-between gap-2 text-left",
           isPressed && "cursor-grabbing"
         )}
         {...attributes}
@@ -881,12 +896,14 @@ export type GanttFeatureItemProps = GanttFeature & {
   onMove?: (id: string, startDate: Date, endDate: Date | null) => void;
   children?: ReactNode;
   className?: string;
+  accentColor?: string;
 };
 
 export const GanttFeatureItem: FC<GanttFeatureItemProps> = ({
   onMove,
   children,
   className,
+  accentColor,
   ...feature
 }) => {
   const [scrollX] = useGanttScrollX();
@@ -997,7 +1014,7 @@ export const GanttFeatureItem: FC<GanttFeatureItemProps> = ({
           onDragStart={handleItemDragStart}
           sensors={[mouseSensor]}
         >
-          <GanttFeatureItemCard id={feature.id}>
+          <GanttFeatureItemCard id={feature.id} accentColor={accentColor}>
             {children ?? (
               <p className="flex-1 truncate text-xs">{feature.name}</p>
             )}

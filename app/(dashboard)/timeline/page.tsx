@@ -203,6 +203,19 @@ export default function TimelinePage() {
     [visibleEntries, clients]
   );
 
+  // Map for looking up parent entries (used for accent colors)
+  const parentMap = useMemo(
+    () => new Map(parentEntries.map((e) => [e.id, e])),
+    [parentEntries]
+  );
+
+  const getAccentColor = (entry: TimelineEntry) => {
+    const colorKey = entry.parent_id
+      ? parentMap.get(entry.parent_id)?.color || entry.color
+      : entry.color;
+    return CLIENT_HEX_COLORS[colorKey] || CLIENT_HEX_COLORS.blue;
+  };
+
   const toggleExpanded = (id: string) => {
     setExpandedEntries((prev) => {
       const next = new Set(prev);
@@ -611,11 +624,13 @@ export default function TimelinePage() {
                       ? clientMap.get(entry.client_id)
                       : undefined;
                   const isMilestone = entry?.start_date === entry?.end_date;
+                  const accent = entry ? getAccentColor(entry) : undefined;
                   return (
                     <GanttFeatureItem
                       key={feature.id}
                       {...feature}
                       onMove={handleMove}
+                      accentColor={accent}
                     >
                       {isChild && isMilestone ? (
                         <Diamond className="size-2.5 shrink-0 text-white/60" />
