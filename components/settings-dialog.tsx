@@ -1,13 +1,14 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import { toast } from "sonner";
 import type { User } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/client";
 import { removeUserFromWorkspace, getPendingInvites, cancelInvite, updateWorkspace, type WorkspaceMember } from "@/lib/supabase/workspace";
 import { loadCurrentProfile, updateProfile, uploadAvatar } from "@/lib/supabase/profiles";
 import { WORKSPACE_COLORS } from "@/lib/colors";
 import type { PendingInvite, WeekMode, Project } from "@/lib/types";
-import type { ConnectionWithCalendars } from "@/lib/workspace-context";
+import type { ConnectionWithCalendars } from "@/lib/calendar-context";
 import {
   Dialog,
   DialogContent,
@@ -215,7 +216,7 @@ export function SettingsDialog({
       await cancelInvite(inviteId);
       setPendingInvites(pendingInvites.filter(i => i.id !== inviteId));
     } catch {
-      alert('Failed to cancel invite');
+      toast.error("Failed to cancel invite");
     }
   };
 
@@ -680,7 +681,7 @@ export function SettingsDialog({
                               onMembersChange(workspaceMembers.filter(m => m.id !== member.id));
                             } catch (error) {
                               console.error('Failed to remove member:', error);
-                              alert('Failed to remove member');
+                              toast.error("Failed to remove member");
                             }
                           }
                         }}

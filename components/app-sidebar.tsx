@@ -4,6 +4,8 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
 import { useWorkspace } from "@/lib/workspace-context";
+import { useBacklog } from "@/lib/backlog-context";
+import { useCalendar } from "@/lib/calendar-context";
 import { SettingsDialog } from "@/components/settings-dialog";
 import type { WorkspaceMember } from "@/lib/supabase/workspace";
 import {
@@ -32,12 +34,15 @@ export function AppSidebar() {
   const pathname = usePathname();
   const {
     userProjects, activeProjectId, setActiveProjectId, activeProject, user,
-    googleCalendarConnected, connectGoogleCalendar, disconnectGoogleAccount,
-    syncCalendarEvents, calendarConnections, updateSelectedCalendars,
-    backlogOpen, toggleBacklog, transitionToNextWeek, refreshTeamMembers,
+    transitionToNextWeek, refreshTeamMembers,
     weekMode, setWeekMode, transitionDay, transitionHour, setTransitionSchedule,
     refreshWorkspaces,
   } = useWorkspace();
+  const { backlogOpen, toggleBacklog } = useBacklog();
+  const {
+    googleCalendarConnected, connectGoogleCalendar, disconnectGoogleAccount,
+    syncCalendarEvents, calendarConnections, updateSelectedCalendars,
+  } = useCalendar();
   const { setOpenMobile } = useSidebar();
   const [showSettings, setShowSettings] = useState(false);
   const [showCreateWorkspace, setShowCreateWorkspace] = useState(false);

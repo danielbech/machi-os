@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useWorkspace } from "@/lib/workspace-context";
+import { useBacklog } from "@/lib/backlog-context";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { BacklogPanel } from "@/components/backlog-panel";
 import { TaskEditDialog } from "@/components/task-edit-dialog";
@@ -9,26 +10,14 @@ import { X } from "lucide-react";
 import type { Task } from "@/lib/types";
 
 export function BacklogShell() {
+  const { clients, teamMembers, weekMode } = useWorkspace();
   const {
-    backlogOpen,
-    toggleBacklog,
-    backlogTasks,
-    backlogFolders,
-    clients,
-    teamMembers,
-    backlogWidth,
-    setBacklogWidth,
-    weekMode,
-    sendBacklogToDay,
-    sendFolderToDay,
-    createBacklogTask,
-    saveBacklogTask,
-    deleteBacklogTask,
-    createFolder,
-    renameFolder,
-    deleteFolder,
-    reorderBacklogTasks,
-  } = useWorkspace();
+    backlogOpen, toggleBacklog, backlogTasks, backlogFolders,
+    backlogWidth, setBacklogWidth,
+    sendBacklogToDay, sendFolderToDay,
+    createBacklogTask, saveBacklogTask, deleteBacklogTask,
+    createFolder, renameFolder, deleteFolder, reorderBacklogTasks,
+  } = useBacklog();
 
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const isMobile = useIsMobile();

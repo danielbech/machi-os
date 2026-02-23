@@ -36,6 +36,7 @@ export default function FeedbackPage() {
   const [category, setCategory] = useState<FeedbackCategory>("feedback");
   const [submitting, setSubmitting] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
+  const [initialLoading, setInitialLoading] = useState(true);
 
   const userEmail = user?.email || "";
   const isOwner = PLATFORM_OWNERS.includes(userEmail);
@@ -43,6 +44,7 @@ export default function FeedbackPage() {
   const loadTickets = useCallback(async () => {
     const data = await loadFeedbackTickets();
     setTickets(data);
+    setInitialLoading(false);
   }, []);
 
   useEffect(() => {
@@ -209,6 +211,22 @@ export default function FeedbackPage() {
       </div>
     );
   };
+
+  if (initialLoading) {
+    return (
+      <main className="flex min-h-screen flex-col p-4 md:p-8 bg-black/50">
+        <div className="mb-6 flex items-center justify-between">
+          <div className="h-8 w-32 bg-white/5 rounded animate-pulse" />
+          <div className="h-9 w-28 bg-white/5 rounded animate-pulse" />
+        </div>
+        <div className="space-y-2">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="h-16 bg-white/[0.02] rounded-lg border border-white/5 animate-pulse" />
+          ))}
+        </div>
+      </main>
+    );
+  }
 
   return (
     <main className="flex min-h-screen flex-col p-4 md:p-8 bg-black/50">

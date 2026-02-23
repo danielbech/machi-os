@@ -1,6 +1,8 @@
 "use client";
 
 import { WorkspaceProvider, useWorkspace } from "@/lib/workspace-context";
+import { BacklogProvider, useBacklog } from "@/lib/backlog-context";
+import { CalendarProvider } from "@/lib/calendar-context";
 import { AuthForm } from "@/components/auth-form";
 import { AppSidebar } from "@/components/app-sidebar";
 import { SidebarProvider, SidebarInset, SidebarTrigger } from "@/components/ui/sidebar";
@@ -10,7 +12,8 @@ import { BacklogShell } from "@/components/backlog-shell";
 import { ErrorBoundary } from "@/components/error-boundary";
 
 function DashboardGate({ children }: { children: React.ReactNode }) {
-  const { user, loading, backlogOpen, backlogWidth } = useWorkspace();
+  const { user, loading } = useWorkspace();
+  const { backlogOpen, backlogWidth } = useBacklog();
   const isMobile = useIsMobile();
 
   if (loading) {
@@ -45,7 +48,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   return (
     <ErrorBoundary>
       <WorkspaceProvider>
-        <DashboardGate>{children}</DashboardGate>
+        <CalendarProvider>
+          <BacklogProvider>
+            <DashboardGate>{children}</DashboardGate>
+          </BacklogProvider>
+        </CalendarProvider>
       </WorkspaceProvider>
     </ErrorBoundary>
   );

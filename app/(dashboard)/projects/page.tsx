@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useWorkspace } from "@/lib/workspace-context";
 import { updateClientRecord, deleteClientRecord } from "@/lib/supabase/clients";
 import { getClientTextClassName, CLIENT_DOT_COLORS } from "@/lib/colors";
@@ -18,6 +18,11 @@ import { Plus, Pencil, Trash2 } from "lucide-react";
 
 export default function ProjectsPage() {
   const { activeProjectId, clients, refreshClients } = useWorkspace();
+  const [initialLoading, setInitialLoading] = useState(true);
+
+  useEffect(() => {
+    if (activeProjectId) setInitialLoading(false);
+  }, [activeProjectId]);
 
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingClient, setEditingClient] = useState<Client | null>(null);
@@ -116,6 +121,22 @@ export default function ProjectsPage() {
       </div>
     </div>
   );
+
+  if (initialLoading) {
+    return (
+      <main className="flex min-h-screen flex-col p-4 md:p-8 bg-black/50">
+        <div className="mb-6 flex items-center justify-between">
+          <div className="h-8 w-32 bg-white/5 rounded animate-pulse" />
+          <div className="h-9 w-28 bg-white/5 rounded animate-pulse" />
+        </div>
+        <div className="space-y-2">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="h-14 bg-white/[0.02] rounded-lg border border-white/5 animate-pulse" />
+          ))}
+        </div>
+      </main>
+    );
+  }
 
   return (
     <main className="flex min-h-screen flex-col p-4 md:p-8 bg-black/50">

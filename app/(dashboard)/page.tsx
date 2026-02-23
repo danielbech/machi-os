@@ -4,6 +4,8 @@ import { useState, useCallback, useRef, useEffect } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { loadTasksByDay, saveTask, updateDayTasks, deleteTask } from "@/lib/supabase/tasks-simple";
 import { useWorkspace } from "@/lib/workspace-context";
+import { useBacklog } from "@/lib/backlog-context";
+import { useCalendar } from "@/lib/calendar-context";
 import { TaskEditDialog } from "@/components/task-edit-dialog";
 import { BoardTaskCard } from "@/components/board-task-card";
 import { BoardCalendarEvent } from "@/components/board-calendar-event";
@@ -20,7 +22,9 @@ import {
 import { Check, Plus, StickyNote } from "lucide-react";
 
 export default function BoardPage() {
-  const { activeProjectId, clients, calendarEvents, backlogOpen, addToBacklog, backlogFolders, teamMembers, weekMode, weekDays, displayMonday, areaId } = useWorkspace();
+  const { activeProjectId, clients, teamMembers, weekMode, weekDays, displayMonday, areaId } = useWorkspace();
+  const { calendarEvents } = useCalendar();
+  const { backlogOpen, addToBacklog, backlogFolders } = useBacklog();
 
   const columnTitles = getColumnTitles(weekMode);
   const [columns, setColumns] = useState<Record<string, Task[]>>(() => getEmptyColumns(weekMode));

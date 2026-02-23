@@ -119,7 +119,7 @@ export async function removeCalendarConnection(connectionId: string): Promise<vo
   }
 }
 
-// Sync events for a specific connection: delete old events, bulk insert new ones
+// Sync events for a specific connection: upsert current events, then remove stale ones
 export async function syncCalendarEventsToDb(
   projectId: string,
   userId: string,
@@ -127,19 +127,20 @@ export async function syncCalendarEventsToDb(
   events: { google_event_id: string; calendar_id: string; summary: string; description?: string; start_time: string; end_time: string; location?: string; attendees?: string[] }[]
 ): Promise<void> {
   const supabase = createClient()
+  const now = new Date().toISOString()
 
-  // Delete existing events for this connection
-  const { error: deleteError } = await supabase
-    .from('calendar_events')
-    .delete()
-    .eq('connection_id', connectionId)
-
-  if (deleteError) {
-    console.error('Error deleting old calendar events:', deleteError)
-    throw deleteError
+  if (events.length === 0) {
+    // No events from Google — delete all for this connection
+    const { error } = await supabase
+      .from('calendar_events')
+      .delete()
+      .eq('connection_id', connectionId)
+    if (error) {
+      console.error('Error deleting calendar events:', error)
+      throw error
+    }
+    return
   }
-
-  if (events.length === 0) return
 
   const rows = events.map(e => ({
     project_id: projectId,
@@ -153,16 +154,29 @@ export async function syncCalendarEventsToDb(
     end_time: e.end_time,
     location: e.location || null,
     attendees: e.attendees || [],
-    synced_at: new Date().toISOString(),
+    synced_at: now,
   }))
 
-  const { error: insertError } = await supabase
+  // Upsert all current events (update if google_event_id matches)
+  const { error: upsertError } = await supabase
     .from('calendar_events')
-    .insert(rows)
+    .upsert(rows, { onConflict: 'connection_id,google_event_id' })
 
-  if (insertError) {
-    console.error('Error inserting calendar events:', insertError)
-    throw insertError
+  if (upsertError) {
+    console.error('Error upserting calendar events:', upsertError)
+    throw upsertError
+  }
+
+  // Remove stale events (synced before this batch — means they were deleted in Google)
+  const { error: cleanupError } = await supabase
+    .from('calendar_events')
+    .delete()
+    .eq('connection_id', connectionId)
+    .lt('synced_at', now)
+
+  if (cleanupError) {
+    console.error('Error cleaning up stale calendar events:', cleanupError)
+    // Non-fatal — events are already upserted, stale ones will be cleaned next sync
   }
 }
 

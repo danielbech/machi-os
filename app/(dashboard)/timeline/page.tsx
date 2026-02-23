@@ -121,6 +121,7 @@ function EventDot({
 export default function TimelinePage() {
   const { activeProjectId, clients } = useWorkspace();
   const [entries, setEntries] = useState<TimelineEntry[]>([]);
+  const [initialLoading, setInitialLoading] = useState(true);
   const [range, setRange] = useState<Range>("monthly");
   const [projectDialogOpen, setProjectDialogOpen] = useState(false);
   const [eventDialogOpen, setEventDialogOpen] = useState(false);
@@ -165,6 +166,7 @@ export default function TimelinePage() {
     ]);
     setEntries(entryData);
     setMarkers(markerData);
+    setInitialLoading(false);
   }, [activeProjectId]);
 
   useEffect(() => {
@@ -363,6 +365,18 @@ export default function TimelinePage() {
     { value: "monthly", label: "Monthly" },
     { value: "quarterly", label: "Quarterly" },
   ];
+
+  if (initialLoading) {
+    return (
+      <main className="flex min-h-screen flex-col p-4 md:p-8 bg-black/50 overflow-hidden">
+        <div className="mb-6 flex items-center justify-between">
+          <div className="h-8 w-32 bg-white/5 rounded animate-pulse" />
+          <div className="h-9 w-48 bg-white/5 rounded animate-pulse" />
+        </div>
+        <div className="flex-1 bg-white/[0.02] rounded-lg border border-white/5 animate-pulse" />
+      </main>
+    );
+  }
 
   return (
     <main className="flex min-h-screen flex-col p-4 md:p-8 bg-black/50 overflow-hidden">
