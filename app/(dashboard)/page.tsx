@@ -476,7 +476,7 @@ export default function BoardPage() {
                     </h2>
                     <span className="text-xs text-white/40">{weekDates[columnId]}</span>
                     {columnId === todayName && (
-                      <span className="text-xs px-1.5 py-0.5 rounded bg-orange-500/20 text-orange-400">Today</span>
+                      <span className="size-1.5 rounded-full bg-orange-400" />
                     )}
                   </div>
                 </div>
@@ -636,9 +636,9 @@ export default function BoardPage() {
                 <button
                   onClick={() => setFilterMine(f => { const v = !f; localStorage.setItem("machi-filter-mine", String(v)); return v; })}
                   aria-label={filterMine ? "Show all tasks" : "Show my tasks"}
-                  className={`flex items-center justify-center h-10 w-10 pr-0 pl-2.5 hover:pl-0 transition-all ${
+                  className={`flex items-center justify-center h-10 w-8 pr-0 pl-1.5 hover:w-10 hover:pl-0 transition-all ${
                     filterMine
-                      ? "bg-white/15 text-white !pl-0"
+                      ? "bg-white/15 text-white !w-10 !pl-0"
                       : "text-white/40 hover:text-white/70 hover:bg-white/[0.06]"
                   }`}
                 >
@@ -655,9 +655,9 @@ export default function BoardPage() {
               <button
                 onClick={() => setHideCompleted(h => { const v = !h; localStorage.setItem("machi-hide-completed", String(v)); return v; })}
                 aria-label={hideCompleted ? "Show completed tasks" : "Hide completed tasks"}
-                className={`flex items-center justify-center h-10 w-10 pl-0 pr-2.5 hover:pr-0 transition-all ${
+                className={`flex items-center justify-center h-10 w-8 pl-0 pr-1.5 hover:w-10 hover:pr-0 transition-all ${
                   hideCompleted
-                    ? "bg-white/15 text-white !pr-0"
+                    ? "bg-white/15 text-white !w-10 !pr-0"
                     : "text-white/40 hover:text-white/70 hover:bg-white/[0.06]"
                 }`}
               >
