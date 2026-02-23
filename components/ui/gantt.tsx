@@ -99,6 +99,7 @@ export type GanttContextProps = {
   headerHeight: number;
   rowHeight: number;
   onAddItem: ((date: Date) => void) | undefined;
+  onAddItemRange: ((startDate: Date, endDate: Date) => void) | undefined;
   placeholderLength: number;
   timelineData: TimelineData;
   ref: RefObject<HTMLDivElement | null> | null;
@@ -321,6 +322,7 @@ const GanttContext = createContext<GanttContextProps>({
   sidebarWidth: 300,
   rowHeight: 36,
   onAddItem: undefined,
+  onAddItemRange: undefined,
   placeholderLength: 2,
   timelineData: [],
   ref: null,
@@ -792,6 +794,151 @@ export const GanttCreateMarkerTrigger: FC<GanttCreateMarkerTriggerProps> = ({
   );
 };
 
+export type GanttDragCreateProps = {
+  className?: string;
+};
+
+export const GanttDragCreate: FC<GanttDragCreateProps> = ({ className }) => {
+  const gantt = useContext(GanttContext);
+  const [featureDragging] = useGanttDragging();
+  const [scrollX] = useGanttScrollX();
+  const [mousePosition, mouseRef] = useMouse<HTMLDivElement>();
+  const [dragging, setDragging] = useState(false);
+  const [startX, setStartX] = useState<number | null>(null);
+  const [currentX, setCurrentX] = useState(0);
+
+  const getRelativeX = useCallback(
+    (clientX: number) => {
+      const ganttRect = gantt.ref?.current?.getBoundingClientRect();
+      return clientX - (ganttRect?.left ?? 0) + scrollX - gantt.sidebarWidth;
+    },
+    [gantt.ref, gantt.sidebarWidth, scrollX]
+  );
+
+  const hoverX = useThrottle(
+    mousePosition.x
+      ? getRelativeX(mousePosition.x)
+      : 0,
+    10
+  );
+
+  const handleMouseDown = useCallback(
+    (e: React.MouseEvent) => {
+      if (e.button !== 0) return;
+      const x = getRelativeX(e.clientX);
+      setStartX(x);
+      setCurrentX(x);
+      setDragging(true);
+    },
+    [getRelativeX]
+  );
+
+  useEffect(() => {
+    if (!dragging) return;
+
+    const handlePointerMove = (e: PointerEvent) => {
+      const ganttRect = gantt.ref?.current?.getBoundingClientRect();
+      const x =
+        e.clientX - (ganttRect?.left ?? 0) + scrollX - gantt.sidebarWidth;
+      setCurrentX(x);
+    };
+
+    const handlePointerUp = (e: PointerEvent) => {
+      if (startX === null) return;
+      const ganttRect = gantt.ref?.current?.getBoundingClientRect();
+      const finalX =
+        e.clientX - (ganttRect?.left ?? 0) + scrollX - gantt.sidebarWidth;
+
+      const x1 = Math.min(startX, finalX);
+      const x2 = Math.max(startX, finalX);
+
+      // Only trigger if dragged at least a few pixels
+      if (x2 - x1 > 5) {
+        const startDate = getDateByMousePosition(gantt, x1);
+        const endDate = getDateByMousePosition(gantt, x2);
+        gantt.onAddItemRange?.(startDate, endDate);
+      }
+
+      setDragging(false);
+      setStartX(null);
+    };
+
+    document.addEventListener("pointermove", handlePointerMove);
+    document.addEventListener("pointerup", handlePointerUp);
+    return () => {
+      document.removeEventListener("pointermove", handlePointerMove);
+      document.removeEventListener("pointerup", handlePointerUp);
+    };
+  }, [dragging, startX, gantt, scrollX]);
+
+  if (featureDragging) return null;
+
+  const selLeft = startX !== null ? Math.min(startX, currentX) : 0;
+  const selWidth = startX !== null ? Math.abs(currentX - startX) : 0;
+
+  return (
+    <div
+      className={cn(
+        "pointer-events-none absolute top-0 left-0 h-full w-full select-none overflow-visible",
+        className
+      )}
+      ref={mouseRef}
+      style={{ marginTop: "var(--gantt-header-height)" }}
+    >
+      {/* Tracking layer for mousedown */}
+      <div
+        className="pointer-events-auto absolute inset-0 cursor-crosshair"
+        onMouseDown={handleMouseDown}
+      />
+
+      {/* Hover indicator */}
+      {!dragging && hoverX > 0 && (
+        <div
+          className="pointer-events-none absolute top-0 flex flex-col items-center"
+          style={{
+            left: hoverX,
+            height: "100%",
+          }}
+        >
+          <div className="h-full w-px border-l border-dashed border-white/20" />
+          <div className="absolute top-1/2 -translate-y-1/2 flex h-5 w-5 items-center justify-center rounded-full bg-white/10 backdrop-blur-sm">
+            <PlusIcon className="text-white/50" size={12} />
+          </div>
+        </div>
+      )}
+
+      {/* Selection rectangle */}
+      {dragging && startX !== null && (
+        <div
+          className="pointer-events-none absolute top-0 rounded border border-dashed border-white/30 bg-white/[0.04]"
+          style={{
+            left: selLeft,
+            width: selWidth,
+            height: "100%",
+          }}
+        >
+          {selWidth > 60 && (
+            <>
+              <div className="absolute -bottom-6 left-0 whitespace-nowrap rounded-md bg-background/90 px-1.5 py-0.5 text-[10px] text-white/60 backdrop-blur-sm border border-white/10">
+                {format(
+                  getDateByMousePosition(gantt, selLeft),
+                  "MMM dd"
+                )}
+              </div>
+              <div className="absolute -bottom-6 right-0 whitespace-nowrap rounded-md bg-background/90 px-1.5 py-0.5 text-[10px] text-white/60 backdrop-blur-sm border border-white/10">
+                {format(
+                  getDateByMousePosition(gantt, selLeft + selWidth),
+                  "MMM dd"
+                )}
+              </div>
+            </>
+          )}
+        </div>
+      )}
+    </div>
+  );
+};
+
 export type GanttFeatureDragHelperProps = {
   featureId: GanttFeature["id"];
   direction: "left" | "right";
@@ -1209,6 +1356,7 @@ export type GanttProviderProps = {
   range?: Range;
   zoom?: number;
   onAddItem?: (date: Date) => void;
+  onAddItemRange?: (startDate: Date, endDate: Date) => void;
   children: ReactNode;
   className?: string;
 };
@@ -1217,6 +1365,7 @@ export const GanttProvider: FC<GanttProviderProps> = ({
   zoom = 100,
   range = "monthly",
   onAddItem,
+  onAddItemRange,
   children,
   className,
 }) => {
@@ -1275,6 +1424,7 @@ export const GanttProvider: FC<GanttProviderProps> = ({
         headerHeight,
         rowHeight,
         onAddItem,
+        onAddItemRange,
         placeholderLength: 2,
         timelineData,
         ref: scrollRef,
@@ -1409,6 +1559,7 @@ export const GanttProvider: FC<GanttProviderProps> = ({
         headerHeight,
         rowHeight,
         onAddItem,
+        onAddItemRange,
         placeholderLength: 2,
         timelineData,
         ref: scrollRef,
@@ -1421,7 +1572,7 @@ export const GanttProvider: FC<GanttProviderProps> = ({
         behavior: "smooth",
       });
     },
-    [timelineData, zoom, range, columnWidth, sidebarWidth, onAddItem]
+    [timelineData, zoom, range, columnWidth, sidebarWidth, onAddItem, onAddItemRange]
   );
 
   return (
@@ -1434,6 +1585,7 @@ export const GanttProvider: FC<GanttProviderProps> = ({
         sidebarWidth,
         rowHeight,
         onAddItem,
+        onAddItemRange,
         timelineData,
         placeholderLength: 2,
         ref: scrollRef,

@@ -26,6 +26,7 @@ import {
   GanttToday,
   GanttMarker,
   GanttCreateMarkerTrigger,
+  GanttDragCreate,
 } from "@/components/ui/gantt";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -470,6 +471,13 @@ export default function TimelinePage() {
     }
   };
 
+  const handleAddItemRange = (startDate: Date, endDate: Date) => {
+    setEventStartDate(format(startDate, "yyyy-MM-dd"));
+    setEventEndDate(format(endDate, "yyyy-MM-dd"));
+    setDialogTab("event");
+    setDialogOpen(true);
+  };
+
   const handleRemoveMarker = async (id: string) => {
     const previous = markers;
     setMarkers((prev) => prev.filter((m) => m.id !== id));
@@ -547,7 +555,7 @@ export default function TimelinePage() {
         </div>
       ) : (
         <div className="flex-1 min-h-0 h-[calc(100vh-160px)] rounded-lg border border-white/[0.06] overflow-hidden">
-          <GanttProvider range={range}>
+          <GanttProvider range={range} onAddItemRange={handleAddItemRange}>
             <GanttSidebar>
               {visibleEntries.map((entry) => {
                 const client = entry.client_id
@@ -689,6 +697,7 @@ export default function TimelinePage() {
                   );
                 })}
               </GanttFeatureList>
+              <GanttDragCreate />
               <GanttCreateMarkerTrigger onCreateMarker={handleCreateMarker} />
               {markers.map((marker) => (
                 <GanttMarker
