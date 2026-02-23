@@ -6,7 +6,9 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import PrismaticBurst from '@/components/PrismaticBurst'
+import dynamic from 'next/dynamic'
+
+const PrismaticBurst = dynamic(() => import('@/components/PrismaticBurst'), { ssr: false })
 
 export function AuthForm() {
   const [email, setEmail] = useState('')
