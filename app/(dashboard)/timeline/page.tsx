@@ -123,7 +123,20 @@ export default function TimelinePage() {
   const { activeProjectId, clients } = useWorkspace();
   const [entries, setEntries] = useState<TimelineEntry[]>([]);
   const [initialLoading, setInitialLoading] = useState(true);
-  const [range, setRange] = useState<Range>("monthly");
+  const [range, setRange] = useState<Range>(() => {
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem("timeline-range");
+      if (saved === "daily" || saved === "weekly" || saved === "monthly" || saved === "quarterly") {
+        return saved;
+      }
+    }
+    return "monthly";
+  });
+
+  const handleSetRange = (value: Range) => {
+    setRange(value);
+    localStorage.setItem("timeline-range", value);
+  };
   const [dialogOpen, setDialogOpen] = useState(false);
   const [dialogTab, setDialogTab] = useState<"project" | "event">("project");
   const [markers, setMarkers] = useState<TimelineMarker[]>([]);
@@ -540,7 +553,7 @@ export default function TimelinePage() {
             {RANGE_OPTIONS.map((opt) => (
               <button
                 key={opt.value}
-                onClick={() => setRange(opt.value)}
+                onClick={() => handleSetRange(opt.value)}
                 className={`px-3 py-1 rounded-md text-sm font-medium transition-all ${
                   range === opt.value
                     ? "bg-white/10 text-white"
