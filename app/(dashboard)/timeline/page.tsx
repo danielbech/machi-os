@@ -561,6 +561,20 @@ export default function TimelinePage() {
     }
   };
 
+  const handleRenameMarker = async (id: string, newLabel: string) => {
+    const previous = markers;
+
+    setMarkers((prev) =>
+      prev.map((m) => (m.id === id ? { ...m, label: newLabel } : m))
+    );
+
+    try {
+      await updateTimelineMarker(id, { label: newLabel });
+    } catch {
+      setMarkers(previous);
+    }
+  };
+
   const RANGE_OPTIONS: { value: Range; label: string }[] = [
     { value: "daily", label: "Daily" },
     { value: "weekly", label: "Weekly" },
@@ -643,7 +657,9 @@ export default function TimelinePage() {
             const target = e.target as HTMLElement;
             if (
               !target.closest("[data-gantt-item]") &&
-              !target.closest("[data-sidebar-entry]")
+              !target.closest("[data-sidebar-entry]") &&
+              !target.closest("[data-gantt-marker]") &&
+              !target.closest("button")
             ) {
               setSelectedEntryId(null);
             }
@@ -874,6 +890,7 @@ export default function TimelinePage() {
                     label={marker.label}
                     onRemove={handleRemoveMarker}
                     onMove={handleMoveMarker}
+                    onRename={handleRenameMarker}
                     color={markerColor}
                   />
                 );

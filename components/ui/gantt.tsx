@@ -30,7 +30,7 @@ import {
 } from "date-fns";
 import { atom, useAtom } from "jotai";
 import throttle from "lodash.throttle";
-import { PlusIcon } from "lucide-react";
+import { PlusIcon, XIcon } from "lucide-react";
 import type {
   CSSProperties,
   FC,
@@ -1405,19 +1405,25 @@ export const GanttMarker: FC<
   GanttMarkerProps & {
     onRemove?: (id: string) => void;
     onMove?: (id: string, newDate: Date) => void;
+    onRename?: (id: string, newLabel: string) => void;
     className?: string;
     color?: string;
   }
-> = memo(({ label, date, id, onRemove, onMove, className, color }) => {
+> = memo(({ label, date, id, onRemove, onMove, onRename, className, color }) => {
   const gantt = useContext(GanttContext);
   const [currentDate, setCurrentDate] = useState(date);
   const [dragging, setDragging] = useState(false);
+  const [editing, setEditing] = useState(false);
+  const [editValue, setEditValue] = useState(label);
+  const inputRef = useRef<HTMLInputElement>(null);
   const didDragRef = useRef(false);
-  const startXRef = useRef(0);
-  const startDateRef = useRef(date);
 
   // Sync when prop changes
   useEffect(() => { setCurrentDate(date); }, [date]);
+  useEffect(() => { setEditValue(label); }, [label]);
+  useEffect(() => {
+    if (editing) inputRef.current?.focus();
+  }, [editing]);
 
   const differenceIn = useMemo(
     () => getDifferenceIn(gantt.range),
@@ -1445,6 +1451,16 @@ export const GanttMarker: FC<
 
   const handleRemove = useCallback(() => onRemove?.(id), [onRemove, id]);
 
+  const commitEdit = useCallback(() => {
+    const trimmed = editValue.trim();
+    setEditing(false);
+    if (trimmed && trimmed !== label) {
+      onRename?.(id, trimmed);
+    } else {
+      setEditValue(label);
+    }
+  }, [editValue, label, id, onRename]);
+
   const getRelativeX = useCallback(
     (clientX: number) => {
       const container = gantt.ref?.current;
@@ -1457,11 +1473,9 @@ export const GanttMarker: FC<
 
   const handlePointerDown = useCallback(
     (e: React.PointerEvent) => {
-      if (!onMove) return;
+      if (!onMove || editing) return;
       e.preventDefault();
       const originX = e.clientX;
-      startXRef.current = getRelativeX(e.clientX);
-      startDateRef.current = currentDate;
       didDragRef.current = false;
       setDragging(true);
 
@@ -1489,12 +1503,13 @@ export const GanttMarker: FC<
       document.addEventListener("pointermove", handlePointerMove);
       document.addEventListener("pointerup", handlePointerUp);
     },
-    [onMove, gantt, id, currentDate, getRelativeX]
+    [onMove, editing, gantt, id, getRelativeX]
   );
 
   return (
     <div
       className="pointer-events-none absolute top-0 left-0 z-20 flex h-full select-none flex-col items-center justify-center overflow-visible"
+      data-gantt-marker
       style={{
         width: 0,
         transform: `translateX(calc(var(--gantt-column-width) * ${offset} + ${innerOffset}px))`,
@@ -1502,8 +1517,8 @@ export const GanttMarker: FC<
     >
       <div
         className={cn(
-          "group pointer-events-auto sticky top-0 flex select-auto flex-col flex-nowrap items-center justify-center whitespace-nowrap rounded-b-md border px-1.5 py-0.5 text-foreground text-[10px] leading-tight backdrop-blur-sm transition-colors",
-          dragging ? "cursor-grabbing" : onMove ? "cursor-grab" : "cursor-pointer",
+          "group pointer-events-auto sticky top-0 flex select-auto flex-row flex-nowrap items-center gap-1 whitespace-nowrap rounded-b-md border px-1.5 py-0.5 text-foreground text-[10px] leading-tight backdrop-blur-sm transition-colors",
+          dragging ? "cursor-grabbing" : onMove ? "cursor-grab" : "cursor-default",
           color ? "hover:brightness-125" : "hover:bg-white/15",
           !color && "border-white/[0.06] bg-white/10",
           className
@@ -1517,18 +1532,40 @@ export const GanttMarker: FC<
             : undefined
         }
         onPointerDown={handlePointerDown}
-        onClick={() => {
-          // Only remove if it wasn't a drag
-          if (!didDragRef.current) handleRemove();
+        onDoubleClick={(e) => {
+          e.stopPropagation();
+          if (onRename) setEditing(true);
         }}
-        role="button"
-        tabIndex={0}
-        onKeyDown={(e) => e.key === "Enter" && handleRemove()}
       >
-        {dragging ? formatDate(currentDate, "MMM dd") : label}
-        <span className="max-h-[0] overflow-hidden opacity-80 transition-all group-hover:max-h-[2rem]">
-          {formatDate(currentDate, "MMM dd, yyyy")}
-        </span>
+        {editing ? (
+          <input
+            ref={inputRef}
+            className="bg-transparent outline-none text-[10px] leading-tight text-foreground w-16 min-w-0"
+            value={editValue}
+            onChange={(e) => setEditValue(e.target.value)}
+            onBlur={commitEdit}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") commitEdit();
+              if (e.key === "Escape") { setEditValue(label); setEditing(false); }
+              e.stopPropagation();
+            }}
+            onPointerDown={(e) => e.stopPropagation()}
+            onClick={(e) => e.stopPropagation()}
+          />
+        ) : (
+          <span>{dragging ? formatDate(currentDate, "MMM dd") : label}</span>
+        )}
+        {!editing && onRemove && (
+          <button
+            className="hidden group-hover:flex items-center justify-center rounded-full hover:bg-white/10 -mr-0.5 shrink-0"
+            onClick={(e) => { e.stopPropagation(); handleRemove(); }}
+            onPointerDown={(e) => e.stopPropagation()}
+            type="button"
+            aria-label="Remove marker"
+          >
+            <XIcon size={10} className="text-white/40 hover:text-white/70" />
+          </button>
+        )}
       </div>
       <div
         className="h-full w-px"
