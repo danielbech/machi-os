@@ -6,7 +6,7 @@ export async function loadTimelineEntries(projectId: string): Promise<TimelineEn
 
   const { data, error } = await supabase
     .from('timeline_entries')
-    .select('id, project_id, client_id, title, start_date, end_date, color, sort_order, type, created_at')
+    .select('id, project_id, client_id, parent_id, title, start_date, end_date, color, sort_order, type, created_at')
     .eq('project_id', projectId)
     .order('sort_order')
 
@@ -19,6 +19,7 @@ export async function loadTimelineEntries(projectId: string): Promise<TimelineEn
     id: e.id,
     project_id: e.project_id,
     client_id: e.client_id || undefined,
+    parent_id: e.parent_id || undefined,
     title: e.title,
     start_date: e.start_date,
     end_date: e.end_date,
@@ -31,7 +32,7 @@ export async function loadTimelineEntries(projectId: string): Promise<TimelineEn
 
 export async function createTimelineEntry(
   projectId: string,
-  entry: { client_id?: string; title: string; start_date: string; end_date: string; color: string; sort_order: number; type?: string }
+  entry: { client_id?: string; parent_id?: string; title: string; start_date: string; end_date: string; color: string; sort_order: number; type?: string }
 ): Promise<TimelineEntry> {
   const supabase = createClient()
 
@@ -40,6 +41,7 @@ export async function createTimelineEntry(
     .insert({
       project_id: projectId,
       client_id: entry.client_id || null,
+      parent_id: entry.parent_id || null,
       title: entry.title,
       start_date: entry.start_date,
       end_date: entry.end_date,
@@ -59,6 +61,7 @@ export async function createTimelineEntry(
     id: data.id,
     project_id: data.project_id,
     client_id: data.client_id || undefined,
+    parent_id: data.parent_id || undefined,
     title: data.title,
     start_date: data.start_date,
     end_date: data.end_date,

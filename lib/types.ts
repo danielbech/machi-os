@@ -78,6 +78,7 @@ export interface TimelineEntry {
   id: string;
   project_id: string;
   client_id?: string;
+  parent_id?: string;
   title: string;
   start_date: string;
   end_date: string;

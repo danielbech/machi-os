@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { parseISO, format, addDays, isSameDay, formatDistance } from "date-fns";
 import { useWorkspace } from "@/lib/workspace-context";
 import {
@@ -42,7 +42,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Plus, Trash2, CalendarPlus, Pencil, MoreHorizontal } from "lucide-react";
+import { Plus, Trash2, CalendarPlus, Pencil, MoreHorizontal, ChevronRight, Diamond } from "lucide-react";
 
 function toFeature(entry: TimelineEntry, clients: Client[]): GanttFeature {
   const client = entry.client_id
@@ -127,6 +127,17 @@ export default function TimelinePage() {
   const [dialogTab, setDialogTab] = useState<"project" | "event">("project");
   const [markers, setMarkers] = useState<TimelineMarker[]>([]);
 
+  // Expand/collapse state for sub-items
+  const [expandedEntries, setExpandedEntries] = useState<Set<string>>(new Set());
+
+  // Sub-item form state
+  const [subItemParent, setSubItemParent] = useState<TimelineEntry | null>(null);
+  const [subItemTitle, setSubItemTitle] = useState("");
+  const [subItemStartDate, setSubItemStartDate] = useState("");
+  const [subItemEndDate, setSubItemEndDate] = useState("");
+  const [subItemColor, setSubItemColor] = useState("blue");
+  const [subItemSubmitting, setSubItemSubmitting] = useState(false);
+
   // Event form state
   const [eventTitle, setEventTitle] = useState("");
   const [eventStartDate, setEventStartDate] = useState(
@@ -154,9 +165,55 @@ export default function TimelinePage() {
     (c) => !clientsOnTimeline.has(c.id)
   );
 
-  const features = entries.map((e) => toFeature(e, clients));
-
   const clientMap = new Map(clients.map((c) => [c.id, c]));
+
+  // Split entries into parents and children
+  const { parentEntries, childrenMap } = useMemo(() => {
+    const parents: TimelineEntry[] = [];
+    const children = new Map<string, TimelineEntry[]>();
+
+    for (const entry of entries) {
+      if (entry.parent_id) {
+        const siblings = children.get(entry.parent_id) || [];
+        siblings.push(entry);
+        children.set(entry.parent_id, siblings);
+      } else {
+        parents.push(entry);
+      }
+    }
+
+    return { parentEntries: parents, childrenMap: children };
+  }, [entries]);
+
+  // Build flat visible entries array (parents + expanded children)
+  const visibleEntries = useMemo(() => {
+    const result: TimelineEntry[] = [];
+    for (const parent of parentEntries) {
+      result.push(parent);
+      if (expandedEntries.has(parent.id)) {
+        const children = childrenMap.get(parent.id) || [];
+        result.push(...children);
+      }
+    }
+    return result;
+  }, [parentEntries, childrenMap, expandedEntries]);
+
+  const visibleFeatures = useMemo(
+    () => visibleEntries.map((e) => toFeature(e, clients)),
+    [visibleEntries, clients]
+  );
+
+  const toggleExpanded = (id: string) => {
+    setExpandedEntries((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  };
 
   const loadEntries = useCallback(async () => {
     if (!activeProjectId) return;
@@ -253,6 +310,56 @@ export default function TimelinePage() {
     }
   };
 
+  const handleAddSubItem = async () => {
+    if (!activeProjectId || !subItemParent || !subItemTitle.trim()) return;
+    setSubItemSubmitting(true);
+
+    const optimisticEntry: TimelineEntry = {
+      id: `temp-${Date.now()}`,
+      project_id: activeProjectId,
+      parent_id: subItemParent.id,
+      title: subItemTitle.trim(),
+      start_date: subItemStartDate,
+      end_date: subItemEndDate,
+      color: subItemColor,
+      sort_order: entries.length,
+      type: "event",
+      created_at: new Date().toISOString(),
+    };
+
+    setEntries((prev) => [...prev, optimisticEntry]);
+    // Auto-expand parent
+    setExpandedEntries((prev) => new Set(prev).add(subItemParent.id));
+    setSubItemParent(null);
+    setSubItemTitle("");
+    setSubItemSubmitting(false);
+
+    try {
+      const created = await createTimelineEntry(activeProjectId, {
+        parent_id: subItemParent.id,
+        title: subItemTitle.trim(),
+        start_date: subItemStartDate,
+        end_date: subItemEndDate,
+        color: subItemColor,
+        sort_order: entries.length,
+        type: "event",
+      });
+      setEntries((prev) =>
+        prev.map((e) => (e.id === optimisticEntry.id ? created : e))
+      );
+    } catch {
+      setEntries((prev) => prev.filter((e) => e.id !== optimisticEntry.id));
+    }
+  };
+
+  const openSubItemDialog = (parent: TimelineEntry) => {
+    setSubItemParent(parent);
+    setSubItemTitle("");
+    setSubItemStartDate(parent.start_date);
+    setSubItemEndDate(parent.start_date);
+    setSubItemColor(parent.color);
+  };
+
   const handleMove = async (
     id: string,
     startAt: Date,
@@ -279,7 +386,8 @@ export default function TimelinePage() {
 
   const handleRemove = async (id: string) => {
     const previous = entries;
-    setEntries((prev) => prev.filter((e) => e.id !== id));
+    // Remove the entry and any children (CASCADE handles DB, this handles optimistic UI)
+    setEntries((prev) => prev.filter((e) => e.id !== id && e.parent_id !== id));
 
     try {
       await deleteTimelineEntry(id);
@@ -424,12 +532,17 @@ export default function TimelinePage() {
         <div className="flex-1 min-h-0 h-[calc(100vh-160px)] rounded-lg border border-white/[0.06] overflow-hidden">
           <GanttProvider range={range}>
             <GanttSidebar>
-              {entries.map((entry) => {
+              {visibleEntries.map((entry) => {
                 const client = entry.client_id
                   ? clientMap.get(entry.client_id)
                   : undefined;
-                const feature = features.find((f) => f.id === entry.id);
+                const feature = visibleFeatures.find((f) => f.id === entry.id);
                 if (!feature) return null;
+
+                const isChild = !!entry.parent_id;
+                const hasChildren = childrenMap.has(entry.id);
+                const isExpanded = expandedEntries.has(entry.id);
+                const isMilestone = entry.start_date === entry.end_date;
 
                 const tempEndAt =
                   feature.endAt && isSameDay(feature.startAt, feature.endAt)
@@ -442,10 +555,28 @@ export default function TimelinePage() {
                 return (
                   <div
                     key={entry.id}
-                    className="relative flex items-center gap-2.5 p-2.5 text-xs"
+                    className={`relative flex items-center gap-2.5 p-2.5 text-xs ${isChild ? "pl-8" : ""}`}
                     style={{ height: "var(--gantt-row-height)" }}
                   >
-                    {entry.type === "event" ? (
+                    {!isChild && hasChildren && (
+                      <button
+                        onClick={() => toggleExpanded(entry.id)}
+                        className="shrink-0 text-white/30 hover:text-white/60 transition-colors"
+                        aria-label={isExpanded ? "Collapse" : "Expand"}
+                      >
+                        <ChevronRight
+                          className={`size-3.5 transition-transform ${isExpanded ? "rotate-90" : ""}`}
+                        />
+                      </button>
+                    )}
+                    {isChild && isMilestone ? (
+                      <Diamond className="size-3.5 shrink-0 text-white/40" />
+                    ) : isChild ? (
+                      <div
+                        className="size-2 shrink-0 rounded-full"
+                        style={{ backgroundColor: feature.status.color }}
+                      />
+                    ) : entry.type === "event" ? (
                       <EventDot color={entry.color} size="sm" />
                     ) : client ? (
                       <ClientAvatar client={client} size="sm" />
@@ -459,7 +590,7 @@ export default function TimelinePage() {
                       {feature.name}
                     </p>
                     <p className="text-muted-foreground">
-                      {duration}
+                      {isMilestone ? format(feature.startAt, "MMM d") : duration}
                     </p>
                   </div>
                 );
@@ -468,19 +599,28 @@ export default function TimelinePage() {
             <GanttTimeline>
               <GanttHeader />
               <GanttFeatureList>
-                {features.map((feature) => {
-                  const entry = entries.find((e) => e.id === feature.id);
+                {visibleFeatures.map((feature) => {
+                  const entry = visibleEntries.find((e) => e.id === feature.id);
+                  const isChild = !!entry?.parent_id;
                   const client =
                     entry?.client_id
                       ? clientMap.get(entry.client_id)
                       : undefined;
+                  const isMilestone = entry?.start_date === entry?.end_date;
                   return (
                     <GanttFeatureItem
                       key={feature.id}
                       {...feature}
                       onMove={handleMove}
                     >
-                      {entry?.type === "event" ? (
+                      {isChild && isMilestone ? (
+                        <Diamond className="size-2.5 shrink-0 text-white/60" />
+                      ) : isChild ? (
+                        <div
+                          className="size-2 shrink-0 rounded-full"
+                          style={{ backgroundColor: feature.status.color }}
+                        />
+                      ) : entry?.type === "event" ? (
                         <EventDot color={entry.color} size="xs" />
                       ) : client ? (
                         <ClientAvatar client={client} size="xs" />
@@ -510,6 +650,12 @@ export default function TimelinePage() {
                             <Pencil className="size-4" />
                             Edit
                           </DropdownMenuItem>
+                          {!isChild && (
+                            <DropdownMenuItem onClick={() => entry && openSubItemDialog(entry)}>
+                              <Plus className="size-4" />
+                              Add sub-item
+                            </DropdownMenuItem>
+                          )}
                           <DropdownMenuSeparator />
                           <DropdownMenuItem
                             className="text-destructive"
@@ -732,6 +878,78 @@ export default function TimelinePage() {
                 disabled={!editTitle.trim() || !editStartDate || !editEndDate || editSaving}
               >
                 {editSaving ? "Saving..." : "Save"}
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Add Sub-Item Dialog */}
+      <Dialog open={!!subItemParent} onOpenChange={(open) => !open && setSubItemParent(null)}>
+        <DialogContent className="sm:max-w-[400px]">
+          <DialogHeader>
+            <DialogTitle>Add sub-item to {subItemParent?.title}</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={(e) => { e.preventDefault(); handleAddSubItem(); }} className="space-y-4 pt-2">
+            <div className="space-y-1.5">
+              <label className="text-xs text-white/40">Title</label>
+              <Input
+                placeholder="Sub-item name"
+                value={subItemTitle}
+                onChange={(e) => setSubItemTitle(e.target.value)}
+                autoFocus
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <label className="text-xs text-white/40">Start date</label>
+                <Input
+                  type="date"
+                  value={subItemStartDate}
+                  onChange={(e) => setSubItemStartDate(e.target.value)}
+                  className="[color-scheme:dark]"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-xs text-white/40">End date</label>
+                <Input
+                  type="date"
+                  value={subItemEndDate}
+                  onChange={(e) => setSubItemEndDate(e.target.value)}
+                  className="[color-scheme:dark]"
+                />
+              </div>
+            </div>
+            <p className="text-xs text-white/30">
+              Set start and end to the same date for a milestone.
+            </p>
+            <div className="space-y-1.5">
+              <label className="text-xs text-white/40">Color</label>
+              <div className="flex gap-2">
+                {COLOR_NAMES.map((name) => (
+                  <button
+                    key={name}
+                    type="button"
+                    onClick={() => setSubItemColor(name)}
+                    className={`size-6 rounded-full ${CLIENT_DOT_COLORS[name]} transition-all ${
+                      subItemColor === name
+                        ? "ring-2 ring-white ring-offset-2 ring-offset-black scale-110"
+                        : "opacity-50 hover:opacity-80"
+                    }`}
+                    aria-label={name}
+                  />
+                ))}
+              </div>
+            </div>
+            <div className="flex justify-end gap-2 pt-2">
+              <Button variant="ghost" type="button" onClick={() => setSubItemParent(null)}>
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                disabled={!subItemTitle.trim() || !subItemStartDate || !subItemEndDate || subItemSubmitting}
+              >
+                {subItemSubmitting ? "Adding..." : "Add Sub-item"}
               </Button>
             </div>
           </form>
