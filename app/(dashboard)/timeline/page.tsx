@@ -667,7 +667,10 @@ export default function TimelinePage() {
                       data-sidebar-entry
                       className={`relative flex items-center gap-2.5 px-2.5 text-xs bg-white/[0.03] hover:bg-white/[0.05] cursor-pointer transition-colors ${selectedEntryId === parent.id ? "bg-white/[0.08]" : ""}`}
                       style={{ height: "var(--gantt-row-height)" }}
-                      onClick={() => setSelectedEntryId(parent.id)}
+                      onClick={() => {
+                        setSelectedEntryId(parent.id);
+                        if (hasChildren) toggleExpanded(parent.id);
+                      }}
                     >
                       {hasChildren && (
                         <button
@@ -768,7 +771,12 @@ export default function TimelinePage() {
                             onMove={handleMove}
                             accentColor={accent}
                             selected={selectedEntryId === feature.id}
-                            onSelect={() => setSelectedEntryId(feature.id)}
+                            onSelect={() => {
+                              setSelectedEntryId(feature.id);
+                              if (!isChild && childrenMap.has(entry.id)) {
+                                toggleExpanded(entry.id);
+                              }
+                            }}
                           >
                             {isChild && isMilestone ? (
                               <Diamond className="size-2.5 shrink-0 text-white/60" />
