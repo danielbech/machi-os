@@ -474,10 +474,7 @@ export default function BoardPage() {
                     <h2 className={`font-semibold ${columnId === todayName ? "text-white" : ""}`}>
                       {columnTitles[columnId] || columnId}
                     </h2>
-                    <span className="text-xs text-white/40">{weekDates[columnId]}</span>
-                    {columnId === todayName && (
-                      <span className="size-1.5 rounded-full bg-orange-400" />
-                    )}
+                    <span className={`text-xs ${columnId === todayName ? "text-orange-400 border border-orange-400/30 rounded px-1 py-0.5" : "text-white/40"}`}>{weekDates[columnId]}</span>
                   </div>
                 </div>
 
