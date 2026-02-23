@@ -1532,9 +1532,8 @@ export const GanttMarker: FC<
             : undefined
         }
         onPointerDown={handlePointerDown}
-        onDoubleClick={(e) => {
-          e.stopPropagation();
-          if (onRename) setEditing(true);
+        onClick={() => {
+          if (!didDragRef.current && onRename) setEditing(true);
         }}
       >
         {editing ? (
