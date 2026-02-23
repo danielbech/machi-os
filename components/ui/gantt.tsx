@@ -1895,14 +1895,12 @@ export const GanttToday: FC<GanttTodayProps> = ({ className }) => {
     >
       <div
         className={cn(
-          "group pointer-events-auto sticky top-0 flex select-auto flex-col flex-nowrap items-center justify-center whitespace-nowrap rounded-b-md border border-blue-500/30 bg-blue-500/15 px-2 py-1 text-blue-400 text-xs backdrop-blur-sm",
+          "group pointer-events-auto sticky flex select-auto flex-col flex-nowrap items-center justify-center whitespace-nowrap rounded-t-md border border-blue-500/30 bg-blue-500/15 px-1.5 py-0.5 text-blue-400 text-[10px] leading-tight backdrop-blur-sm",
           className
         )}
+        style={{ top: "calc(var(--gantt-header-height) - 22px)" }}
       >
         {label}
-        <span className="max-h-[0] overflow-hidden opacity-80 transition-all group-hover:max-h-[2rem]">
-          {formatDate(date, "MMM dd, yyyy")}
-        </span>
       </div>
       <div className="h-full w-px bg-blue-500/40" />
     </div>
