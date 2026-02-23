@@ -402,42 +402,6 @@ export default function BoardPage() {
 
   return (
     <main className="flex min-h-screen flex-col p-4 md:px-8 md:pt-4 bg-black/50">
-      <div className="flex items-center gap-1 mb-3">
-        {teamMembers.length > 1 && (
-          <button
-            onClick={() => setFilterMine(f => !f)}
-            aria-label={filterMine ? "Show all tasks" : "Show my tasks"}
-            className={`flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs font-medium transition-colors ${
-              filterMine
-                ? "bg-white/10 text-white"
-                : "text-white/40 hover:text-white/60 hover:bg-white/[0.05]"
-            }`}
-          >
-            {currentMember?.avatar ? (
-              <img src={currentMember.avatar} alt="" className="size-4 rounded-full" />
-            ) : currentMember?.initials ? (
-              <span className={`flex size-4 items-center justify-center rounded-full text-[9px] font-bold ${currentMember.color || "bg-white/20"}`}>
-                {currentMember.initials}
-              </span>
-            ) : (
-              <User className="size-3.5" />
-            )}
-            My tasks
-          </button>
-        )}
-        <button
-          onClick={() => setHideCompleted(h => !h)}
-          aria-label={hideCompleted ? "Show completed tasks" : "Hide completed tasks"}
-          className={`flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs font-medium transition-colors ${
-            hideCompleted
-              ? "bg-white/10 text-white"
-              : "text-white/40 hover:text-white/60 hover:bg-white/[0.05]"
-          }`}
-        >
-          <CheckCircle className="size-3.5" />
-          Hide completed
-        </button>
-      </div>
       <div>
         <Kanban
           value={filteredColumns}
@@ -654,6 +618,33 @@ export default function BoardPage() {
         onToggle={() => setShowShortcuts(!showShortcuts)}
         teamMembers={teamMembers}
       />
+
+      <div className="fixed bottom-5 right-[4.25rem] z-50 flex items-center gap-px rounded-full border border-white/10 bg-zinc-900/90 shadow-lg overflow-hidden">
+        {teamMembers.length > 1 && (
+          <button
+            onClick={() => setFilterMine(f => !f)}
+            aria-label={filterMine ? "Show all tasks" : "Show my tasks"}
+            className={`flex items-center justify-center size-10 transition-colors ${
+              filterMine
+                ? "bg-white/15 text-white"
+                : "text-white/40 hover:text-white/70 hover:bg-white/[0.06]"
+            }`}
+          >
+            <User className="size-4" />
+          </button>
+        )}
+        <button
+          onClick={() => setHideCompleted(h => !h)}
+          aria-label={hideCompleted ? "Show completed tasks" : "Hide completed tasks"}
+          className={`flex items-center justify-center size-10 transition-colors ${
+            hideCompleted
+              ? "bg-white/15 text-white"
+              : "text-white/40 hover:text-white/70 hover:bg-white/[0.06]"
+          }`}
+        >
+          <CheckCircle className="size-4" />
+        </button>
+      </div>
     </main>
   );
 }
