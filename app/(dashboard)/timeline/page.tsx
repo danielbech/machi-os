@@ -778,7 +778,8 @@ export default function TimelinePage() {
           ) : (
             <div className="space-y-4 pt-2">
               <Input
-                placeholder="Event name (e.g. Holiday, Workshop)"
+                placeholder="Event name"
+                className="placeholder:text-white/25"
                 value={eventTitle}
                 onChange={(e) => setEventTitle(e.target.value)}
                 autoFocus
