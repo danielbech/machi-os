@@ -43,7 +43,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Plus, Trash2, CalendarPlus, Pencil, MoreHorizontal, ChevronRight, Diamond } from "lucide-react";
+import { Plus, Trash2, CalendarPlus, Pencil, MoreHorizontal, ChevronRight, Diamond, Filter } from "lucide-react";
 
 function toFeature(entry: TimelineEntry, clients: Client[]): GanttFeature {
   const client = entry.client_id
@@ -137,6 +137,18 @@ export default function TimelinePage() {
     setRange(value);
     localStorage.setItem("timeline-range", value);
   };
+  const [activeOnly, setActiveOnly] = useState(() => {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem("timeline-active-only") === "true";
+    }
+    return false;
+  });
+
+  const handleSetActiveOnly = (value: boolean) => {
+    setActiveOnly(value);
+    localStorage.setItem("timeline-active-only", String(value));
+  };
+
   const [dialogOpen, setDialogOpen] = useState(false);
   const [dialogTab, setDialogTab] = useState<"project" | "event">("project");
   const [markers, setMarkers] = useState<TimelineMarker[]>([]);
@@ -184,8 +196,12 @@ export default function TimelinePage() {
 
   const clientMap = new Map(clients.map((c) => [c.id, c]));
 
-  // Split entries into parents and children
+  // Split entries into parents and children, optionally filtering by active clients
   const { parentEntries, childrenMap } = useMemo(() => {
+    const activeClientIds = activeOnly
+      ? new Set(clients.filter((c) => c.active).map((c) => c.id))
+      : null;
+
     const parents: TimelineEntry[] = [];
     const children = new Map<string, TimelineEntry[]>();
 
@@ -195,12 +211,16 @@ export default function TimelinePage() {
         siblings.push(entry);
         children.set(entry.parent_id, siblings);
       } else {
+        // When activeOnly, hide client entries whose client is inactive
+        if (activeClientIds && entry.client_id && !activeClientIds.has(entry.client_id)) {
+          continue;
+        }
         parents.push(entry);
       }
     }
 
     return { parentEntries: parents, childrenMap: children };
-  }, [entries]);
+  }, [entries, activeOnly, clients]);
 
   // Build flat visible entries array (parents + expanded children)
   const visibleEntries = useMemo(() => {
@@ -548,25 +568,36 @@ export default function TimelinePage() {
           <h1 className="text-2xl font-bold">Timeline</h1>
           <span className="rounded-full bg-white/[0.08] px-2 py-0.5 text-[10px] font-medium text-white/40 uppercase tracking-wider">Beta</span>
         </div>
-        <div className="flex items-center gap-3">
-          <div className="flex gap-1 rounded-lg bg-white/5 p-1">
+        <div className="flex items-center gap-2">
+          <div className="flex gap-0.5 rounded-md bg-white/5 p-0.5">
             {RANGE_OPTIONS.map((opt) => (
               <button
                 key={opt.value}
                 onClick={() => handleSetRange(opt.value)}
-                className={`px-3 py-1 rounded-md text-sm font-medium transition-all ${
+                className={`px-2 py-0.5 rounded text-xs font-medium transition-all ${
                   range === opt.value
                     ? "bg-white/10 text-white"
-                    : "text-white/40 hover:text-white/60"
+                    : "text-white/30 hover:text-white/50"
                 }`}
               >
                 {opt.label}
               </button>
             ))}
           </div>
-          <Button onClick={() => setDialogOpen(true)}>
-            <Plus className="size-4" />
-            Add to Timeline
+          <button
+            onClick={() => handleSetActiveOnly(!activeOnly)}
+            className={`flex items-center gap-1.5 rounded-md px-2 py-1 text-xs font-medium transition-all ${
+              activeOnly
+                ? "bg-white/10 text-white"
+                : "text-white/30 hover:text-white/50"
+            }`}
+          >
+            <Filter className="size-3" />
+            Active
+          </button>
+          <Button size="sm" onClick={() => setDialogOpen(true)}>
+            <Plus className="size-3.5" />
+            Add
           </Button>
         </div>
       </div>
