@@ -16,6 +16,7 @@ export function AuthForm() {
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState('')
   const [isSignUp, setIsSignUp] = useState(false)
+  const [isForgot, setIsForgot] = useState(false)
   const supabase = createClient()
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -24,7 +25,13 @@ export function AuthForm() {
     setMessage('')
 
     try {
-      if (isSignUp) {
+      if (isForgot) {
+        const { error } = await supabase.auth.resetPasswordForEmail(email, {
+          redirectTo: `${window.location.origin}/auth/reset-password`,
+        })
+        if (error) throw error
+        setMessage('Check your email for the password reset link!')
+      } else if (isSignUp) {
         const { error } = await supabase.auth.signUp({
           email,
           password,
@@ -68,7 +75,7 @@ export function AuthForm() {
             <div>
               <CardTitle className="text-2xl">Machi OS</CardTitle>
               <CardDescription className="text-white/40">
-                {isSignUp ? 'Create your account' : 'Sign in to your account'}
+                {isForgot ? 'Reset your password' : isSignUp ? 'Create your account' : 'Sign in to your account'}
               </CardDescription>
             </div>
           </div>
@@ -86,35 +93,47 @@ export function AuthForm() {
                 className="border-white/10 bg-white/[0.02] focus:border-white/30 focus:ring-white/20"
               />
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="password" className="text-sm font-medium text-white/80">Password</Label>
-              <Input
-                id="password"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                className="border-white/10 bg-white/[0.02] focus:border-white/30 focus:ring-white/20"
-              />
-            </div>
+            {!isForgot && (
+              <div className="space-y-2">
+                <Label htmlFor="password" className="text-sm font-medium text-white/80">Password</Label>
+                <Input
+                  id="password"
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  className="border-white/10 bg-white/[0.02] focus:border-white/30 focus:ring-white/20"
+                />
+              </div>
+            )}
             {message && (
               <div className={`text-sm ${message.includes('error') || message.includes('Invalid') ? 'text-red-400' : 'text-green-400'}`}>
                 {message}
               </div>
             )}
             <Button type="submit" className="w-full bg-white text-black hover:bg-white/90" disabled={loading}>
-              {loading ? 'Loading...' : isSignUp ? 'Sign Up' : 'Sign In'}
+              {loading ? 'Loading...' : isForgot ? 'Send Reset Link' : isSignUp ? 'Sign Up' : 'Sign In'}
             </Button>
+            {!isSignUp && !isForgot && (
+              <button
+                type="button"
+                className="w-full text-center text-sm text-white/40 hover:text-white/60 transition-colors"
+                onClick={() => { setIsForgot(true); setMessage('') }}
+              >
+                Forgot password?
+              </button>
+            )}
             <Button
               type="button"
               variant="ghost"
               className="w-full text-white/60 hover:text-white hover:bg-white/5"
               onClick={() => {
-                setIsSignUp(!isSignUp)
+                setIsForgot(false)
+                setIsSignUp(isForgot ? false : !isSignUp)
                 setMessage('')
               }}
             >
-              {isSignUp ? 'Already have an account? Sign in' : "Don't have an account? Sign up"}
+              {isForgot ? 'Back to sign in' : isSignUp ? 'Already have an account? Sign in' : "Don't have an account? Sign up"}
             </Button>
           </form>
         </CardContent>
