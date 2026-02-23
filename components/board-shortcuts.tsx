@@ -2,6 +2,7 @@
 
 import type { Member } from "@/lib/types";
 import { Keyboard } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface BoardShortcutsProps {
   open: boolean;
@@ -33,17 +34,26 @@ export function BoardShortcuts({ open, onToggle, teamMembers }: BoardShortcutsPr
           </div>
         </div>
       )}
-      <button
-        onClick={onToggle}
-        className={`flex items-center justify-center size-10 rounded-full border shadow-lg transition-all ${
-          open
-            ? "bg-white/10 border-white/20 text-white"
-            : "bg-zinc-900/90 border-white/10 text-white/40 hover:text-white/70 hover:border-white/20"
-        }`}
-        aria-label="Keyboard shortcuts"
-      >
-        <Keyboard className="size-4" />
-      </button>
+      <TooltipProvider>
+        <Tooltip open={open ? false : undefined}>
+          <TooltipTrigger asChild>
+            <button
+              onClick={onToggle}
+              className={`flex items-center justify-center size-10 rounded-full border shadow-lg transition-all ${
+                open
+                  ? "bg-white/10 border-white/20 text-white"
+                  : "bg-zinc-900/90 border-white/10 text-white/40 hover:text-white/70 hover:border-white/20"
+              }`}
+              aria-label="Keyboard shortcuts"
+            >
+              <Keyboard className="size-4" />
+            </button>
+          </TooltipTrigger>
+          <TooltipContent side="top" sideOffset={8}>
+            Shortcuts
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
     </div>
   );
 }
