@@ -19,7 +19,7 @@ import {
   KanbanColumn,
   KanbanOverlay,
 } from "@/components/ui/kanban";
-import { Check, Plus, StickyNote, User } from "lucide-react";
+import { Check, CheckCircle, Plus, StickyNote, User } from "lucide-react";
 
 export default function BoardPage() {
   const { activeProjectId, clients, teamMembers, weekMode, weekDays, displayMonday, areaId, user } = useWorkspace();
@@ -42,17 +42,25 @@ export default function BoardPage() {
   const [dragOverTarget, setDragOverTarget] = useState<string | null>(null);
   const [glowingCards, setGlowingCards] = useState<Set<string>>(new Set());
   const [filterMine, setFilterMine] = useState(false);
+  const [hideCompleted, setHideCompleted] = useState(false);
 
   const currentMember = teamMembers.find(m => m.id === user?.id);
 
   const filteredColumns = useMemo(() => {
-    if (!filterMine || !user) return columns;
+    if (!filterMine && !hideCompleted) return columns;
     const result: Record<string, Task[]> = {};
     for (const [day, tasks] of Object.entries(columns)) {
-      result[day] = tasks.filter(t => t.assignees.includes(user.id));
+      let filtered = tasks;
+      if (filterMine && user) {
+        filtered = filtered.filter(t => t.assignees.includes(user.id));
+      }
+      if (hideCompleted) {
+        filtered = filtered.filter(t => !t.completed);
+      }
+      result[day] = filtered;
     }
     return result;
-  }, [columns, filterMine, user]);
+  }, [columns, filterMine, hideCompleted, user]);
 
   // Load tasks
   const refreshTasks = useCallback(async () => {
@@ -73,6 +81,7 @@ export default function BoardPage() {
   // Load tasks when active project changes
   useEffect(() => {
     setFilterMine(false);
+    setHideCompleted(false);
     if (!activeProjectId) {
       setColumns(getEmptyColumns(weekMode));
       return;
@@ -393,12 +402,12 @@ export default function BoardPage() {
 
   return (
     <main className="flex min-h-screen flex-col p-4 md:px-8 md:pt-4 bg-black/50">
-      {teamMembers.length > 1 && (
-        <div className="flex items-center gap-2 mb-3">
+      <div className="flex items-center gap-1 mb-3">
+        {teamMembers.length > 1 && (
           <button
             onClick={() => setFilterMine(f => !f)}
             aria-label={filterMine ? "Show all tasks" : "Show my tasks"}
-            className={`flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs font-medium transition-colors ${
+            className={`flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs font-medium transition-colors ${
               filterMine
                 ? "bg-white/10 text-white"
                 : "text-white/40 hover:text-white/60 hover:bg-white/[0.05]"
@@ -415,8 +424,20 @@ export default function BoardPage() {
             )}
             My tasks
           </button>
-        </div>
-      )}
+        )}
+        <button
+          onClick={() => setHideCompleted(h => !h)}
+          aria-label={hideCompleted ? "Show completed tasks" : "Hide completed tasks"}
+          className={`flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs font-medium transition-colors ${
+            hideCompleted
+              ? "bg-white/10 text-white"
+              : "text-white/40 hover:text-white/60 hover:bg-white/[0.05]"
+          }`}
+        >
+          <CheckCircle className="size-3.5" />
+          Hide completed
+        </button>
+      </div>
       <div>
         <Kanban
           value={filteredColumns}
@@ -424,12 +445,13 @@ export default function BoardPage() {
             const prev = prevColumnsRef.current;
             // When filtering, merge drag changes back into full columns
             let merged: Record<string, Task[]>;
-            if (filterMine && user) {
+            const isFiltering = (filterMine && user) || hideCompleted;
+            if (isFiltering) {
               merged = {};
               for (const day of Object.keys(columns)) {
-                const newMyTasks = newCols[day] || [];
-                const otherTasks = (columns[day] || []).filter(t => !t.assignees.includes(user.id));
-                merged[day] = [...newMyTasks, ...otherTasks];
+                const visibleIds = new Set((newCols[day] || []).map(t => t.id));
+                const hiddenTasks = (columns[day] || []).filter(t => !visibleIds.has(t.id));
+                merged[day] = [...(newCols[day] || []), ...hiddenTasks];
               }
             } else {
               merged = newCols;
