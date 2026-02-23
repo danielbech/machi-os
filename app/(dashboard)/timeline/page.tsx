@@ -10,6 +10,7 @@ import {
   deleteTimelineEntry,
   loadTimelineMarkers,
   createTimelineMarker,
+  updateTimelineMarker,
   deleteTimelineMarker,
 } from "@/lib/supabase/timeline";
 import { CLIENT_HEX_COLORS, CLIENT_DOT_COLORS, COLOR_NAMES } from "@/lib/colors";
@@ -542,6 +543,24 @@ export default function TimelinePage() {
     }
   };
 
+  const handleMoveMarker = async (id: string, newDate: Date) => {
+    const dateStr = format(newDate, "yyyy-MM-dd");
+    const newLabel = format(newDate, "MMM d");
+    const previous = markers;
+
+    setMarkers((prev) =>
+      prev.map((m) =>
+        m.id === id ? { ...m, date: dateStr, label: newLabel } : m
+      )
+    );
+
+    try {
+      await updateTimelineMarker(id, { date: dateStr, label: newLabel });
+    } catch {
+      setMarkers(previous);
+    }
+  };
+
   const RANGE_OPTIONS: { value: Range; label: string }[] = [
     { value: "daily", label: "Daily" },
     { value: "weekly", label: "Weekly" },
@@ -854,6 +873,7 @@ export default function TimelinePage() {
                     date={parseISO(marker.date)}
                     label={marker.label}
                     onRemove={handleRemoveMarker}
+                    onMove={handleMoveMarker}
                     color={markerColor}
                   />
                 );

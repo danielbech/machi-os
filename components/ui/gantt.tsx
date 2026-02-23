@@ -1404,11 +1404,21 @@ export const GanttFeatureList: FC<GanttFeatureListProps> = ({
 export const GanttMarker: FC<
   GanttMarkerProps & {
     onRemove?: (id: string) => void;
+    onMove?: (id: string, newDate: Date) => void;
     className?: string;
     color?: string;
   }
-> = memo(({ label, date, id, onRemove, className, color }) => {
+> = memo(({ label, date, id, onRemove, onMove, className, color }) => {
   const gantt = useContext(GanttContext);
+  const [currentDate, setCurrentDate] = useState(date);
+  const [dragging, setDragging] = useState(false);
+  const didDragRef = useRef(false);
+  const startXRef = useRef(0);
+  const startDateRef = useRef(date);
+
+  // Sync when prop changes
+  useEffect(() => { setCurrentDate(date); }, [date]);
+
   const differenceIn = useMemo(
     () => getDifferenceIn(gantt.range),
     [gantt.range]
@@ -1419,21 +1429,68 @@ export const GanttMarker: FC<
   );
 
   const offset = useMemo(
-    () => differenceIn(date, timelineStartDate),
-    [differenceIn, date, timelineStartDate]
+    () => differenceIn(currentDate, timelineStartDate),
+    [differenceIn, currentDate, timelineStartDate]
   );
   const innerOffset = useMemo(
     () =>
       calculateInnerOffset(
-        date,
+        currentDate,
         gantt.range,
         (gantt.columnWidth * gantt.zoom) / 100,
         timelineStartDate
       ),
-    [date, gantt.range, gantt.columnWidth, gantt.zoom, timelineStartDate]
+    [currentDate, gantt.range, gantt.columnWidth, gantt.zoom, timelineStartDate]
   );
 
   const handleRemove = useCallback(() => onRemove?.(id), [onRemove, id]);
+
+  const getRelativeX = useCallback(
+    (clientX: number) => {
+      const container = gantt.ref?.current;
+      if (!container) return 0;
+      const rect = container.getBoundingClientRect();
+      return clientX - rect.left + container.scrollLeft - gantt.sidebarWidth;
+    },
+    [gantt.ref, gantt.sidebarWidth]
+  );
+
+  const handlePointerDown = useCallback(
+    (e: React.PointerEvent) => {
+      if (!onMove) return;
+      e.preventDefault();
+      const originX = e.clientX;
+      startXRef.current = getRelativeX(e.clientX);
+      startDateRef.current = currentDate;
+      didDragRef.current = false;
+      setDragging(true);
+
+      const handlePointerMove = (ev: PointerEvent) => {
+        if (Math.abs(ev.clientX - originX) > 3) {
+          didDragRef.current = true;
+        }
+        const x = getRelativeX(ev.clientX);
+        const newDate = getDateByMousePosition(gantt, x);
+        setCurrentDate(newDate);
+      };
+
+      const handlePointerUp = (ev: PointerEvent) => {
+        setDragging(false);
+        if (didDragRef.current) {
+          const x = getRelativeX(ev.clientX);
+          const finalDate = getDateByMousePosition(gantt, x);
+          setCurrentDate(finalDate);
+          onMove(id, finalDate);
+        }
+        document.removeEventListener("pointermove", handlePointerMove);
+        document.removeEventListener("pointerup", handlePointerUp);
+      };
+
+      document.addEventListener("pointermove", handlePointerMove);
+      document.addEventListener("pointerup", handlePointerUp);
+    },
+    [onMove, gantt, id, currentDate, getRelativeX]
+  );
 
   return (
     <div
@@ -1445,7 +1502,8 @@ export const GanttMarker: FC<
     >
       <div
         className={cn(
-          "group pointer-events-auto sticky top-0 flex select-auto flex-col flex-nowrap items-center justify-center whitespace-nowrap rounded-b-md border px-2 py-1 text-foreground text-xs backdrop-blur-sm cursor-pointer transition-colors",
+          "group pointer-events-auto sticky top-0 flex select-auto flex-col flex-nowrap items-center justify-center whitespace-nowrap rounded-b-md border px-1.5 py-0.5 text-foreground text-[10px] leading-tight backdrop-blur-sm transition-colors",
+          dragging ? "cursor-grabbing" : onMove ? "cursor-grab" : "cursor-pointer",
           color ? "hover:brightness-125" : "hover:bg-white/15",
           !color && "border-white/[0.06] bg-white/10",
           className
@@ -1458,14 +1516,18 @@ export const GanttMarker: FC<
               }
             : undefined
         }
-        onClick={handleRemove}
+        onPointerDown={handlePointerDown}
+        onClick={() => {
+          // Only remove if it wasn't a drag
+          if (!didDragRef.current) handleRemove();
+        }}
         role="button"
         tabIndex={0}
         onKeyDown={(e) => e.key === "Enter" && handleRemove()}
       >
-        {label}
+        {dragging ? formatDate(currentDate, "MMM dd") : label}
         <span className="max-h-[0] overflow-hidden opacity-80 transition-all group-hover:max-h-[2rem]">
-          {formatDate(date, "MMM dd, yyyy")}
+          {formatDate(currentDate, "MMM dd, yyyy")}
         </span>
       </div>
       <div

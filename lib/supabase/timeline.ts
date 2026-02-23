@@ -161,6 +161,23 @@ export async function createTimelineMarker(
   }
 }
 
+export async function updateTimelineMarker(
+  markerId: string,
+  updates: { label?: string; date?: string }
+): Promise<void> {
+  const supabase = createClient()
+
+  const { error } = await supabase
+    .from('timeline_markers')
+    .update(updates)
+    .eq('id', markerId)
+
+  if (error) {
+    console.error('Error updating timeline marker:', error)
+    throw error
+  }
+}
+
 export async function deleteTimelineMarker(markerId: string): Promise<void> {
   const supabase = createClient()
 
