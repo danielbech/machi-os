@@ -20,6 +20,7 @@ import {
   KanbanOverlay,
 } from "@/components/ui/kanban";
 import { Check, CheckCircle, Plus, StickyNote, User } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 export default function BoardPage() {
   const { activeProjectId, clients, teamMembers, weekMode, weekDays, displayMonday, areaId, user } = useWorkspace();
@@ -619,32 +620,48 @@ export default function BoardPage() {
         teamMembers={teamMembers}
       />
 
-      <div className="fixed bottom-5 right-[4.25rem] z-50 flex items-center gap-px rounded-full border border-white/10 bg-zinc-900/90 shadow-lg overflow-hidden">
-        {teamMembers.length > 1 && (
-          <button
-            onClick={() => setFilterMine(f => !f)}
-            aria-label={filterMine ? "Show all tasks" : "Show my tasks"}
-            className={`flex items-center justify-center size-10 transition-colors ${
-              filterMine
-                ? "bg-white/15 text-white"
-                : "text-white/40 hover:text-white/70 hover:bg-white/[0.06]"
-            }`}
-          >
-            <User className="size-4" />
-          </button>
-        )}
-        <button
-          onClick={() => setHideCompleted(h => !h)}
-          aria-label={hideCompleted ? "Show completed tasks" : "Hide completed tasks"}
-          className={`flex items-center justify-center size-10 transition-colors ${
-            hideCompleted
-              ? "bg-white/15 text-white"
-              : "text-white/40 hover:text-white/70 hover:bg-white/[0.06]"
-          }`}
-        >
-          <CheckCircle className="size-4" />
-        </button>
-      </div>
+      <TooltipProvider>
+        <div className="fixed bottom-5 right-[4.25rem] z-50 flex items-center gap-px rounded-full border border-white/10 bg-zinc-900/90 shadow-lg overflow-hidden">
+          {teamMembers.length > 1 && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  onClick={() => setFilterMine(f => !f)}
+                  aria-label={filterMine ? "Show all tasks" : "Show my tasks"}
+                  className={`flex items-center justify-center size-10 transition-colors ${
+                    filterMine
+                      ? "bg-white/15 text-white"
+                      : "text-white/40 hover:text-white/70 hover:bg-white/[0.06]"
+                  }`}
+                >
+                  <User className="size-4" />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent side="top" sideOffset={8}>
+                {filterMine ? "Show all tasks" : "My tasks"}
+              </TooltipContent>
+            </Tooltip>
+          )}
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button
+                onClick={() => setHideCompleted(h => !h)}
+                aria-label={hideCompleted ? "Show completed tasks" : "Hide completed tasks"}
+                className={`flex items-center justify-center size-10 transition-colors ${
+                  hideCompleted
+                    ? "bg-white/15 text-white"
+                    : "text-white/40 hover:text-white/70 hover:bg-white/[0.06]"
+                }`}
+              >
+                <CheckCircle className="size-4" />
+              </button>
+            </TooltipTrigger>
+            <TooltipContent side="top" sideOffset={8}>
+              {hideCompleted ? "Show completed" : "Hide completed"}
+            </TooltipContent>
+          </Tooltip>
+        </div>
+      </TooltipProvider>
     </main>
   );
 }
