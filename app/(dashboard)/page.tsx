@@ -160,7 +160,8 @@ export default function BoardPage() {
   const handleAddCard = async (columnId: string, index?: number) => {
     const title = newCardTitle.trim();
     if (!title || !activeProjectId) return;
-    const cardType = newCardType;
+    const isDivider = title === "-";
+    const resolvedType = isDivider ? "divider" : newCardType;
     setNewCardTitle("");
     setAddingToColumn(null);
     setAddingAtIndex(null);
@@ -168,12 +169,12 @@ export default function BoardPage() {
     const tempId = `task-${Date.now()}`;
     const newCard: Task = {
       id: tempId,
-      title,
+      title: isDivider ? "-" : title,
       assignees: [],
       checklist: [],
-      priority: cardType === "note" ? undefined : "medium",
+      priority: resolvedType === "task" ? "medium" : undefined,
       day: columnId as DayName,
-      type: cardType,
+      type: resolvedType,
     };
     const columnItems = [...columns[columnId]];
     if (index !== undefined && index !== null) {
@@ -577,6 +578,13 @@ export default function BoardPage() {
                 .flat()
                 .find((item) => item.id === value);
               if (!task) return null;
+              if (task.type === "divider") {
+                return (
+                  <div className="w-[85vw] sm:w-80 py-2 px-1">
+                    <div className="h-px bg-white/10" />
+                  </div>
+                );
+              }
               if (task.type === "note") {
                 return (
                   <div className="w-[85vw] sm:w-80 rounded-lg border border-amber-500/20 bg-amber-500/10 p-3 shadow-lg">

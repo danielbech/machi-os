@@ -36,7 +36,7 @@ export interface Task {
   assignees: string[];
   client?: string;
   day?: DayName;
-  type?: "task" | "note";
+  type?: "task" | "note" | "divider";
   folder_id?: string;
   checklist: ChecklistItem[];
 }

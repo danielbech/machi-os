@@ -213,9 +213,9 @@ export async function transitionWeek(projectId: string, cachedAreaId?: string | 
 
   if (!tasks || tasks.length === 0) return { deleted: 0, carriedOver: 0 }
 
-  const notes = tasks.filter(t => t.type === 'note')
-  const completed = tasks.filter(t => t.completed && t.type !== 'note')
-  const incomplete = tasks.filter(t => !t.completed && t.type !== 'note')
+  const notes = tasks.filter(t => t.type === 'note' || t.type === 'divider')
+  const completed = tasks.filter(t => t.completed && t.type !== 'note' && t.type !== 'divider')
+  const incomplete = tasks.filter(t => !t.completed && t.type !== 'note' && t.type !== 'divider')
 
   // Delete completed tasks and all notes
   const toDelete = [...completed, ...notes]

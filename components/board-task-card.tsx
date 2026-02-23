@@ -46,6 +46,42 @@ export function BoardTaskCard({
   const isPastDay = dayIdx < todayIdx;
   const dimCompleted = item.completed && isPastDay;
 
+  if (item.type === "divider") {
+    return (
+      <KanbanItem
+        asHandle
+        value={item.id}
+        className="border-transparent bg-transparent shadow-none focus:outline-none cursor-grab"
+        tabIndex={0}
+        ref={(el: HTMLDivElement | null) => {
+          if (el && isNewlyCreated) {
+            setTimeout(() => {
+              el.focus();
+              onNewlyCreatedSeen();
+            }, 100);
+          }
+        }}
+        onMouseEnter={(e: any) => {
+          if (!addingToColumn) e.currentTarget.focus();
+        }}
+        onKeyDownCapture={(e: any) => {
+          const key = e.key;
+          if ((e.metaKey || e.ctrlKey) && key === "c") {
+            e.preventDefault();
+            onCopy(item, columnId);
+          } else if (key === "Backspace") {
+            e.preventDefault();
+            onRemove(item.id);
+          }
+        }}
+      >
+        <div className="py-1 px-2">
+          <div className="h-px bg-white/[0.06]" />
+        </div>
+      </KanbanItem>
+    );
+  }
+
   return (
     <KanbanItem
       asHandle
