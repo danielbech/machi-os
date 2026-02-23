@@ -1887,16 +1887,15 @@ export const GanttToday: FC<GanttTodayProps> = ({ className }) => {
 
   return (
     <div
-      className="pointer-events-none absolute left-0 z-20 flex h-full select-none flex-col items-center overflow-visible"
+      className="pointer-events-none absolute top-0 left-0 z-20 flex h-full select-none flex-col items-center overflow-visible"
       style={{
         width: 0,
-        top: -22,
         transform: `translateX(calc(var(--gantt-column-width) * ${offset} + ${innerOffset}px))`,
       }}
     >
       <div
         className={cn(
-          "pointer-events-auto flex select-auto items-center justify-center whitespace-nowrap rounded-t-md border border-b-0 border-blue-500/30 bg-blue-500/15 px-1.5 py-0.5 text-blue-400 text-[10px] leading-tight backdrop-blur-sm",
+          "pointer-events-auto sticky top-0 z-30 flex select-auto items-center justify-center whitespace-nowrap rounded-b-md border border-blue-500/30 bg-blue-500/15 px-1.5 py-0.5 text-blue-400 text-[10px] leading-tight backdrop-blur-sm",
           className
         )}
       >
