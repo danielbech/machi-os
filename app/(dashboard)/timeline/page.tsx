@@ -128,6 +128,9 @@ export default function TimelinePage() {
   const [dialogTab, setDialogTab] = useState<"project" | "event">("project");
   const [markers, setMarkers] = useState<TimelineMarker[]>([]);
 
+  // Selection state
+  const [selectedEntryId, setSelectedEntryId] = useState<string | null>(null);
+
   // Expand/collapse state for sub-items
   const [expandedEntries, setExpandedEntries] = useState<Set<string>>(new Set());
 
@@ -197,6 +200,15 @@ export default function TimelinePage() {
       }
     }
     return result;
+  }, [parentEntries, childrenMap, expandedEntries]);
+
+  // Grouped entries for boxed sidebar rendering
+  type EntryGroup = { parent: TimelineEntry; children: TimelineEntry[] };
+  const visibleGroups = useMemo((): EntryGroup[] => {
+    return parentEntries.map((parent) => ({
+      parent,
+      children: expandedEntries.has(parent.id) ? (childrenMap.get(parent.id) || []) : [],
+    }));
   }, [parentEntries, childrenMap, expandedEntries]);
 
   const visibleFeatures = useMemo(
@@ -443,6 +455,12 @@ export default function TimelinePage() {
     }
   };
 
+  // Filter markers: show global markers always, entry-scoped only when that entry is selected
+  const visibleMarkers = useMemo(
+    () => markers.filter((m) => !m.entry_id || m.entry_id === selectedEntryId),
+    [markers, selectedEntryId]
+  );
+
   const handleCreateMarker = async (date: Date) => {
     if (!activeProjectId) return;
     const dateStr = format(date, "yyyy-MM-dd");
@@ -453,6 +471,7 @@ export default function TimelinePage() {
       project_id: activeProjectId,
       label,
       date: dateStr,
+      entry_id: selectedEntryId || undefined,
       created_at: new Date().toISOString(),
     };
 
@@ -462,6 +481,7 @@ export default function TimelinePage() {
       const created = await createTimelineMarker(activeProjectId, {
         label,
         date: dateStr,
+        entry_id: selectedEntryId || undefined,
       });
       setMarkers((prev) =>
         prev.map((m) => (m.id === optimistic.id ? created : m))
@@ -554,69 +574,124 @@ export default function TimelinePage() {
           </div>
         </div>
       ) : (
-        <div className="flex-1 min-h-0 h-[calc(100vh-160px)] rounded-lg border border-white/[0.06] overflow-hidden">
+        <div
+          className="flex-1 min-h-0 h-[calc(100vh-160px)] rounded-lg border border-white/[0.06] overflow-hidden"
+          onClick={(e) => {
+            const target = e.target as HTMLElement;
+            if (
+              !target.closest("[data-gantt-item]") &&
+              !target.closest("[data-sidebar-entry]")
+            ) {
+              setSelectedEntryId(null);
+            }
+          }}
+        >
           <GanttProvider range={range} onAddItemRange={handleAddItemRange}>
             <GanttSidebar>
-              {visibleEntries.map((entry) => {
-                const client = entry.client_id
-                  ? clientMap.get(entry.client_id)
+              {visibleGroups.map((group) => {
+                const parent = group.parent;
+                const parentClient = parent.client_id
+                  ? clientMap.get(parent.client_id)
                   : undefined;
-                const feature = visibleFeatures.find((f) => f.id === entry.id);
-                if (!feature) return null;
+                const parentFeature = visibleFeatures.find((f) => f.id === parent.id);
+                if (!parentFeature) return null;
 
-                const isChild = !!entry.parent_id;
-                const hasChildren = childrenMap.has(entry.id);
-                const isExpanded = expandedEntries.has(entry.id);
-                const isMilestone = entry.start_date === entry.end_date;
+                const hasChildren = childrenMap.has(parent.id);
+                const isExpanded = expandedEntries.has(parent.id);
+                const childCount = (childrenMap.get(parent.id) || []).length;
 
                 const tempEndAt =
-                  feature.endAt && isSameDay(feature.startAt, feature.endAt)
-                    ? addDays(feature.endAt, 1)
-                    : feature.endAt;
-                const duration = tempEndAt
-                  ? formatDistance(feature.startAt, tempEndAt)
-                  : `${formatDistance(feature.startAt, new Date())} so far`;
+                  parentFeature.endAt && isSameDay(parentFeature.startAt, parentFeature.endAt)
+                    ? addDays(parentFeature.endAt, 1)
+                    : parentFeature.endAt;
+                const parentDuration = tempEndAt
+                  ? formatDistance(parentFeature.startAt, tempEndAt)
+                  : `${formatDistance(parentFeature.startAt, new Date())} so far`;
 
                 return (
                   <div
-                    key={entry.id}
-                    className={`relative flex items-center gap-2.5 p-2.5 text-xs ${isChild ? "pl-8" : ""}`}
-                    style={{ height: "var(--gantt-row-height)" }}
+                    key={parent.id}
+                    className="mx-2 mb-2 rounded-lg border border-white/[0.06] bg-white/[0.02] overflow-hidden"
                   >
-                    {!isChild && hasChildren && (
-                      <button
-                        onClick={() => toggleExpanded(entry.id)}
-                        className="shrink-0 text-white/30 hover:text-white/60 transition-colors"
-                        aria-label={isExpanded ? "Collapse" : "Expand"}
-                      >
-                        <ChevronRight
-                          className={`size-3.5 transition-transform ${isExpanded ? "rotate-90" : ""}`}
+                    {/* Parent header row */}
+                    <div
+                      data-sidebar-entry
+                      className={`relative flex items-center gap-2.5 px-2.5 text-xs bg-white/[0.03] hover:bg-white/[0.05] cursor-pointer transition-colors ${selectedEntryId === parent.id ? "bg-white/[0.08]" : ""}`}
+                      style={{ height: "var(--gantt-row-height)" }}
+                      onClick={() => setSelectedEntryId(parent.id)}
+                    >
+                      {hasChildren && (
+                        <button
+                          onClick={(e) => { e.stopPropagation(); toggleExpanded(parent.id); }}
+                          className="shrink-0 text-white/30 hover:text-white/60 transition-colors"
+                          aria-label={isExpanded ? "Collapse" : "Expand"}
+                        >
+                          <ChevronRight
+                            className={`size-3.5 transition-transform ${isExpanded ? "rotate-90" : ""}`}
+                          />
+                        </button>
+                      )}
+                      {parent.type === "event" ? (
+                        <EventDot color={parent.color} size="sm" />
+                      ) : parentClient ? (
+                        <ClientAvatar client={parentClient} size="sm" />
+                      ) : (
+                        <div
+                          className="h-2 w-2 shrink-0 rounded-full"
+                          style={{ backgroundColor: parentFeature.status.color }}
                         />
-                      </button>
-                    )}
-                    {isChild && isMilestone ? (
-                      <Diamond className="size-3.5 shrink-0 text-white/40" />
-                    ) : isChild ? (
-                      <div
-                        className="size-2 shrink-0 rounded-full"
-                        style={{ backgroundColor: feature.status.color }}
-                      />
-                    ) : entry.type === "event" ? (
-                      <EventDot color={entry.color} size="sm" />
-                    ) : client ? (
-                      <ClientAvatar client={client} size="sm" />
-                    ) : (
-                      <div
-                        className="h-2 w-2 shrink-0 rounded-full"
-                        style={{ backgroundColor: feature.status.color }}
-                      />
-                    )}
-                    <p className="flex-1 truncate text-left font-medium">
-                      {feature.name}
-                    </p>
-                    <p className="text-muted-foreground">
-                      {isMilestone ? format(feature.startAt, "MMM d") : duration}
-                    </p>
+                      )}
+                      <p className="flex-1 truncate text-left font-medium">
+                        {parentFeature.name}
+                      </p>
+                      {childCount > 0 && (
+                        <span className="shrink-0 rounded-full bg-white/[0.08] px-1.5 py-0.5 text-[10px] text-white/40">
+                          {childCount}
+                        </span>
+                      )}
+                      <p className="text-muted-foreground shrink-0">
+                        {parentDuration}
+                      </p>
+                    </div>
+                    {/* Child rows */}
+                    {group.children.map((child) => {
+                      const childFeature = visibleFeatures.find((f) => f.id === child.id);
+                      if (!childFeature) return null;
+                      const isMilestone = child.start_date === child.end_date;
+
+                      const childTempEndAt =
+                        childFeature.endAt && isSameDay(childFeature.startAt, childFeature.endAt)
+                          ? addDays(childFeature.endAt, 1)
+                          : childFeature.endAt;
+                      const childDuration = childTempEndAt
+                        ? formatDistance(childFeature.startAt, childTempEndAt)
+                        : `${formatDistance(childFeature.startAt, new Date())} so far`;
+
+                      return (
+                        <div
+                          key={child.id}
+                          data-sidebar-entry
+                          className={`relative flex items-center gap-2.5 pl-8 pr-2.5 text-xs border-t border-white/[0.04] cursor-pointer hover:bg-white/[0.05] transition-colors ${selectedEntryId === child.id ? "bg-white/[0.08]" : ""}`}
+                          style={{ height: "var(--gantt-row-height)" }}
+                          onClick={() => setSelectedEntryId(child.id)}
+                        >
+                          {isMilestone ? (
+                            <Diamond className="size-3.5 shrink-0 text-white/40" />
+                          ) : (
+                            <div
+                              className="size-2 shrink-0 rounded-full"
+                              style={{ backgroundColor: childFeature.status.color }}
+                            />
+                          )}
+                          <p className="flex-1 truncate text-left font-medium">
+                            {childFeature.name}
+                          </p>
+                          <p className="text-muted-foreground shrink-0">
+                            {isMilestone ? format(childFeature.startAt, "MMM d") : childDuration}
+                          </p>
+                        </div>
+                      );
+                    })}
                   </div>
                 );
               })}
@@ -624,88 +699,98 @@ export default function TimelinePage() {
             <GanttTimeline>
               <GanttHeader />
               <GanttFeatureList>
-                {visibleFeatures.map((feature) => {
-                  const entry = visibleEntries.find((e) => e.id === feature.id);
-                  const isChild = !!entry?.parent_id;
-                  const client =
-                    entry?.client_id
-                      ? clientMap.get(entry.client_id)
-                      : undefined;
-                  const isMilestone = entry?.start_date === entry?.end_date;
-                  const accent = entry ? getAccentColor(entry) : undefined;
+                {visibleGroups.map((group) => {
+                  const allGroupEntries = [group.parent, ...group.children];
                   return (
-                    <GanttFeatureItem
-                      key={feature.id}
-                      {...feature}
-                      onMove={handleMove}
-                      accentColor={accent}
-                    >
-                      {isChild && isMilestone ? (
-                        <Diamond className="size-2.5 shrink-0 text-white/60" />
-                      ) : isChild ? (
-                        <div
-                          className="size-2 shrink-0 rounded-full"
-                          style={{ backgroundColor: feature.status.color }}
-                        />
-                      ) : entry?.type === "event" ? (
-                        <EventDot color={entry.color} size="xs" />
-                      ) : client ? (
-                        <ClientAvatar client={client} size="xs" />
-                      ) : (
-                        <div
-                          className="h-2 w-2 shrink-0 rounded-full"
-                          style={{
-                            backgroundColor: feature.status.color,
-                          }}
-                        />
-                      )}
-                      <p className="flex-1 truncate text-xs">
-                        {feature.name}
-                      </p>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <button
-                            className="shrink-0 rounded p-0.5 text-white/30 hover:text-white/60 hover:bg-white/10 transition-colors"
-                            onPointerDown={(e) => e.stopPropagation()}
-                            aria-label="Entry options"
+                    <div key={group.parent.id} className="mb-2">
+                      {allGroupEntries.map((entry) => {
+                        const feature = visibleFeatures.find((f) => f.id === entry.id);
+                        if (!feature) return null;
+                        const isChild = !!entry.parent_id;
+                        const client = entry.client_id
+                          ? clientMap.get(entry.client_id)
+                          : undefined;
+                        const isMilestone = entry.start_date === entry.end_date;
+                        const accent = getAccentColor(entry);
+                        return (
+                          <GanttFeatureItem
+                            key={feature.id}
+                            {...feature}
+                            onMove={handleMove}
+                            accentColor={accent}
+                            selected={selectedEntryId === feature.id}
+                            onSelect={() => setSelectedEntryId(feature.id)}
                           >
-                            <MoreHorizontal className="size-3.5" />
-                          </button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem onClick={() => entry && openEditDialog(entry)}>
-                            <Pencil className="size-4" />
-                            Edit
-                          </DropdownMenuItem>
-                          {!isChild && (
-                            <DropdownMenuItem onClick={() => entry && openSubItemDialog(entry)}>
-                              <Plus className="size-4" />
-                              Add sub-item
-                            </DropdownMenuItem>
-                          )}
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem
-                            className="text-destructive"
-                            onClick={() => entry && handleRemove(entry.id)}
-                          >
-                            <Trash2 className="size-4" />
-                            Remove from timeline
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </GanttFeatureItem>
+                            {isChild && isMilestone ? (
+                              <Diamond className="size-2.5 shrink-0 text-white/60" />
+                            ) : isChild ? (
+                              <div
+                                className="size-2 shrink-0 rounded-full"
+                                style={{ backgroundColor: feature.status.color }}
+                              />
+                            ) : entry.type === "event" ? (
+                              <EventDot color={entry.color} size="xs" />
+                            ) : client ? (
+                              <ClientAvatar client={client} size="xs" />
+                            ) : (
+                              <div
+                                className="h-2 w-2 shrink-0 rounded-full"
+                                style={{
+                                  backgroundColor: feature.status.color,
+                                }}
+                              />
+                            )}
+                            <p className="flex-1 truncate text-xs">
+                              {feature.name}
+                            </p>
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <button
+                                  className="shrink-0 rounded p-0.5 text-white/30 hover:text-white/60 hover:bg-white/10 transition-colors"
+                                  onPointerDown={(e) => e.stopPropagation()}
+                                  aria-label="Entry options"
+                                >
+                                  <MoreHorizontal className="size-3.5" />
+                                </button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuItem onClick={() => openEditDialog(entry)}>
+                                  <Pencil className="size-4" />
+                                  Edit
+                                </DropdownMenuItem>
+                                {!isChild && (
+                                  <DropdownMenuItem onClick={() => openSubItemDialog(entry)}>
+                                    <Plus className="size-4" />
+                                    Add sub-item
+                                  </DropdownMenuItem>
+                                )}
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem
+                                  className="text-destructive"
+                                  onClick={() => handleRemove(entry.id)}
+                                >
+                                  <Trash2 className="size-4" />
+                                  Remove from timeline
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </GanttFeatureItem>
+                        );
+                      })}
+                    </div>
                   );
                 })}
               </GanttFeatureList>
               <GanttDragCreate />
               <GanttCreateMarkerTrigger onCreateMarker={handleCreateMarker} />
-              {markers.map((marker) => (
+              {visibleMarkers.map((marker) => (
                 <GanttMarker
                   key={marker.id}
                   id={marker.id}
                   date={parseISO(marker.date)}
                   label={marker.label}
                   onRemove={handleRemoveMarker}
+                  className={marker.entry_id ? "opacity-70" : undefined}
                 />
               ))}
               <GanttToday />

@@ -93,6 +93,7 @@ export interface TimelineMarker {
   project_id: string;
   label: string;
   date: string;
+  entry_id?: string;
   created_at: string;
 }
 

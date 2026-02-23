@@ -110,7 +110,7 @@ export async function loadTimelineMarkers(projectId: string): Promise<TimelineMa
 
   const { data, error } = await supabase
     .from('timeline_markers')
-    .select('id, project_id, label, date, created_at')
+    .select('id, project_id, label, date, entry_id, created_at')
     .eq('project_id', projectId)
     .order('date')
 
@@ -124,13 +124,14 @@ export async function loadTimelineMarkers(projectId: string): Promise<TimelineMa
     project_id: m.project_id,
     label: m.label,
     date: m.date,
+    entry_id: m.entry_id || undefined,
     created_at: m.created_at,
   }))
 }
 
 export async function createTimelineMarker(
   projectId: string,
-  marker: { label: string; date: string }
+  marker: { label: string; date: string; entry_id?: string }
 ): Promise<TimelineMarker> {
   const supabase = createClient()
 
@@ -140,6 +141,7 @@ export async function createTimelineMarker(
       project_id: projectId,
       label: marker.label,
       date: marker.date,
+      entry_id: marker.entry_id || null,
     })
     .select()
     .single()
@@ -154,6 +156,7 @@ export async function createTimelineMarker(
     project_id: data.project_id,
     label: data.label,
     date: data.date,
+    entry_id: data.entry_id || undefined,
     created_at: data.created_at,
   }
 }

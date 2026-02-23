@@ -624,7 +624,7 @@ export const GanttSidebar: FC<GanttSidebarProps> = ({
     data-roadmap-ui="gantt-sidebar"
   >
     <GanttSidebarHeader />
-    <div className="space-y-4">{children}</div>
+    <div>{children}</div>
   </div>
 );
 
@@ -1092,12 +1092,16 @@ export const GanttFeatureDragHelper: FC<GanttFeatureDragHelperProps> = ({
 export type GanttFeatureItemCardProps = Pick<GanttFeature, "id"> & {
   children?: ReactNode;
   accentColor?: string;
+  selected?: boolean;
+  onSelect?: () => void;
 };
 
 export const GanttFeatureItemCard: FC<GanttFeatureItemCardProps> = ({
   id,
   children,
   accentColor,
+  selected,
+  onSelect,
 }) => {
   const [, setDragging] = useGanttDragging();
   const { attributes, listeners, setNodeRef } = useDraggable({ id });
@@ -1107,12 +1111,16 @@ export const GanttFeatureItemCard: FC<GanttFeatureItemCardProps> = ({
 
   return (
     <Card
-      className="relative h-full w-full rounded-md border-white/10 hover:border-white/20 bg-background p-2 text-xs shadow-sm transition-colors cursor-pointer overflow-hidden"
+      className={cn(
+        "relative h-full w-full rounded-md border-white/10 hover:border-white/20 bg-background p-2 text-xs shadow-sm transition-colors cursor-pointer overflow-hidden",
+        selected && "ring-1 ring-white/20 border-white/20"
+      )}
       style={
         accentColor
           ? { borderLeftWidth: 2, borderLeftColor: accentColor }
           : undefined
       }
+      onClick={onSelect}
     >
       {accentColor && (
         <div
@@ -1140,6 +1148,8 @@ export type GanttFeatureItemProps = GanttFeature & {
   children?: ReactNode;
   className?: string;
   accentColor?: string;
+  selected?: boolean;
+  onSelect?: () => void;
 };
 
 export const GanttFeatureItem: FC<GanttFeatureItemProps> = ({
@@ -1147,6 +1157,8 @@ export const GanttFeatureItem: FC<GanttFeatureItemProps> = ({
   children,
   className,
   accentColor,
+  selected,
+  onSelect,
   ...feature
 }) => {
   const [scrollX] = useGanttScrollX();
@@ -1258,7 +1270,7 @@ export const GanttFeatureItem: FC<GanttFeatureItemProps> = ({
           onDragStart={handleItemDragStart}
           sensors={[mouseSensor]}
         >
-          <GanttFeatureItemCard id={feature.id} accentColor={accentColor}>
+          <GanttFeatureItemCard id={feature.id} accentColor={accentColor} selected={selected} onSelect={onSelect}>
             {children ?? (
               <p className="flex-1 truncate text-xs">{feature.name}</p>
             )}
@@ -1379,7 +1391,7 @@ export const GanttFeatureList: FC<GanttFeatureListProps> = ({
   children,
 }) => (
   <div
-    className={cn("absolute top-0 left-0 h-full w-max space-y-4", className)}
+    className={cn("absolute top-0 left-0 h-full w-max", className)}
     data-gantt-drag-area
     style={{ marginTop: "var(--gantt-header-height)" }}
   >
