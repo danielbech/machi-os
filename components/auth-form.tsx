@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import PrismaticBurst from '@/components/PrismaticBurst'
 
 export function AuthForm() {
   const [email, setEmail] = useState('')
@@ -43,8 +44,22 @@ export function AuthForm() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center p-4 bg-black/50">
-      <Card className="w-full max-w-md border-white/5 bg-white/[0.02]">
+    <div className="relative flex min-h-screen items-center justify-center p-4 bg-black overflow-hidden">
+      <div className="absolute inset-0">
+        <PrismaticBurst
+          animationType="rotate"
+          intensity={1.3}
+          speed={0.25}
+          distort={5.9}
+          paused={false}
+          offset={{ x: 0, y: 0 }}
+          hoverDampness={0.25}
+          rayCount={0}
+          mixBlendMode="lighten"
+          colors={['#ff007a', '#4d3dff', '#ffffff']}
+        />
+      </div>
+      <Card className="relative z-10 w-full max-w-md border-white/10 bg-black/60 backdrop-blur-xl">
         <CardHeader>
           <div className="flex items-center gap-3 mb-2">
             <img src="/logo.svg" alt="Machi OS" className="w-10 h-10" />
