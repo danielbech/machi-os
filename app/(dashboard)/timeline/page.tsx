@@ -624,7 +624,12 @@ export default function TimelinePage() {
                 return (
                   <div
                     key={parent.id}
-                    className="mx-2 mb-2 rounded-lg border border-white/[0.06] bg-white/[0.02] overflow-hidden"
+                    className="mx-2 mb-2 rounded-lg border bg-white/[0.02] overflow-hidden transition-colors"
+                    style={{
+                      borderColor: selectedEntryId === parent.id || group.children.some((c) => c.id === selectedEntryId)
+                        ? `${getAccentColor(parent)}50`
+                        : "rgb(255 255 255 / 0.06)",
+                    }}
                   >
                     {/* Parent header row */}
                     <div
@@ -796,16 +801,24 @@ export default function TimelinePage() {
               </GanttFeatureList>
               <GanttDragCreate />
               <GanttCreateMarkerTrigger onCreateMarker={handleCreateMarker} />
-              {visibleMarkers.map((marker) => (
-                <GanttMarker
-                  key={marker.id}
-                  id={marker.id}
-                  date={parseISO(marker.date)}
-                  label={marker.label}
-                  onRemove={handleRemoveMarker}
-                  className={marker.entry_id ? "opacity-70" : undefined}
-                />
-              ))}
+              {visibleMarkers.map((marker) => {
+                const markerEntry = marker.entry_id
+                  ? entries.find((e) => e.id === marker.entry_id)
+                  : undefined;
+                const markerColor = markerEntry
+                  ? getAccentColor(markerEntry)
+                  : undefined;
+                return (
+                  <GanttMarker
+                    key={marker.id}
+                    id={marker.id}
+                    date={parseISO(marker.date)}
+                    label={marker.label}
+                    onRemove={handleRemoveMarker}
+                    color={markerColor}
+                  />
+                );
+              })}
               <GanttToday />
             </GanttTimeline>
           </GanttProvider>

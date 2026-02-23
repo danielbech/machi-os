@@ -1113,13 +1113,15 @@ export const GanttFeatureItemCard: FC<GanttFeatureItemCardProps> = ({
     <Card
       className={cn(
         "relative h-full w-full rounded-md border-white/10 hover:border-white/20 bg-background p-2 text-xs shadow-sm transition-colors cursor-pointer overflow-hidden",
-        selected && "ring-1 ring-white/20 border-white/20"
+        selected && !accentColor && "ring-1 ring-white/20 border-white/20",
+        selected && accentColor && "ring-1"
       )}
-      style={
-        accentColor
-          ? { borderLeftWidth: 2, borderLeftColor: accentColor }
-          : undefined
-      }
+      style={{
+        ...(accentColor ? { borderLeftWidth: 2, borderLeftColor: accentColor } : {}),
+        ...(selected && accentColor
+          ? { "--tw-ring-color": `${accentColor}50`, borderColor: `${accentColor}50` } as React.CSSProperties
+          : {}),
+      }}
       onClick={onSelect}
     >
       {accentColor && (
@@ -1403,8 +1405,9 @@ export const GanttMarker: FC<
   GanttMarkerProps & {
     onRemove?: (id: string) => void;
     className?: string;
+    color?: string;
   }
-> = memo(({ label, date, id, onRemove, className }) => {
+> = memo(({ label, date, id, onRemove, className, color }) => {
   const gantt = useContext(GanttContext);
   const differenceIn = useMemo(
     () => getDifferenceIn(gantt.range),
@@ -1442,9 +1445,19 @@ export const GanttMarker: FC<
     >
       <div
         className={cn(
-          "group pointer-events-auto sticky top-0 flex select-auto flex-col flex-nowrap items-center justify-center whitespace-nowrap rounded-b-md border border-white/[0.06] bg-white/10 px-2 py-1 text-foreground text-xs backdrop-blur-sm cursor-pointer hover:bg-white/15 transition-colors",
+          "group pointer-events-auto sticky top-0 flex select-auto flex-col flex-nowrap items-center justify-center whitespace-nowrap rounded-b-md border px-2 py-1 text-foreground text-xs backdrop-blur-sm cursor-pointer transition-colors",
+          color ? "hover:brightness-125" : "hover:bg-white/15",
+          !color && "border-white/[0.06] bg-white/10",
           className
         )}
+        style={
+          color
+            ? {
+                borderColor: `${color}40`,
+                backgroundColor: `${color}20`,
+              }
+            : undefined
+        }
         onClick={handleRemove}
         role="button"
         tabIndex={0}
@@ -1455,7 +1468,10 @@ export const GanttMarker: FC<
           {formatDate(date, "MMM dd, yyyy")}
         </span>
       </div>
-      <div className="h-full w-px bg-white/20" />
+      <div
+        className="h-full w-px"
+        style={{ backgroundColor: color ? `${color}60` : "rgb(255 255 255 / 0.2)" }}
+      />
     </div>
   );
 });
