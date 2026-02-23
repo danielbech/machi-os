@@ -10,6 +10,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { BacklogShell } from "@/components/backlog-shell";
 import { ErrorBoundary } from "@/components/error-boundary";
+import { CursorOverlay } from "@/components/cursor-overlay";
 
 function DashboardGate({ children }: { children: React.ReactNode }) {
   const { user, loading } = useWorkspace();
@@ -38,6 +39,7 @@ function DashboardGate({ children }: { children: React.ReactNode }) {
             </header>
             {children}
           </SidebarInset>
+          <CursorOverlay />
         </div>
       </SidebarProvider>
     </TooltipProvider>
