@@ -43,7 +43,7 @@ export function AppSidebar() {
     googleCalendarConnected, connectGoogleCalendar, disconnectGoogleAccount,
     syncCalendarEvents, calendarConnections, updateSelectedCalendars,
   } = useCalendar();
-  const { setOpen, setOpenMobile } = useSidebar();
+  const { setOpenMobile } = useSidebar();
   const [showSettings, setShowSettings] = useState(false);
   const [showCreateWorkspace, setShowCreateWorkspace] = useState(false);
   const [workspaceMembers, setWorkspaceMembers] = useState<WorkspaceMember[]>([]);
@@ -124,7 +124,7 @@ export function AppSidebar() {
               <SidebarMenu>
                 <SidebarMenuItem>
                   <SidebarMenuButton asChild isActive={pathname === "/"} tooltip="Board">
-                    <Link href="/" onClick={() => { setOpen(true); setOpenMobile(false); }}>
+                    <Link href="/" onClick={() => setOpenMobile(false)}>
                       <LayoutDashboard />
                       <span>Board</span>
                     </Link>
@@ -138,7 +138,7 @@ export function AppSidebar() {
                 </SidebarMenuItem>
                 <SidebarMenuItem>
                   <SidebarMenuButton asChild isActive={pathname === "/timeline"} tooltip="Timeline">
-                    <Link href="/timeline" onClick={() => { setOpen(false); setOpenMobile(false); }}>
+                    <Link href="/timeline" onClick={() => { if (backlogOpen) toggleBacklog(); setOpenMobile(false); }}>
                       <CalendarRange />
                       <span>Timeline</span>
                     </Link>
@@ -146,7 +146,7 @@ export function AppSidebar() {
                 </SidebarMenuItem>
                 <SidebarMenuItem>
                   <SidebarMenuButton asChild isActive={pathname === "/projects"} tooltip="Projects">
-                    <Link href="/projects" onClick={() => { setOpen(false); setOpenMobile(false); }}>
+                    <Link href="/projects" onClick={() => { if (backlogOpen) toggleBacklog(); setOpenMobile(false); }}>
                       <FolderKanban />
                       <span>Projects</span>
                     </Link>
