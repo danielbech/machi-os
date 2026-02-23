@@ -470,6 +470,7 @@ export default function TimelinePage() {
 
   const RANGE_OPTIONS: { value: Range; label: string }[] = [
     { value: "daily", label: "Daily" },
+    { value: "weekly", label: "Weekly" },
     { value: "monthly", label: "Monthly" },
     { value: "quarterly", label: "Quarterly" },
   ];
@@ -489,7 +490,10 @@ export default function TimelinePage() {
   return (
     <main className="flex min-h-screen flex-col p-4 md:p-8 bg-black/50 overflow-hidden">
       <div className="mb-6 flex items-center justify-between">
-        <h1 className="text-2xl font-bold">Timeline</h1>
+        <div className="flex items-center gap-2.5">
+          <h1 className="text-2xl font-bold">Timeline</h1>
+          <span className="rounded-full bg-white/[0.08] px-2 py-0.5 text-[10px] font-medium text-white/40 uppercase tracking-wider">Beta</span>
+        </div>
         <div className="flex items-center gap-3">
           <div className="flex gap-1 rounded-lg bg-white/5 p-1">
             {RANGE_OPTIONS.map((opt) => (

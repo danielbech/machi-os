@@ -11,9 +11,11 @@ import { useMouse, useThrottle, useWindowScroll } from "@uidotdev/usehooks";
 import {
   addDays,
   addMonths,
+  addWeeks,
   differenceInDays,
   differenceInHours,
   differenceInMonths,
+  differenceInWeeks,
   endOfDay,
   endOfMonth,
   format,
@@ -21,6 +23,7 @@ import {
   formatDistance,
   getDate,
   getDaysInMonth,
+  getWeek,
   isSameDay,
   startOfDay,
   startOfMonth,
@@ -77,7 +80,7 @@ export type GanttMarkerProps = {
   label: string;
 };
 
-export type Range = "daily" | "monthly" | "quarterly";
+export type Range = "daily" | "weekly" | "monthly" | "quarterly";
 
 export type TimelineData = {
   year: number;
@@ -105,7 +108,9 @@ export type GanttContextProps = {
 const getsDaysIn = (range: Range) => {
   let fn = (_date: Date) => 1;
 
-  if (range === "monthly" || range === "quarterly") {
+  if (range === "weekly") {
+    fn = (_date: Date) => 7;
+  } else if (range === "monthly" || range === "quarterly") {
     fn = getDaysInMonth;
   }
 
@@ -115,7 +120,9 @@ const getsDaysIn = (range: Range) => {
 const getDifferenceIn = (range: Range) => {
   let fn = differenceInDays;
 
-  if (range === "monthly" || range === "quarterly") {
+  if (range === "weekly") {
+    fn = differenceInWeeks;
+  } else if (range === "monthly" || range === "quarterly") {
     fn = differenceInMonths;
   }
 
@@ -125,7 +132,7 @@ const getDifferenceIn = (range: Range) => {
 const getInnerDifferenceIn = (range: Range) => {
   let fn = differenceInHours;
 
-  if (range === "monthly" || range === "quarterly") {
+  if (range === "weekly" || range === "monthly" || range === "quarterly") {
     fn = differenceInDays;
   }
 
@@ -155,7 +162,9 @@ const getEndOf = (range: Range) => {
 const getAddRange = (range: Range) => {
   let fn = addDays;
 
-  if (range === "monthly" || range === "quarterly") {
+  if (range === "weekly") {
+    fn = addWeeks;
+  } else if (range === "monthly" || range === "quarterly") {
     fn = addMonths;
   }
 
@@ -214,6 +223,14 @@ const getOffset = (
     return parsedColumnWidth * fullColumns;
   }
 
+  if (context.range === "weekly") {
+    const totalDays = differenceInDays(date, timelineStartDate);
+    const fullWeeks = Math.floor(totalDays / 7);
+    const daysIntoWeek = totalDays - fullWeeks * 7;
+    const pixelsPerDay = parsedColumnWidth / 7;
+    return fullWeeks * parsedColumnWidth + daysIntoWeek * pixelsPerDay;
+  }
+
   const partialColumns = date.getDate();
   const daysInMonth = getDaysInMonth(date);
   const pixelsPerDay = parsedColumnWidth / daysInMonth;
@@ -238,6 +255,12 @@ const getWidth = (
     const delta = differenceIn(endAt, startAt);
 
     return parsedColumnWidth * (delta ? delta : 1);
+  }
+
+  if (context.range === "weekly") {
+    const pixelsPerDay = parsedColumnWidth / 7;
+    const totalDays = differenceInDays(endAt, startAt);
+    return totalDays === 0 ? pixelsPerDay : totalDays * pixelsPerDay;
   }
 
   const daysInStartMonth = getDaysInMonth(startAt);
@@ -270,8 +293,15 @@ const getWidth = (
 const calculateInnerOffset = (
   date: Date,
   range: Range,
-  columnWidth: number
+  columnWidth: number,
+  timelineStartDate?: Date
 ) => {
+  if (range === "weekly" && timelineStartDate) {
+    const totalDays = differenceInDays(date, timelineStartDate);
+    const daysIntoWeek = ((totalDays % 7) + 7) % 7;
+    return (daysIntoWeek / 7) * columnWidth;
+  }
+
   const startOf = getStartOf(range);
   const endOf = getEndOf(range);
   const differenceIn = getInnerDifferenceIn(range);
@@ -425,8 +455,37 @@ const QuarterlyHeader: FC = () => {
   );
 };
 
+const WeeklyHeader: FC = () => {
+  const gantt = useContext(GanttContext);
+
+  return gantt.timelineData.map((year) => {
+    const yearStart = new Date(year.year, 0, 1);
+    const nextYearStart = new Date(year.year + 1, 0, 1);
+    const weeksInYear = differenceInWeeks(nextYearStart, yearStart);
+
+    return (
+      <div className="relative flex flex-col" key={year.year}>
+        <GanttContentHeader
+          columns={weeksInYear}
+          renderHeaderItem={(item: number) => {
+            const weekMid = addDays(yearStart, item * 7 + 3);
+            const weekNum = getWeek(weekMid, {
+              weekStartsOn: 1,
+              firstWeekContainsDate: 4,
+            });
+            return <p>W{weekNum}</p>;
+          }}
+          title={`${year.year}`}
+        />
+        <GanttColumns columns={weeksInYear} />
+      </div>
+    );
+  });
+};
+
 const headers: Record<Range, FC> = {
   daily: DailyHeader,
+  weekly: WeeklyHeader,
   monthly: MonthlyHeader,
   quarterly: QuarterlyHeader,
 };
@@ -1091,9 +1150,10 @@ export const GanttMarker: FC<
       calculateInnerOffset(
         date,
         gantt.range,
-        (gantt.columnWidth * gantt.zoom) / 100
+        (gantt.columnWidth * gantt.zoom) / 100,
+        timelineStartDate
       ),
-    [date, gantt.range, gantt.columnWidth, gantt.zoom]
+    [date, gantt.range, gantt.columnWidth, gantt.zoom, timelineStartDate]
   );
 
   const handleRemove = useCallback(() => onRemove?.(id), [onRemove, id]);
@@ -1154,7 +1214,9 @@ export const GanttProvider: FC<GanttProviderProps> = ({
   const rowHeight = 36;
   let columnWidth = 50;
 
-  if (range === "monthly") {
+  if (range === "weekly") {
+    columnWidth = 100;
+  } else if (range === "monthly") {
     columnWidth = 150;
   } else if (range === "quarterly") {
     columnWidth = 100;
@@ -1392,9 +1454,10 @@ export const GanttToday: FC<GanttTodayProps> = ({ className }) => {
       calculateInnerOffset(
         date,
         gantt.range,
-        (gantt.columnWidth * gantt.zoom) / 100
+        (gantt.columnWidth * gantt.zoom) / 100,
+        timelineStartDate
       ),
-    [date, gantt.range, gantt.columnWidth, gantt.zoom]
+    [date, gantt.range, gantt.columnWidth, gantt.zoom, timelineStartDate]
   );
 
   return (
