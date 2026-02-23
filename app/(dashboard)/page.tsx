@@ -42,8 +42,14 @@ export default function BoardPage() {
   const [kanbanDragActive, setKanbanDragActive] = useState(false);
   const [dragOverTarget, setDragOverTarget] = useState<string | null>(null);
   const [glowingCards, setGlowingCards] = useState<Set<string>>(new Set());
-  const [filterMine, setFilterMine] = useState(false);
-  const [hideCompleted, setHideCompleted] = useState(false);
+  const [filterMine, setFilterMine] = useState(() => {
+    if (typeof window === "undefined") return false;
+    return localStorage.getItem("machi-filter-mine") === "true";
+  });
+  const [hideCompleted, setHideCompleted] = useState(() => {
+    if (typeof window === "undefined") return false;
+    return localStorage.getItem("machi-hide-completed") === "true";
+  });
 
   const currentMember = teamMembers.find(m => m.id === user?.id);
 
@@ -83,6 +89,8 @@ export default function BoardPage() {
   useEffect(() => {
     setFilterMine(false);
     setHideCompleted(false);
+    localStorage.removeItem("machi-filter-mine");
+    localStorage.removeItem("machi-hide-completed");
     if (!activeProjectId) {
       setColumns(getEmptyColumns(weekMode));
       return;
@@ -626,11 +634,11 @@ export default function BoardPage() {
             <Tooltip>
               <TooltipTrigger asChild>
                 <button
-                  onClick={() => setFilterMine(f => !f)}
+                  onClick={() => setFilterMine(f => { const v = !f; localStorage.setItem("machi-filter-mine", String(v)); return v; })}
                   aria-label={filterMine ? "Show all tasks" : "Show my tasks"}
-                  className={`flex items-center justify-center size-10 transition-colors ${
+                  className={`flex items-center justify-center h-10 w-9 pr-0.5 hover:w-10 hover:pr-0 transition-all ${
                     filterMine
-                      ? "bg-white/15 text-white"
+                      ? "bg-white/15 text-white !w-10 !pr-0"
                       : "text-white/40 hover:text-white/70 hover:bg-white/[0.06]"
                   }`}
                 >
@@ -645,11 +653,11 @@ export default function BoardPage() {
           <Tooltip>
             <TooltipTrigger asChild>
               <button
-                onClick={() => setHideCompleted(h => !h)}
+                onClick={() => setHideCompleted(h => { const v = !h; localStorage.setItem("machi-hide-completed", String(v)); return v; })}
                 aria-label={hideCompleted ? "Show completed tasks" : "Hide completed tasks"}
-                className={`flex items-center justify-center size-10 transition-colors ${
+                className={`flex items-center justify-center h-10 w-9 pl-0.5 hover:w-10 hover:pl-0 transition-all ${
                   hideCompleted
-                    ? "bg-white/15 text-white"
+                    ? "bg-white/15 text-white !w-10 !pl-0"
                     : "text-white/40 hover:text-white/70 hover:bg-white/[0.06]"
                 }`}
               >
