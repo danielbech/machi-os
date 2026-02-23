@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useRef, useEffect } from "react";
+import { useState, useCallback, useRef, useEffect, useMemo } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { loadTasksByDay, saveTask, updateDayTasks, deleteTask } from "@/lib/supabase/tasks-simple";
 import { useWorkspace } from "@/lib/workspace-context";
@@ -19,10 +19,10 @@ import {
   KanbanColumn,
   KanbanOverlay,
 } from "@/components/ui/kanban";
-import { Check, Plus, StickyNote } from "lucide-react";
+import { Check, Plus, StickyNote, User } from "lucide-react";
 
 export default function BoardPage() {
-  const { activeProjectId, clients, teamMembers, weekMode, weekDays, displayMonday, areaId } = useWorkspace();
+  const { activeProjectId, clients, teamMembers, weekMode, weekDays, displayMonday, areaId, user } = useWorkspace();
   const { calendarEvents } = useCalendar();
   const { backlogOpen, addToBacklog, backlogFolders } = useBacklog();
 
@@ -41,6 +41,18 @@ export default function BoardPage() {
   const [kanbanDragActive, setKanbanDragActive] = useState(false);
   const [dragOverTarget, setDragOverTarget] = useState<string | null>(null);
   const [glowingCards, setGlowingCards] = useState<Set<string>>(new Set());
+  const [filterMine, setFilterMine] = useState(false);
+
+  const currentMember = teamMembers.find(m => m.id === user?.id);
+
+  const filteredColumns = useMemo(() => {
+    if (!filterMine || !user) return columns;
+    const result: Record<string, Task[]> = {};
+    for (const [day, tasks] of Object.entries(columns)) {
+      result[day] = tasks.filter(t => t.assignees.includes(user.id));
+    }
+    return result;
+  }, [columns, filterMine, user]);
 
   // Load tasks
   const refreshTasks = useCallback(async () => {
@@ -60,6 +72,7 @@ export default function BoardPage() {
 
   // Load tasks when active project changes
   useEffect(() => {
+    setFilterMine(false);
     if (!activeProjectId) {
       setColumns(getEmptyColumns(weekMode));
       return;
@@ -380,15 +393,51 @@ export default function BoardPage() {
 
   return (
     <main className="flex min-h-screen flex-col p-4 md:px-8 md:pt-4 bg-black/50">
+      {teamMembers.length > 1 && (
+        <div className="flex items-center gap-2 mb-3">
+          <button
+            onClick={() => setFilterMine(f => !f)}
+            aria-label={filterMine ? "Show all tasks" : "Show my tasks"}
+            className={`flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs font-medium transition-colors ${
+              filterMine
+                ? "bg-white/10 text-white"
+                : "text-white/40 hover:text-white/60 hover:bg-white/[0.05]"
+            }`}
+          >
+            {currentMember?.avatar ? (
+              <img src={currentMember.avatar} alt="" className="size-4 rounded-full" />
+            ) : currentMember?.initials ? (
+              <span className={`flex size-4 items-center justify-center rounded-full text-[9px] font-bold ${currentMember.color || "bg-white/20"}`}>
+                {currentMember.initials}
+              </span>
+            ) : (
+              <User className="size-3.5" />
+            )}
+            My tasks
+          </button>
+        </div>
+      )}
       <div>
         <Kanban
-          value={columns}
-          onValueChange={async (newColumns) => {
+          value={filteredColumns}
+          onValueChange={async (newCols) => {
             const prev = prevColumnsRef.current;
-            setColumns(newColumns);
+            // When filtering, merge drag changes back into full columns
+            let merged: Record<string, Task[]>;
+            if (filterMine && user) {
+              merged = {};
+              for (const day of Object.keys(columns)) {
+                const newMyTasks = newCols[day] || [];
+                const otherTasks = (columns[day] || []).filter(t => !t.assignees.includes(user.id));
+                merged[day] = [...newMyTasks, ...otherTasks];
+              }
+            } else {
+              merged = newCols;
+            }
+            setColumns(merged);
             if (activeProjectId) {
               // Only persist columns that actually changed
-              const updates = Object.entries(newColumns).filter(([day, tasks]) => {
+              const updates = Object.entries(merged).filter(([day, tasks]) => {
                 const prevTasks = prev[day];
                 if (!prevTasks || prevTasks.length !== tasks.length) return true;
                 return tasks.some((t, i) => t.id !== prevTasks[i].id);
@@ -417,7 +466,7 @@ export default function BoardPage() {
           }}
         >
           <KanbanBoard className="overflow-x-auto p-1 pb-3">
-            {Object.entries(columns).map(([columnId, items]) => (
+            {Object.entries(filteredColumns).map(([columnId, items]) => (
               <KanbanColumn
                 key={columnId}
                 value={columnId}
