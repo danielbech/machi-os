@@ -19,7 +19,7 @@ import {
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Calendar, RefreshCw, Plus, X, ChevronDown, Camera, User as UserIcon, Trash2 } from "lucide-react";
+import { Calendar, RefreshCw, Plus, X, ChevronDown, Camera, User as UserIcon, Trash2, Blocks } from "lucide-react";
 
 interface SettingsDialogProps {
   open: boolean;
@@ -642,7 +642,7 @@ export function SettingsDialog({
                           {wsLogo ? (
                             <img src={wsLogo} alt="Workspace logo" className="w-full h-full object-cover" />
                           ) : (
-                            <img src="/logo.svg" alt="Default logo" className="size-8 invert" />
+                            <Blocks className="size-5 text-white/90" />
                           )}
                         </div>
                         <div className="absolute inset-0 rounded-lg bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
@@ -693,7 +693,17 @@ export function SettingsDialog({
                           <button
                             key={c}
                             type="button"
-                            onClick={() => setWsColor(c)}
+                            onClick={async () => {
+                              setWsColor(c);
+                              if (!activeProjectId || c === activeProject.color) return;
+                              try {
+                                await updateWorkspace(activeProjectId, { color: c });
+                                await refreshWorkspaces?.();
+                              } catch (err) {
+                                console.error("Failed to update color:", err);
+                                setWsColor(activeProject.color);
+                              }
+                            }}
                             className="w-6 h-6 rounded-full transition-all"
                             style={{
                               backgroundColor: c,
@@ -709,15 +719,12 @@ export function SettingsDialog({
                       size="sm"
                       variant="ghost"
                       className="w-full justify-center border border-white/10"
-                      disabled={wsSaving || (!wsName.trim()) || (wsName === activeProject.name && wsColor === activeProject.color)}
+                      disabled={wsSaving || !wsName.trim() || wsName === activeProject.name}
                       onClick={async () => {
                         if (!activeProjectId) return;
                         setWsSaving(true);
                         try {
-                          await updateWorkspace(activeProjectId, {
-                            ...(wsName !== activeProject.name && { name: wsName.trim() }),
-                            ...(wsColor !== activeProject.color && { color: wsColor }),
-                          });
+                          await updateWorkspace(activeProjectId, { name: wsName.trim() });
                           await refreshWorkspaces?.();
                         } catch (err) {
                           console.error("Failed to update workspace:", err);
@@ -726,7 +733,7 @@ export function SettingsDialog({
                         }
                       }}
                     >
-                      {wsSaving ? "Saving..." : "Save changes"}
+                      {wsSaving ? "Saving..." : "Save name"}
                     </Button>
                   </div>
                 </div>
