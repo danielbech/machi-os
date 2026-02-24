@@ -14,7 +14,7 @@ export default function DashboardError({
   }, [error]);
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-black/50">
+    <main className="flex min-h-screen items-center justify-center bg-zinc-950">
       <div className="text-center space-y-4">
         <h2 className="text-lg font-semibold text-white/80">Something went wrong</h2>
         <p className="text-sm text-white/40 max-w-md">

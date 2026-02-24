@@ -18,7 +18,7 @@ function DashboardGate({ children }: { children: React.ReactNode }) {
   const isMobile = useIsMobile();
 
   if (loading) {
-    return <div className="min-h-screen bg-black/50" />;
+    return <div className="min-h-screen bg-zinc-950" />;
   }
 
   if (!user) {
@@ -28,7 +28,7 @@ function DashboardGate({ children }: { children: React.ReactNode }) {
   return (
     <TooltipProvider>
       <SidebarProvider defaultOpen={false}>
-        <div className="flex w-full animate-in fade-in duration-300 bg-black/50">
+        <div className="flex w-full animate-in fade-in duration-300 bg-zinc-950">
           <AppSidebar />
           <BacklogShell />
           <SidebarInset className="overflow-hidden min-w-0 transition-[margin] duration-200 ease-in-out bg-transparent" style={!isMobile && backlogOpen ? { marginLeft: backlogWidth } : undefined}>
