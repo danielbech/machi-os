@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { WorkspaceProvider, useWorkspace } from "@/lib/workspace-context";
 import { BacklogProvider, useBacklog } from "@/lib/backlog-context";
 import { CalendarProvider } from "@/lib/calendar-context";
@@ -11,11 +12,16 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { BacklogShell } from "@/components/backlog-shell";
 import { ErrorBoundary } from "@/components/error-boundary";
 import { CursorOverlay } from "@/components/cursor-overlay";
+import { WelcomeDialog } from "@/components/welcome-dialog";
 
 function DashboardGate({ children }: { children: React.ReactNode }) {
   const { user, loading } = useWorkspace();
   const { backlogOpen, backlogWidth } = useBacklog();
   const isMobile = useIsMobile();
+  const [showWelcome, setShowWelcome] = useState(() => {
+    if (typeof window === "undefined") return false;
+    return !localStorage.getItem("flowie-welcome-seen");
+  });
 
   if (loading) {
     return <div className="min-h-screen bg-zinc-950" />;
@@ -41,6 +47,13 @@ function DashboardGate({ children }: { children: React.ReactNode }) {
           </SidebarInset>
           <CursorOverlay />
         </div>
+        <WelcomeDialog
+          open={showWelcome}
+          onClose={() => {
+            localStorage.setItem("flowie-welcome-seen", "true");
+            setShowWelcome(false);
+          }}
+        />
       </SidebarProvider>
     </TooltipProvider>
   );
