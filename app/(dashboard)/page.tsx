@@ -3,6 +3,7 @@
 import { useState, useCallback, useRef, useEffect, useMemo } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { loadTasksByDay, saveTask, updateDayTasks, deleteTask } from "@/lib/supabase/tasks-simple";
+import { seedDemoTasks } from "@/lib/supabase/initialize";
 import { useWorkspace } from "@/lib/workspace-context";
 import { useBacklog } from "@/lib/backlog-context";
 import { useCalendar } from "@/lib/calendar-context";
@@ -144,6 +145,30 @@ export default function BoardPage() {
       supabase.removeChannel(tasksChannel);
     };
   }, [activeProjectId, refreshTasks]);
+
+  // Dev helper: reset and re-seed demo tasks from browser console
+  useEffect(() => {
+    if (process.env.NODE_ENV !== "development") return;
+    const w = window as typeof window & { __resetDemoTasks?: () => Promise<void> };
+    w.__resetDemoTasks = async () => {
+      if (!areaId) {
+        console.error("No areaId available");
+        return;
+      }
+      const supabase = createClient();
+      const { error } = await supabase.from("tasks").delete().eq("area_id", areaId);
+      if (error) {
+        console.error("Failed to delete tasks:", error);
+        return;
+      }
+      await seedDemoTasks(areaId);
+      await refreshTasks();
+      console.log("Demo tasks re-seeded!");
+    };
+    return () => {
+      delete w.__resetDemoTasks;
+    };
+  }, [areaId, refreshTasks]);
 
   // Week dates — uses displayMonday from context (accounts for post-transition offset)
   const getWeekDates = () => {
