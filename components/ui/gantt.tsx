@@ -1479,6 +1479,9 @@ export const GanttMarker: FC<
       if (!onMove || editing) return;
       e.preventDefault();
       const originX = e.clientX;
+      const startDate = currentDate;
+      const originRelativeX = getRelativeX(e.clientX);
+      const originDate = getDateByMousePosition(gantt, originRelativeX);
       didDragRef.current = false;
       setDragging(true);
 
@@ -1486,16 +1489,20 @@ export const GanttMarker: FC<
         if (Math.abs(ev.clientX - originX) > 3) {
           didDragRef.current = true;
         }
-        const x = getRelativeX(ev.clientX);
-        const newDate = getDateByMousePosition(gantt, x);
+        const currentRelativeX = getRelativeX(ev.clientX);
+        const currentMouseDate = getDateByMousePosition(gantt, currentRelativeX);
+        const daysDelta = differenceInDays(currentMouseDate, originDate);
+        const newDate = addDays(startDate, daysDelta);
         setCurrentDate(newDate);
       };
 
       const handlePointerUp = (ev: PointerEvent) => {
         setDragging(false);
         if (didDragRef.current) {
-          const x = getRelativeX(ev.clientX);
-          const finalDate = getDateByMousePosition(gantt, x);
+          const currentRelativeX = getRelativeX(ev.clientX);
+          const currentMouseDate = getDateByMousePosition(gantt, currentRelativeX);
+          const daysDelta = differenceInDays(currentMouseDate, originDate);
+          const finalDate = addDays(startDate, daysDelta);
           setCurrentDate(finalDate);
           onMove(id, finalDate);
         }
@@ -1506,7 +1513,7 @@ export const GanttMarker: FC<
       document.addEventListener("pointermove", handlePointerMove);
       document.addEventListener("pointerup", handlePointerUp);
     },
-    [onMove, editing, gantt, id, getRelativeX]
+    [onMove, editing, gantt, id, getRelativeX, currentDate, differenceIn]
   );
 
   return (
