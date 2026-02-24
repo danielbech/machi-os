@@ -1614,6 +1614,9 @@ export const GanttProvider: FC<GanttProviderProps> = ({
     columnWidth = 100;
   }
 
+  const prevZoomInfoRef = useRef({ zoom, range, columnWidth });
+  const zoomAnchorRef = useRef<{ cursorViewportX: number; scrollLeft: number } | null>(null);
+
   const cssVariables = useMemo(
     () =>
       ({
@@ -1626,7 +1629,7 @@ export const GanttProvider: FC<GanttProviderProps> = ({
     [zoom, columnWidth, sidebarWidth]
   );
 
-  // Scroll to center today on mount and when range changes
+  // Scroll to center today on mount, or anchor to cursor position on wheel zoom
   useEffect(() => {
     requestAnimationFrame(() => {
       const scrollElement = scrollRef.current;
@@ -1636,33 +1639,52 @@ export const GanttProvider: FC<GanttProviderProps> = ({
         '[data-roadmap-ui="gantt-sidebar"]'
       );
       const sw = sidebar ? sidebar.getBoundingClientRect().width : 0;
-      const today = new Date();
       const startDate = new Date(
-        timelineData[0]?.year ?? today.getFullYear(),
+        timelineData[0]?.year ?? new Date().getFullYear(),
         0,
         1
       );
-      const ctx: GanttContextProps = {
-        zoom,
-        range,
-        columnWidth,
-        sidebarWidth: sw,
-        headerHeight,
-        rowHeight,
-        onAddItem,
-        onAddItemRange,
-        placeholderLength: 2,
-        timelineData,
-        ref: scrollRef,
-      };
-      const todayOffset = getOffset(today, startDate, ctx);
-      const viewportCenter = (scrollElement.clientWidth - sw) / 2;
 
-      scrollElement.scrollLeft = Math.max(
-        0,
-        todayOffset - viewportCenter + sw
-      );
-      setScrollX(scrollElement.scrollLeft);
+      const anchor = zoomAnchorRef.current;
+      const prev = prevZoomInfoRef.current;
+
+      if (anchor) {
+        // Cursor-anchored zoom: keep the date under the cursor stable
+        const oldContentX = anchor.scrollLeft + anchor.cursorViewportX - sw;
+
+        const oldCtx: GanttContextProps = {
+          zoom: prev.zoom, range: prev.range, columnWidth: prev.columnWidth,
+          sidebarWidth: sw, headerHeight, rowHeight,
+          onAddItem, onAddItemRange, placeholderLength: 2, timelineData, ref: scrollRef,
+        };
+        const dateUnderCursor = getDateByMousePosition(oldCtx, Math.max(0, oldContentX));
+
+        const newCtx: GanttContextProps = {
+          zoom, range, columnWidth,
+          sidebarWidth: sw, headerHeight, rowHeight,
+          onAddItem, onAddItemRange, placeholderLength: 2, timelineData, ref: scrollRef,
+        };
+        const newOffset = getOffset(dateUnderCursor, startDate, newCtx);
+
+        scrollElement.scrollLeft = Math.max(0, newOffset - anchor.cursorViewportX + sw);
+        setScrollX(scrollElement.scrollLeft);
+        zoomAnchorRef.current = null;
+      } else {
+        // No cursor anchor — center on today (initial mount, button zoom)
+        const today = new Date();
+        const ctx: GanttContextProps = {
+          zoom, range, columnWidth,
+          sidebarWidth: sw, headerHeight, rowHeight,
+          onAddItem, onAddItemRange, placeholderLength: 2, timelineData, ref: scrollRef,
+        };
+        const todayOffset = getOffset(today, startDate, ctx);
+        const viewportCenter = (scrollElement.clientWidth - sw) / 2;
+
+        scrollElement.scrollLeft = Math.max(0, todayOffset - viewportCenter + sw);
+        setScrollX(scrollElement.scrollLeft);
+      }
+
+      prevZoomInfoRef.current = { zoom, range, columnWidth };
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [range, zoom]);
@@ -1678,6 +1700,11 @@ export const GanttProvider: FC<GanttProviderProps> = ({
       const now = Date.now();
       if (now - lastZoomTime < 200) return;
       lastZoomTime = now;
+      // Store cursor position so scroll anchors to it after zoom
+      zoomAnchorRef.current = {
+        cursorViewportX: e.clientX - el.getBoundingClientRect().left,
+        scrollLeft: el.scrollLeft,
+      };
       onZoom(e.deltaY > 0 ? -1 : 1);
     };
     el.addEventListener("wheel", handler, { passive: false });
