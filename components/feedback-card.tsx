@@ -61,57 +61,58 @@ export function FeedbackCard({
           </p>
         )}
 
-        {/* Author row */}
-        <div className="flex items-center gap-1.5 text-xs text-white/30 mt-2.5 min-w-0">
-          {ticket.author && (
-            <>
-              {ticket.author.avatar_url ? (
-                <img
-                  src={ticket.author.avatar_url}
-                  alt={ticket.author.display_name}
-                  className="size-4 rounded-full shrink-0"
-                />
-              ) : (
-                <div
-                  className={`size-4 rounded-full ${ticket.author.color} flex items-center justify-center shrink-0`}
+        {/* Author + date + reactions */}
+        <div className="flex items-center justify-between gap-2 mt-2.5">
+          <div className="flex items-center gap-1.5 text-xs text-white/30 min-w-0">
+            {ticket.author && (
+              <>
+                {ticket.author.avatar_url ? (
+                  <img
+                    src={ticket.author.avatar_url}
+                    alt={ticket.author.display_name}
+                    className="size-4 rounded-full shrink-0"
+                  />
+                ) : (
+                  <div
+                    className={`size-4 rounded-full ${ticket.author.color} flex items-center justify-center shrink-0`}
+                  >
+                    <span className="text-[7px] font-bold text-white">
+                      {ticket.author.initials}
+                    </span>
+                  </div>
+                )}
+                <span className="truncate">{ticket.author.display_name}</span>
+                <span>·</span>
+              </>
+            )}
+            <span className="shrink-0">{relativeDate}</span>
+          </div>
+
+          <div className={`flex items-center gap-0.5 shrink-0 ${!hasAnyReaction ? "opacity-0 group-hover:opacity-100" : ""} transition-opacity`}>
+            {REACTIONS.map(({ type, icon: Icon, activeColor, hoverColor }) => {
+              const count = ticket.reactions[type];
+              const isActive = ticket.user_reactions.includes(type);
+
+              return (
+                <button
+                  key={type}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onReact(ticket.id, type);
+                  }}
+                  className={`flex items-center gap-0.5 rounded-full px-1.5 py-0.5 text-xs font-medium transition-all ${
+                    isActive
+                      ? activeColor
+                      : `text-white/25 ${hoverColor}`
+                  }`}
+                  aria-label={`${isActive ? "Remove" : "Add"} ${type} reaction`}
                 >
-                  <span className="text-[7px] font-bold text-white">
-                    {ticket.author.initials}
-                  </span>
-                </div>
-              )}
-              <span className="truncate">{ticket.author.display_name}</span>
-              <span>·</span>
-            </>
-          )}
-          <span className="shrink-0">{relativeDate}</span>
-        </div>
-
-        {/* Reactions */}
-        <div className={`flex items-center gap-1 mt-2 ${!hasAnyReaction ? "opacity-0 group-hover:opacity-100" : ""} transition-opacity`}>
-          {REACTIONS.map(({ type, icon: Icon, activeColor, hoverColor }) => {
-            const count = ticket.reactions[type];
-            const isActive = ticket.user_reactions.includes(type);
-
-            return (
-              <button
-                key={type}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onReact(ticket.id, type);
-                }}
-                className={`flex items-center gap-1 rounded-full px-1.5 py-0.5 text-xs font-medium transition-all ${
-                  isActive
-                    ? activeColor
-                    : `text-white/25 ${hoverColor}`
-                }`}
-                aria-label={`${isActive ? "Remove" : "Add"} ${type} reaction`}
-              >
-                <Icon className="size-3" />
-                {count > 0 && <span>{count}</span>}
-              </button>
-            );
-          })}
+                  <Icon className="size-3" />
+                  {count > 0 && <span>{count}</span>}
+                </button>
+              );
+            })}
+          </div>
         </div>
       </div>
     </KanbanItem>
