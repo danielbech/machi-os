@@ -184,8 +184,16 @@ export default function TimelinePage() {
   // Selection state
   const [selectedEntryId, setSelectedEntryId] = useState<string | null>(null);
 
-  // Expand/collapse state for sub-items
-  const [expandedEntries, setExpandedEntries] = useState<Set<string>>(new Set());
+  // Expand/collapse state for sub-items (persisted to localStorage)
+  const [expandedEntries, setExpandedEntries] = useState<Set<string>>(() => {
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem("timeline-expanded-entries");
+      if (saved) {
+        try { return new Set(JSON.parse(saved)); } catch { /* ignore */ }
+      }
+    }
+    return new Set();
+  });
 
   // Sub-item form state
   const [subItemParent, setSubItemParent] = useState<TimelineEntry | null>(null);
@@ -298,6 +306,7 @@ export default function TimelinePage() {
       } else {
         next.add(id);
       }
+      localStorage.setItem("timeline-expanded-entries", JSON.stringify([...next]));
       return next;
     });
   };
