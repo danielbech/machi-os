@@ -582,17 +582,16 @@ export default function TimelinePage() {
 
   const handleMoveMarker = async (id: string, newDate: Date) => {
     const dateStr = format(newDate, "yyyy-MM-dd");
-    const newLabel = format(newDate, "MMM d");
     const previous = markers;
 
     setMarkers((prev) =>
       prev.map((m) =>
-        m.id === id ? { ...m, date: dateStr, label: newLabel } : m
+        m.id === id ? { ...m, date: dateStr } : m
       )
     );
 
     try {
-      await updateTimelineMarker(id, { date: dateStr, label: newLabel });
+      await updateTimelineMarker(id, { date: dateStr });
     } catch {
       setMarkers(previous);
     }
