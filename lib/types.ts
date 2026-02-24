@@ -98,6 +98,13 @@ export interface TimelineMarker {
   created_at: string;
 }
 
+export interface FeedbackColumn {
+  id: string;
+  project_id: string;
+  title: string;
+  sort_order: number;
+}
+
 export interface FeedbackTicket {
   id: string;
   user_id: string;
@@ -105,6 +112,10 @@ export interface FeedbackTicket {
   description: string;
   category: FeedbackCategory;
   status: FeedbackStatus;
+  column_id: string | null;
+  sort_order: number;
+  vote_count: number;
+  user_has_voted: boolean;
   created_at: string;
   author?: {
     display_name: string;

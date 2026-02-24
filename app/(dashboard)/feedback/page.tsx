@@ -1,14 +1,23 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
+import { createClient } from "@/lib/supabase/client";
 import { useWorkspace } from "@/lib/workspace-context";
 import {
+  ensureDefaultColumns,
+  loadFeedbackColumns,
+  createFeedbackColumn,
+  updateFeedbackColumn,
+  deleteFeedbackColumn,
   loadFeedbackTickets,
   createFeedbackTicket,
   updateFeedbackTicket,
   deleteFeedbackTicket,
+  reorderFeedbackTickets,
+  toggleFeedbackVote,
 } from "@/lib/supabase/feedback";
-import type { FeedbackTicket, FeedbackCategory } from "@/lib/types";
+import type { FeedbackTicket, FeedbackColumn } from "@/lib/types";
+import { FeedbackCard } from "@/components/feedback-card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -17,198 +26,294 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  Kanban,
+  KanbanBoard,
+  KanbanColumn,
+  KanbanOverlay,
+} from "@/components/ui/kanban";
 import { toast } from "sonner";
-import { Plus, Trash2, Lightbulb, Bug, MessageSquare } from "lucide-react";
-
-const CATEGORY_CONFIG: Record<FeedbackCategory, { label: string; color: string; icon: typeof Lightbulb }> = {
-  idea: { label: "Idea", color: "bg-purple-500/20 text-purple-400", icon: Lightbulb },
-  bug: { label: "Bug", color: "bg-red-500/20 text-red-400", icon: Bug },
-  feedback: { label: "Feedback", color: "bg-blue-500/20 text-blue-400", icon: MessageSquare },
-};
+import { Plus, Trash2, ChevronUp, Pencil, X, Check } from "lucide-react";
 
 export default function FeedbackPage() {
-  const { user, activeProjectId } = useWorkspace();
-  const [tickets, setTickets] = useState<FeedbackTicket[]>([]);
-  const [dialogOpen, setDialogOpen] = useState(false);
-  const [title, setTitle] = useState("");
-  const [description, setDescription] = useState("");
-  const [category, setCategory] = useState<FeedbackCategory>("feedback");
-  const [submitting, setSubmitting] = useState(false);
-  const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
+  const { user, activeProjectId, activeProject } = useWorkspace();
+  const isAdmin = activeProject?.role === "owner" || activeProject?.role === "admin";
+
+  const [columns, setColumns] = useState<FeedbackColumn[]>([]);
+  const [tickets, setTickets] = useState<Record<string, FeedbackTicket[]>>({});
   const [initialLoading, setInitialLoading] = useState(true);
 
-  const loadTickets = useCallback(async () => {
-    const data = await loadFeedbackTickets();
-    setTickets(data);
+  // New ticket dialog
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [dialogColumnId, setDialogColumnId] = useState<string | null>(null);
+  const [title, setTitle] = useState("");
+  const [description, setDescription] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+
+  // Edit ticket dialog
+  const [editingTicket, setEditingTicket] = useState<FeedbackTicket | null>(null);
+  const [editTitle, setEditTitle] = useState("");
+  const [editDescription, setEditDescription] = useState("");
+  const [editColumnId, setEditColumnId] = useState<string | null>(null);
+  const [editSubmitting, setEditSubmitting] = useState(false);
+
+  // Delete confirmation
+  const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
+
+  // Column rename
+  const [renamingColumnId, setRenamingColumnId] = useState<string | null>(null);
+  const [renameValue, setRenameValue] = useState("");
+
+  // Add column
+  const [addingColumn, setAddingColumn] = useState(false);
+  const [newColumnTitle, setNewColumnTitle] = useState("");
+
+  // Delete column confirmation
+  const [deleteColumnConfirm, setDeleteColumnConfirm] = useState<string | null>(null);
+
+  // Drag suppression
+  const suppressReload = useRef(false);
+  const prevTicketsRef = useRef(tickets);
+  useEffect(() => { prevTicketsRef.current = tickets; }, [tickets]);
+
+  const loadData = useCallback(async () => {
+    if (!activeProjectId || !user) return;
+
+    const cols = await ensureDefaultColumns(activeProjectId);
+    setColumns(cols);
+
+    const grouped = await loadFeedbackTickets(activeProjectId, user.id);
+    // Build kanban value keyed by column ID (ensure every column has an array)
+    const kanbanValue: Record<string, FeedbackTicket[]> = {};
+    for (const col of cols) {
+      kanbanValue[col.id] = grouped[col.id] || [];
+    }
+    setTickets(kanbanValue);
     setInitialLoading(false);
-  }, []);
+  }, [activeProjectId, user]);
 
   useEffect(() => {
-    loadTickets();
-  }, [loadTickets]);
+    loadData();
+  }, [loadData]);
 
-  const handleSubmit = async () => {
-    if (!user || !title.trim()) return;
+  // Realtime subscription
+  const realtimeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => {
+    if (!activeProjectId) return;
+    const supabase = createClient();
+
+    const reload = () => {
+      if (realtimeTimer.current) clearTimeout(realtimeTimer.current);
+      realtimeTimer.current = setTimeout(() => {
+        if (!suppressReload.current) loadData();
+      }, 500);
+    };
+
+    const channel = supabase
+      .channel(`feedback-${activeProjectId}`)
+      .on("postgres_changes", { event: "*", schema: "public", table: "feedback_tickets" }, reload)
+      .on("postgres_changes", { event: "*", schema: "public", table: "feedback_votes" }, reload)
+      .on("postgres_changes", { event: "*", schema: "public", table: "feedback_columns" }, reload)
+      .subscribe();
+
+    return () => {
+      if (realtimeTimer.current) clearTimeout(realtimeTimer.current);
+      supabase.removeChannel(channel);
+    };
+  }, [activeProjectId, loadData]);
+
+  // --- Kanban reorder handler (same pattern as board page) ---
+  const handleKanbanChange = async (newCols: Record<string, FeedbackTicket[]>) => {
+    const prev = prevTicketsRef.current;
+    setTickets(newCols);
+
+    suppressReload.current = true;
+    try {
+      // Only persist columns that actually changed
+      const updates = Object.entries(newCols).filter(([colId, items]) => {
+        const prevItems = prev[colId];
+        if (!prevItems || prevItems.length !== items.length) return true;
+        return items.some((t, i) => t.id !== prevItems[i].id);
+      });
+
+      await Promise.all(
+        updates.map(([colId, items]) => reorderFeedbackTickets(colId, items))
+      );
+    } finally {
+      setTimeout(() => { suppressReload.current = false; }, 2000);
+    }
+  };
+
+  // --- Ticket actions ---
+  const handleCreateTicket = async () => {
+    if (!user || !title.trim() || !activeProjectId || !dialogColumnId) return;
     setSubmitting(true);
     try {
-      await createFeedbackTicket(
+      const newTicket = await createFeedbackTicket(
         user.id,
-        { title: title.trim(), description: description.trim(), category },
-        activeProjectId || undefined
+        { title: title.trim(), description: description.trim(), column_id: dialogColumnId },
+        activeProjectId
       );
+      // Add author info from current user profile
+      newTicket.author = undefined; // Will be loaded on next refresh
+      setTickets(prev => ({
+        ...prev,
+        [dialogColumnId]: [...(prev[dialogColumnId] || []), newTicket],
+      }));
       setTitle("");
       setDescription("");
-      setCategory("feedback");
       setDialogOpen(false);
-      await loadTickets();
-    } catch (error) {
-      console.error("Error creating ticket:", error);
+      setDialogColumnId(null);
+    } catch {
       toast.error("Failed to create ticket");
     } finally {
       setSubmitting(false);
     }
   };
 
-  const handleToggleStatus = async (ticket: FeedbackTicket) => {
-    const newStatus = ticket.status === "open" ? "resolved" : "open";
-    // Optimistic update
-    setTickets((prev) =>
-      prev.map((t) => (t.id === ticket.id ? { ...t, status: newStatus } : t))
-    );
+  const handleEditTicket = async () => {
+    if (!editingTicket || !editTitle.trim()) return;
+    setEditSubmitting(true);
     try {
-      await updateFeedbackTicket(ticket.id, { status: newStatus });
-    } catch (error) {
-      console.error("Error updating ticket:", error);
+      const updates: { title?: string; description?: string; column_id?: string } = {
+        title: editTitle.trim(),
+        description: editDescription.trim(),
+      };
+      if (editColumnId && editColumnId !== editingTicket.column_id) {
+        updates.column_id = editColumnId;
+      }
+      await updateFeedbackTicket(editingTicket.id, updates);
+
+      // Optimistic update
+      setTickets(prev => {
+        const next = { ...prev };
+        const oldColId = editingTicket.column_id || "";
+        const newColId = editColumnId || oldColId;
+
+        // Remove from old column
+        if (next[oldColId]) {
+          next[oldColId] = next[oldColId].filter(t => t.id !== editingTicket.id);
+        }
+
+        // Add to new column
+        const updated = { ...editingTicket, ...updates, column_id: newColId };
+        next[newColId] = [...(next[newColId] || []), updated];
+
+        return next;
+      });
+
+      setEditingTicket(null);
+    } catch {
       toast.error("Failed to update ticket");
-      await loadTickets();
+    } finally {
+      setEditSubmitting(false);
     }
   };
 
-  const handleDelete = async (ticketId: string) => {
-    setTickets((prev) => prev.filter((t) => t.id !== ticketId));
+  const handleDeleteTicket = async (ticketId: string) => {
+    // Optimistic remove
+    setTickets(prev => {
+      const next = { ...prev };
+      for (const colId of Object.keys(next)) {
+        next[colId] = next[colId].filter(t => t.id !== ticketId);
+      }
+      return next;
+    });
     setDeleteConfirm(null);
     try {
       await deleteFeedbackTicket(ticketId);
-    } catch (error) {
-      console.error("Error deleting ticket:", error);
+    } catch {
       toast.error("Failed to delete ticket");
-      await loadTickets();
+      loadData();
     }
   };
 
-  const canManage = (ticket: FeedbackTicket) =>
-    ticket.user_id === user?.id;
+  const handleVote = async (ticketId: string) => {
+    if (!user) return;
+    // Optimistic toggle
+    setTickets(prev => {
+      const next = { ...prev };
+      for (const colId of Object.keys(next)) {
+        next[colId] = next[colId].map(t => {
+          if (t.id !== ticketId) return t;
+          const wasVoted = t.user_has_voted;
+          return {
+            ...t,
+            user_has_voted: !wasVoted,
+            vote_count: wasVoted ? t.vote_count - 1 : t.vote_count + 1,
+          };
+        });
+      }
+      return next;
+    });
+    try {
+      await toggleFeedbackVote(ticketId, user.id);
+    } catch {
+      loadData();
+    }
+  };
 
-  const openTickets = tickets.filter((t) => t.status === "open");
-  const resolvedTickets = tickets.filter((t) => t.status === "resolved");
+  // --- Column actions ---
+  const handleRenameColumn = async (columnId: string) => {
+    if (!renameValue.trim()) {
+      setRenamingColumnId(null);
+      return;
+    }
+    try {
+      await updateFeedbackColumn(columnId, { title: renameValue.trim() });
+      setColumns(prev => prev.map(c => c.id === columnId ? { ...c, title: renameValue.trim() } : c));
+    } catch {
+      toast.error("Failed to rename column");
+    }
+    setRenamingColumnId(null);
+  };
 
-  const TicketRow = ({ ticket }: { ticket: FeedbackTicket }) => {
-    const config = CATEGORY_CONFIG[ticket.category];
-    const CategoryIcon = config.icon;
-    const isResolved = ticket.status === "resolved";
+  const handleAddColumn = async () => {
+    if (!newColumnTitle.trim() || !activeProjectId) return;
+    try {
+      const col = await createFeedbackColumn(activeProjectId, newColumnTitle.trim(), columns.length);
+      if (col) {
+        setColumns(prev => [...prev, col]);
+        setTickets(prev => ({ ...prev, [col.id]: [] }));
+      }
+    } catch {
+      toast.error("Failed to add column");
+    }
+    setNewColumnTitle("");
+    setAddingColumn(false);
+  };
 
-    return (
-      <div
-        className={`group flex items-start gap-3 px-4 py-3 rounded-lg border border-white/5 bg-white/[0.02] hover:bg-white/[0.04] hover:border-white/10 transition-all ${
-          isResolved ? "opacity-50" : ""
-        }`}
-      >
-        {/* Status toggle */}
-        {canManage(ticket) ? (
-          <button
-            onClick={() => handleToggleStatus(ticket)}
-            className={`mt-0.5 size-5 rounded-full border-2 shrink-0 transition-colors ${
-              isResolved
-                ? "bg-green-500 border-green-500"
-                : "border-white/20 hover:border-white/40"
-            }`}
-            aria-label={isResolved ? "Mark as open" : "Mark as resolved"}
-          >
-            {isResolved && (
-              <svg className="size-full text-white p-0.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-                <polyline points="20 6 9 17 4 12" />
-              </svg>
-            )}
-          </button>
-        ) : (
-          <div
-            className={`mt-0.5 size-5 rounded-full border-2 shrink-0 ${
-              isResolved
-                ? "bg-green-500 border-green-500"
-                : "border-white/20"
-            }`}
-          />
-        )}
+  const handleDeleteColumn = async (columnId: string) => {
+    try {
+      await deleteFeedbackColumn(columnId);
+      setColumns(prev => prev.filter(c => c.id !== columnId));
+      setTickets(prev => {
+        const next = { ...prev };
+        delete next[columnId];
+        return next;
+      });
+    } catch {
+      toast.error("Failed to delete column");
+    }
+    setDeleteColumnConfirm(null);
+  };
 
-        {/* Content */}
-        <div className="flex-1 min-w-0 space-y-1">
-          <div className="flex flex-wrap items-center gap-2">
-            <span
-              className={`font-medium ${
-                isResolved ? "line-through text-white/40" : "text-white"
-              }`}
-            >
-              {ticket.title}
-            </span>
-            <span
-              className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium shrink-0 ${config.color}`}
-            >
-              <CategoryIcon className="size-3" />
-              {config.label}
-            </span>
-          </div>
+  const canManageTicket = (ticket: FeedbackTicket) =>
+    ticket.user_id === user?.id || isAdmin;
 
-          {ticket.description && (
-            <p className="text-sm text-white/40 line-clamp-2">
-              {ticket.description}
-            </p>
-          )}
+  // Open new ticket dialog with a default column
+  const openNewTicketDialog = (columnId?: string) => {
+    setDialogColumnId(columnId || columns[0]?.id || null);
+    setTitle("");
+    setDescription("");
+    setDialogOpen(true);
+  };
 
-          <div className="flex items-center gap-2 text-xs text-white/30">
-            {ticket.author && (
-              <div className="flex items-center gap-1.5">
-                {ticket.author.avatar_url ? (
-                  <img
-                    src={ticket.author.avatar_url}
-                    alt={ticket.author.display_name}
-                    className="size-4 rounded-full"
-                  />
-                ) : (
-                  <div
-                    className={`size-4 rounded-full ${ticket.author.color} flex items-center justify-center`}
-                  >
-                    <span className="text-[8px] font-bold text-white">
-                      {ticket.author.initials}
-                    </span>
-                  </div>
-                )}
-                <span>{ticket.author.display_name}</span>
-              </div>
-            )}
-            <span>·</span>
-            <span>
-              {new Date(ticket.created_at).toLocaleDateString("en-US", {
-                month: "short",
-                day: "numeric",
-              })}
-            </span>
-          </div>
-        </div>
-
-        {/* Delete */}
-        {canManage(ticket) && (
-          <Button
-            variant="ghost"
-            size="icon-xs"
-            className="opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 text-white/40 hover:text-red-400 hover:bg-red-500/10 transition-all shrink-0"
-            onClick={() => setDeleteConfirm(ticket.id)}
-            aria-label={`Delete ${ticket.title}`}
-          >
-            <Trash2 className="size-3.5" />
-          </Button>
-        )}
-      </div>
-    );
+  const openEditDialog = (ticket: FeedbackTicket) => {
+    setEditingTicket(ticket);
+    setEditTitle(ticket.title);
+    setEditDescription(ticket.description);
+    setEditColumnId(ticket.column_id);
   };
 
   if (initialLoading) {
@@ -218,9 +323,13 @@ export default function FeedbackPage() {
           <div className="h-8 w-32 bg-white/5 rounded animate-pulse" />
           <div className="h-9 w-28 bg-white/5 rounded animate-pulse" />
         </div>
-        <div className="space-y-2">
-          {[1, 2, 3].map((i) => (
-            <div key={i} className="h-16 bg-white/[0.02] rounded-lg border border-white/5 animate-pulse" />
+        <div className="flex gap-4">
+          {[1, 2, 3, 4].map((i) => (
+            <div key={i} className="w-[280px] shrink-0 space-y-2">
+              <div className="h-6 w-32 bg-white/5 rounded animate-pulse" />
+              <div className="h-24 bg-white/[0.02] rounded-lg border border-white/5 animate-pulse" />
+              <div className="h-24 bg-white/[0.02] rounded-lg border border-white/5 animate-pulse" />
+            </div>
           ))}
         </div>
       </main>
@@ -228,57 +337,195 @@ export default function FeedbackPage() {
   }
 
   return (
-    <main className="flex min-h-screen flex-col p-4 md:p-8">
-      <div className="mb-6 flex items-center justify-between">
+    <main className="flex min-h-screen flex-col pt-4 pr-4 md:pr-8">
+      {/* Header */}
+      <div className="mb-4 flex items-center justify-between pl-4 md:pl-8">
         <h1 className="text-2xl font-bold">Feedback</h1>
-        <Button onClick={() => setDialogOpen(true)}>
-          <Plus className="size-4" />
-          New Ticket
-        </Button>
+        <div className="flex items-center gap-2">
+          {isAdmin && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setAddingColumn(true)}
+            >
+              <Plus className="size-4" />
+              Add Column
+            </Button>
+          )}
+          <Button onClick={() => openNewTicketDialog()}>
+            <Plus className="size-4" />
+            New Ticket
+          </Button>
+        </div>
       </div>
 
-      {tickets.length === 0 ? (
-        <div className="flex-1 flex items-center justify-center">
-          <div className="text-center space-y-3">
-            <div className="text-white/40 text-sm">No feedback yet</div>
-            <Button
-              variant="link"
-              onClick={() => setDialogOpen(true)}
-              className="text-white/60 hover:text-white"
+      {/* Kanban */}
+      <Kanban
+        value={tickets}
+        onValueChange={handleKanbanChange}
+        getItemValue={(item) => item.id}
+        flatCursor
+      >
+        <KanbanBoard className="overflow-x-auto p-1 pb-3 pl-4 md:pl-8">
+          {columns.map((col) => (
+            <KanbanColumn
+              key={col.id}
+              value={col.id}
+              className="w-[85vw] sm:w-[280px] shrink-0 rounded-lg"
             >
-              Submit the first ticket
-            </Button>
-          </div>
-        </div>
-      ) : (
-        <div className="space-y-6">
-          {openTickets.length > 0 && (
-            <div className="space-y-2">
-              <div className="text-xs font-medium text-white/40 uppercase tracking-wider px-1">
-                Open ({openTickets.length})
-              </div>
-              <div className="space-y-1">
-                {openTickets.map((ticket) => (
-                  <TicketRow key={ticket.id} ticket={ticket} />
-                ))}
-              </div>
-            </div>
-          )}
+              {/* Column header */}
+              <div className="mb-1.5 px-1 flex items-center justify-between group/header">
+                {renamingColumnId === col.id ? (
+                  <form
+                    className="flex items-center gap-1 flex-1"
+                    onSubmit={(e) => {
+                      e.preventDefault();
+                      handleRenameColumn(col.id);
+                    }}
+                  >
+                    <Input
+                      value={renameValue}
+                      onChange={(e) => setRenameValue(e.target.value)}
+                      className="h-6 text-sm font-semibold px-1"
+                      autoFocus
+                      onBlur={() => handleRenameColumn(col.id)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Escape") setRenamingColumnId(null);
+                      }}
+                    />
+                  </form>
+                ) : (
+                  <div className="flex items-baseline gap-2">
+                    <h2 className="font-semibold text-sm">{col.title}</h2>
+                    <span className="text-xs text-white/40">
+                      {(tickets[col.id] || []).length}
+                    </span>
+                  </div>
+                )}
 
-          {resolvedTickets.length > 0 && (
-            <div className="space-y-2">
-              <div className="text-xs font-medium text-white/40 uppercase tracking-wider px-1">
-                Resolved ({resolvedTickets.length})
+                {isAdmin && renamingColumnId !== col.id && (
+                  <div className="flex items-center gap-0.5 opacity-0 group-hover/header:opacity-100 transition-opacity">
+                    <Button
+                      variant="ghost"
+                      size="icon-xs"
+                      className="text-white/40 hover:text-white/70"
+                      onClick={() => {
+                        setRenamingColumnId(col.id);
+                        setRenameValue(col.title);
+                      }}
+                      aria-label={`Rename ${col.title}`}
+                    >
+                      <Pencil className="size-3" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon-xs"
+                      className="text-white/40 hover:text-red-400 hover:bg-red-500/10"
+                      onClick={() => setDeleteColumnConfirm(col.id)}
+                      aria-label={`Delete ${col.title}`}
+                    >
+                      <Trash2 className="size-3" />
+                    </Button>
+                  </div>
+                )}
               </div>
-              <div className="space-y-1">
-                {resolvedTickets.map((ticket) => (
-                  <TicketRow key={ticket.id} ticket={ticket} />
+
+              {/* Cards */}
+              <div className="flex flex-col gap-1.5 overflow-y-auto pr-1">
+                {(tickets[col.id] || []).map((ticket) => (
+                  <FeedbackCard
+                    key={ticket.id}
+                    ticket={ticket}
+                    canDelete={canManageTicket(ticket)}
+                    onVote={handleVote}
+                    onDelete={(id) => setDeleteConfirm(id)}
+                    onClick={openEditDialog}
+                  />
                 ))}
+
+                {/* Add ticket button at bottom of column */}
+                <button
+                  onClick={() => openNewTicketDialog(col.id)}
+                  className="flex items-center gap-2 rounded-lg p-2 text-xs text-muted-foreground/40 bg-white/[0.02] hover:text-muted-foreground/60 hover:bg-white/[0.05] transition-colors"
+                >
+                  <Plus className="size-3.5" />
+                  Add ticket
+                </button>
               </div>
+            </KanbanColumn>
+          ))}
+
+          {/* Inline add column */}
+          {addingColumn && (
+            <div className="w-[280px] shrink-0 p-2.5">
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  handleAddColumn();
+                }}
+                className="space-y-2"
+              >
+                <Input
+                  placeholder="Column title"
+                  value={newColumnTitle}
+                  onChange={(e) => setNewColumnTitle(e.target.value)}
+                  autoFocus
+                  onKeyDown={(e) => {
+                    if (e.key === "Escape") {
+                      setAddingColumn(false);
+                      setNewColumnTitle("");
+                    }
+                  }}
+                />
+                <div className="flex gap-2">
+                  <Button size="sm" type="submit" disabled={!newColumnTitle.trim()}>
+                    Add
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    type="button"
+                    onClick={() => {
+                      setAddingColumn(false);
+                      setNewColumnTitle("");
+                    }}
+                  >
+                    Cancel
+                  </Button>
+                </div>
+              </form>
             </div>
           )}
-        </div>
-      )}
+        </KanbanBoard>
+
+        <KanbanOverlay>
+          {({ value }) => {
+            const ticket = Object.values(tickets)
+              .flat()
+              .find((t) => t.id === value);
+            if (!ticket) return null;
+            return (
+              <div className="w-[85vw] sm:w-[280px] rounded-lg border border-white/10 bg-card p-3 shadow-lg">
+                <div className="text-sm font-medium line-clamp-2">{ticket.title}</div>
+                {ticket.description && (
+                  <p className="text-xs text-white/40 line-clamp-2 mt-1">{ticket.description}</p>
+                )}
+                <div className="flex items-center justify-between mt-2">
+                  <div className="text-xs text-white/30">
+                    {ticket.author?.display_name}
+                  </div>
+                  {ticket.vote_count > 0 && (
+                    <div className="flex items-center gap-0.5 text-xs text-white/30">
+                      <ChevronUp className="size-3.5" />
+                      <span>{ticket.vote_count}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            );
+          }}
+        </KanbanOverlay>
+      </Kanban>
 
       {/* New Ticket Dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
@@ -301,29 +548,24 @@ export default function FeedbackPage() {
               className="flex w-full rounded-md border border-white/10 bg-white/5 px-3 py-2 text-sm placeholder:text-white/30 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-white/20 resize-none"
             />
 
-            {/* Category pills */}
-            <div className="flex gap-2">
-              {(Object.keys(CATEGORY_CONFIG) as FeedbackCategory[]).map(
-                (cat) => {
-                  const config = CATEGORY_CONFIG[cat];
-                  const CategoryIcon = config.icon;
-                  const isActive = category === cat;
-                  return (
-                    <button
-                      key={cat}
-                      onClick={() => setCategory(cat)}
-                      className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium transition-all ${
-                        isActive
-                          ? config.color + " ring-1 ring-current"
-                          : "text-white/40 hover:text-white/60 bg-white/5 hover:bg-white/10"
-                      }`}
-                    >
-                      <CategoryIcon className="size-3.5" />
-                      {config.label}
-                    </button>
-                  );
-                }
-              )}
+            {/* Column picker */}
+            <div>
+              <div className="text-xs text-white/40 mb-2">Column</div>
+              <div className="flex flex-wrap gap-2">
+                {columns.map((col) => (
+                  <button
+                    key={col.id}
+                    onClick={() => setDialogColumnId(col.id)}
+                    className={`px-3 py-1.5 rounded-full text-sm font-medium transition-all ${
+                      dialogColumnId === col.id
+                        ? "bg-white/15 text-white ring-1 ring-white/30"
+                        : "text-white/40 hover:text-white/60 bg-white/5 hover:bg-white/10"
+                    }`}
+                  >
+                    {col.title}
+                  </button>
+                ))}
+              </div>
             </div>
 
             <div className="flex justify-end gap-2 pt-2">
@@ -331,8 +573,8 @@ export default function FeedbackPage() {
                 Cancel
               </Button>
               <Button
-                onClick={handleSubmit}
-                disabled={!title.trim() || submitting}
+                onClick={handleCreateTicket}
+                disabled={!title.trim() || !dialogColumnId || submitting}
               >
                 {submitting ? "Submitting..." : "Submit"}
               </Button>
@@ -341,7 +583,66 @@ export default function FeedbackPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Delete Confirmation Dialog */}
+      {/* Edit Ticket Dialog */}
+      <Dialog
+        open={editingTicket !== null}
+        onOpenChange={(open) => { if (!open) setEditingTicket(null); }}
+      >
+        <DialogContent className="sm:max-w-[480px]">
+          <DialogHeader>
+            <DialogTitle>Edit Ticket</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 pt-2">
+            <Input
+              placeholder="Title"
+              value={editTitle}
+              onChange={(e) => setEditTitle(e.target.value)}
+              autoFocus
+            />
+            <textarea
+              placeholder="Description (optional)"
+              value={editDescription}
+              onChange={(e) => setEditDescription(e.target.value)}
+              rows={3}
+              className="flex w-full rounded-md border border-white/10 bg-white/5 px-3 py-2 text-sm placeholder:text-white/30 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-white/20 resize-none"
+            />
+
+            {/* Column picker */}
+            <div>
+              <div className="text-xs text-white/40 mb-2">Column</div>
+              <div className="flex flex-wrap gap-2">
+                {columns.map((col) => (
+                  <button
+                    key={col.id}
+                    onClick={() => setEditColumnId(col.id)}
+                    className={`px-3 py-1.5 rounded-full text-sm font-medium transition-all ${
+                      editColumnId === col.id
+                        ? "bg-white/15 text-white ring-1 ring-white/30"
+                        : "text-white/40 hover:text-white/60 bg-white/5 hover:bg-white/10"
+                    }`}
+                  >
+                    {col.title}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-2 pt-2">
+              <Button variant="ghost" onClick={() => setEditingTicket(null)}>
+                Cancel
+              </Button>
+              <Button
+                onClick={handleEditTicket}
+                disabled={!editTitle.trim() || editSubmitting}
+              >
+                {editSubmitting ? "Saving..." : "Save"}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Ticket Confirmation */}
       <Dialog
         open={deleteConfirm !== null}
         onOpenChange={() => setDeleteConfirm(null)}
@@ -352,8 +653,7 @@ export default function FeedbackPage() {
           </DialogHeader>
           <div className="py-4 space-y-4">
             <p className="text-sm text-white/60">
-              Are you sure you want to delete this ticket? This action cannot be
-              undone.
+              Are you sure you want to delete this ticket? This action cannot be undone.
             </p>
             <div className="flex justify-end gap-2">
               <Button variant="ghost" onClick={() => setDeleteConfirm(null)}>
@@ -361,7 +661,35 @@ export default function FeedbackPage() {
               </Button>
               <Button
                 variant="destructive"
-                onClick={() => deleteConfirm && handleDelete(deleteConfirm)}
+                onClick={() => deleteConfirm && handleDeleteTicket(deleteConfirm)}
+              >
+                Delete
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Column Confirmation */}
+      <Dialog
+        open={deleteColumnConfirm !== null}
+        onOpenChange={() => setDeleteColumnConfirm(null)}
+      >
+        <DialogContent className="sm:max-w-[360px]">
+          <DialogHeader>
+            <DialogTitle>Delete Column</DialogTitle>
+          </DialogHeader>
+          <div className="py-4 space-y-4">
+            <p className="text-sm text-white/60">
+              Are you sure you want to delete this column? Tickets in this column will become unassigned.
+            </p>
+            <div className="flex justify-end gap-2">
+              <Button variant="ghost" onClick={() => setDeleteColumnConfirm(null)}>
+                Cancel
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={() => deleteColumnConfirm && handleDeleteColumn(deleteColumnConfirm)}
               >
                 Delete
               </Button>
