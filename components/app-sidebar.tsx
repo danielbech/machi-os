@@ -28,7 +28,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { CreateWorkspaceDialog } from "@/components/create-workspace-dialog";
-import { LayoutDashboard, FolderKanban, Inbox, Settings, Check, ChevronDown, MessageSquarePlus, CalendarRange, Plus, Blocks, Pencil } from "lucide-react";
+import { LayoutDashboard, FolderKanban, Inbox, Settings, Check, ChevronDown, MessageSquarePlus, CalendarRange, Plus, Pencil } from "lucide-react";
 
 export function AppSidebar() {
   const pathname = usePathname();
@@ -92,7 +92,7 @@ export function AppSidebar() {
                             onError={() => handleLogoError(activeProject.id)}
                           />
                         ) : (
-                          <Blocks className="size-4 text-white/90" />
+                          <img src="/logo.svg" alt="Flowie" className="size-8 object-cover" />
                         )
                       )}
                     </div>
@@ -122,7 +122,7 @@ export function AppSidebar() {
                             onError={() => handleLogoError(project.id)}
                           />
                         ) : (
-                          <Blocks className="size-3 text-white/90" />
+                          <img src="/logo.svg" alt="Flowie" className="w-5 h-5 object-cover" />
                         )}
                       </span>
                       <span className={project.id === activeProjectId ? "font-semibold" : ""}>
