@@ -622,7 +622,7 @@ export default function TimelinePage() {
 
   if (initialLoading) {
     return (
-      <main className="flex min-h-screen flex-col p-4 md:p-8 bg-black/50 overflow-hidden">
+      <main className="flex min-h-screen flex-col p-4 md:py-8 md:pl-4 md:pr-8 bg-black/50 overflow-hidden">
         <div className="mb-6 flex items-center justify-between">
           <div className="h-8 w-32 bg-white/5 rounded animate-pulse" />
           <div className="h-9 w-48 bg-white/5 rounded animate-pulse" />
@@ -633,7 +633,7 @@ export default function TimelinePage() {
   }
 
   return (
-    <main className="flex min-h-screen flex-col p-4 md:p-8 bg-black/50 overflow-hidden">
+    <main className="flex min-h-screen flex-col p-4 md:py-8 md:pl-4 md:pr-8 bg-black/50 overflow-hidden">
       <div className="mb-6 flex items-center justify-between">
         <div className="flex items-center gap-2.5">
           <h1 className="text-2xl font-bold">Timeline</h1>

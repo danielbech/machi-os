@@ -127,7 +127,7 @@ export default function ProjectsPage() {
 
   if (initialLoading) {
     return (
-      <main className="flex min-h-screen flex-col p-4 md:p-8 bg-black/50">
+      <main className="flex min-h-screen flex-col p-4 md:py-8 md:pl-4 md:pr-8 bg-black/50">
         <div className="mb-6 flex items-center justify-between">
           <div className="h-8 w-32 bg-white/5 rounded animate-pulse" />
           <div className="h-9 w-28 bg-white/5 rounded animate-pulse" />
@@ -142,7 +142,7 @@ export default function ProjectsPage() {
   }
 
   return (
-    <main className="flex min-h-screen flex-col p-4 md:p-8 bg-black/50">
+    <main className="flex min-h-screen flex-col p-4 md:py-8 md:pl-4 md:pr-8 bg-black/50">
       <div className="mb-6 flex items-center justify-between">
         <h1 className="text-2xl font-bold">Projects</h1>
         <Button onClick={openAdd}>
