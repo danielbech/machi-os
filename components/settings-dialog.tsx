@@ -49,6 +49,7 @@ interface SettingsDialogProps {
   activeProject?: Project;
   refreshWorkspaces?: () => Promise<void>;
   userProjectCount: number;
+  defaultTab?: string;
 }
 
 export function SettingsDialog({
@@ -74,7 +75,9 @@ export function SettingsDialog({
   activeProject,
   refreshWorkspaces,
   userProjectCount,
+  defaultTab = "general",
 }: SettingsDialogProps) {
+  const [settingsTab, setSettingsTab] = useState(defaultTab);
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteRole, setInviteRole] = useState<"admin" | "member">("member");
   const [inviteLoading, setInviteLoading] = useState(false);
@@ -104,6 +107,11 @@ export function SettingsDialog({
   const [deleteConfirmName, setDeleteConfirmName] = useState("");
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
+
+  // Reset tab when dialog opens
+  useEffect(() => {
+    if (open) setSettingsTab(defaultTab);
+  }, [open, defaultTab]);
 
   // Sync workspace settings when dialog opens or active project changes
   useEffect(() => {
@@ -177,6 +185,7 @@ export function SettingsDialog({
       await refreshWorkspaces?.();
     } catch (err) {
       console.error('Workspace logo upload failed:', err);
+      toast.error("Failed to upload logo");
     } finally {
       setWsLogoUploading(false);
       if (wsLogoInputRef.current) wsLogoInputRef.current.value = '';
@@ -194,6 +203,7 @@ export function SettingsDialog({
       await refreshWorkspaces?.();
     } catch (err) {
       console.error('Workspace logo remove failed:', err);
+      toast.error("Failed to remove logo");
     } finally {
       setWsLogoUploading(false);
     }
@@ -289,7 +299,7 @@ export function SettingsDialog({
         <DialogHeader>
           <DialogTitle>Settings</DialogTitle>
         </DialogHeader>
-        <Tabs defaultValue="general" className="flex-1 min-h-0 flex flex-col">
+        <Tabs value={settingsTab} onValueChange={setSettingsTab} className="flex-1 min-h-0 flex flex-col">
           <TabsList variant="line" className="border-b border-white/5 px-0">
             <TabsTrigger value="general" className="text-white/40 data-[state=active]:text-white after:bg-white">General</TabsTrigger>
             <TabsTrigger value="workspace" className="text-white/40 data-[state=active]:text-white after:bg-white">Workspace</TabsTrigger>

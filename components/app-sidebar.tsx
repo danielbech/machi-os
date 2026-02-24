@@ -28,7 +28,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { CreateWorkspaceDialog } from "@/components/create-workspace-dialog";
-import { LayoutDashboard, FolderKanban, Inbox, Settings, Check, ChevronDown, MessageSquarePlus, CalendarRange, Plus } from "lucide-react";
+import { LayoutDashboard, FolderKanban, Inbox, Settings, Check, ChevronDown, MessageSquarePlus, CalendarRange, Plus, Blocks, Pencil } from "lucide-react";
 
 export function AppSidebar() {
   const pathname = usePathname();
@@ -45,10 +45,12 @@ export function AppSidebar() {
   } = useCalendar();
   const { setOpenMobile } = useSidebar();
   const [showSettings, setShowSettings] = useState(false);
+  const [settingsDefaultTab, setSettingsDefaultTab] = useState("general");
   const [showCreateWorkspace, setShowCreateWorkspace] = useState(false);
   const [workspaceMembers, setWorkspaceMembers] = useState<WorkspaceMember[]>([]);
 
-  const handleOpenSettings = async () => {
+  const handleOpenSettings = async (tab = "general") => {
+    setSettingsDefaultTab(tab);
     setShowSettings(true);
     if (activeProjectId) {
       try {
@@ -79,7 +81,7 @@ export function AppSidebar() {
                       {activeProject?.logo_url ? (
                         <img src={activeProject.logo_url} alt={activeProject.name} className="size-8 object-cover transition-transform duration-200 group-hover:scale-110" />
                       ) : (
-                        <img src="/logo.svg" alt="Machi OS" className="size-6 invert transition-transform duration-200 group-hover:scale-110" />
+                        <Blocks className="size-4 text-white/90" />
                       )}
                     </div>
                     <div className="flex flex-col gap-0.5 leading-none">
@@ -96,18 +98,16 @@ export function AppSidebar() {
                       onClick={() => setActiveProjectId(project.id)}
                       className="flex items-center gap-2"
                     >
-                      {project.logo_url ? (
-                        <img
-                          src={project.logo_url}
-                          alt={project.name}
-                          className="w-4 h-4 rounded-sm object-cover shrink-0"
-                        />
-                      ) : (
-                        <span
-                          className="inline-block w-2.5 h-2.5 rounded-full shrink-0"
-                          style={{ backgroundColor: project.color }}
-                        />
-                      )}
+                      <span
+                        className="inline-flex w-5 h-5 rounded-md items-center justify-center overflow-hidden shrink-0"
+                        style={{ backgroundColor: project.color }}
+                      >
+                        {project.logo_url ? (
+                          <img src={project.logo_url} alt={project.name} className="w-5 h-5 object-cover" />
+                        ) : (
+                          <Blocks className="size-3 text-white/90" />
+                        )}
+                      </span>
                       <span className={project.id === activeProjectId ? "font-semibold" : ""}>
                         {project.name}
                       </span>
@@ -117,6 +117,13 @@ export function AppSidebar() {
                     </DropdownMenuItem>
                   ))}
                   <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    onClick={() => { handleOpenSettings("workspace"); setOpenMobile(false); }}
+                    className="flex items-center gap-2"
+                  >
+                    <Pencil className="size-4" />
+                    <span>Edit workspace</span>
+                  </DropdownMenuItem>
                   <DropdownMenuItem
                     onClick={() => setShowCreateWorkspace(true)}
                     className="flex items-center gap-2"
@@ -213,6 +220,7 @@ export function AppSidebar() {
           activeProject={activeProject}
           refreshWorkspaces={refreshWorkspaces}
           userProjectCount={userProjects.length}
+          defaultTab={settingsDefaultTab}
         />
       )}
 
