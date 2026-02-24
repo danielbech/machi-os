@@ -344,7 +344,7 @@ export const GanttContentHeader: FC<GanttContentHeaderProps> = ({
 
   return (
     <div
-      className="sticky top-0 z-20 grid w-full shrink-0 bg-background/90 backdrop-blur-sm"
+      className="sticky top-0 z-20 grid content-start w-full shrink-0 bg-background/90 backdrop-blur-sm"
       style={{ height: "var(--gantt-header-height)" }}
     >
       <div>
@@ -1508,7 +1508,7 @@ export const GanttMarker: FC<
 
   return (
     <div
-      className="pointer-events-none absolute top-0 left-0 z-30 flex h-full select-none flex-col items-center justify-center overflow-visible"
+      className="pointer-events-none absolute top-0 left-0 z-30 h-full select-none overflow-visible"
       data-gantt-marker
       style={{
         width: 0,
@@ -1517,20 +1517,21 @@ export const GanttMarker: FC<
     >
       <div
         className={cn(
-          "group pointer-events-auto sticky top-[62px] flex select-auto flex-row flex-nowrap items-center gap-1 whitespace-nowrap rounded-md border px-1.5 py-0.5 text-foreground text-[10px] leading-tight backdrop-blur-sm transition-colors",
+          "group pointer-events-auto sticky top-[62px] z-[1] flex select-auto flex-row flex-nowrap items-center gap-1 whitespace-nowrap rounded-md border px-1.5 py-0.5 text-foreground text-[10px] leading-tight backdrop-blur-sm transition-colors",
           dragging ? "cursor-grabbing" : onMove ? "cursor-grab" : "cursor-default",
           color ? "hover:brightness-125" : "hover:bg-white/15",
           !color && "border-white/[0.06] bg-white/10",
           className
         )}
-        style={
-          color
+        style={{
+          marginLeft: "-50%",
+          ...(color
             ? {
                 borderColor: `${color}40`,
                 backgroundColor: `${color}20`,
               }
-            : undefined
-        }
+            : {}),
+        }}
         onPointerDown={handlePointerDown}
         onClick={() => {
           if (!didDragRef.current && onRename) setEditing(true);
@@ -1567,8 +1568,8 @@ export const GanttMarker: FC<
         )}
       </div>
       <div
-        className="h-full w-px"
-        style={{ backgroundColor: color ? `${color}60` : "rgb(255 255 255 / 0.2)" }}
+        className="absolute w-px"
+        style={{ top: 62, bottom: 0, backgroundColor: color ? `${color}60` : "rgb(255 255 255 / 0.2)" }}
       />
     </div>
   );
@@ -1933,7 +1934,7 @@ export const GanttToday: FC<GanttTodayProps> = ({ className }) => {
 
   return (
     <div
-      className="pointer-events-none absolute top-0 left-0 z-30 flex h-full select-none flex-col items-center overflow-visible"
+      className="pointer-events-none absolute top-0 left-0 z-30 h-full select-none overflow-visible"
       style={{
         width: 0,
         transform: `translateX(calc(var(--gantt-column-width) * ${offset} + ${innerOffset}px))`,
@@ -1941,13 +1942,14 @@ export const GanttToday: FC<GanttTodayProps> = ({ className }) => {
     >
       <div
         className={cn(
-          "pointer-events-auto sticky top-[44px] z-30 flex select-auto items-center justify-center whitespace-nowrap rounded-md border border-blue-500/30 bg-blue-500/15 px-1.5 py-0.5 text-blue-400 text-[10px] leading-tight backdrop-blur-sm",
+          "pointer-events-auto sticky top-[44px] z-[1] flex select-auto items-center justify-center whitespace-nowrap rounded-md border border-blue-500/30 bg-blue-500/15 px-1.5 py-0.5 text-blue-400 text-[10px] leading-tight backdrop-blur-sm",
           className
         )}
+        style={{ marginLeft: "-50%" }}
       >
         {label}
       </div>
-      <div className="flex-1 w-px bg-blue-500/40" />
+      <div className="absolute w-px bg-blue-500/40" style={{ top: 44, bottom: 0 }} />
     </div>
   );
 };
