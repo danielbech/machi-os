@@ -1,11 +1,12 @@
 import { createClient } from './client'
+import { validateImageFile } from '../validate-file'
 
 const BUCKET = 'Project Logos'
 
 export async function uploadClientLogo(file: File, clientId: string): Promise<string> {
+  validateImageFile(file)
   const supabase = createClient()
 
-  // Use client ID + extension for a clean, unique path
   const ext = file.name.split('.').pop() || 'png'
   const path = `${clientId}.${ext}`
 
@@ -27,6 +28,7 @@ export async function uploadClientLogo(file: File, clientId: string): Promise<st
 }
 
 export async function uploadWorkspaceLogo(file: File, projectId: string): Promise<string> {
+  validateImageFile(file)
   const supabase = createClient()
 
   const ext = file.name.split('.').pop() || 'png'

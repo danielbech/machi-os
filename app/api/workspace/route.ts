@@ -1,14 +1,27 @@
 import { NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
 import { authenticateRoute } from "@/lib/supabase/route-auth";
 import { createAdminClient } from "@/lib/supabase/server";
 
+const createWorkspaceSchema = z.object({
+  name: z.string().min(1, "Name is required").max(100, "Name too long").transform(s => s.trim()),
+  color: z.string().regex(/^#[0-9a-fA-F]{6}$/, "Invalid color").default("#3b82f6"),
+});
+
+const deleteWorkspaceSchema = z.object({
+  projectId: z.string().uuid("Invalid project ID"),
+});
+
 export async function POST(request: NextRequest) {
   try {
-    const { name, color } = await request.json();
+    const body = await request.json();
+    const parsed = createWorkspaceSchema.safeParse(body);
 
-    if (!name || typeof name !== "string" || !name.trim()) {
-      return NextResponse.json({ error: "Name is required" }, { status: 400 });
+    if (!parsed.success) {
+      return NextResponse.json({ error: parsed.error.issues[0].message }, { status: 400 });
     }
+
+    const { name, color } = parsed.data;
 
     const { user } = await authenticateRoute(request);
     const admin = createAdminClient();
@@ -16,7 +29,7 @@ export async function POST(request: NextRequest) {
     // Create project
     const { data: project, error: projectError } = await admin
       .from("projects")
-      .insert({ name: name.trim(), color: color || "#3b82f6", user_id: user.id })
+      .insert({ name, color, user_id: user.id })
       .select("id, name, color")
       .single();
 
@@ -57,11 +70,14 @@ export async function POST(request: NextRequest) {
 
 export async function DELETE(request: NextRequest) {
   try {
-    const { projectId } = await request.json();
+    const body = await request.json();
+    const parsed = deleteWorkspaceSchema.safeParse(body);
 
-    if (!projectId) {
-      return NextResponse.json({ error: "Missing projectId" }, { status: 400 });
+    if (!parsed.success) {
+      return NextResponse.json({ error: parsed.error.issues[0].message }, { status: 400 });
     }
+
+    const { projectId } = parsed.data;
 
     const { supabase, user } = await authenticateRoute(request);
 

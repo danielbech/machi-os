@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { toast } from "sonner";
 import { useWorkspace } from "@/lib/workspace-context";
 import { updateClientRecord, deleteClientRecord } from "@/lib/supabase/clients";
 import { getClientTextClassName, CLIENT_DOT_COLORS } from "@/lib/colors";
@@ -47,6 +48,7 @@ export default function ProjectsPage() {
       await refreshClients();
     } catch (error) {
       console.error("Error toggling project status:", error);
+      toast.error("Failed to update project");
     }
   };
 
@@ -57,6 +59,7 @@ export default function ProjectsPage() {
       setDeleteConfirm(null);
     } catch (error) {
       console.error("Error deleting project:", error);
+      toast.error("Failed to delete project");
     }
   };
 

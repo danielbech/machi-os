@@ -17,9 +17,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { toast } from "sonner";
 import { Plus, Trash2, Lightbulb, Bug, MessageSquare } from "lucide-react";
-
-const PLATFORM_OWNERS = ["hello@oimachi.co"];
 
 const CATEGORY_CONFIG: Record<FeedbackCategory, { label: string; color: string; icon: typeof Lightbulb }> = {
   idea: { label: "Idea", color: "bg-purple-500/20 text-purple-400", icon: Lightbulb },
@@ -28,7 +27,7 @@ const CATEGORY_CONFIG: Record<FeedbackCategory, { label: string; color: string; 
 };
 
 export default function FeedbackPage() {
-  const { user } = useWorkspace();
+  const { user, activeProjectId } = useWorkspace();
   const [tickets, setTickets] = useState<FeedbackTicket[]>([]);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [title, setTitle] = useState("");
@@ -37,9 +36,6 @@ export default function FeedbackPage() {
   const [submitting, setSubmitting] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
   const [initialLoading, setInitialLoading] = useState(true);
-
-  const userEmail = user?.email || "";
-  const isOwner = PLATFORM_OWNERS.includes(userEmail);
 
   const loadTickets = useCallback(async () => {
     const data = await loadFeedbackTickets();
@@ -55,11 +51,11 @@ export default function FeedbackPage() {
     if (!user || !title.trim()) return;
     setSubmitting(true);
     try {
-      await createFeedbackTicket(user.id, {
-        title: title.trim(),
-        description: description.trim(),
-        category,
-      });
+      await createFeedbackTicket(
+        user.id,
+        { title: title.trim(), description: description.trim(), category },
+        activeProjectId || undefined
+      );
       setTitle("");
       setDescription("");
       setCategory("feedback");
@@ -67,6 +63,7 @@ export default function FeedbackPage() {
       await loadTickets();
     } catch (error) {
       console.error("Error creating ticket:", error);
+      toast.error("Failed to create ticket");
     } finally {
       setSubmitting(false);
     }
@@ -82,6 +79,7 @@ export default function FeedbackPage() {
       await updateFeedbackTicket(ticket.id, { status: newStatus });
     } catch (error) {
       console.error("Error updating ticket:", error);
+      toast.error("Failed to update ticket");
       await loadTickets();
     }
   };
@@ -93,12 +91,13 @@ export default function FeedbackPage() {
       await deleteFeedbackTicket(ticketId);
     } catch (error) {
       console.error("Error deleting ticket:", error);
+      toast.error("Failed to delete ticket");
       await loadTickets();
     }
   };
 
   const canManage = (ticket: FeedbackTicket) =>
-    ticket.user_id === user?.id || isOwner;
+    ticket.user_id === user?.id;
 
   const openTickets = tickets.filter((t) => t.status === "open");
   const resolvedTickets = tickets.filter((t) => t.status === "resolved");

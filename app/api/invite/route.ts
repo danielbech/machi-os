@@ -1,18 +1,24 @@
 import { NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
 import { authenticateRoute } from "@/lib/supabase/route-auth";
 import { createAdminClient } from "@/lib/supabase/server";
 
+const inviteSchema = z.object({
+  email: z.string().email("Invalid email address"),
+  projectId: z.string().uuid("Invalid project ID"),
+  role: z.enum(["admin", "member"]).default("member"),
+});
+
 export async function POST(request: NextRequest) {
   try {
-    const { email, projectId, role = "member" } = await request.json();
+    const body = await request.json();
+    const parsed = inviteSchema.safeParse(body);
 
-    if (!email || !projectId) {
-      return NextResponse.json({ error: "Missing email or projectId" }, { status: 400 });
+    if (!parsed.success) {
+      return NextResponse.json({ error: parsed.error.issues[0].message }, { status: 400 });
     }
 
-    if (!["admin", "member"].includes(role)) {
-      return NextResponse.json({ error: "Invalid role" }, { status: 400 });
-    }
+    const { email, projectId, role } = parsed.data;
 
     const { supabase, user } = await authenticateRoute(request);
 

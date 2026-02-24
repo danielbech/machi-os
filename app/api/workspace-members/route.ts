@@ -1,13 +1,23 @@
 import { NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
 import { authenticateRoute } from "@/lib/supabase/route-auth";
 import { createAdminClient } from "@/lib/supabase/server";
 
+const querySchema = z.object({
+  projectId: z.string().uuid("Invalid project ID"),
+});
+
 export async function GET(request: NextRequest) {
   try {
-    const projectId = request.nextUrl.searchParams.get("projectId");
-    if (!projectId) {
-      return NextResponse.json({ error: "Missing projectId" }, { status: 400 });
+    const params = querySchema.safeParse({
+      projectId: request.nextUrl.searchParams.get("projectId"),
+    });
+
+    if (!params.success) {
+      return NextResponse.json({ error: params.error.issues[0].message }, { status: 400 });
     }
+
+    const { projectId } = params.data;
 
     const { supabase, user } = await authenticateRoute(request);
 
@@ -56,7 +66,7 @@ export async function GET(request: NextRequest) {
       .in("user_id", userIds);
 
     const profileMap = new Map(
-      (profiles || []).map((p: any) => [p.user_id, p])
+      (profiles || []).map((p: { user_id: string; display_name: string | null; avatar_url: string | null; color: string | null }) => [p.user_id, p])
     );
 
     const members = (memberships || []).map((m) => {

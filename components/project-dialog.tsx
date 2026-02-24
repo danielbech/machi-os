@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect, useMemo } from "react";
+import { toast } from "sonner";
 import { useWorkspace } from "@/lib/workspace-context";
 import { createClientRecord, updateClientRecord } from "@/lib/supabase/clients";
 import { uploadClientLogo, deleteClientLogo } from "@/lib/supabase/storage";
@@ -149,6 +150,7 @@ export function ProjectDialog({ open, onOpenChange, editingClient = null }: Proj
       onOpenChange(false);
     } catch (error) {
       console.error("Error saving project:", error);
+      toast.error("Failed to save project");
     } finally {
       setSaving(false);
     }

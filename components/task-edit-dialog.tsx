@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef } from "react";
+import { useRef, lazy, Suspense } from "react";
 import type { Task, BacklogFolder, ChecklistItem } from "@/lib/types";
 import { useWorkspace } from "@/lib/workspace-context";
 import {
@@ -8,7 +8,10 @@ import {
   DialogContent,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { RichTextEditor } from "@/components/rich-text-editor";
+
+const RichTextEditor = lazy(() =>
+  import("@/components/rich-text-editor").then((mod) => ({ default: mod.RichTextEditor }))
+);
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -275,11 +278,13 @@ export function TaskEditDialog({ task, onClose, onSave, onTaskChange, folders }:
             {/* Description */}
             <div className="flex flex-col gap-3">
               <label className="text-sm font-medium">Description</label>
-              <RichTextEditor
-                value={task.description || ""}
-                onChange={(html) => onTaskChange({ ...task, description: html })}
-                placeholder="Optional description..."
-              />
+              <Suspense fallback={<div className="h-24 rounded-md border border-white/10 bg-white/5 animate-pulse" />}>
+                <RichTextEditor
+                  value={task.description || ""}
+                  onChange={(html) => onTaskChange({ ...task, description: html })}
+                  placeholder="Optional description..."
+                />
+              </Suspense>
             </div>
 
             {/* Checklist */}

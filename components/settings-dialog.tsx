@@ -150,6 +150,7 @@ export function SettingsDialog({
       onProfileUpdate?.();
     } catch (err) {
       console.error('Avatar upload failed:', err);
+      toast.error(err instanceof Error ? err.message : "Failed to upload avatar");
     } finally {
       setAvatarUploading(false);
       // Reset input so re-selecting the same file triggers onChange
@@ -168,6 +169,7 @@ export function SettingsDialog({
       onProfileUpdate?.();
     } catch (err) {
       console.error('Profile save failed:', err);
+      toast.error("Failed to save profile");
     } finally {
       setProfileSaving(false);
     }
@@ -485,11 +487,13 @@ export function SettingsDialog({
                         const { error } = await supabase.auth.signOut();
                         if (error) {
                           console.error('Sign out error:', error);
+                          toast.error("Failed to sign out");
                         } else {
                           onOpenChange(false);
                         }
                       } catch (err) {
                         console.error('Sign out failed:', err);
+                        toast.error("Failed to sign out");
                       }
                     }}
                   >
@@ -701,6 +705,7 @@ export function SettingsDialog({
                                 await refreshWorkspaces?.();
                               } catch (err) {
                                 console.error("Failed to update color:", err);
+                                toast.error("Failed to update color");
                                 setWsColor(activeProject.color);
                               }
                             }}
@@ -728,6 +733,7 @@ export function SettingsDialog({
                           await refreshWorkspaces?.();
                         } catch (err) {
                           console.error("Failed to update workspace:", err);
+                          toast.error("Failed to update workspace");
                         } finally {
                           setWsSaving(false);
                         }

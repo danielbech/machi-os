@@ -168,6 +168,7 @@ export function CalendarProvider({ children }: { children: React.ReactNode }) {
           updatedConnections.push({ ...conn, availableCalendars: calendars });
         } catch (error) {
           console.error(`Failed to sync connection ${conn.google_email}:`, error);
+          toast.error(`Failed to sync ${conn.google_email}`);
           updatedConnections.push({ ...conn, availableCalendars: [] });
         }
       }
@@ -176,6 +177,7 @@ export function CalendarProvider({ children }: { children: React.ReactNode }) {
       await loadSharedEvents(activeProjectId, weekMode);
     } catch (error) {
       console.error("Failed to sync calendar events:", error);
+      toast.error("Failed to sync calendar");
     }
   }, [activeProjectId, user, weekMode, transitionDay, loadSharedEvents]);
 
@@ -281,6 +283,7 @@ export function CalendarProvider({ children }: { children: React.ReactNode }) {
           });
         } catch (error) {
           console.error("Error handling OAuth callback:", error);
+        toast.error("Failed to connect Google Calendar");
         }
       } else if (event.data.type === "GOOGLE_AUTH_FAILED") {
         toast.error("Failed to connect Google Calendar");
@@ -324,6 +327,7 @@ export function CalendarProvider({ children }: { children: React.ReactNode }) {
       await removeCalendarConnection(connectionId);
     } catch (error) {
       console.error("Error disconnecting calendar:", error);
+      toast.error("Failed to disconnect calendar");
     }
     setCalendarConnections(prev => prev.filter(c => c.id !== connectionId));
     if (activeProjectId) {

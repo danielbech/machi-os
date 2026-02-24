@@ -122,6 +122,8 @@ export async function updateProfile(
 
 // Upload avatar image and return public URL
 export async function uploadAvatar(file: File, userId: string): Promise<string> {
+  const { validateImageFile } = await import('../validate-file')
+  validateImageFile(file)
   const supabase = createClient()
 
   const ext = file.name.split('.').pop() || 'png'

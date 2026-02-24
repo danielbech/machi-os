@@ -48,7 +48,8 @@ export async function loadFeedbackTickets(): Promise<FeedbackTicket[]> {
 
 export async function createFeedbackTicket(
   userId: string,
-  ticket: { title: string; description: string; category: FeedbackCategory }
+  ticket: { title: string; description: string; category: FeedbackCategory },
+  projectId?: string
 ): Promise<FeedbackTicket> {
   const supabase = createClient()
 
@@ -59,6 +60,7 @@ export async function createFeedbackTicket(
       title: ticket.title,
       description: ticket.description,
       category: ticket.category,
+      ...(projectId && { project_id: projectId }),
     })
     .select()
     .single()

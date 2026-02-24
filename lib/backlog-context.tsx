@@ -1,6 +1,7 @@
 "use client";
 
 import { createContext, useContext, useState, useEffect, useCallback, useRef, useMemo } from "react";
+import { toast } from "sonner";
 import type { Task, BacklogFolder, DayName } from "@/lib/types";
 import { createClient } from "@/lib/supabase/client";
 import { loadBacklogTasks, saveTask, deleteTask, updateBacklogTaskOrder } from "@/lib/supabase/tasks-simple";
@@ -74,6 +75,7 @@ export function BacklogProvider({ children }: { children: React.ReactNode }) {
       setBacklogFolders(folders);
     } catch (error) {
       console.error("Error loading backlog:", error);
+      toast.error("Failed to load backlog");
     }
   }, [activeProjectId, areaId]);
 
