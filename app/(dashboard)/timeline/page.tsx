@@ -46,6 +46,27 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Plus, Trash2, CalendarPlus, Pencil, MoreHorizontal, ChevronRight, Diamond, Filter } from "lucide-react";
 
+const ZOOM_LEVELS: { range: Range; zoom: number }[] = [
+  { range: "quarterly", zoom: 75 },
+  { range: "quarterly", zoom: 100 },
+  { range: "monthly", zoom: 75 },
+  { range: "monthly", zoom: 100 },
+  { range: "monthly", zoom: 125 },
+  { range: "weekly", zoom: 75 },
+  { range: "weekly", zoom: 100 },
+  { range: "weekly", zoom: 125 },
+  { range: "daily", zoom: 75 },
+  { range: "daily", zoom: 100 },
+  { range: "daily", zoom: 125 },
+];
+
+const RANGE_LABELS: Record<Range, string> = {
+  daily: "Daily",
+  weekly: "Weekly",
+  monthly: "Monthly",
+  quarterly: "Quarterly",
+};
+
 function toFeature(entry: TimelineEntry, clients: Client[]): GanttFeature {
   const client = entry.client_id
     ? clients.find((c) => c.id === entry.client_id)
@@ -124,34 +145,26 @@ export default function TimelinePage() {
   const { activeProjectId, clients } = useWorkspace();
   const [entries, setEntries] = useState<TimelineEntry[]>([]);
   const [initialLoading, setInitialLoading] = useState(true);
-  const [range, setRange] = useState<Range>(() => {
+  const [zoomLevel, setZoomLevel] = useState(() => {
     if (typeof window !== "undefined") {
-      const saved = localStorage.getItem("timeline-range");
-      if (saved === "daily" || saved === "weekly" || saved === "monthly" || saved === "quarterly") {
-        return saved;
+      const saved = localStorage.getItem("timeline-zoom-level");
+      if (saved !== null) {
+        const idx = Number(saved);
+        if (idx >= 0 && idx < ZOOM_LEVELS.length) return idx;
       }
     }
-    return "monthly";
+    return 3; // monthly 100%
   });
 
-  const [zoom, setZoom] = useState(100);
+  const { range, zoom } = ZOOM_LEVELS[zoomLevel];
 
-  // Load saved zoom when range changes
-  useEffect(() => {
-    const saved = localStorage.getItem(`timeline-zoom-${range}`);
-    setZoom(saved ? Number(saved) : 100);
-  }, [range]);
-
-  const handleZoom = useCallback((newZoom: number) => {
-    const clamped = Math.min(200, Math.max(50, newZoom));
-    setZoom(clamped);
-    localStorage.setItem(`timeline-zoom-${range}`, String(clamped));
-  }, [range]);
-
-  const handleSetRange = (value: Range) => {
-    setRange(value);
-    localStorage.setItem("timeline-range", value);
-  };
+  const handleZoom = useCallback((direction: number) => {
+    setZoomLevel(prev => {
+      const next = Math.min(ZOOM_LEVELS.length - 1, Math.max(0, prev + (direction > 0 ? 1 : -1)));
+      localStorage.setItem("timeline-zoom-level", String(next));
+      return next;
+    });
+  }, []);
   const [activeOnly, setActiveOnly] = useState(() => {
     if (typeof window !== "undefined") {
       return localStorage.getItem("timeline-active-only") === "true";
@@ -589,13 +602,6 @@ export default function TimelinePage() {
     }
   };
 
-  const RANGE_OPTIONS: { value: Range; label: string }[] = [
-    { value: "daily", label: "Daily" },
-    { value: "weekly", label: "Weekly" },
-    { value: "monthly", label: "Monthly" },
-    { value: "quarterly", label: "Quarterly" },
-  ];
-
   if (initialLoading) {
     return (
       <main className="flex min-h-screen flex-col p-4 md:p-8 bg-black/50 overflow-hidden">
@@ -616,34 +622,21 @@ export default function TimelinePage() {
           <span className="rounded-full bg-white/[0.08] px-2 py-0.5 text-[10px] font-medium text-white/40 uppercase tracking-wider">Beta</span>
         </div>
         <div className="flex items-center gap-2">
-          <div className="flex gap-0.5 rounded-md bg-white/5 p-0.5">
-            {RANGE_OPTIONS.map((opt) => (
-              <button
-                key={opt.value}
-                onClick={() => handleSetRange(opt.value)}
-                className={`px-2 py-0.5 rounded text-xs font-medium transition-all ${
-                  range === opt.value
-                    ? "bg-white/10 text-white"
-                    : "text-white/30 hover:text-white/50"
-                }`}
-              >
-                {opt.label}
-              </button>
-            ))}
-          </div>
           <div className="flex items-center gap-0.5 rounded-md bg-white/5 p-0.5">
             <button
-              onClick={() => handleZoom(zoom - 25)}
-              disabled={zoom <= 50}
+              onClick={() => handleZoom(-1)}
+              disabled={zoomLevel <= 0}
               className="px-1.5 py-0.5 rounded text-xs font-medium transition-all text-white/30 hover:text-white/50 disabled:opacity-25 disabled:cursor-not-allowed"
               aria-label="Zoom out"
             >
               −
             </button>
-            <span className="px-1 text-[10px] font-medium text-white/40 tabular-nums min-w-[32px] text-center">{zoom}%</span>
+            <span className="px-2 text-xs font-medium text-white/40 min-w-[56px] text-center">
+              {RANGE_LABELS[range]}
+            </span>
             <button
-              onClick={() => handleZoom(zoom + 25)}
-              disabled={zoom >= 200}
+              onClick={() => handleZoom(1)}
+              disabled={zoomLevel >= ZOOM_LEVELS.length - 1}
               className="px-1.5 py-0.5 rounded text-xs font-medium transition-all text-white/30 hover:text-white/50 disabled:opacity-25 disabled:cursor-not-allowed"
               aria-label="Zoom in"
             >

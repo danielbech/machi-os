@@ -1674,12 +1674,11 @@ export const GanttProvider: FC<GanttProviderProps> = ({
     const handler = (e: WheelEvent) => {
       if (!e.metaKey && !e.ctrlKey) return;
       e.preventDefault();
-      const delta = e.deltaY > 0 ? -25 : 25;
-      onZoom(zoom + delta);
+      onZoom(e.deltaY > 0 ? -1 : 1);
     };
     el.addEventListener("wheel", handler, { passive: false });
     return () => el.removeEventListener("wheel", handler);
-  }, [onZoom, zoom]);
+  }, [onZoom]);
 
   useEffect(() => {
     const updateSidebarWidth = () => {
