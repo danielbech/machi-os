@@ -74,18 +74,34 @@ export async function initializeUserData(userId: string) {
   }
 
   // Seed demo tasks for new users
-  await seedDemoTasks(area.id)
+  await seedDemoTasks(area.id, project.id)
 }
 
 // Seed demo tasks so new users see example cards on their board
-export async function seedDemoTasks(areaId: string) {
+export async function seedDemoTasks(areaId: string, projectId: string) {
   const supabase = createClient()
+
+  // Create a demo client
+  const { data: client } = await supabase
+    .from('clients')
+    .insert({
+      project_id: projectId,
+      name: 'Flowie',
+      slug: 'flowie',
+      color: 'orange',
+      sort_order: 0,
+      active: true,
+    })
+    .select('id')
+    .single()
+
+  const clientId = client?.id ?? null
 
   const { error } = await supabase.from('tasks').insert([
     {
       area_id: areaId,
-      title: 'This is your weekly board',
-      description: 'Each column is a day of the week. Drag cards between days to plan your work. Cards carry over automatically if not completed by end of week.',
+      title: 'This is a note',
+      description: 'Notes are for context — reminders, links, or anything that isn\'t a to-do. Tasks have priorities and can be completed.',
       day: 'monday',
       type: 'note',
       priority: null,
@@ -104,11 +120,12 @@ export async function seedDemoTasks(areaId: string) {
       completed: false,
       assignees: [],
       checklist: [],
+      client: clientId,
     },
     {
       area_id: areaId,
-      title: 'Press . to open the backlog',
-      description: 'The backlog is your inbox for unsorted tasks. Organize them by project, then drag onto the board when you\'re ready to schedule.',
+      title: 'Press ⌫ to delete a card',
+      description: 'Select any card and press backspace to remove it.',
       day: 'tuesday',
       type: 'task',
       priority: 'medium',
@@ -119,23 +136,11 @@ export async function seedDemoTasks(areaId: string) {
     },
     {
       area_id: areaId,
-      title: 'Plan ahead on the Timeline',
-      description: 'Open the Timeline tab in the sidebar to visualize long-term projects on a Gantt-style chart. Great for tracking deadlines across weeks.',
-      day: 'wednesday',
-      type: 'task',
-      priority: 'high',
-      sort_order: 0,
-      completed: false,
-      assignees: [],
-      checklist: [],
-    },
-    {
-      area_id: areaId,
       title: 'Getting started',
-      day: 'thursday',
+      day: 'tuesday',
       type: 'task',
-      priority: 'medium',
-      sort_order: 0,
+      priority: null,
+      sort_order: 1,
       completed: false,
       assignees: [],
       checklist: [
@@ -143,18 +148,7 @@ export async function seedDemoTasks(areaId: string) {
         { id: crypto.randomUUID(), text: 'Invite a teammate', checked: false },
         { id: crypto.randomUUID(), text: 'Connect Google Calendar', checked: false },
       ],
-    },
-    {
-      area_id: areaId,
-      title: 'Share your feedback',
-      description: 'Head to the Feedback tab in the sidebar — we\'d love to hear what you think and what features you want next.',
-      day: 'friday',
-      type: 'task',
-      priority: 'low',
-      sort_order: 0,
-      completed: false,
-      assignees: [],
-      checklist: [],
+      client: clientId,
     },
   ])
 

@@ -161,7 +161,7 @@ export default function BoardPage() {
         console.error("Failed to delete tasks:", error);
         return;
       }
-      await seedDemoTasks(areaId);
+      await seedDemoTasks(areaId, activeProjectId!);
       await refreshTasks();
       console.log("Demo tasks re-seeded!");
     };
