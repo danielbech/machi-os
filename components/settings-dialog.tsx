@@ -641,12 +641,12 @@ export function SettingsDialog({
                       >
                         <div
                           className="w-12 h-12 rounded-lg flex items-center justify-center overflow-hidden"
-                          style={{ backgroundColor: wsColor || activeProject?.color || '#3b82f6' }}
+                          style={{ backgroundColor: wsColor || activeProject?.color || '#FF3700' }}
                         >
                           {wsLogo ? (
                             <img src={wsLogo} alt="Workspace logo" className="w-full h-full object-cover" />
                           ) : (
-                            <img src="/logo.svg" alt="Flowie" className="w-full h-full object-cover" />
+                            <img src="/logo-mark.svg" alt="Flowie" className="size-6" />
                           )}
                         </div>
                         <div className="absolute inset-0 rounded-lg bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">

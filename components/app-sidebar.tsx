@@ -81,7 +81,7 @@ export function AppSidebar() {
                   <SidebarMenuButton size="lg" className="cursor-pointer">
                     <div
                       className="flex aspect-square size-8 shrink-0 items-center justify-center rounded-lg overflow-hidden transition-colors duration-200"
-                      style={{ backgroundColor: activeProject?.color }}
+                      style={{ backgroundColor: activeProject?.color || '#FF3700' }}
                     >
                       {activeProject && (
                         activeProject.logo_url && !logoError.has(activeProject.id) ? (
@@ -92,7 +92,7 @@ export function AppSidebar() {
                             onError={() => handleLogoError(activeProject.id)}
                           />
                         ) : (
-                          <img src="/logo.svg" alt="Flowie" className="size-8 object-cover" />
+                          <img src="/logo-mark.svg" alt="Flowie" className="size-5" />
                         )
                       )}
                     </div>
@@ -112,7 +112,7 @@ export function AppSidebar() {
                     >
                       <span
                         className="inline-flex w-5 h-5 rounded-md items-center justify-center overflow-hidden shrink-0"
-                        style={{ backgroundColor: project.color }}
+                        style={{ backgroundColor: project.color || '#FF3700' }}
                       >
                         {project.logo_url && !logoError.has(project.id) ? (
                           <img
@@ -122,7 +122,7 @@ export function AppSidebar() {
                             onError={() => handleLogoError(project.id)}
                           />
                         ) : (
-                          <img src="/logo.svg" alt="Flowie" className="w-5 h-5 object-cover" />
+                          <img src="/logo-mark.svg" alt="Flowie" className="size-3" />
                         )}
                       </span>
                       <span className={project.id === activeProjectId ? "font-semibold" : ""}>
