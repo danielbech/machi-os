@@ -5,7 +5,6 @@ import { createClient } from "@/lib/supabase/client";
 import { useWorkspace } from "@/lib/workspace-context";
 import {
   ensureDefaultColumns,
-  loadFeedbackColumns,
   createFeedbackColumn,
   updateFeedbackColumn,
   deleteFeedbackColumn,
@@ -38,7 +37,7 @@ import { toast } from "sonner";
 import { Plus, Trash2, ThumbsUp } from "lucide-react";
 
 export default function FeedbackPage() {
-  const { user, activeProjectId, activeProject } = useWorkspace();
+  const { user, activeProject } = useWorkspace();
   const isAdmin = activeProject?.role === "owner" || activeProject?.role === "admin";
 
   const [columns, setColumns] = useState<FeedbackColumn[]>([]);
@@ -79,12 +78,12 @@ export default function FeedbackPage() {
   useEffect(() => { prevTicketsRef.current = tickets; }, [tickets]);
 
   const loadData = useCallback(async () => {
-    if (!activeProjectId || !user) return;
+    if (!user) return;
 
-    const cols = await ensureDefaultColumns(activeProjectId);
+    const cols = await ensureDefaultColumns();
     setColumns(cols);
 
-    const grouped = await loadFeedbackTickets(activeProjectId, user.id);
+    const grouped = await loadFeedbackTickets(user.id);
     // Build kanban value keyed by column ID (ensure every column has an array)
     const kanbanValue: Record<string, FeedbackTicket[]> = {};
     for (const col of cols) {
@@ -92,7 +91,7 @@ export default function FeedbackPage() {
     }
     setTickets(kanbanValue);
     setInitialLoading(false);
-  }, [activeProjectId, user]);
+  }, [user]);
 
   useEffect(() => {
     loadData();
@@ -101,7 +100,6 @@ export default function FeedbackPage() {
   // Realtime subscription
   const realtimeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => {
-    if (!activeProjectId) return;
     const supabase = createClient();
 
     const reload = () => {
@@ -112,7 +110,7 @@ export default function FeedbackPage() {
     };
 
     const channel = supabase
-      .channel(`feedback-${activeProjectId}`)
+      .channel('feedback-global')
       .on("postgres_changes", { event: "*", schema: "public", table: "feedback_tickets" }, reload)
       .on("postgres_changes", { event: "*", schema: "public", table: "feedback_votes" }, reload)
       .on("postgres_changes", { event: "*", schema: "public", table: "feedback_columns" }, reload)
@@ -122,7 +120,7 @@ export default function FeedbackPage() {
       if (realtimeTimer.current) clearTimeout(realtimeTimer.current);
       supabase.removeChannel(channel);
     };
-  }, [activeProjectId, loadData]);
+  }, [loadData]);
 
   // --- Kanban reorder handler (same pattern as board page) ---
   const handleKanbanChange = async (newCols: Record<string, FeedbackTicket[]>) => {
@@ -165,13 +163,12 @@ export default function FeedbackPage() {
 
   // --- Ticket actions ---
   const handleCreateTicket = async () => {
-    if (!user || !title.trim() || !activeProjectId || !dialogColumnId) return;
+    if (!user || !title.trim() || !dialogColumnId) return;
     setSubmitting(true);
     try {
       const newTicket = await createFeedbackTicket(
         user.id,
         { title: title.trim(), description: description.trim(), column_id: dialogColumnId },
-        activeProjectId
       );
       // Add author info from current user profile
       newTicket.author = undefined; // Will be loaded on next refresh
@@ -293,9 +290,9 @@ export default function FeedbackPage() {
   };
 
   const handleAddColumn = async () => {
-    if (!newColumnTitle.trim() || !activeProjectId) return;
+    if (!newColumnTitle.trim()) return;
     try {
-      const col = await createFeedbackColumn(activeProjectId, newColumnTitle.trim(), columns.length);
+      const col = await createFeedbackColumn(newColumnTitle.trim(), columns.length);
       if (col) {
         setColumns(prev => [...prev, col]);
         setTickets(prev => ({ ...prev, [col.id]: [] }));

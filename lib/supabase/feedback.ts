@@ -10,20 +10,19 @@ const DEFAULT_COLUMNS = [
 
 // --- Columns ---
 
-export async function ensureDefaultColumns(projectId: string): Promise<FeedbackColumn[]> {
+export async function ensureDefaultColumns(): Promise<FeedbackColumn[]> {
   const supabase = createClient()
 
   const { data: existing } = await supabase
     .from('feedback_columns')
     .select('id, project_id, title, sort_order')
-    .eq('project_id', projectId)
     .order('sort_order')
 
   if (existing && existing.length > 0) return existing
 
   const { data: created, error } = await supabase
     .from('feedback_columns')
-    .insert(DEFAULT_COLUMNS.map(c => ({ project_id: projectId, ...c })))
+    .insert(DEFAULT_COLUMNS.map(c => ({ ...c })))
     .select('id, project_id, title, sort_order')
     .order('sort_order')
 
@@ -35,13 +34,12 @@ export async function ensureDefaultColumns(projectId: string): Promise<FeedbackC
   return created || []
 }
 
-export async function loadFeedbackColumns(projectId: string): Promise<FeedbackColumn[]> {
+export async function loadFeedbackColumns(): Promise<FeedbackColumn[]> {
   const supabase = createClient()
 
   const { data, error } = await supabase
     .from('feedback_columns')
     .select('id, project_id, title, sort_order')
-    .eq('project_id', projectId)
     .order('sort_order')
 
   if (error) {
@@ -53,7 +51,6 @@ export async function loadFeedbackColumns(projectId: string): Promise<FeedbackCo
 }
 
 export async function createFeedbackColumn(
-  projectId: string,
   title: string,
   sortOrder: number
 ): Promise<FeedbackColumn | null> {
@@ -61,7 +58,7 @@ export async function createFeedbackColumn(
 
   const { data, error } = await supabase
     .from('feedback_columns')
-    .insert({ project_id: projectId, title, sort_order: sortOrder })
+    .insert({ title, sort_order: sortOrder })
     .select('id, project_id, title, sort_order')
     .single()
 
@@ -118,7 +115,6 @@ export async function reorderFeedbackColumns(columns: { id: string; sort_order: 
 // --- Tickets ---
 
 export async function loadFeedbackTickets(
-  projectId: string,
   userId: string
 ): Promise<Record<string, FeedbackTicket[]>> {
   const supabase = createClient()
@@ -126,7 +122,6 @@ export async function loadFeedbackTickets(
   const { data: tickets, error } = await supabase
     .from('feedback_tickets')
     .select('id, user_id, title, description, category, status, column_id, sort_order, created_at')
-    .eq('project_id', projectId)
     .order('sort_order')
 
   if (error) {
@@ -210,7 +205,6 @@ export async function loadFeedbackTickets(
 export async function createFeedbackTicket(
   userId: string,
   ticket: { title: string; description: string; column_id: string },
-  projectId: string
 ): Promise<FeedbackTicket> {
   const supabase = createClient()
 
@@ -222,7 +216,6 @@ export async function createFeedbackTicket(
       description: ticket.description,
       column_id: ticket.column_id,
       category: 'feedback',
-      project_id: projectId,
     })
     .select()
     .single()
