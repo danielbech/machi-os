@@ -1517,7 +1517,7 @@ export const GanttMarker: FC<
     >
       <div
         className={cn(
-          "group pointer-events-auto sticky top-0 flex select-auto flex-row flex-nowrap items-center gap-1 whitespace-nowrap rounded-b-md border px-2 py-1 text-foreground text-xs backdrop-blur-sm transition-colors",
+          "group pointer-events-auto sticky top-0 flex select-auto flex-row flex-nowrap items-center gap-1 whitespace-nowrap rounded-b-md border px-1.5 py-0.5 text-foreground text-[10px] leading-tight backdrop-blur-sm transition-colors",
           dragging ? "cursor-grabbing" : onMove ? "cursor-grab" : "cursor-default",
           color ? "hover:brightness-125" : "hover:bg-white/15",
           !color && "border-white/[0.06] bg-white/10",
@@ -1539,7 +1539,7 @@ export const GanttMarker: FC<
         {editing ? (
           <input
             ref={inputRef}
-            className="bg-transparent outline-none text-xs text-foreground w-16 min-w-0"
+            className="bg-transparent outline-none text-[10px] leading-tight text-foreground w-16 min-w-0"
             value={editValue}
             onChange={(e) => setEditValue(e.target.value)}
             onBlur={commitEdit}
@@ -1602,7 +1602,7 @@ export const GanttProvider: FC<GanttProviderProps> = ({
   const [, setScrollX] = useGanttScrollX();
   const [sidebarWidth, setSidebarWidth] = useState(0);
 
-  const headerHeight = 60;
+  const headerHeight = 76;
   const rowHeight = 36;
   let columnWidth = 50;
 
