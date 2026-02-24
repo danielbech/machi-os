@@ -776,7 +776,7 @@ export const GanttCreateMarkerTrigger: FC<GanttCreateMarkerTriggerProps> = ({
       ref={mouseRef}
     >
       <div
-        className="-ml-2 pointer-events-auto sticky top-6 z-20 flex w-4 flex-col items-center justify-center gap-1 overflow-visible opacity-0 group-hover:opacity-100"
+        className="-ml-2 pointer-events-auto sticky top-[44px] z-30 flex w-4 flex-col items-center justify-center gap-1 overflow-visible opacity-0 group-hover:opacity-100"
         style={{ transform: `translateX(${x}px)` }}
       >
         <button
@@ -1508,7 +1508,7 @@ export const GanttMarker: FC<
 
   return (
     <div
-      className="pointer-events-none absolute top-0 left-0 z-20 flex h-full select-none flex-col items-center justify-center overflow-visible"
+      className="pointer-events-none absolute top-0 left-0 z-30 flex h-full select-none flex-col items-center justify-center overflow-visible"
       data-gantt-marker
       style={{
         width: 0,
@@ -1517,7 +1517,7 @@ export const GanttMarker: FC<
     >
       <div
         className={cn(
-          "group pointer-events-auto sticky top-0 flex select-auto flex-row flex-nowrap items-center gap-1 whitespace-nowrap rounded-b-md border px-2 py-1 text-foreground text-xs backdrop-blur-sm transition-colors",
+          "group pointer-events-auto sticky top-[62px] flex select-auto flex-row flex-nowrap items-center gap-1 whitespace-nowrap rounded-md border px-1.5 py-0.5 text-foreground text-[10px] leading-tight backdrop-blur-sm transition-colors",
           dragging ? "cursor-grabbing" : onMove ? "cursor-grab" : "cursor-default",
           color ? "hover:brightness-125" : "hover:bg-white/15",
           !color && "border-white/[0.06] bg-white/10",
@@ -1539,7 +1539,7 @@ export const GanttMarker: FC<
         {editing ? (
           <input
             ref={inputRef}
-            className="bg-transparent outline-none text-xs text-foreground w-16 min-w-0"
+            className="bg-transparent outline-none text-[10px] text-foreground w-14 min-w-0"
             value={editValue}
             onChange={(e) => setEditValue(e.target.value)}
             onBlur={commitEdit}
@@ -1602,7 +1602,7 @@ export const GanttProvider: FC<GanttProviderProps> = ({
   const [, setScrollX] = useGanttScrollX();
   const [sidebarWidth, setSidebarWidth] = useState(0);
 
-  const headerHeight = 60;
+  const headerHeight = 84;
   const rowHeight = 36;
   let columnWidth = 50;
 
@@ -1933,7 +1933,7 @@ export const GanttToday: FC<GanttTodayProps> = ({ className }) => {
 
   return (
     <div
-      className="pointer-events-none absolute top-0 left-0 z-20 flex h-full select-none flex-col items-center overflow-visible"
+      className="pointer-events-none absolute top-0 left-0 z-30 flex h-full select-none flex-col items-center overflow-visible"
       style={{
         width: 0,
         transform: `translateX(calc(var(--gantt-column-width) * ${offset} + ${innerOffset}px))`,
@@ -1941,7 +1941,7 @@ export const GanttToday: FC<GanttTodayProps> = ({ className }) => {
     >
       <div
         className={cn(
-          "pointer-events-auto sticky top-0 z-30 flex select-auto items-center justify-center whitespace-nowrap rounded-b-md border border-blue-500/30 bg-blue-500/15 px-1.5 py-0.5 text-blue-400 text-[10px] leading-tight backdrop-blur-sm",
+          "pointer-events-auto sticky top-[44px] z-30 flex select-auto items-center justify-center whitespace-nowrap rounded-md border border-blue-500/30 bg-blue-500/15 px-1.5 py-0.5 text-blue-400 text-[10px] leading-tight backdrop-blur-sm",
           className
         )}
       >
