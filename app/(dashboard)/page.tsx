@@ -30,6 +30,7 @@ export default function BoardPage() {
 
   const columnTitles = getColumnTitles(weekMode);
   const [columns, setColumns] = useState<Record<string, Task[]>>(() => getEmptyColumns(weekMode));
+  const [initialLoading, setInitialLoading] = useState(true);
   const [addingToColumn, setAddingToColumn] = useState<string | null>(null);
   const [addingAtIndex, setAddingAtIndex] = useState<number | null>(null);
   const [newCardTitle, setNewCardTitle] = useState("");
@@ -90,8 +91,10 @@ export default function BoardPage() {
         filtered[day] = tasks[day] || [];
       }
       setColumns(filtered);
+      setInitialLoading(false);
     } catch (error) {
       console.error("Error loading tasks:", error);
+      setInitialLoading(false);
     }
   }, [activeProjectId, weekDays, areaId]);
 
@@ -103,6 +106,7 @@ export default function BoardPage() {
     localStorage.removeItem("flowie-hide-completed");
     if (!activeProjectId) {
       setColumns(getEmptyColumns(weekMode));
+      setInitialLoading(false);
       return;
     }
     refreshTasks();
@@ -441,6 +445,26 @@ export default function BoardPage() {
     await addToBacklog(task);
     await updateDayTasks(activeProjectId, sourceColumn, updatedColumnItems, areaId);
   };
+
+  if (initialLoading) {
+    return (
+      <main className="flex min-h-screen flex-col pt-4 pr-4 md:pr-8">
+        <div className="flex gap-2 overflow-hidden p-1 pl-4 md:pl-8">
+          {weekDays.map((day) => (
+            <div key={day} className="w-[85vw] sm:w-[280px] shrink-0 p-2.5 space-y-2">
+              <div className="flex items-baseline gap-2 px-1 mb-1.5">
+                <div className="h-5 w-20 bg-white/5 rounded animate-pulse" />
+                <div className="h-4 w-12 bg-white/5 rounded animate-pulse" />
+              </div>
+              {[...Array(day === "monday" ? 4 : day === "tuesday" ? 3 : 2)].map((_, i) => (
+                <div key={i} className="h-12 bg-white/[0.02] rounded-lg border border-white/5 animate-pulse" />
+              ))}
+            </div>
+          ))}
+        </div>
+      </main>
+    );
+  }
 
   return (
     <main className="flex min-h-screen flex-col pt-4 pr-4 md:pr-8">
