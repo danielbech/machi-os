@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { useWorkspace } from "@/lib/workspace-context";
 import { useBacklog } from "@/lib/backlog-context";
 import { useCalendar } from "@/lib/calendar-context";
@@ -48,6 +48,11 @@ export function AppSidebar() {
   const [settingsDefaultTab, setSettingsDefaultTab] = useState("general");
   const [showCreateWorkspace, setShowCreateWorkspace] = useState(false);
   const [workspaceMembers, setWorkspaceMembers] = useState<WorkspaceMember[]>([]);
+  const [logoError, setLogoError] = useState<Set<string>>(new Set());
+
+  const handleLogoError = useCallback((projectId: string) => {
+    setLogoError(prev => new Set(prev).add(projectId));
+  }, []);
 
   const handleOpenSettings = async (tab = "general") => {
     setSettingsDefaultTab(tab);
@@ -75,11 +80,16 @@ export function AppSidebar() {
                 <DropdownMenuTrigger asChild>
                   <SidebarMenuButton size="lg" className="cursor-pointer">
                     <div
-                      className="group flex aspect-square size-8 items-center justify-center rounded-lg overflow-hidden"
+                      className="flex aspect-square size-8 shrink-0 items-center justify-center rounded-lg overflow-hidden"
                       style={{ backgroundColor: activeProject?.color || "#3b82f6" }}
                     >
-                      {activeProject?.logo_url ? (
-                        <img src={activeProject.logo_url} alt={activeProject.name} className="size-8 object-cover transition-transform duration-200 group-hover:scale-110" />
+                      {activeProject?.logo_url && !logoError.has(activeProject.id) ? (
+                        <img
+                          src={activeProject.logo_url}
+                          alt={activeProject.name}
+                          className="size-8 object-cover"
+                          onError={() => handleLogoError(activeProject.id)}
+                        />
                       ) : (
                         <Blocks className="size-4 text-white/90" />
                       )}
@@ -102,8 +112,13 @@ export function AppSidebar() {
                         className="inline-flex w-5 h-5 rounded-md items-center justify-center overflow-hidden shrink-0"
                         style={{ backgroundColor: project.color }}
                       >
-                        {project.logo_url ? (
-                          <img src={project.logo_url} alt={project.name} className="w-5 h-5 object-cover" />
+                        {project.logo_url && !logoError.has(project.id) ? (
+                          <img
+                            src={project.logo_url}
+                            alt={project.name}
+                            className="w-5 h-5 object-cover"
+                            onError={() => handleLogoError(project.id)}
+                          />
                         ) : (
                           <Blocks className="size-3 text-white/90" />
                         )}
