@@ -443,7 +443,7 @@ export default function BoardPage() {
   };
 
   return (
-    <main className="flex min-h-screen flex-col p-4 md:px-8 md:pt-4">
+    <main className="flex min-h-screen flex-col pt-4 pr-4 md:pr-8">
       <div>
         <Kanban
           value={filteredColumns}
@@ -493,7 +493,7 @@ export default function BoardPage() {
             }
           }}
         >
-          <KanbanBoard className="overflow-x-auto p-1 pb-3">
+          <KanbanBoard className="overflow-x-auto p-1 pb-3 pl-4 md:pl-8">
             {Object.entries(filteredColumns).map(([columnId, items]) => (
               <KanbanColumn
                 key={columnId}
