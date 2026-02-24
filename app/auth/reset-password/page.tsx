@@ -107,7 +107,7 @@ function ResetPasswordForm() {
       <Card className="w-full max-w-md border-white/[0.08] bg-white/[0.04] backdrop-blur-2xl shadow-2xl">
         <CardHeader>
           <div className="flex items-center gap-3 mb-2">
-            <img src="/logo.svg" alt="Machi OS" className="w-10 h-10" />
+            <img src="/logo.svg" alt="Flowie" className="w-10 h-10 rounded-lg" />
             <div>
               <CardTitle className="text-2xl">Reset Password</CardTitle>
               <CardDescription className="text-white/40">
@@ -211,7 +211,7 @@ export default function ResetPasswordPage() {
           <Card className="w-full max-w-md border-white/[0.08] bg-white/[0.04] backdrop-blur-2xl shadow-2xl">
             <CardHeader>
               <div className="flex items-center gap-3 mb-2">
-                <img src="/logo.svg" alt="Machi OS" className="w-10 h-10" />
+                <img src="/logo.svg" alt="Flowie" className="w-10 h-10 rounded-lg" />
                 <div>
                   <CardTitle className="text-2xl">Reset Password</CardTitle>
                   <CardDescription className="text-white/40">

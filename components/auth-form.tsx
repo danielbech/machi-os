@@ -65,15 +65,15 @@ export function AuthForm() {
           hoverDampness={0.25}
           rayCount={0}
           mixBlendMode="lighten"
-          colors={['#A0492D', '#FF7300', '#D2AA1A']}
+          colors={['#454545', '#ff9238', '#ff3700']}
         />
       </div>
       <Card className="relative z-10 w-full max-w-md border-white/[0.08] bg-white/[0.04] backdrop-blur-2xl shadow-2xl">
         <CardHeader>
           <div className="flex items-center gap-3 mb-2">
-            <img src="/logo.svg" alt="Machi OS" className="w-10 h-10" />
+            <img src="/logo.svg" alt="Flowie" className="w-10 h-10 rounded-lg" />
             <div>
-              <CardTitle className="text-2xl">Machi OS</CardTitle>
+              <CardTitle className="text-2xl">Flowie</CardTitle>
               <CardDescription className="text-white/40">
                 {isForgot ? 'Reset your password' : isSignUp ? 'Create your account' : 'Sign in to your account'}
               </CardDescription>
