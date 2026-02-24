@@ -516,11 +516,21 @@ export default function TimelinePage() {
     }
   };
 
-  // Filter markers: show global markers always, entry-scoped only when that entry is selected
-  const visibleMarkers = useMemo(
-    () => markers.filter((m) => !m.entry_id || m.entry_id === selectedEntryId),
-    [markers, selectedEntryId]
-  );
+  // Filter markers: show global markers always, entry-scoped markers for selected entry + ancestors
+  const visibleMarkers = useMemo(() => {
+    if (!selectedEntryId) return markers.filter((m) => !m.entry_id);
+
+    // Build set: selected entry + all its ancestors
+    const relevantIds = new Set<string>();
+    let currentId: string | null = selectedEntryId;
+    while (currentId) {
+      relevantIds.add(currentId);
+      const entry = entries.find((e) => e.id === currentId);
+      currentId = entry?.parent_id ?? null;
+    }
+
+    return markers.filter((m) => !m.entry_id || relevantIds.has(m.entry_id));
+  }, [markers, selectedEntryId, entries]);
 
   const handleCreateMarker = async (date: Date) => {
     if (!activeProjectId) return;
