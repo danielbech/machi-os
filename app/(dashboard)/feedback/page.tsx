@@ -9,6 +9,7 @@ import {
   createFeedbackColumn,
   updateFeedbackColumn,
   deleteFeedbackColumn,
+  reorderFeedbackColumns,
   loadFeedbackTickets,
   createFeedbackTicket,
   updateFeedbackTicket,
@@ -30,6 +31,7 @@ import {
   Kanban,
   KanbanBoard,
   KanbanColumn,
+  KanbanColumnHandle,
   KanbanOverlay,
 } from "@/components/ui/kanban";
 import { toast } from "sonner";
@@ -125,20 +127,37 @@ export default function FeedbackPage() {
   // --- Kanban reorder handler (same pattern as board page) ---
   const handleKanbanChange = async (newCols: Record<string, FeedbackTicket[]>) => {
     const prev = prevTicketsRef.current;
+    const prevKeys = Object.keys(prev);
+    const newKeys = Object.keys(newCols);
     setTickets(newCols);
 
     suppressReload.current = true;
     try {
-      // Only persist columns that actually changed
-      const updates = Object.entries(newCols).filter(([colId, items]) => {
+      // Detect column reorder (keys changed order)
+      const columnsReordered = prevKeys.length === newKeys.length &&
+        newKeys.some((key, i) => key !== prevKeys[i]);
+
+      if (columnsReordered) {
+        const reordered = newKeys.map((id, i) => ({ id, sort_order: i }));
+        setColumns(prev => {
+          const map = new Map(prev.map(c => [c.id, c]));
+          return newKeys.map((id, i) => ({ ...map.get(id)!, sort_order: i }));
+        });
+        await reorderFeedbackColumns(reordered);
+      }
+
+      // Persist ticket changes within columns
+      const ticketUpdates = Object.entries(newCols).filter(([colId, items]) => {
         const prevItems = prev[colId];
         if (!prevItems || prevItems.length !== items.length) return true;
         return items.some((t, i) => t.id !== prevItems[i].id);
       });
 
-      await Promise.all(
-        updates.map(([colId, items]) => reorderFeedbackTickets(colId, items))
-      );
+      if (ticketUpdates.length > 0) {
+        await Promise.all(
+          ticketUpdates.map(([colId, items]) => reorderFeedbackTickets(colId, items))
+        );
+      }
     } finally {
       setTimeout(() => { suppressReload.current = false; }, 2000);
     }
@@ -379,52 +398,54 @@ export default function FeedbackPage() {
               className="w-[85vw] sm:w-[280px] shrink-0 rounded-lg"
             >
               {/* Column header */}
-              <div className="mb-1.5 px-1 flex items-center justify-between group/header">
-                <div className="flex items-baseline gap-2 min-w-0 flex-1">
-                  {renamingColumnId === col.id ? (
-                    <input
-                      value={renameValue}
-                      onChange={(e) => setRenameValue(e.target.value)}
-                      className="font-semibold text-sm bg-transparent outline-none border-b border-white/20 focus:border-white/40 w-full min-w-0"
-                      autoFocus
-                      onFocus={(e) => e.target.select()}
-                      onBlur={() => handleRenameColumn(col.id)}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter") { e.preventDefault(); handleRenameColumn(col.id); }
-                        if (e.key === "Escape") setRenamingColumnId(null);
-                      }}
-                    />
-                  ) : (
-                    <h2
-                      className={`font-semibold text-sm truncate ${isAdmin ? "cursor-text hover:text-white/80" : ""}`}
-                      onClick={() => {
-                        if (!isAdmin) return;
-                        setRenamingColumnId(col.id);
-                        setRenameValue(col.title);
-                      }}
+              <KanbanColumnHandle asChild disabled={!isAdmin || renamingColumnId === col.id}>
+                <div className="mb-1.5 px-1 flex items-center justify-between group/header">
+                  <div className="flex items-baseline gap-2 min-w-0 flex-1">
+                    {renamingColumnId === col.id ? (
+                      <input
+                        value={renameValue}
+                        onChange={(e) => setRenameValue(e.target.value)}
+                        className="font-semibold text-sm bg-transparent outline-none border-b border-white/20 focus:border-white/40 w-full min-w-0"
+                        autoFocus
+                        onFocus={(e) => e.target.select()}
+                        onBlur={() => handleRenameColumn(col.id)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") { e.preventDefault(); handleRenameColumn(col.id); }
+                          if (e.key === "Escape") setRenamingColumnId(null);
+                        }}
+                      />
+                    ) : (
+                      <h2
+                        className={`font-semibold text-sm truncate ${isAdmin ? "cursor-text hover:text-white/80" : ""}`}
+                        onClick={() => {
+                          if (!isAdmin) return;
+                          setRenamingColumnId(col.id);
+                          setRenameValue(col.title);
+                        }}
+                      >
+                        {col.title}
+                      </h2>
+                    )}
+                    {renamingColumnId !== col.id && (
+                      <span className="text-xs text-white/40 shrink-0">
+                        {(tickets[col.id] || []).length}
+                      </span>
+                    )}
+                  </div>
+
+                  {isAdmin && renamingColumnId !== col.id && (
+                    <Button
+                      variant="ghost"
+                      size="icon-xs"
+                      className="opacity-0 group-hover/header:opacity-100 text-white/40 hover:text-red-400 hover:bg-red-500/10 transition-all shrink-0"
+                      onClick={() => setDeleteColumnConfirm(col.id)}
+                      aria-label={`Delete ${col.title}`}
                     >
-                      {col.title}
-                    </h2>
-                  )}
-                  {renamingColumnId !== col.id && (
-                    <span className="text-xs text-white/40 shrink-0">
-                      {(tickets[col.id] || []).length}
-                    </span>
+                      <Trash2 className="size-3" />
+                    </Button>
                   )}
                 </div>
-
-                {isAdmin && renamingColumnId !== col.id && (
-                  <Button
-                    variant="ghost"
-                    size="icon-xs"
-                    className="opacity-0 group-hover/header:opacity-100 text-white/40 hover:text-red-400 hover:bg-red-500/10 transition-all shrink-0"
-                    onClick={() => setDeleteColumnConfirm(col.id)}
-                    aria-label={`Delete ${col.title}`}
-                  >
-                    <Trash2 className="size-3" />
-                  </Button>
-                )}
-              </div>
+              </KanbanColumnHandle>
 
               {/* Cards */}
               <div className="flex flex-col gap-1.5 overflow-y-auto pr-1">
@@ -541,8 +562,13 @@ export default function FeedbackPage() {
               placeholder="Description (optional)"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              rows={3}
-              className="flex w-full rounded-md border border-white/10 bg-white/5 px-3 py-2 text-sm placeholder:text-white/30 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-white/20 resize-none"
+              rows={2}
+              className="flex w-full rounded-md border border-white/10 bg-white/5 px-3 py-2 text-sm placeholder:text-white/30 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-white/20 resize-none overflow-hidden"
+              onInput={(e) => {
+                const el = e.currentTarget;
+                el.style.height = "auto";
+                el.style.height = el.scrollHeight + "px";
+              }}
             />
 
             {/* Column picker */}
@@ -597,11 +623,19 @@ export default function FeedbackPage() {
               autoFocus
             />
             <textarea
+              ref={(el) => {
+                if (el) { el.style.height = "auto"; el.style.height = el.scrollHeight + "px"; }
+              }}
               placeholder="Description (optional)"
               value={editDescription}
               onChange={(e) => setEditDescription(e.target.value)}
-              rows={3}
-              className="flex w-full rounded-md border border-white/10 bg-white/5 px-3 py-2 text-sm placeholder:text-white/30 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-white/20 resize-none"
+              rows={2}
+              className="flex w-full rounded-md border border-white/10 bg-white/5 px-3 py-2 text-sm placeholder:text-white/30 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-white/20 resize-none overflow-hidden"
+              onInput={(e) => {
+                const el = e.currentTarget;
+                el.style.height = "auto";
+                el.style.height = el.scrollHeight + "px";
+              }}
             />
 
             {/* Column picker */}
