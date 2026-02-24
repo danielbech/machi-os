@@ -1103,7 +1103,7 @@ export const GanttFeatureItemCard: FC<GanttFeatureItemCardProps> = ({
   selected,
   onSelect,
 }) => {
-  const [, setDragging] = useGanttDragging();
+  const [globalDragging, setDragging] = useGanttDragging();
   const { attributes, listeners, setNodeRef } = useDraggable({ id });
   const isPressed = Boolean(attributes["aria-pressed"]);
 
@@ -1125,7 +1125,7 @@ export const GanttFeatureItemCard: FC<GanttFeatureItemCardProps> = ({
           ? { "--tw-ring-color": `${accentColor}50`, borderColor: `${accentColor}50` } as React.CSSProperties
           : {}),
       }}
-      onClick={onSelect}
+      onClick={globalDragging ? undefined : onSelect}
     >
       {accentColor && (
         <div
@@ -1416,6 +1416,7 @@ export const GanttMarker: FC<
   const gantt = useContext(GanttContext);
   const [currentDate, setCurrentDate] = useState(date);
   const [dragging, setDragging] = useState(false);
+  const [, setGlobalDragging] = useGanttDragging();
   const [editing, setEditing] = useState(false);
   const [editValue, setEditValue] = useState(label);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -1484,6 +1485,7 @@ export const GanttMarker: FC<
       const originDate = getDateByMousePosition(gantt, originRelativeX);
       didDragRef.current = false;
       setDragging(true);
+      setGlobalDragging(true);
 
       const handlePointerMove = (ev: PointerEvent) => {
         if (Math.abs(ev.clientX - originX) > 3) {
@@ -1498,6 +1500,8 @@ export const GanttMarker: FC<
 
       const handlePointerUp = (ev: PointerEvent) => {
         setDragging(false);
+        // Delay clearing global drag so click events on items underneath are suppressed
+        setTimeout(() => setGlobalDragging(false), 50);
         if (didDragRef.current) {
           const currentRelativeX = getRelativeX(ev.clientX);
           const currentMouseDate = getDateByMousePosition(gantt, currentRelativeX);
@@ -1513,7 +1517,7 @@ export const GanttMarker: FC<
       document.addEventListener("pointermove", handlePointerMove);
       document.addEventListener("pointerup", handlePointerUp);
     },
-    [onMove, editing, gantt, id, getRelativeX, currentDate, differenceIn]
+    [onMove, editing, gantt, id, getRelativeX, currentDate, differenceIn, setGlobalDragging]
   );
 
   return (
