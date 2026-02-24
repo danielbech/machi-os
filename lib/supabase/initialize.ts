@@ -89,6 +89,7 @@ export async function seedDemoTasks(areaId: string, projectId: string) {
       name: 'Flowie',
       slug: 'flowie',
       color: 'orange',
+      icon: '❤️',
       sort_order: 0,
       active: true,
     })
@@ -149,6 +150,17 @@ export async function seedDemoTasks(areaId: string, projectId: string) {
         { id: crypto.randomUUID(), text: 'Connect Google Calendar', checked: false },
       ],
       client: clientId,
+    },
+    {
+      area_id: areaId,
+      title: 'Use spacebar to check a card',
+      day: 'thursday',
+      type: 'task',
+      priority: 'medium',
+      sort_order: 0,
+      completed: false,
+      assignees: [],
+      checklist: [],
     },
   ])
 
