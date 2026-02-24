@@ -38,12 +38,12 @@ export function BacklogProvider({ children }: { children: React.ReactNode }) {
   const { activeProjectId, areaId } = useWorkspace();
 
   const [backlogOpen, setBacklogOpen] = useState(() => {
-    try { return localStorage.getItem("machi-backlog-open") === "true"; }
+    try { return localStorage.getItem("flowie-backlog-open") === "true"; }
     catch { return false; }
   });
   const toggleBacklog = useCallback(() => {
     setBacklogOpen((prev) => {
-      localStorage.setItem("machi-backlog-open", String(!prev));
+      localStorage.setItem("flowie-backlog-open", String(!prev));
       return !prev;
     });
   }, []);
@@ -55,12 +55,12 @@ export function BacklogProvider({ children }: { children: React.ReactNode }) {
   // Backlog panel width (persisted)
   const [backlogWidth, setBacklogWidthState] = useState(400);
   useEffect(() => {
-    const stored = localStorage.getItem("machi-backlog-width");
+    const stored = localStorage.getItem("flowie-backlog-width");
     if (stored) setBacklogWidthState(Number(stored));
   }, []);
   const setBacklogWidth = useCallback((w: number) => {
     setBacklogWidthState(w);
-    localStorage.setItem("machi-backlog-width", String(w));
+    localStorage.setItem("flowie-backlog-width", String(w));
   }, []);
 
   const refreshBacklog = useCallback(async () => {

@@ -19,7 +19,7 @@ import {
 } from "@/components/ui/dialog";
 import { Plus, Trash2, Lightbulb, Bug, MessageSquare } from "lucide-react";
 
-const PLATFORM_OWNERS = ["daniel@oimachi.co", "casper@oimachi.co"];
+const PLATFORM_OWNERS = ["hello@oimachi.co"];
 
 const CATEGORY_CONFIG: Record<FeedbackCategory, { label: string; color: string; icon: typeof Lightbulb }> = {
   idea: { label: "Idea", color: "bg-purple-500/20 text-purple-400", icon: Lightbulb },

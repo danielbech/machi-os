@@ -1,4 +1,4 @@
-# Machi OS
+# Flowie
 
 A custom Kanban-based project management system with enhanced flexibility and workflow optimization.
 

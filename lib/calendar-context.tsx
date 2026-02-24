@@ -58,7 +58,7 @@ function getCurrentMonday() {
 function isTransitionedToNextWeek(transitionDay: number) {
   if (typeof window === "undefined") return false;
   const monday = getCurrentMonday();
-  const marker = localStorage.getItem("machi-last-transition");
+  const marker = localStorage.getItem("flowie-last-transition");
   const currentDay = new Date().getDay();
   const inPostTransitionWindow = transitionDay === 0
     ? currentDay === 0

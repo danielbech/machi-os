@@ -59,7 +59,7 @@ function getCurrentMonday() {
 function isTransitionedToNextWeek(transitionDay: number) {
   if (typeof window === "undefined") return false;
   const monday = getCurrentMonday();
-  const marker = localStorage.getItem("machi-last-transition");
+  const marker = localStorage.getItem("flowie-last-transition");
   const currentDay = new Date().getDay();
   const inPostTransitionWindow = transitionDay === 0
     ? currentDay === 0
@@ -99,7 +99,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
 
   const setActiveProjectId = useCallback((id: string) => {
     setActiveProjectIdState(id);
-    localStorage.setItem("machi-active-project", id);
+    localStorage.setItem("flowie-active-project", id);
   }, []);
 
   const refreshWorkspaces = useCallback(async () => {
@@ -109,7 +109,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     if (!activeStillExists && projects.length > 0) {
       const newId = projects[0].id;
       setActiveProjectIdState(newId);
-      localStorage.setItem("machi-active-project", newId);
+      localStorage.setItem("flowie-active-project", newId);
     }
   }, [activeProjectId]);
 
@@ -154,7 +154,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
 
         setUserProjects(projects);
 
-        const stored = localStorage.getItem("machi-active-project");
+        const stored = localStorage.getItem("flowie-active-project");
         const validStored = projects.find((p) => p.id === stored);
         const projectId = validStored?.id || projects[0]?.id || null;
         setActiveProjectIdState(projectId);
@@ -258,7 +258,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     if (!activeProjectId) return { deleted: 0, carriedOver: 0 };
     const result = await transitionWeek(activeProjectId, areaId);
     const monday = getCurrentMonday();
-    localStorage.setItem("machi-last-transition", monday.toISOString());
+    localStorage.setItem("flowie-last-transition", monday.toISOString());
     setTransitionCount((c) => c + 1);
     return result;
   }, [activeProjectId, areaId]);
@@ -272,7 +272,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
       if (now.getDay() !== transitionDay || now.getHours() < transitionHour) return;
 
       const monday = getCurrentMonday();
-      const marker = localStorage.getItem("machi-last-transition");
+      const marker = localStorage.getItem("flowie-last-transition");
       if (marker === monday.toISOString()) return;
 
       transitionToNextWeek();

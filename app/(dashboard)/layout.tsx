@@ -35,7 +35,7 @@ function DashboardGate({ children }: { children: React.ReactNode }) {
             {/* Mobile header with hamburger trigger */}
             <header className="flex items-center gap-2 px-4 py-3 md:hidden">
               <SidebarTrigger className="-ml-1" />
-              <span className="text-sm font-semibold">Machi OS</span>
+              <span className="text-sm font-semibold">Flowie</span>
             </header>
             {children}
           </SidebarInset>

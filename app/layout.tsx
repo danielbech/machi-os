@@ -14,7 +14,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Machi OS",
+  title: "Flowie",
   description: "Custom Kanban-based project management system",
 };
 

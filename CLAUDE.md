@@ -1,4 +1,4 @@
-# Machi OS
+# Flowie
 
 The operating system for Oimachi — a 2-person digital design & development agency (Daniel & Casper). Started as a weekly kanban board to replace Trello, growing into the central hub for projects, clients, team tasks, AI agent work, and client-facing status views.
 

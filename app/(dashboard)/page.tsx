@@ -45,11 +45,11 @@ export default function BoardPage() {
   const [glowingCards, setGlowingCards] = useState<Set<string>>(new Set());
   const [filterMine, setFilterMine] = useState(() => {
     if (typeof window === "undefined") return false;
-    return localStorage.getItem("machi-filter-mine") === "true";
+    return localStorage.getItem("flowie-filter-mine") === "true";
   });
   const [hideCompleted, setHideCompleted] = useState(() => {
     if (typeof window === "undefined") return false;
-    return localStorage.getItem("machi-hide-completed") === "true";
+    return localStorage.getItem("flowie-hide-completed") === "true";
   });
 
   const currentMember = teamMembers.find(m => m.id === user?.id);
@@ -99,8 +99,8 @@ export default function BoardPage() {
   useEffect(() => {
     setFilterMine(false);
     setHideCompleted(false);
-    localStorage.removeItem("machi-filter-mine");
-    localStorage.removeItem("machi-hide-completed");
+    localStorage.removeItem("flowie-filter-mine");
+    localStorage.removeItem("flowie-hide-completed");
     if (!activeProjectId) {
       setColumns(getEmptyColumns(weekMode));
       return;
@@ -681,7 +681,7 @@ export default function BoardPage() {
             <Tooltip>
               <TooltipTrigger asChild>
                 <button
-                  onClick={() => setFilterMine(f => { const v = !f; localStorage.setItem("machi-filter-mine", String(v)); return v; })}
+                  onClick={() => setFilterMine(f => { const v = !f; localStorage.setItem("flowie-filter-mine", String(v)); return v; })}
                   aria-label={filterMine ? "Show all tasks" : "Show my tasks"}
                   className={`flex items-center justify-center h-10 w-8 pr-0 pl-1.5 hover:w-10 hover:pl-0 transition-all ${
                     filterMine
@@ -700,7 +700,7 @@ export default function BoardPage() {
           <Tooltip>
             <TooltipTrigger asChild>
               <button
-                onClick={() => setHideCompleted(h => { const v = !h; localStorage.setItem("machi-hide-completed", String(v)); return v; })}
+                onClick={() => setHideCompleted(h => { const v = !h; localStorage.setItem("flowie-hide-completed", String(v)); return v; })}
                 aria-label={hideCompleted ? "Show completed tasks" : "Hide completed tasks"}
                 className={`flex items-center justify-center h-10 w-8 pl-0 pr-1.5 hover:w-10 hover:pr-0 transition-all ${
                   hideCompleted
