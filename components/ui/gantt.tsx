@@ -1667,13 +1667,17 @@ export const GanttProvider: FC<GanttProviderProps> = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [range, zoom]);
 
-  // Cmd/Ctrl+wheel to zoom
+  // Cmd/Ctrl+wheel to zoom (throttled to avoid trackpad over-sensitivity)
   useEffect(() => {
     const el = scrollRef.current;
     if (!el || !onZoom) return;
+    let lastZoomTime = 0;
     const handler = (e: WheelEvent) => {
       if (!e.metaKey && !e.ctrlKey) return;
       e.preventDefault();
+      const now = Date.now();
+      if (now - lastZoomTime < 200) return;
+      lastZoomTime = now;
       onZoom(e.deltaY > 0 ? -1 : 1);
     };
     el.addEventListener("wheel", handler, { passive: false });
