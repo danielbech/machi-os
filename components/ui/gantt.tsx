@@ -1515,10 +1515,10 @@ export const GanttMarker: FC<
         transform: `translateX(calc(var(--gantt-column-width) * ${offset} + ${innerOffset}px))`,
       }}
     >
-      <div className="shrink-0" style={{ height: 34 }} />
+      <div className="shrink-0" style={{ height: 28 }} />
       <div
         className={cn(
-          "group pointer-events-auto sticky top-[34px] flex select-auto flex-row flex-nowrap items-center gap-1 whitespace-nowrap rounded-md border px-1.5 py-0.5 text-foreground text-[10px] leading-tight backdrop-blur-sm transition-colors z-10",
+          "group pointer-events-auto sticky top-[28px] flex select-auto flex-row flex-nowrap items-center gap-1 whitespace-nowrap rounded-md border px-1.5 py-0.5 text-foreground text-[10px] leading-tight backdrop-blur-sm transition-colors z-10",
           dragging ? "cursor-grabbing" : onMove ? "cursor-grab" : "cursor-default",
           color ? "hover:brightness-125" : "hover:bg-white/15",
           !color && "border-white/[0.06] bg-white/10",
