@@ -545,6 +545,12 @@ export function SettingsDialog({
                           setDeleteAccountError(data.error || "Failed to delete account");
                           return;
                         }
+                        // Clear all app state so re-signup starts fresh
+                        localStorage.removeItem("flowie-active-project");
+                        localStorage.removeItem("flowie-welcome-seen");
+                        localStorage.removeItem("flowie-filter-mine");
+                        localStorage.removeItem("flowie-hide-completed");
+                        localStorage.removeItem("flowie-last-transition");
                         const supabase = createClient();
                         await supabase.auth.signOut();
                         onOpenChange(false);
