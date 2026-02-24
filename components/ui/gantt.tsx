@@ -1112,12 +1112,15 @@ export const GanttFeatureItemCard: FC<GanttFeatureItemCardProps> = ({
   return (
     <Card
       className={cn(
-        "relative h-full w-full rounded-md border-white/10 hover:border-white/20 bg-background p-2 text-xs shadow-sm transition-colors cursor-pointer overflow-hidden",
+        "relative h-full w-full rounded-md bg-background p-2 text-xs shadow-sm transition-colors cursor-pointer overflow-hidden",
+        !accentColor && "border-white/10 hover:border-white/20",
         selected && !accentColor && "ring-1 ring-white/20 border-white/20",
         selected && accentColor && "ring-1"
       )}
       style={{
-        ...(accentColor ? { borderLeftWidth: 2, borderLeftColor: accentColor } : {}),
+        ...(accentColor
+          ? { borderWidth: 1, borderLeftWidth: 2, borderColor: `${accentColor}30`, borderLeftColor: accentColor }
+          : {}),
         ...(selected && accentColor
           ? { "--tw-ring-color": `${accentColor}50`, borderColor: `${accentColor}50` } as React.CSSProperties
           : {}),
