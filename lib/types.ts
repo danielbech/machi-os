@@ -105,6 +105,8 @@ export interface FeedbackColumn {
   sort_order: number;
 }
 
+export type ReactionType = 'thumbsup' | 'heart' | 'fire';
+
 export interface FeedbackTicket {
   id: string;
   user_id: string;
@@ -114,8 +116,8 @@ export interface FeedbackTicket {
   status: FeedbackStatus;
   column_id: string | null;
   sort_order: number;
-  vote_count: number;
-  user_has_voted: boolean;
+  reactions: Record<ReactionType, number>;
+  user_reactions: ReactionType[];
   created_at: string;
   author?: {
     display_name: string;

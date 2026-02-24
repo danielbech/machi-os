@@ -1,5 +1,5 @@
 import { createClient } from './client'
-import type { FeedbackTicket, FeedbackColumn, FeedbackCategory } from '../types'
+import type { FeedbackTicket, FeedbackColumn, FeedbackCategory, ReactionType } from '../types'
 
 const DEFAULT_COLUMNS = [
   { title: 'Feature requests', sort_order: 0 },
@@ -147,20 +147,27 @@ export async function loadFeedbackTickets(
     (profiles || []).map(p => [p.user_id, p])
   )
 
-  // Load vote counts per ticket
+  // Load reactions per ticket
   const ticketIds = tickets.map(t => t.id)
   const { data: votes } = await supabase
     .from('feedback_votes')
-    .select('ticket_id, user_id')
+    .select('ticket_id, user_id, reaction_type')
     .in('ticket_id', ticketIds)
 
-  const voteCounts = new Map<string, number>()
-  const userVotes = new Set<string>()
+  // { ticketId -> { reaction_type -> count } }
+  const reactionCounts = new Map<string, Record<ReactionType, number>>()
+  // { ticketId -> ReactionType[] } for current user
+  const userReactions = new Map<string, ReactionType[]>()
 
   for (const v of votes || []) {
-    voteCounts.set(v.ticket_id, (voteCounts.get(v.ticket_id) || 0) + 1)
+    const rt = v.reaction_type as ReactionType
+    if (!reactionCounts.has(v.ticket_id)) {
+      reactionCounts.set(v.ticket_id, { thumbsup: 0, heart: 0, fire: 0 })
+    }
+    reactionCounts.get(v.ticket_id)![rt]++
     if (v.user_id === userId) {
-      userVotes.add(v.ticket_id)
+      if (!userReactions.has(v.ticket_id)) userReactions.set(v.ticket_id, [])
+      userReactions.get(v.ticket_id)!.push(rt)
     }
   }
 
@@ -180,8 +187,8 @@ export async function loadFeedbackTickets(
       status: t.status as FeedbackTicket['status'],
       column_id: t.column_id,
       sort_order: t.sort_order,
-      vote_count: voteCounts.get(t.id) || 0,
-      user_has_voted: userVotes.has(t.id),
+      reactions: reactionCounts.get(t.id) || { thumbsup: 0, heart: 0, fire: 0 },
+      user_reactions: userReactions.get(t.id) || [],
       created_at: t.created_at,
       author: profile
         ? {
@@ -234,8 +241,8 @@ export async function createFeedbackTicket(
     status: data.status as FeedbackTicket['status'],
     column_id: data.column_id,
     sort_order: data.sort_order ?? 0,
-    vote_count: 0,
-    user_has_voted: false,
+    reactions: { thumbsup: 0, heart: 0, fire: 0 },
+    user_reactions: [],
     created_at: data.created_at,
   }
 }
@@ -305,16 +312,18 @@ export async function reorderFeedbackTickets(
 
 export async function toggleFeedbackVote(
   ticketId: string,
-  userId: string
+  userId: string,
+  reactionType: ReactionType
 ): Promise<{ voted: boolean }> {
   const supabase = createClient()
 
-  // Check if vote exists
+  // Check if vote exists for this reaction type
   const { data: existing } = await supabase
     .from('feedback_votes')
     .select('id')
     .eq('ticket_id', ticketId)
     .eq('user_id', userId)
+    .eq('reaction_type', reactionType)
     .maybeSingle()
 
   if (existing) {
@@ -329,7 +338,7 @@ export async function toggleFeedbackVote(
     // Add vote
     const { error } = await supabase
       .from('feedback_votes')
-      .insert({ ticket_id: ticketId, user_id: userId })
+      .insert({ ticket_id: ticketId, user_id: userId, reaction_type: reactionType })
 
     if (error) {
       console.error('Error adding vote:', error)

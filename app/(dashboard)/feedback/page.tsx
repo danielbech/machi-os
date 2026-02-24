@@ -16,7 +16,7 @@ import {
   reorderFeedbackTickets,
   toggleFeedbackVote,
 } from "@/lib/supabase/feedback";
-import type { FeedbackTicket, FeedbackColumn } from "@/lib/types";
+import type { FeedbackTicket, FeedbackColumn, ReactionType } from "@/lib/types";
 import { FeedbackCard } from "@/components/feedback-card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -33,7 +33,7 @@ import {
   KanbanOverlay,
 } from "@/components/ui/kanban";
 import { toast } from "sonner";
-import { Plus, Trash2, ChevronUp } from "lucide-react";
+import { Plus, Trash2, ThumbsUp } from "lucide-react";
 
 export default function FeedbackPage() {
   const { user, activeProjectId, activeProject } = useWorkspace();
@@ -228,7 +228,7 @@ export default function FeedbackPage() {
     }
   };
 
-  const handleVote = async (ticketId: string) => {
+  const handleReact = async (ticketId: string, reactionType: ReactionType) => {
     if (!user) return;
     // Optimistic toggle
     setTickets(prev => {
@@ -236,18 +236,23 @@ export default function FeedbackPage() {
       for (const colId of Object.keys(next)) {
         next[colId] = next[colId].map(t => {
           if (t.id !== ticketId) return t;
-          const wasVoted = t.user_has_voted;
+          const wasActive = t.user_reactions.includes(reactionType);
           return {
             ...t,
-            user_has_voted: !wasVoted,
-            vote_count: wasVoted ? t.vote_count - 1 : t.vote_count + 1,
+            reactions: {
+              ...t.reactions,
+              [reactionType]: t.reactions[reactionType] + (wasActive ? -1 : 1),
+            },
+            user_reactions: wasActive
+              ? t.user_reactions.filter(r => r !== reactionType)
+              : [...t.user_reactions, reactionType],
           };
         });
       }
       return next;
     });
     try {
-      await toggleFeedbackVote(ticketId, user.id);
+      await toggleFeedbackVote(ticketId, user.id, reactionType);
     } catch {
       loadData();
     }
@@ -375,13 +380,14 @@ export default function FeedbackPage() {
             >
               {/* Column header */}
               <div className="mb-1.5 px-1 flex items-center justify-between group/header">
-                <div className="flex items-baseline gap-2 min-w-0">
+                <div className="flex items-baseline gap-2 min-w-0 flex-1">
                   {renamingColumnId === col.id ? (
                     <input
                       value={renameValue}
                       onChange={(e) => setRenameValue(e.target.value)}
-                      className="font-semibold text-sm bg-transparent outline-none border-b border-white/20 focus:border-white/40 w-full"
+                      className="font-semibold text-sm bg-transparent outline-none border-b border-white/20 focus:border-white/40 w-full min-w-0"
                       autoFocus
+                      onFocus={(e) => e.target.select()}
                       onBlur={() => handleRenameColumn(col.id)}
                       onKeyDown={(e) => {
                         if (e.key === "Enter") { e.preventDefault(); handleRenameColumn(col.id); }
@@ -390,8 +396,8 @@ export default function FeedbackPage() {
                     />
                   ) : (
                     <h2
-                      className={`font-semibold text-sm ${isAdmin ? "cursor-text" : ""}`}
-                      onDoubleClick={() => {
+                      className={`font-semibold text-sm truncate ${isAdmin ? "cursor-text hover:text-white/80" : ""}`}
+                      onClick={() => {
                         if (!isAdmin) return;
                         setRenamingColumnId(col.id);
                         setRenameValue(col.title);
@@ -400,16 +406,18 @@ export default function FeedbackPage() {
                       {col.title}
                     </h2>
                   )}
-                  <span className="text-xs text-white/40 shrink-0">
-                    {(tickets[col.id] || []).length}
-                  </span>
+                  {renamingColumnId !== col.id && (
+                    <span className="text-xs text-white/40 shrink-0">
+                      {(tickets[col.id] || []).length}
+                    </span>
+                  )}
                 </div>
 
                 {isAdmin && renamingColumnId !== col.id && (
                   <Button
                     variant="ghost"
                     size="icon-xs"
-                    className="opacity-0 group-hover/header:opacity-100 text-white/40 hover:text-red-400 hover:bg-red-500/10 transition-all"
+                    className="opacity-0 group-hover/header:opacity-100 text-white/40 hover:text-red-400 hover:bg-red-500/10 transition-all shrink-0"
                     onClick={() => setDeleteColumnConfirm(col.id)}
                     aria-label={`Delete ${col.title}`}
                   >
@@ -425,7 +433,7 @@ export default function FeedbackPage() {
                     key={ticket.id}
                     ticket={ticket}
                     canDelete={canManageTicket(ticket)}
-                    onVote={handleVote}
+                    onReact={handleReact}
                     onDelete={(id) => setDeleteConfirm(id)}
                     onClick={openEditDialog}
                   />
@@ -492,6 +500,7 @@ export default function FeedbackPage() {
               .flat()
               .find((t) => t.id === value);
             if (!ticket) return null;
+            const totalReactions = ticket.reactions.thumbsup + ticket.reactions.heart + ticket.reactions.fire;
             return (
               <div className="w-[85vw] sm:w-[280px] rounded-lg border border-white/10 bg-card p-3 shadow-lg">
                 <div className="text-sm font-medium line-clamp-2">{ticket.title}</div>
@@ -502,10 +511,10 @@ export default function FeedbackPage() {
                   <div className="text-xs text-white/30">
                     {ticket.author?.display_name}
                   </div>
-                  {ticket.vote_count > 0 && (
-                    <div className="flex items-center gap-0.5 text-xs text-white/30">
-                      <ChevronUp className="size-3.5" />
-                      <span>{ticket.vote_count}</span>
+                  {totalReactions > 0 && (
+                    <div className="flex items-center gap-1 text-xs text-white/30">
+                      <ThumbsUp className="size-3" />
+                      <span>{totalReactions}</span>
                     </div>
                   )}
                 </div>
