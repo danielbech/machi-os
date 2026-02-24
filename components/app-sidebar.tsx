@@ -97,7 +97,7 @@ export function AppSidebar() {
                       )}
                     </div>
                     <div className="flex flex-col gap-0.5 leading-none">
-                      <span className="font-semibold">{activeProject?.name || "Machi OS"}</span>
+                      <span className="font-semibold">{activeProject?.name || "Flowie"}</span>
                       <span className="text-xs text-sidebar-foreground/60">Workspace</span>
                     </div>
                     <ChevronDown className="ml-auto size-4 opacity-50" />
