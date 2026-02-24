@@ -634,7 +634,7 @@ export function SettingsDialog({
                     <div className="flex items-center gap-3">
                       <button
                         type="button"
-                        className="relative group shrink-0"
+                        className="relative group shrink-0 cursor-pointer"
                         onClick={() => wsLogoInputRef.current?.click()}
                         disabled={wsLogoUploading}
                         aria-label="Change workspace logo"
@@ -646,7 +646,7 @@ export function SettingsDialog({
                           {wsLogo ? (
                             <img src={wsLogo} alt="Workspace logo" className="w-full h-full object-cover" />
                           ) : (
-                            <img src="/logo-mark.svg" alt="Flowie" className="size-6" />
+                            <img src="/logo-mark.svg" alt="Flowie" className="size-7" />
                           )}
                         </div>
                         <div className="absolute inset-0 rounded-lg bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
@@ -667,7 +667,15 @@ export function SettingsDialog({
                       />
                       <div className="flex-1 min-w-0">
                         <div className="text-xs text-white/40">Workspace logo</div>
-                        <div className="text-xs text-white/30">Click to upload</div>
+                        <button
+                          type="button"
+                          className="text-xs text-white/50 hover:text-white/80 transition-colors cursor-pointer flex items-center gap-1"
+                          onClick={() => wsLogoInputRef.current?.click()}
+                          disabled={wsLogoUploading}
+                        >
+                          <Camera className="size-3" />
+                          <span>Upload image</span>
+                        </button>
                       </div>
                       {wsLogo && (
                         <Button

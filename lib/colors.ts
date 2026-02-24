@@ -74,6 +74,6 @@ export function getClientTextClassName(color: string): string {
 }
 
 export const WORKSPACE_COLORS = [
-  "#3b82f6", "#22c55e", "#a855f7", "#f97316", "#ec4899",
+  "#FF3700", "#3b82f6", "#22c55e", "#a855f7", "#ec4899",
   "#ef4444", "#eab308", "#06b6d4", "#6366f1", "#14b8a6",
 ];
