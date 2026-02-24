@@ -215,7 +215,7 @@ export function BoardTaskCard({
       )}
 
       {item.type === "note" ? (
-        <div className="flex items-start gap-2">
+        <div className={`flex items-start gap-2 transition-opacity ${isPastDay ? "opacity-30" : item.completed ? "opacity-50" : ""}`}>
           <StickyNote className="size-3.5 text-amber-400 mt-0.5 shrink-0" />
           {isEditingTitle ? (
             <input
