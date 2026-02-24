@@ -344,19 +344,9 @@ export const GanttContentHeader: FC<GanttContentHeaderProps> = ({
 
   return (
     <div
-      className="sticky top-0 z-20 grid w-full shrink-0 bg-background/90 backdrop-blur-sm"
+      className="sticky top-0 z-20 flex w-full shrink-0 flex-col justify-end bg-background/90 backdrop-blur-sm"
       style={{ height: "var(--gantt-header-height)" }}
     >
-      <div>
-        <div
-          className="sticky inline-flex whitespace-nowrap px-3 py-2 text-muted-foreground text-xs"
-          style={{
-            left: "var(--gantt-sidebar-width)",
-          }}
-        >
-          <p>{title}</p>
-        </div>
-      </div>
       <div
         className="grid w-full"
         style={{
@@ -1508,7 +1498,7 @@ export const GanttMarker: FC<
 
   return (
     <div
-      className="pointer-events-none absolute top-0 left-0 z-20 flex h-full select-none flex-col items-center justify-center overflow-visible"
+      className="pointer-events-none absolute top-0 left-0 z-20 flex h-full select-none flex-col items-center overflow-visible"
       data-gantt-marker
       style={{
         width: 0,
@@ -1517,7 +1507,7 @@ export const GanttMarker: FC<
     >
       <div
         className={cn(
-          "group pointer-events-auto sticky top-[22px] flex select-auto flex-row flex-nowrap items-center gap-1 whitespace-nowrap rounded-md border px-1.5 py-0.5 text-foreground text-[10px] leading-tight backdrop-blur-sm transition-colors",
+          "group pointer-events-auto sticky top-[34px] flex select-auto flex-row flex-nowrap items-center gap-1 whitespace-nowrap rounded-md border px-1.5 py-0.5 text-foreground text-[10px] leading-tight backdrop-blur-sm transition-colors",
           dragging ? "cursor-grabbing" : onMove ? "cursor-grab" : "cursor-default",
           color ? "hover:brightness-125" : "hover:bg-white/15",
           !color && "border-white/[0.06] bg-white/10",
@@ -1567,7 +1557,7 @@ export const GanttMarker: FC<
         )}
       </div>
       <div
-        className="h-full w-px"
+        className="flex-1 w-px"
         style={{ backgroundColor: color ? `${color}60` : "rgb(255 255 255 / 0.2)" }}
       />
     </div>
