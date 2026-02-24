@@ -443,7 +443,7 @@ export default function BoardPage() {
   };
 
   return (
-    <main className="flex min-h-screen flex-col p-4 md:pl-4 md:pr-8 md:pt-4 bg-black/50">
+    <main className="flex min-h-screen flex-col p-4 md:px-8 md:pt-4">
       <div>
         <Kanban
           value={filteredColumns}
