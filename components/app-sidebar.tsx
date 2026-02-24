@@ -80,18 +80,20 @@ export function AppSidebar() {
                 <DropdownMenuTrigger asChild>
                   <SidebarMenuButton size="lg" className="cursor-pointer">
                     <div
-                      className="flex aspect-square size-8 shrink-0 items-center justify-center rounded-lg overflow-hidden"
-                      style={{ backgroundColor: activeProject?.color || "#3b82f6" }}
+                      className="flex aspect-square size-8 shrink-0 items-center justify-center rounded-lg overflow-hidden transition-colors duration-200"
+                      style={{ backgroundColor: activeProject?.color }}
                     >
-                      {activeProject?.logo_url && !logoError.has(activeProject.id) ? (
-                        <img
-                          src={activeProject.logo_url}
-                          alt={activeProject.name}
-                          className="size-8 object-cover animate-in fade-in duration-200"
-                          onError={() => handleLogoError(activeProject.id)}
-                        />
-                      ) : (!activeProject?.logo_url || logoError.has(activeProject?.id ?? "")) && (
-                        <Blocks className="size-4 text-white/90" />
+                      {activeProject && (
+                        activeProject.logo_url && !logoError.has(activeProject.id) ? (
+                          <img
+                            src={activeProject.logo_url}
+                            alt={activeProject.name}
+                            className="size-8 object-cover"
+                            onError={() => handleLogoError(activeProject.id)}
+                          />
+                        ) : (
+                          <Blocks className="size-4 text-white/90" />
+                        )
                       )}
                     </div>
                     <div className="flex flex-col gap-0.5 leading-none">
