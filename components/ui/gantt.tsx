@@ -1517,7 +1517,7 @@ export const GanttMarker: FC<
     >
       <div
         className={cn(
-          "group pointer-events-auto sticky top-0 flex select-auto flex-row flex-nowrap items-center gap-1 whitespace-nowrap rounded-b-md border px-1.5 py-0.5 text-foreground text-[10px] leading-tight backdrop-blur-sm transition-colors",
+          "group pointer-events-auto sticky top-[22px] flex select-auto flex-row flex-nowrap items-center gap-1 whitespace-nowrap rounded-md border px-1.5 py-0.5 text-foreground text-[10px] leading-tight backdrop-blur-sm transition-colors",
           dragging ? "cursor-grabbing" : onMove ? "cursor-grab" : "cursor-default",
           color ? "hover:brightness-125" : "hover:bg-white/15",
           !color && "border-white/[0.06] bg-white/10",
@@ -1602,7 +1602,7 @@ export const GanttProvider: FC<GanttProviderProps> = ({
   const [, setScrollX] = useGanttScrollX();
   const [sidebarWidth, setSidebarWidth] = useState(0);
 
-  const headerHeight = 76;
+  const headerHeight = 92;
   const rowHeight = 36;
   let columnWidth = 50;
 
