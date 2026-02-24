@@ -87,10 +87,10 @@ export function AppSidebar() {
                         <img
                           src={activeProject.logo_url}
                           alt={activeProject.name}
-                          className="size-8 object-cover"
+                          className="size-8 object-cover animate-in fade-in duration-200"
                           onError={() => handleLogoError(activeProject.id)}
                         />
-                      ) : (
+                      ) : (!activeProject?.logo_url || logoError.has(activeProject?.id ?? "")) && (
                         <Blocks className="size-4 text-white/90" />
                       )}
                     </div>
