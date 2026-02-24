@@ -11,6 +11,7 @@ import { BoardTaskCard } from "@/components/board-task-card";
 import { BoardCalendarEvent } from "@/components/board-calendar-event";
 import { BoardShortcuts } from "@/components/board-shortcuts";
 import { BoardAddCard } from "@/components/board-add-card";
+import { useCardPresence } from "@/hooks/use-card-presence";
 import type { Task, DayName } from "@/lib/types";
 import { getColumnTitles, getEmptyColumns } from "@/lib/constants";
 import {
@@ -52,6 +53,15 @@ export default function BoardPage() {
   });
 
   const currentMember = teamMembers.find(m => m.id === user?.id);
+
+  const { editors, broadcastEditing, broadcastStopEditing } = useCardPresence(
+    activeProjectId,
+    user?.id ?? null,
+    currentMember ? { name: currentMember.name, initials: currentMember.initials, color: currentMember.color, avatar: currentMember.avatar } : null
+  );
+
+  // Suppress realtime reload while user is inline-editing a card title
+  const isInlineEditing = useRef(false);
 
   const filteredColumns = useMemo(() => {
     if (!filterMine && !hideCompleted) return columns;
@@ -114,7 +124,7 @@ export default function BoardPage() {
     const reloadTasks = () => {
       if (realtimeTimer.current) clearTimeout(realtimeTimer.current);
       realtimeTimer.current = setTimeout(() => {
-        if (!suppressTaskReload.current) {
+        if (!suppressTaskReload.current && !isInlineEditing.current) {
           refreshTasks();
         }
       }, 500);
@@ -390,6 +400,28 @@ export default function BoardPage() {
     }, 2000);
   };
 
+  const handleInlineTitleChange = async (taskId: string, newTitle: string) => {
+    if (!activeProjectId) return;
+    suppressTaskReload.current = true;
+    // Optimistic local state update
+    const updated = { ...columns };
+    let updatedTask: Task | null = null;
+    for (const col of Object.keys(updated)) {
+      const idx = updated[col].findIndex((t) => t.id === taskId);
+      if (idx !== -1) {
+        updated[col] = [...updated[col]];
+        updated[col][idx] = { ...updated[col][idx], title: newTitle, day: col as DayName };
+        updatedTask = updated[col][idx];
+        break;
+      }
+    }
+    setColumns(updated);
+    if (updatedTask) await saveTask(activeProjectId, updatedTask, areaId);
+    setTimeout(() => {
+      suppressTaskReload.current = false;
+    }, 2000);
+  };
+
   // Send kanban task to backlog (via drag or action)
   const handleSendToBacklog = async (taskId: string) => {
     if (!activeProjectId) return;
@@ -535,6 +567,16 @@ export default function BoardPage() {
                         onRemove={removeTask}
                         onCopy={(task, col) => setClipboard({ task, column: col })}
                         onNewlyCreatedSeen={() => setNewlyCreatedCardId(null)}
+                        onTitleChange={handleInlineTitleChange}
+                        editingBy={editors.find(e => e.cardId === item.id) || null}
+                        onStartEditing={(cardId) => {
+                          isInlineEditing.current = true;
+                          broadcastEditing(cardId);
+                        }}
+                        onStopEditing={() => {
+                          isInlineEditing.current = false;
+                          broadcastStopEditing();
+                        }}
                       />
                     </div>
                   ))}
