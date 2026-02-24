@@ -33,7 +33,7 @@ import {
   KanbanOverlay,
 } from "@/components/ui/kanban";
 import { toast } from "sonner";
-import { Plus, Trash2, ChevronUp, Pencil, X, Check } from "lucide-react";
+import { Plus, Trash2, ChevronUp } from "lucide-react";
 
 export default function FeedbackPage() {
   const { user, activeProjectId, activeProject } = useWorkspace();
@@ -375,58 +375,46 @@ export default function FeedbackPage() {
             >
               {/* Column header */}
               <div className="mb-1.5 px-1 flex items-center justify-between group/header">
-                {renamingColumnId === col.id ? (
-                  <form
-                    className="flex items-center gap-1 flex-1"
-                    onSubmit={(e) => {
-                      e.preventDefault();
-                      handleRenameColumn(col.id);
-                    }}
-                  >
-                    <Input
+                <div className="flex items-baseline gap-2 min-w-0">
+                  {renamingColumnId === col.id ? (
+                    <input
                       value={renameValue}
                       onChange={(e) => setRenameValue(e.target.value)}
-                      className="h-6 text-sm font-semibold px-1"
+                      className="font-semibold text-sm bg-transparent outline-none border-b border-white/20 focus:border-white/40 w-full"
                       autoFocus
                       onBlur={() => handleRenameColumn(col.id)}
                       onKeyDown={(e) => {
+                        if (e.key === "Enter") { e.preventDefault(); handleRenameColumn(col.id); }
                         if (e.key === "Escape") setRenamingColumnId(null);
                       }}
                     />
-                  </form>
-                ) : (
-                  <div className="flex items-baseline gap-2">
-                    <h2 className="font-semibold text-sm">{col.title}</h2>
-                    <span className="text-xs text-white/40">
-                      {(tickets[col.id] || []).length}
-                    </span>
-                  </div>
-                )}
-
-                {isAdmin && renamingColumnId !== col.id && (
-                  <div className="flex items-center gap-0.5 opacity-0 group-hover/header:opacity-100 transition-opacity">
-                    <Button
-                      variant="ghost"
-                      size="icon-xs"
-                      className="text-white/40 hover:text-white/70"
-                      onClick={() => {
+                  ) : (
+                    <h2
+                      className={`font-semibold text-sm ${isAdmin ? "cursor-text" : ""}`}
+                      onDoubleClick={() => {
+                        if (!isAdmin) return;
                         setRenamingColumnId(col.id);
                         setRenameValue(col.title);
                       }}
-                      aria-label={`Rename ${col.title}`}
                     >
-                      <Pencil className="size-3" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon-xs"
-                      className="text-white/40 hover:text-red-400 hover:bg-red-500/10"
-                      onClick={() => setDeleteColumnConfirm(col.id)}
-                      aria-label={`Delete ${col.title}`}
-                    >
-                      <Trash2 className="size-3" />
-                    </Button>
-                  </div>
+                      {col.title}
+                    </h2>
+                  )}
+                  <span className="text-xs text-white/40 shrink-0">
+                    {(tickets[col.id] || []).length}
+                  </span>
+                </div>
+
+                {isAdmin && renamingColumnId !== col.id && (
+                  <Button
+                    variant="ghost"
+                    size="icon-xs"
+                    className="opacity-0 group-hover/header:opacity-100 text-white/40 hover:text-red-400 hover:bg-red-500/10 transition-all"
+                    onClick={() => setDeleteColumnConfirm(col.id)}
+                    aria-label={`Delete ${col.title}`}
+                  >
+                    <Trash2 className="size-3" />
+                  </Button>
                 )}
               </div>
 
