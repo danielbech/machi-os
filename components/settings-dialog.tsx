@@ -6,6 +6,7 @@ import type { User } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/client";
 import { removeUserFromWorkspace, getPendingInvites, cancelInvite, updateWorkspace, type WorkspaceMember } from "@/lib/supabase/workspace";
 import { loadCurrentProfile, updateProfile, uploadAvatar } from "@/lib/supabase/profiles";
+import { uploadWorkspaceLogo, deleteWorkspaceLogo } from "@/lib/supabase/storage";
 import { WORKSPACE_COLORS } from "@/lib/colors";
 import type { PendingInvite, WeekMode, Project } from "@/lib/types";
 import type { ConnectionWithCalendars } from "@/lib/calendar-context";
@@ -96,6 +97,9 @@ export function SettingsDialog({
   // Workspace settings state
   const [wsName, setWsName] = useState("");
   const [wsColor, setWsColor] = useState("");
+  const [wsLogo, setWsLogo] = useState<string | undefined>(undefined);
+  const [wsLogoUploading, setWsLogoUploading] = useState(false);
+  const wsLogoInputRef = useRef<HTMLInputElement>(null);
   const [wsSaving, setWsSaving] = useState(false);
   const [deleteConfirmName, setDeleteConfirmName] = useState("");
   const [deleting, setDeleting] = useState(false);
@@ -106,6 +110,7 @@ export function SettingsDialog({
     if (open && activeProject) {
       setWsName(activeProject.name);
       setWsColor(activeProject.color);
+      setWsLogo(activeProject.logo_url);
       setDeleteConfirmName("");
       setDeleteError(null);
     }
@@ -157,6 +162,40 @@ export function SettingsDialog({
       console.error('Profile save failed:', err);
     } finally {
       setProfileSaving(false);
+    }
+  };
+
+  const handleWsLogoSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !activeProjectId) return;
+
+    setWsLogoUploading(true);
+    try {
+      const url = await uploadWorkspaceLogo(file, activeProjectId);
+      await updateWorkspace(activeProjectId, { logo_url: url });
+      setWsLogo(url);
+      await refreshWorkspaces?.();
+    } catch (err) {
+      console.error('Workspace logo upload failed:', err);
+    } finally {
+      setWsLogoUploading(false);
+      if (wsLogoInputRef.current) wsLogoInputRef.current.value = '';
+    }
+  };
+
+  const handleWsLogoRemove = async () => {
+    if (!activeProjectId || !wsLogo) return;
+
+    setWsLogoUploading(true);
+    try {
+      await deleteWorkspaceLogo(wsLogo);
+      await updateWorkspace(activeProjectId, { logo_url: null });
+      setWsLogo(undefined);
+      await refreshWorkspaces?.();
+    } catch (err) {
+      console.error('Workspace logo remove failed:', err);
+    } finally {
+      setWsLogoUploading(false);
     }
   };
 
@@ -577,6 +616,57 @@ export function SettingsDialog({
                 <div className="space-y-3">
                   <div className="text-xs text-white/40 px-1">Workspace settings</div>
                   <div className="p-3 rounded-lg border border-white/5 bg-white/[0.02] space-y-3">
+                    {/* Logo */}
+                    <div className="flex items-center gap-3">
+                      <button
+                        type="button"
+                        className="relative group shrink-0"
+                        onClick={() => wsLogoInputRef.current?.click()}
+                        disabled={wsLogoUploading}
+                        aria-label="Change workspace logo"
+                      >
+                        <div
+                          className="w-12 h-12 rounded-lg flex items-center justify-center overflow-hidden"
+                          style={{ backgroundColor: wsColor || activeProject?.color || '#3b82f6' }}
+                        >
+                          {wsLogo ? (
+                            <img src={wsLogo} alt="Workspace logo" className="w-full h-full object-cover" />
+                          ) : (
+                            <img src="/logo.svg" alt="Default logo" className="size-8 invert" />
+                          )}
+                        </div>
+                        <div className="absolute inset-0 rounded-lg bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                          <Camera className="size-4 text-white" />
+                        </div>
+                        {wsLogoUploading && (
+                          <div className="absolute inset-0 rounded-lg bg-black/60 flex items-center justify-center">
+                            <RefreshCw className="size-4 text-white animate-spin" />
+                          </div>
+                        )}
+                      </button>
+                      <input
+                        ref={wsLogoInputRef}
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={handleWsLogoSelect}
+                      />
+                      <div className="flex-1 min-w-0">
+                        <div className="text-xs text-white/40">Workspace logo</div>
+                        <div className="text-xs text-white/30">Click to upload</div>
+                      </div>
+                      {wsLogo && (
+                        <Button
+                          size="sm"
+                          variant="destructive-ghost"
+                          className="shrink-0"
+                          disabled={wsLogoUploading}
+                          onClick={handleWsLogoRemove}
+                        >
+                          Remove
+                        </Button>
+                      )}
+                    </div>
                     <div>
                       <label className="text-xs text-white/40 block mb-1">Name</label>
                       <Input

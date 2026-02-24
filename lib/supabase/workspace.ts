@@ -27,6 +27,7 @@ export async function getUserWorkspaces(): Promise<Project[]> {
         id,
         name,
         color,
+        logo_url,
         week_mode,
         transition_day,
         transition_hour
@@ -46,6 +47,7 @@ export async function getUserWorkspaces(): Promise<Project[]> {
       id: d.projects.id,
       name: d.projects.name,
       color: d.projects.color,
+      logo_url: d.projects.logo_url || undefined,
       role: d.role,
       week_mode: d.projects.week_mode || '5-day',
       transition_day: d.projects.transition_day ?? 5,
@@ -167,7 +169,7 @@ export async function getCurrentUserRole(projectId: string): Promise<string | nu
 // Update workspace name and/or color
 export async function updateWorkspace(
   projectId: string,
-  updates: { name?: string; color?: string }
+  updates: { name?: string; color?: string; logo_url?: string | null }
 ): Promise<void> {
   const supabase = createClient()
 

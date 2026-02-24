@@ -54,6 +54,7 @@ export interface Project {
   id: string;
   name: string;
   color: string;
+  logo_url?: string;
   role: 'owner' | 'admin' | 'member';
   week_mode: WeekMode;
   transition_day: number;

@@ -26,6 +26,54 @@ export async function uploadClientLogo(file: File, clientId: string): Promise<st
   return data.publicUrl
 }
 
+export async function uploadWorkspaceLogo(file: File, projectId: string): Promise<string> {
+  const supabase = createClient()
+
+  const ext = file.name.split('.').pop() || 'png'
+  const path = `workspaces/${projectId}.${ext}`
+
+  const { error } = await supabase.storage
+    .from(BUCKET)
+    .upload(path, file, { upsert: true })
+
+  if (error) {
+    console.error('Error uploading workspace logo:', error)
+    throw error
+  }
+
+  const { data } = supabase.storage
+    .from(BUCKET)
+    .getPublicUrl(path)
+
+  return data.publicUrl
+}
+
+export async function deleteWorkspaceLogo(logoUrl: string): Promise<void> {
+  const supabase = createClient()
+
+  const marker = `/storage/v1/object/public/`
+  const markerIdx = logoUrl.indexOf(marker)
+  if (markerIdx === -1) return
+
+  const afterMarker = logoUrl.slice(markerIdx + marker.length)
+  const decodedAfter = decodeURIComponent(afterMarker)
+
+  let path: string | null = null
+  if (decodedAfter.startsWith(BUCKET + '/')) {
+    path = decodedAfter.slice(BUCKET.length + 1)
+  }
+
+  if (!path) return
+
+  const { error } = await supabase.storage
+    .from(BUCKET)
+    .remove([path])
+
+  if (error) {
+    console.error('Error deleting workspace logo:', error)
+  }
+}
+
 export async function deleteClientLogo(logoUrl: string): Promise<void> {
   const supabase = createClient()
 

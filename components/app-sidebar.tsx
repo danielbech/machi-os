@@ -73,10 +73,14 @@ export function AppSidebar() {
                 <DropdownMenuTrigger asChild>
                   <SidebarMenuButton size="lg" className="cursor-pointer">
                     <div
-                      className="group flex aspect-square size-8 items-center justify-center rounded-lg"
+                      className="group flex aspect-square size-8 items-center justify-center rounded-lg overflow-hidden"
                       style={{ backgroundColor: activeProject?.color || "#3b82f6" }}
                     >
-                      <img src="/logo.svg" alt="Machi OS" className="size-6 invert transition-transform duration-200 group-hover:scale-110" />
+                      {activeProject?.logo_url ? (
+                        <img src={activeProject.logo_url} alt={activeProject.name} className="size-8 object-cover transition-transform duration-200 group-hover:scale-110" />
+                      ) : (
+                        <img src="/logo.svg" alt="Machi OS" className="size-6 invert transition-transform duration-200 group-hover:scale-110" />
+                      )}
                     </div>
                     <div className="flex flex-col gap-0.5 leading-none">
                       <span className="font-semibold">{activeProject?.name || "Machi OS"}</span>
@@ -92,10 +96,18 @@ export function AppSidebar() {
                       onClick={() => setActiveProjectId(project.id)}
                       className="flex items-center gap-2"
                     >
-                      <span
-                        className="inline-block w-2.5 h-2.5 rounded-full shrink-0"
-                        style={{ backgroundColor: project.color }}
-                      />
+                      {project.logo_url ? (
+                        <img
+                          src={project.logo_url}
+                          alt={project.name}
+                          className="w-4 h-4 rounded-sm object-cover shrink-0"
+                        />
+                      ) : (
+                        <span
+                          className="inline-block w-2.5 h-2.5 rounded-full shrink-0"
+                          style={{ backgroundColor: project.color }}
+                        />
+                      )}
                       <span className={project.id === activeProjectId ? "font-semibold" : ""}>
                         {project.name}
                       </span>
