@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import Image from "next/image";
 import {
   Dialog,
@@ -32,7 +33,7 @@ export function WelcomeDialog({ open, onClose }: WelcomeDialogProps) {
             className="rounded-xl mb-1"
           />
           <DialogTitle className="text-xl">Welcome to Flowie!</DialogTitle>
-          <DialogDescription className="text-white/50 text-sm leading-relaxed text-left space-y-3 pt-1">
+          <DialogDescription className="text-white/50 text-sm leading-relaxed text-center space-y-3 pt-1">
             <span className="block">
               Flowie is still in beta and actively being developed. We&apos;re
               shipping updates regularly, and your data is backed up — but
@@ -41,13 +42,23 @@ export function WelcomeDialog({ open, onClose }: WelcomeDialogProps) {
             </span>
             <span className="block">
               We&apos;re really glad to have you! If you run into anything weird
-              or have ideas, head over to the <strong className="text-white/70">Feedback</strong> tab
-              and let us know.
+              or have ideas, head over to the{" "}
+              <Link
+                href="/feedback"
+                onClick={onClose}
+                className="text-white/70 underline underline-offset-2 hover:text-white transition-colors"
+              >
+                Feedback
+              </Link>{" "}
+              tab and let us know.
             </span>
           </DialogDescription>
         </DialogHeader>
         <DialogFooter className="sm:justify-center pt-2">
-          <Button onClick={onClose} className="w-full sm:w-auto">
+          <Button
+            onClick={onClose}
+            className="w-full sm:w-auto hover:brightness-125 hover:scale-[1.02] active:scale-[0.98] transition-all"
+          >
             Get started
           </Button>
         </DialogFooter>
