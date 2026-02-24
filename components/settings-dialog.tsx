@@ -108,6 +108,11 @@ export function SettingsDialog({
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
 
+  // Delete account state
+  const [deleteAccountConfirm, setDeleteAccountConfirm] = useState("");
+  const [deletingAccount, setDeletingAccount] = useState(false);
+  const [deleteAccountError, setDeleteAccountError] = useState<string | null>(null);
+
   // Reset tab when dialog opens
   useEffect(() => {
     if (open) setSettingsTab(defaultTab);
@@ -498,6 +503,59 @@ export function SettingsDialog({
                     }}
                   >
                     Sign Out
+                  </Button>
+                </div>
+
+                {/* Delete Account */}
+                <div className="text-xs text-white/40 px-1 pt-2">Danger zone</div>
+                <div className="p-3 rounded-lg border border-red-500/20 bg-red-500/[0.03] space-y-3">
+                  <div className="flex items-center gap-2">
+                    <Trash2 className="size-4 text-red-400 shrink-0" />
+                    <div>
+                      <div className="text-sm font-medium text-red-400">Delete account</div>
+                      <div className="text-xs text-white/40">
+                        Permanently delete your account and all associated data. This cannot be undone.
+                      </div>
+                    </div>
+                  </div>
+                  <div>
+                    <label className="text-xs text-white/40 block mb-1">
+                      Type <span className="font-mono text-white/60">{user?.email}</span> to confirm
+                    </label>
+                    <Input
+                      value={deleteAccountConfirm}
+                      onChange={(e) => setDeleteAccountConfirm(e.target.value)}
+                      placeholder={user?.email || ""}
+                      className="h-8"
+                    />
+                  </div>
+                  {deleteAccountError && <div className="text-xs text-red-400">{deleteAccountError}</div>}
+                  <Button
+                    size="sm"
+                    variant="destructive"
+                    className="w-full"
+                    disabled={deletingAccount || deleteAccountConfirm !== user?.email}
+                    onClick={async () => {
+                      setDeletingAccount(true);
+                      setDeleteAccountError(null);
+                      try {
+                        const res = await fetch("/api/delete-account", { method: "DELETE" });
+                        const data = await res.json();
+                        if (!res.ok) {
+                          setDeleteAccountError(data.error || "Failed to delete account");
+                          return;
+                        }
+                        const supabase = createClient();
+                        await supabase.auth.signOut();
+                        onOpenChange(false);
+                      } catch {
+                        setDeleteAccountError("Network error");
+                      } finally {
+                        setDeletingAccount(false);
+                      }
+                    }}
+                  >
+                    {deletingAccount ? "Deleting..." : "Delete account permanently"}
                   </Button>
                 </div>
               </div>
