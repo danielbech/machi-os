@@ -1579,6 +1579,7 @@ GanttMarker.displayName = "GanttMarker";
 export type GanttProviderProps = {
   range?: Range;
   zoom?: number;
+  onZoom?: (zoom: number) => void;
   onAddItem?: (date: Date) => void;
   onAddItemRange?: (startDate: Date, endDate: Date) => void;
   children: ReactNode;
@@ -1588,6 +1589,7 @@ export type GanttProviderProps = {
 export const GanttProvider: FC<GanttProviderProps> = ({
   zoom = 100,
   range = "monthly",
+  onZoom,
   onAddItem,
   onAddItemRange,
   children,
@@ -1663,7 +1665,21 @@ export const GanttProvider: FC<GanttProviderProps> = ({
       setScrollX(scrollElement.scrollLeft);
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [range]);
+  }, [range, zoom]);
+
+  // Cmd/Ctrl+wheel to zoom
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el || !onZoom) return;
+    const handler = (e: WheelEvent) => {
+      if (!e.metaKey && !e.ctrlKey) return;
+      e.preventDefault();
+      const delta = e.deltaY > 0 ? -25 : 25;
+      onZoom(zoom + delta);
+    };
+    el.addEventListener("wheel", handler, { passive: false });
+    return () => el.removeEventListener("wheel", handler);
+  }, [onZoom, zoom]);
 
   useEffect(() => {
     const updateSidebarWidth = () => {

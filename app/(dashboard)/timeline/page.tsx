@@ -134,6 +134,20 @@ export default function TimelinePage() {
     return "monthly";
   });
 
+  const [zoom, setZoom] = useState(100);
+
+  // Load saved zoom when range changes
+  useEffect(() => {
+    const saved = localStorage.getItem(`timeline-zoom-${range}`);
+    setZoom(saved ? Number(saved) : 100);
+  }, [range]);
+
+  const handleZoom = useCallback((newZoom: number) => {
+    const clamped = Math.min(200, Math.max(50, newZoom));
+    setZoom(clamped);
+    localStorage.setItem(`timeline-zoom-${range}`, String(clamped));
+  }, [range]);
+
   const handleSetRange = (value: Range) => {
     setRange(value);
     localStorage.setItem("timeline-range", value);
@@ -617,6 +631,25 @@ export default function TimelinePage() {
               </button>
             ))}
           </div>
+          <div className="flex items-center gap-0.5 rounded-md bg-white/5 p-0.5">
+            <button
+              onClick={() => handleZoom(zoom - 25)}
+              disabled={zoom <= 50}
+              className="px-1.5 py-0.5 rounded text-xs font-medium transition-all text-white/30 hover:text-white/50 disabled:opacity-25 disabled:cursor-not-allowed"
+              aria-label="Zoom out"
+            >
+              −
+            </button>
+            <span className="px-1 text-[10px] font-medium text-white/40 tabular-nums min-w-[32px] text-center">{zoom}%</span>
+            <button
+              onClick={() => handleZoom(zoom + 25)}
+              disabled={zoom >= 200}
+              className="px-1.5 py-0.5 rounded text-xs font-medium transition-all text-white/30 hover:text-white/50 disabled:opacity-25 disabled:cursor-not-allowed"
+              aria-label="Zoom in"
+            >
+              +
+            </button>
+          </div>
           <button
             onClick={() => handleSetActiveOnly(!activeOnly)}
             className={`flex items-center gap-1.5 rounded-md px-2 py-1 text-xs font-medium transition-all ${
@@ -665,7 +698,7 @@ export default function TimelinePage() {
             }
           }}
         >
-          <GanttProvider range={range} onAddItemRange={handleAddItemRange}>
+          <GanttProvider range={range} zoom={zoom} onZoom={handleZoom} onAddItemRange={handleAddItemRange}>
             <GanttSidebar>
               {visibleGroups.map((group) => {
                 const parent = group.parent;
