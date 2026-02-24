@@ -1941,13 +1941,13 @@ export const GanttToday: FC<GanttTodayProps> = ({ className }) => {
     >
       <div
         className={cn(
-          "pointer-events-auto sticky top-0 z-30 flex select-auto items-center justify-center whitespace-nowrap rounded-b-md border border-blue-500/30 bg-blue-500/15 px-1.5 py-0.5 text-blue-400 text-[10px] leading-tight backdrop-blur-sm",
+          "pointer-events-auto sticky top-0 z-30 flex select-auto items-center justify-center whitespace-nowrap rounded-b-md border border-white/80 bg-white px-1.5 py-0.5 text-black font-semibold text-[10px] leading-tight",
           className
         )}
       >
         {label}
       </div>
-      <div className="flex-1 w-px bg-blue-500/40" />
+      <div className="flex-1 w-px bg-white/50" />
     </div>
   );
 };
