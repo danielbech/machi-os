@@ -28,10 +28,10 @@ function DashboardGate({ children }: { children: React.ReactNode }) {
   return (
     <TooltipProvider>
       <SidebarProvider defaultOpen={false}>
-        <div className="flex w-full animate-in fade-in duration-300">
+        <div className="flex w-full animate-in fade-in duration-300 bg-black/50">
           <AppSidebar />
           <BacklogShell />
-          <SidebarInset className="overflow-hidden min-w-0 transition-[margin] duration-200 ease-in-out" style={!isMobile && backlogOpen ? { marginLeft: backlogWidth } : undefined}>
+          <SidebarInset className="overflow-hidden min-w-0 transition-[margin] duration-200 ease-in-out bg-transparent" style={!isMobile && backlogOpen ? { marginLeft: backlogWidth } : undefined}>
             {/* Mobile header with hamburger trigger */}
             <header className="flex items-center gap-2 px-4 py-3 md:hidden">
               <SidebarTrigger className="-ml-1" />
