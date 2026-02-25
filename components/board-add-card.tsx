@@ -37,7 +37,7 @@ export function BoardAddCard({ value, onChange, cardType, onToggleType, onSubmit
         }}
         placeholder={cardType === "note" ? "Note..." : "Task title..."}
         autoFocus
-        className="w-full bg-transparent text-sm outline-none placeholder:text-muted-foreground/40"
+        className="w-full bg-transparent text-sm outline-none placeholder:text-white/30"
       />
       <div className="mt-2 flex items-center gap-2 text-xs text-muted-foreground/60">
         <button
