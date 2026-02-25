@@ -1,6 +1,7 @@
 "use client";
 
-import { useRef, useState, useCallback, lazy, Suspense } from "react";
+import { useRef, useState, useCallback, useEffect, lazy, Suspense } from "react";
+import { createPortal } from "react-dom";
 import type { Task, BacklogFolder, ChecklistItem } from "@/lib/types";
 import { useWorkspace } from "@/lib/workspace-context";
 import { uploadTaskImage, deleteTaskImage } from "@/lib/supabase/storage";
@@ -81,6 +82,7 @@ export function TaskEditDialog({ task, onClose, onSave, onTaskChange, folders }:
   }, [task, onTaskChange]);
 
   return (
+  <>
     <Dialog open={task !== null} onOpenChange={(open) => { if (!open && task) onSave(task); }}>
       <DialogContent
         className={`sm:max-w-[500px] transition-[box-shadow] duration-150 ${isDragOver ? "ring-2 ring-blue-500/50 ring-inset" : ""}`}
@@ -561,36 +563,66 @@ export function TaskEditDialog({ task, onClose, onSave, onTaskChange, folders }:
         )}
       </DialogContent>
 
-      {/* Image lightbox */}
-      {lightboxUrl && (
-        <div
-          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm"
-          onMouseDown={(e) => {
-            e.stopPropagation();
-            e.preventDefault();
-            setLightboxUrl(null);
-          }}
-        >
-          <button
-            type="button"
-            onMouseDown={(e) => {
-              e.stopPropagation();
-              e.preventDefault();
-              setLightboxUrl(null);
-            }}
-            className="absolute top-4 right-4 flex size-8 items-center justify-center rounded-full bg-white/10 hover:bg-white/20 transition-colors"
-            aria-label="Close lightbox"
-          >
-            <X className="size-5 text-white" />
-          </button>
-          <img
-            src={lightboxUrl}
-            alt=""
-            className="max-w-[90vw] max-h-[85vh] rounded-lg object-contain"
-            onMouseDown={(e) => e.stopPropagation()}
-          />
-        </div>
-      )}
     </Dialog>
+
+    {/* Image lightbox — rendered via portal outside Dialog to avoid Radix event conflicts */}
+    {lightboxUrl && createPortal(
+      <Lightbox url={lightboxUrl} onClose={() => setLightboxUrl(null)} />,
+      document.body
+    )}
+  </>
+  );
+}
+
+function Lightbox({ url, onClose }: { url: string; onClose: () => void }) {
+  // Block all pointer/mouse events from reaching Radix Dialog underneath
+  useEffect(() => {
+    const stop = (e: Event) => {
+      const target = e.target as HTMLElement;
+      if (target.closest("[data-lightbox]")) {
+        e.stopPropagation();
+      }
+    };
+    document.addEventListener("pointerdown", stop, true);
+    document.addEventListener("mousedown", stop, true);
+    document.addEventListener("click", stop, true);
+
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        e.stopPropagation();
+        onClose();
+      }
+    };
+    document.addEventListener("keydown", handleKey, true);
+
+    return () => {
+      document.removeEventListener("pointerdown", stop, true);
+      document.removeEventListener("mousedown", stop, true);
+      document.removeEventListener("click", stop, true);
+      document.removeEventListener("keydown", handleKey, true);
+    };
+  }, [onClose]);
+
+  return (
+    <div
+      data-lightbox
+      className="fixed inset-0 z-[200] flex items-center justify-center bg-black/80 backdrop-blur-sm"
+      onClick={onClose}
+    >
+      <button
+        type="button"
+        onClick={onClose}
+        className="absolute top-4 right-4 flex size-8 items-center justify-center rounded-full bg-white/10 hover:bg-white/20 transition-colors"
+        aria-label="Close lightbox"
+      >
+        <X className="size-5 text-white" />
+      </button>
+      <img
+        src={url}
+        alt=""
+        className="max-w-[90vw] max-h-[85vh] rounded-lg object-contain"
+        onClick={(e) => e.stopPropagation()}
+      />
+    </div>
   );
 }
