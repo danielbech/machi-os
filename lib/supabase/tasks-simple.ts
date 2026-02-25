@@ -16,7 +16,7 @@ export async function loadTasksByDay(projectId: string, cachedAreaId?: string | 
 
   const { data: tasks } = await supabase
     .from('tasks')
-    .select('id, title, description, completed, assignees, client, priority, day, type, folder_id, checklist, sort_order')
+    .select('id, title, description, completed, assignees, client, priority, day, type, folder_id, checklist, images, sort_order')
     .eq('area_id', areaId)
     .order('sort_order')
 
@@ -50,6 +50,7 @@ export async function loadTasksByDay(projectId: string, cachedAreaId?: string | 
         type: task.type || 'task',
         folder_id: task.folder_id || undefined,
         checklist: task.checklist || [],
+        images: task.images || [],
       })
     }
   })
@@ -83,6 +84,7 @@ export async function saveTask(projectId: string, task: Task, cachedAreaId?: str
         type: task.type || 'task',
         folder_id: task.folder_id || null,
         checklist: task.checklist || [],
+        images: task.images || [],
       })
       .eq('id', task.id)
 
@@ -107,6 +109,7 @@ export async function saveTask(projectId: string, task: Task, cachedAreaId?: str
         type: task.type || 'task',
         folder_id: task.folder_id || null,
         checklist: task.checklist || [],
+        images: task.images || [],
       })
       .select()
       .single()
@@ -151,6 +154,7 @@ export async function updateDayTasks(projectId: string, day: string, tasks: Task
       type: task.type || 'task',
       folder_id: task.folder_id || null,
       checklist: task.checklist || [],
+      images: task.images || [],
     }))
 
   if (updates.length === 0) return
@@ -187,6 +191,7 @@ export async function updateBacklogTaskOrder(projectId: string, tasks: Task[], c
       type: task.type || 'task',
       folder_id: task.folder_id || null,
       checklist: task.checklist || [],
+      images: task.images || [],
     }))
 
   if (updates.length === 0) return
@@ -250,6 +255,7 @@ export async function transitionWeek(projectId: string, cachedAreaId?: string | 
       type: t.type || 'task',
       folder_id: t.folder_id || null,
       checklist: t.checklist || [],
+      images: t.images || [],
     }))
     const { error: updateError } = await supabase.from('tasks').upsert(updates)
     if (updateError) {
@@ -293,5 +299,6 @@ export async function loadBacklogTasks(projectId: string, cachedAreaId?: string 
     type: task.type || 'task',
     folder_id: task.folder_id || undefined,
     checklist: task.checklist || [],
+    images: task.images || [],
   }))
 }

@@ -2,6 +2,7 @@ import { createClient } from './client'
 import { validateImageFile } from '../validate-file'
 
 const BUCKET = 'Project Logos'
+const TASK_IMAGES_BUCKET = 'task-images'
 
 export async function uploadClientLogo(file: File, clientId: string): Promise<string> {
   validateImageFile(file)
@@ -73,6 +74,55 @@ export async function deleteWorkspaceLogo(logoUrl: string): Promise<void> {
 
   if (error) {
     console.error('Error deleting workspace logo:', error)
+  }
+}
+
+export async function uploadTaskImage(file: File, taskId: string): Promise<string> {
+  validateImageFile(file)
+  const supabase = createClient()
+
+  const ext = file.name.split('.').pop() || 'png'
+  const path = `${taskId}/${Date.now()}.${ext}`
+
+  const { error } = await supabase.storage
+    .from(TASK_IMAGES_BUCKET)
+    .upload(path, file)
+
+  if (error) {
+    console.error('Error uploading task image:', error)
+    throw error
+  }
+
+  const { data } = supabase.storage
+    .from(TASK_IMAGES_BUCKET)
+    .getPublicUrl(path)
+
+  return data.publicUrl
+}
+
+export async function deleteTaskImage(imageUrl: string): Promise<void> {
+  const supabase = createClient()
+
+  const marker = `/storage/v1/object/public/`
+  const markerIdx = imageUrl.indexOf(marker)
+  if (markerIdx === -1) return
+
+  const afterMarker = imageUrl.slice(markerIdx + marker.length)
+  const decodedAfter = decodeURIComponent(afterMarker)
+
+  let path: string | null = null
+  if (decodedAfter.startsWith(TASK_IMAGES_BUCKET + '/')) {
+    path = decodedAfter.slice(TASK_IMAGES_BUCKET.length + 1)
+  }
+
+  if (!path) return
+
+  const { error } = await supabase.storage
+    .from(TASK_IMAGES_BUCKET)
+    .remove([path])
+
+  if (error) {
+    console.error('Error deleting task image:', error)
   }
 }
 

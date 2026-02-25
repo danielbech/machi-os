@@ -39,6 +39,7 @@ export interface Task {
   type?: "task" | "note" | "divider";
   folder_id?: string;
   checklist: ChecklistItem[];
+  images?: string[];
 }
 
 export interface BacklogFolder {

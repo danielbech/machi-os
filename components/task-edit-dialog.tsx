@@ -1,13 +1,16 @@
 "use client";
 
-import { useRef, lazy, Suspense } from "react";
+import { useRef, useState, useCallback, lazy, Suspense } from "react";
 import type { Task, BacklogFolder, ChecklistItem } from "@/lib/types";
 import { useWorkspace } from "@/lib/workspace-context";
+import { uploadTaskImage, deleteTaskImage } from "@/lib/supabase/storage";
+import { validateImageFile } from "@/lib/validate-file";
 import {
   Dialog,
   DialogContent,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
 
 const RichTextEditor = lazy(() =>
   import("@/components/rich-text-editor").then((mod) => ({ default: mod.RichTextEditor }))
@@ -20,7 +23,7 @@ import {
   DropdownMenuCheckboxItem,
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
-import { Check, ChevronDown, Circle, StickyNote, ListTodo, Folder, X, Plus } from "lucide-react";
+import { Check, ChevronDown, Circle, StickyNote, ListTodo, Folder, X, Plus, ImageIcon } from "lucide-react";
 import { ClientIcon } from "@/components/client-icon";
 
 interface TaskEditDialogProps {
@@ -35,22 +38,86 @@ export function TaskEditDialog({ task, onClose, onSave, onTaskChange, folders }:
   const { clients, teamMembers } = useWorkspace();
   const titleRef = useRef<HTMLInputElement>(null);
   const checklistRefs = useRef<Map<string, HTMLInputElement>>(new Map());
+  const [isDragOver, setIsDragOver] = useState(false);
+  const [uploadingCount, setUploadingCount] = useState(0);
+  const dragCounter = useRef(0);
   const activeClients = clients.filter((c) => c.active);
   const selectedClient = activeClients.find((c) => c.id === task?.client);
   const clientFolders = folders?.filter((f) => f.client_id === task?.client) || [];
   const selectedFolder = clientFolders.find((f) => f.id === task?.folder_id);
   const assignedMembers = teamMembers.filter((m) => task?.assignees?.includes(m.id));
 
+  const handleImageUpload = useCallback(async (files: File[]) => {
+    if (!task) return;
+    const imageFiles = files.filter((f) => f.type.startsWith("image/"));
+    if (imageFiles.length === 0) return;
+
+    setUploadingCount((c) => c + imageFiles.length);
+    const newUrls: string[] = [];
+
+    for (const file of imageFiles) {
+      try {
+        validateImageFile(file);
+        const url = await uploadTaskImage(file, task.id);
+        newUrls.push(url);
+      } catch (err: any) {
+        toast.error(err.message || "Failed to upload image");
+      }
+    }
+
+    if (newUrls.length > 0) {
+      onTaskChange({ ...task, images: [...(task.images || []), ...newUrls] });
+    }
+    setUploadingCount((c) => c - imageFiles.length);
+  }, [task, onTaskChange]);
+
+  const handleRemoveImage = useCallback(async (url: string) => {
+    if (!task) return;
+    onTaskChange({ ...task, images: (task.images || []).filter((u) => u !== url) });
+    deleteTaskImage(url).catch(() => {});
+  }, [task, onTaskChange]);
+
   return (
     <Dialog open={task !== null} onOpenChange={(open) => { if (!open && task) onSave(task); }}>
       <DialogContent
-        className="sm:max-w-[500px]"
+        className={`sm:max-w-[500px] transition-[box-shadow] duration-150 ${isDragOver ? "ring-2 ring-blue-500/50 ring-inset" : ""}`}
         onOpenAutoFocus={(e) => {
           e.preventDefault();
           titleRef.current?.focus();
         }}
         onCloseAutoFocus={(e) => {
           e.preventDefault();
+        }}
+        onDragEnter={(e) => {
+          e.preventDefault();
+          dragCounter.current++;
+          if (e.dataTransfer.types.includes("Files")) setIsDragOver(true);
+        }}
+        onDragOver={(e) => {
+          e.preventDefault();
+          e.dataTransfer.dropEffect = "copy";
+        }}
+        onDragLeave={(e) => {
+          e.preventDefault();
+          dragCounter.current--;
+          if (dragCounter.current <= 0) {
+            dragCounter.current = 0;
+            setIsDragOver(false);
+          }
+        }}
+        onDrop={(e) => {
+          e.preventDefault();
+          dragCounter.current = 0;
+          setIsDragOver(false);
+          const files = Array.from(e.dataTransfer.files);
+          handleImageUpload(files);
+        }}
+        onPaste={(e) => {
+          const files = Array.from(e.clipboardData.files);
+          if (files.length > 0) {
+            e.preventDefault();
+            handleImageUpload(files);
+          }
         }}
       >
         {task && (
@@ -289,6 +356,50 @@ export function TaskEditDialog({ task, onClose, onSave, onTaskChange, folders }:
                 />
               </Suspense>
             </div>
+
+            {/* Images */}
+            {((task.images && task.images.length > 0) || uploadingCount > 0) && (
+              <div className="flex flex-col gap-2">
+                <label className="text-sm font-medium flex items-center gap-1.5">
+                  <ImageIcon className="size-3.5" />
+                  Images
+                </label>
+                <div className="flex flex-wrap gap-2">
+                  {(task.images || []).map((url) => (
+                    <div key={url} className="group/img relative">
+                      <img
+                        src={url}
+                        alt=""
+                        className="w-20 h-20 rounded-lg object-cover border border-white/10"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveImage(url)}
+                        className="absolute -top-1.5 -right-1.5 flex size-5 items-center justify-center rounded-full bg-black/80 border border-white/20 opacity-0 group-hover/img:opacity-100 transition-opacity"
+                        aria-label="Remove image"
+                      >
+                        <X className="size-3 text-white/70" />
+                      </button>
+                    </div>
+                  ))}
+                  {uploadingCount > 0 && Array.from({ length: uploadingCount }).map((_, i) => (
+                    <div key={`uploading-${i}`} className="w-20 h-20 rounded-lg border border-white/10 bg-white/[0.04] animate-pulse flex items-center justify-center">
+                      <ImageIcon className="size-5 text-white/20" />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Drag overlay */}
+            {isDragOver && (
+              <div className="flex items-center justify-center rounded-lg border-2 border-dashed border-blue-500/40 bg-blue-500/5 py-6">
+                <div className="flex items-center gap-2 text-sm text-blue-400">
+                  <ImageIcon className="size-4" />
+                  Drop image here
+                </div>
+              </div>
+            )}
 
             {/* Checklist */}
             <div className="flex flex-col gap-2">
