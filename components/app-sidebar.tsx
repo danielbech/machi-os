@@ -56,7 +56,7 @@ export function AppSidebar() {
     setLogoError(prev => new Set(prev).add(projectId));
   }, []);
 
-  const handleOpenSettings = async (tab = "general") => {
+  const handleOpenSettings = async (tab = "workspace") => {
     setSettingsDefaultTab(tab);
     setShowSettings(true);
     if (activeProjectId) {
