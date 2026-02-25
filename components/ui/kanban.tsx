@@ -215,6 +215,10 @@ function Kanban<T>(props: KanbanProps<T>) {
   const [activeId, setActiveId] = React.useState<UniqueIdentifier | null>(null);
   const lastOverIdRef = React.useRef<UniqueIdentifier | null>(null);
   const hasMovedRef = React.useRef(false);
+  // Keep a ref to the latest value so onDragOver always sees fresh data
+  // even before React re-renders after onValueChange calls.
+  const valueRef = React.useRef(value);
+  React.useEffect(() => { valueRef.current = value; }, [value]);
   const sensors = useSensors(
     useSensor(MouseSensor, {
       activationConstraint: { distance: 5 },
@@ -243,9 +247,10 @@ function Kanban<T>(props: KanbanProps<T>) {
 
   const getColumn = React.useCallback(
     (id: UniqueIdentifier) => {
-      if (id in value) return id;
+      const current = valueRef.current;
+      if (id in current) return id;
 
-      for (const [columnId, items] of Object.entries(value)) {
+      for (const [columnId, items] of Object.entries(current)) {
         if (items.some((item) => getItemValue(item) === id)) {
           return columnId;
         }
@@ -253,7 +258,7 @@ function Kanban<T>(props: KanbanProps<T>) {
 
       return null;
     },
-    [value, getItemValue],
+    [getItemValue],
   );
 
   const collisionDetection: CollisionDetection = React.useCallback(
@@ -331,8 +336,10 @@ function Kanban<T>(props: KanbanProps<T>) {
 
       if (!activeColumn || !overColumn) return;
 
+      const current = valueRef.current;
+
       if (activeColumn === overColumn) {
-        const items = value[activeColumn];
+        const items = current[activeColumn];
         if (!items) return;
 
         const activeIndex = items.findIndex(
@@ -343,13 +350,14 @@ function Kanban<T>(props: KanbanProps<T>) {
         );
 
         if (activeIndex !== overIndex) {
-          const newColumns = { ...value };
+          const newColumns = { ...current };
           newColumns[activeColumn] = arrayMove(items, activeIndex, overIndex);
+          valueRef.current = newColumns;
           onValueChange?.(newColumns);
         }
       } else {
-        const activeItems = value[activeColumn];
-        const overItems = value[overColumn];
+        const activeItems = current[activeColumn];
+        const overItems = current[overColumn];
 
         if (!activeItems || !overItems) return;
 
@@ -363,18 +371,19 @@ function Kanban<T>(props: KanbanProps<T>) {
         if (!activeItem) return;
 
         const updatedItems = {
-          ...value,
+          ...current,
           [activeColumn]: activeItems.filter(
             (item) => getItemValue(item) !== active.id,
           ),
           [overColumn]: [...overItems, activeItem],
         };
 
+        valueRef.current = updatedItems;
         onValueChange?.(updatedItems);
         hasMovedRef.current = true;
       }
     },
-    [value, getColumn, getItemValue, onValueChange, kanbanProps],
+    [getColumn, getItemValue, onValueChange, kanbanProps],
   );
 
   const onDragEnd = React.useCallback(
