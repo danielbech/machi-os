@@ -35,11 +35,6 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Not authorized to invite to this project" }, { status: 403 });
     }
 
-    // Don't invite yourself
-    if (email === user.email?.toLowerCase()) {
-      return NextResponse.json({ error: "Cannot invite yourself" }, { status: 400 });
-    }
-
     // Use admin client to look up user by email
     const admin = createAdminClient();
     const { data: targetUserId, error: rpcError } = await admin.rpc("get_user_id_by_email", {
@@ -49,6 +44,11 @@ export async function POST(request: NextRequest) {
     if (rpcError) {
       console.error("RPC error:", rpcError);
       return NextResponse.json({ error: "Failed to look up user" }, { status: 500 });
+    }
+
+    // Don't invite yourself (check both email and user ID)
+    if (email === user.email?.toLowerCase() || targetUserId === user.id) {
+      return NextResponse.json({ error: "You're already in this workspace" }, { status: 400 });
     }
 
     if (targetUserId) {
@@ -61,22 +61,31 @@ export async function POST(request: NextRequest) {
         .maybeSingle();
 
       if (existingMembership) {
-        return NextResponse.json({ error: "User is already a member" }, { status: 409 });
+        return NextResponse.json({ error: "Already a member of this workspace" }, { status: 409 });
       }
+    }
+
+    // Check for existing pending invite
+    const { data: existingInvite } = await admin
+      .from("pending_invites")
+      .select("id")
+      .eq("project_id", projectId)
+      .eq("email", email)
+      .maybeSingle();
+
+    if (existingInvite) {
+      return NextResponse.json({ error: "Invite already sent to this email" }, { status: 409 });
     }
 
     // Create pending invite — user will accept/decline from the app
     const { error: inviteError } = await admin
       .from("pending_invites")
-      .upsert(
-        {
-          project_id: projectId,
-          email,
-          role,
-          invited_by: user.id,
-        },
-        { onConflict: "project_id,email" }
-      );
+      .insert({
+        project_id: projectId,
+        email,
+        role,
+        invited_by: user.id,
+      });
 
     if (inviteError) {
       console.error("Invite error:", inviteError);
