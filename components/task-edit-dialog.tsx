@@ -561,12 +561,19 @@ export function TaskEditDialog({ task, onClose, onSave, onTaskChange, folders }:
       {lightboxUrl && (
         <div
           className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm"
-          onClick={() => setLightboxUrl(null)}
-          onKeyDown={(e) => { if (e.key === "Escape") setLightboxUrl(null); }}
+          onMouseDown={(e) => {
+            e.stopPropagation();
+            e.preventDefault();
+            setLightboxUrl(null);
+          }}
         >
           <button
             type="button"
-            onClick={() => setLightboxUrl(null)}
+            onMouseDown={(e) => {
+              e.stopPropagation();
+              e.preventDefault();
+              setLightboxUrl(null);
+            }}
             className="absolute top-4 right-4 flex size-8 items-center justify-center rounded-full bg-white/10 hover:bg-white/20 transition-colors"
             aria-label="Close lightbox"
           >
@@ -576,7 +583,7 @@ export function TaskEditDialog({ task, onClose, onSave, onTaskChange, folders }:
             src={lightboxUrl}
             alt=""
             className="max-w-[90vw] max-h-[85vh] rounded-lg object-contain"
-            onClick={(e) => e.stopPropagation()}
+            onMouseDown={(e) => e.stopPropagation()}
           />
         </div>
       )}
