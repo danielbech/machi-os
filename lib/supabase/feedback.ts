@@ -131,23 +131,24 @@ export async function loadFeedbackTickets(
 
   if (!tickets || tickets.length === 0) return {}
 
-  // Batch-load author profiles
+  // Batch-load author profiles and reactions in parallel
   const userIds = [...new Set(tickets.map(t => t.user_id))]
-  const { data: profiles } = await supabase
-    .from('profiles')
-    .select('user_id, display_name, initials, color, avatar_url')
-    .in('user_id', userIds)
+  const ticketIds = tickets.map(t => t.id)
+
+  const [{ data: profiles }, { data: votes }] = await Promise.all([
+    supabase
+      .from('profiles')
+      .select('user_id, display_name, initials, color, avatar_url')
+      .in('user_id', userIds),
+    supabase
+      .from('feedback_votes')
+      .select('ticket_id, user_id, reaction_type')
+      .in('ticket_id', ticketIds),
+  ])
 
   const profileMap = new Map(
     (profiles || []).map(p => [p.user_id, p])
   )
-
-  // Load reactions per ticket
-  const ticketIds = tickets.map(t => t.id)
-  const { data: votes } = await supabase
-    .from('feedback_votes')
-    .select('ticket_id, user_id, reaction_type')
-    .in('ticket_id', ticketIds)
 
   // { ticketId -> { reaction_type -> count } }
   const reactionCounts = new Map<string, Record<ReactionType, number>>()

@@ -80,10 +80,12 @@ export default function FeedbackPage() {
   const loadData = useCallback(async () => {
     if (!user) return;
 
-    const cols = await ensureDefaultColumns();
+    const [cols, grouped] = await Promise.all([
+      ensureDefaultColumns(),
+      loadFeedbackTickets(user.id),
+    ]);
     setColumns(cols);
 
-    const grouped = await loadFeedbackTickets(user.id);
     // Build kanban value keyed by column ID (ensure every column has an array)
     const kanbanValue: Record<string, FeedbackTicket[]> = {};
     for (const col of cols) {
