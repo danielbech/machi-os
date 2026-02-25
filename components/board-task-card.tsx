@@ -334,7 +334,7 @@ export function BoardTaskCard({
           </div>
 
           <div className={`absolute top-0.5 right-0 flex flex-col items-center gap-1 transition-opacity ${
-            item.completed || item.checklist.length > 0 ? "" : "opacity-0 group-hover:opacity-100"
+            /* item.completed || */ item.checklist.length > 0 ? "" : "opacity-0 group-hover:opacity-100"
           }`}>
             <button
               type="button"
@@ -344,6 +344,7 @@ export function BoardTaskCard({
               }}
               onMouseDown={(e) => e.stopPropagation()}
               aria-label={item.completed ? "Mark as incomplete" : "Mark as complete"}
+              className="invisible"
             >
               <div
                 className={`flex size-4 items-center justify-center rounded-full border transition-all ${
