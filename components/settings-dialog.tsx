@@ -77,7 +77,7 @@ export function SettingsDialog({
   lastSyncedAt,
   refreshWorkspaces,
   userProjectCount,
-  defaultTab = "general",
+  defaultTab = "workspace",
 }: SettingsDialogProps) {
   const isAdmin = activeProject?.role === 'owner' || activeProject?.role === 'admin';
   const [settingsTab, setSettingsTab] = useState(defaultTab);
@@ -329,8 +329,8 @@ export function SettingsDialog({
         </DialogHeader>
         <Tabs value={settingsTab} onValueChange={setSettingsTab} className="flex-1 min-h-0 flex flex-col">
           <TabsList variant="line" className="border-b border-white/5 px-0">
-            <TabsTrigger value="general" className="text-white/40 data-[state=active]:text-white after:bg-white">General</TabsTrigger>
             <TabsTrigger value="workspace" className="text-white/40 data-[state=active]:text-white after:bg-white">Workspace</TabsTrigger>
+            <TabsTrigger value="general" className="text-white/40 data-[state=active]:text-white after:bg-white">General</TabsTrigger>
             <TabsTrigger value="calendar" className="text-white/40 data-[state=active]:text-white after:bg-white">Integrations</TabsTrigger>
             <TabsTrigger value="about" className="text-white/40 data-[state=active]:text-white after:bg-white">About</TabsTrigger>
           </TabsList>
@@ -401,110 +401,6 @@ export function SettingsDialog({
                   </Button>
                 </div>
               </div>
-
-              {/* Board View */}
-              <div className="space-y-3">
-                <h3 className="text-sm font-medium">Board View</h3>
-                <div className="p-3 rounded-lg border border-white/5 bg-white/[0.02] space-y-3">
-                  <div className="text-xs text-white/40">
-                    Choose the board layout.
-                  </div>
-                  <div className="flex gap-1 p-1 rounded-lg bg-white/[0.04]">
-                    <button
-                      type="button"
-                      onClick={() => onWeekModeChange("5-day")}
-                      className={`flex-1 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
-                        weekMode === "5-day"
-                          ? "bg-white/10 text-white"
-                          : "text-white/40 hover:text-white/60"
-                      }`}
-                    >
-                      5-day week
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => onWeekModeChange("7-day")}
-                      className={`flex-1 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
-                        weekMode === "7-day"
-                          ? "bg-white/10 text-white"
-                          : "text-white/40 hover:text-white/60"
-                      }`}
-                    >
-                      7-day week
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => onWeekModeChange("custom")}
-                      className={`flex-1 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
-                        weekMode === "custom"
-                          ? "bg-white/10 text-white"
-                          : "text-white/40 hover:text-white/60"
-                      }`}
-                    >
-                      Custom
-                    </button>
-                  </div>
-                </div>
-              </div>
-
-              {/* Week Transition — hidden in custom mode */}
-              {weekMode !== "custom" && <div className="space-y-3">
-                <h3 className="text-sm font-medium">Week Transition</h3>
-                <div className="p-3 rounded-lg border border-white/5 bg-white/[0.02] space-y-3">
-                  <div className="text-xs text-white/40">
-                    Archive completed tasks and move incomplete tasks to Monday.
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs text-white/50">Auto-transition:</span>
-                    <select
-                      value={transitionDay}
-                      onChange={(e) => onSetTransitionSchedule(Number(e.target.value), transitionHour)}
-                      className="px-2 py-1 rounded-md border border-white/10 bg-white/[0.02] text-sm outline-none focus:border-white/30 focus:ring-1 focus:ring-white/20"
-                    >
-                      <option value={1}>Monday</option>
-                      <option value={2}>Tuesday</option>
-                      <option value={3}>Wednesday</option>
-                      <option value={4}>Thursday</option>
-                      <option value={5}>Friday</option>
-                      <option value={6}>Saturday</option>
-                      <option value={0}>Sunday</option>
-                    </select>
-                    <span className="text-xs text-white/50">at</span>
-                    <select
-                      value={transitionHour}
-                      onChange={(e) => onSetTransitionSchedule(transitionDay, Number(e.target.value))}
-                      className="px-2 py-1 rounded-md border border-white/10 bg-white/[0.02] text-sm outline-none focus:border-white/30 focus:ring-1 focus:ring-white/20"
-                    >
-                      {Array.from({ length: 24 }, (_, i) => (
-                        <option key={i} value={i}>{String(i).padStart(2, '0')}:00</option>
-                      ))}
-                    </select>
-                  </div>
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    className="w-full justify-center border border-white/10"
-                    disabled={transitioning}
-                    onClick={async () => {
-                      setTransitioning(true);
-                      setTransitionResult(null);
-                      try {
-                        const result = await onTransitionWeek();
-                        setTransitionResult(`Archived ${result.deleted} tasks, carried over ${result.carriedOver}`);
-                      } catch {
-                        setTransitionResult("Failed to transition");
-                      } finally {
-                        setTransitioning(false);
-                      }
-                    }}
-                  >
-                    {transitioning ? "Transitioning..." : "Transition to next week"}
-                  </Button>
-                  {transitionResult && (
-                    <div className="text-xs text-white/60">{transitionResult}</div>
-                  )}
-                </div>
-              </div>}
 
               {/* Account */}
               <div className="space-y-3">
@@ -994,6 +890,104 @@ export function SettingsDialog({
                   )}
                 </div>
               )}
+
+              {/* Board View */}
+              <div className="space-y-3">
+                <div className="text-xs text-white/40 px-1">Board view</div>
+                <div className="p-3 rounded-lg border border-white/5 bg-white/[0.02] space-y-3">
+                  <div className="flex gap-1 p-1 rounded-lg bg-white/[0.04]">
+                    <button
+                      type="button"
+                      onClick={() => onWeekModeChange("5-day")}
+                      className={`flex-1 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+                        weekMode === "5-day"
+                          ? "bg-white/10 text-white"
+                          : "text-white/40 hover:text-white/60"
+                      }`}
+                    >
+                      5-day week
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => onWeekModeChange("7-day")}
+                      className={`flex-1 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+                        weekMode === "7-day"
+                          ? "bg-white/10 text-white"
+                          : "text-white/40 hover:text-white/60"
+                      }`}
+                    >
+                      7-day week
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => onWeekModeChange("custom")}
+                      className={`flex-1 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+                        weekMode === "custom"
+                          ? "bg-white/10 text-white"
+                          : "text-white/40 hover:text-white/60"
+                      }`}
+                    >
+                      Custom
+                    </button>
+                  </div>
+                  {weekMode !== "custom" && (
+                    <>
+                      <div className="border-t border-white/5 pt-3">
+                        <div className="text-xs text-white/40 mb-2">Week transition</div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs text-white/50">Auto-transition:</span>
+                          <select
+                            value={transitionDay}
+                            onChange={(e) => onSetTransitionSchedule(Number(e.target.value), transitionHour)}
+                            className="px-2 py-1 rounded-md border border-white/10 bg-white/[0.02] text-sm outline-none focus:border-white/30 focus:ring-1 focus:ring-white/20"
+                          >
+                            <option value={1}>Monday</option>
+                            <option value={2}>Tuesday</option>
+                            <option value={3}>Wednesday</option>
+                            <option value={4}>Thursday</option>
+                            <option value={5}>Friday</option>
+                            <option value={6}>Saturday</option>
+                            <option value={0}>Sunday</option>
+                          </select>
+                          <span className="text-xs text-white/50">at</span>
+                          <select
+                            value={transitionHour}
+                            onChange={(e) => onSetTransitionSchedule(transitionDay, Number(e.target.value))}
+                            className="px-2 py-1 rounded-md border border-white/10 bg-white/[0.02] text-sm outline-none focus:border-white/30 focus:ring-1 focus:ring-white/20"
+                          >
+                            {Array.from({ length: 24 }, (_, i) => (
+                              <option key={i} value={i}>{String(i).padStart(2, '0')}:00</option>
+                            ))}
+                          </select>
+                        </div>
+                      </div>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="w-full justify-center border border-white/10"
+                        disabled={transitioning}
+                        onClick={async () => {
+                          setTransitioning(true);
+                          setTransitionResult(null);
+                          try {
+                            const result = await onTransitionWeek();
+                            setTransitionResult(`Archived ${result.deleted} tasks, carried over ${result.carriedOver}`);
+                          } catch {
+                            setTransitionResult("Failed to transition");
+                          } finally {
+                            setTransitioning(false);
+                          }
+                        }}
+                      >
+                        {transitioning ? "Transitioning..." : "Transition to next week"}
+                      </Button>
+                      {transitionResult && (
+                        <div className="text-xs text-white/60">{transitionResult}</div>
+                      )}
+                    </>
+                  )}
+                </div>
+              </div>
 
               {/* Delete workspace */}
               {activeProject && activeProject.role === "owner" && userProjectCount > 1 && (

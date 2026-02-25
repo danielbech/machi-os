@@ -46,7 +46,7 @@ export function AppSidebar() {
   } = useCalendar();
   const { setOpenMobile } = useSidebar();
   const [showSettings, setShowSettings] = useState(false);
-  const [settingsDefaultTab, setSettingsDefaultTab] = useState("general");
+  const [settingsDefaultTab, setSettingsDefaultTab] = useState("workspace");
   const [showCreateWorkspace, setShowCreateWorkspace] = useState(false);
   const [workspaceMembers, setWorkspaceMembers] = useState<WorkspaceMember[]>([]);
   const [logoError, setLogoError] = useState<Set<string>>(new Set());
