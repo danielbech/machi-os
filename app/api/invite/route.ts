@@ -63,25 +63,9 @@ export async function POST(request: NextRequest) {
       if (existingMembership) {
         return NextResponse.json({ error: "User is already a member" }, { status: 409 });
       }
-
-      // Add them directly
-      const { error: insertError } = await admin
-        .from("workspace_memberships")
-        .insert({
-          project_id: projectId,
-          user_id: targetUserId,
-          role,
-        });
-
-      if (insertError) {
-        console.error("Insert membership error:", insertError);
-        return NextResponse.json({ error: "Failed to add member" }, { status: 500 });
-      }
-
-      return NextResponse.json({ status: "added", message: "User added to workspace" });
     }
 
-    // User doesn't exist — create pending invite
+    // Create pending invite — user will accept/decline from the app
     const { error: inviteError } = await admin
       .from("pending_invites")
       .upsert(
@@ -99,7 +83,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Failed to create invite" }, { status: 500 });
     }
 
-    return NextResponse.json({ status: "invited", message: "Invite sent — will be accepted when they sign up" });
+    return NextResponse.json({ status: "invited", message: "Invite sent" });
   } catch (err) {
     if (err instanceof NextResponse) return err;
     console.error("Invite route error:", err);
