@@ -83,7 +83,7 @@ export default function BoardPage() {
 
   // Load tasks
   const refreshTasks = useCallback(async () => {
-    if (!activeProjectId) return;
+    if (!activeProjectId || !areaId) return;
     try {
       const tasks = await loadTasksByDay(activeProjectId, areaId);
       // Filter to only show active days based on weekMode

@@ -16,7 +16,7 @@ export async function loadTasksByDay(projectId: string, cachedAreaId?: string | 
 
   const { data: tasks } = await supabase
     .from('tasks')
-    .select('*')
+    .select('id, title, description, completed, assignees, client, priority, day, type, folder_id, checklist, sort_order')
     .eq('area_id', areaId)
     .order('sort_order')
 

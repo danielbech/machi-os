@@ -148,15 +148,28 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
 
     async function loadWorkspaces() {
       try {
-        await initializeUserData(user!.id);
-        const projects = await getUserWorkspaces();
+        // Run init and workspace load in parallel — for returning users
+        // initializeUserData returns early (just a membership check), so
+        // getUserWorkspaces can safely run alongside it. For brand-new users
+        // we retry if the first load returns empty.
+        const [, projects] = await Promise.all([
+          initializeUserData(user!.id),
+          getUserWorkspaces(),
+        ]);
+
+        let finalProjects = projects;
+        if (finalProjects.length === 0) {
+          // New user — init just created their workspace, fetch again
+          finalProjects = await getUserWorkspaces();
+        }
+
         if (cancelled) return;
 
-        setUserProjects(projects);
+        setUserProjects(finalProjects);
 
         const stored = localStorage.getItem("flowie-active-project");
-        const validStored = projects.find((p) => p.id === stored);
-        const projectId = validStored?.id || projects[0]?.id || null;
+        const validStored = finalProjects.find((p) => p.id === stored);
+        const projectId = validStored?.id || finalProjects[0]?.id || null;
         setActiveProjectIdState(projectId);
       } catch (error) {
         console.error("Error loading workspaces:", error);
