@@ -837,7 +837,7 @@ export function SettingsDialog({
                 </div>
               )}
 
-              {/* Members list */}
+              {/* Members + pending invites in one list */}
               <div className="space-y-2">
                 <div className="text-xs text-white/40 px-1">Members</div>
                 {workspaceMembers.map((member) => (
@@ -896,6 +896,35 @@ export function SettingsDialog({
                     )}
                   </div>
                 ))}
+                {isAdmin && pendingInvites.map((invite) => (
+                  <div
+                    key={invite.id}
+                    className="flex items-center gap-3 p-3 rounded-lg border border-dashed border-white/10 bg-white/[0.02]"
+                  >
+                    <div className="size-8 rounded-full bg-white/[0.06] flex items-center justify-center shrink-0 border border-dashed border-white/10">
+                      <UserIcon className="size-4 text-white/20" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="text-sm font-medium flex items-center gap-2">
+                        <span className="truncate text-white/50">{invite.email}</span>
+                        <span className="text-xs px-1.5 py-0.5 rounded bg-yellow-500/15 text-yellow-400/80 shrink-0">
+                          Pending
+                        </span>
+                      </div>
+                      <div className="text-xs text-white/30">
+                        {invite.role} &middot; invited {new Date(invite.created_at).toLocaleDateString()}
+                      </div>
+                    </div>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="text-white/40 hover:text-red-400 hover:bg-red-500/10 shrink-0"
+                      onClick={() => handleCancelInvite(invite.id)}
+                    >
+                      Cancel
+                    </Button>
+                  </div>
+                ))}
               </div>
 
               {/* Invite form — only for owners/admins */}
@@ -934,34 +963,6 @@ export function SettingsDialog({
                       {inviteMessage.text}
                     </div>
                   )}
-                </div>
-              )}
-
-              {/* Pending invites — only for owners/admins */}
-              {isAdmin && pendingInvites.length > 0 && (
-                <div className="space-y-2">
-                  <div className="text-xs text-white/40 px-1">Pending invites</div>
-                  {pendingInvites.map((invite) => (
-                    <div
-                      key={invite.id}
-                      className="flex items-center justify-between p-3 rounded-lg border border-dashed border-white/10 bg-white/[0.01]"
-                    >
-                      <div>
-                        <div className="text-sm text-white/60">{invite.email}</div>
-                        <div className="text-xs text-white/30">
-                          {invite.role} &middot; invited {new Date(invite.created_at).toLocaleDateString()}
-                        </div>
-                      </div>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        className="text-white/40 hover:text-red-400 hover:bg-red-500/10"
-                        onClick={() => handleCancelInvite(invite.id)}
-                      >
-                        Cancel
-                      </Button>
-                    </div>
-                  ))}
                 </div>
               )}
 
