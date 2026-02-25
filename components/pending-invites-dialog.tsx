@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { toast } from "sonner";
 import { useWorkspace } from "@/lib/workspace-context";
 import type { MyPendingInvite } from "@/lib/supabase/workspace";
 import {
@@ -25,8 +26,14 @@ export function PendingInvitesDialog({ open, onOpenChange }: PendingInvitesDialo
     setLoadingId(invite.id);
     try {
       await acceptInvite(invite);
+      toast.success(`Joined ${invite.workspace_name}`);
+      // Close dialog if no more invites
+      if (pendingInvites.length <= 1) {
+        onOpenChange(false);
+      }
     } catch (error) {
       console.error("Failed to accept invite:", error);
+      toast.error("Failed to join workspace");
     } finally {
       setLoadingId(null);
     }
@@ -36,8 +43,12 @@ export function PendingInvitesDialog({ open, onOpenChange }: PendingInvitesDialo
     setLoadingId(invite.id);
     try {
       await declineInvite(invite);
+      if (pendingInvites.length <= 1) {
+        onOpenChange(false);
+      }
     } catch (error) {
       console.error("Failed to decline invite:", error);
+      toast.error("Failed to decline invite");
     } finally {
       setLoadingId(null);
     }
@@ -82,7 +93,7 @@ export function PendingInvitesDialog({ open, onOpenChange }: PendingInvitesDialo
                   disabled={loadingId === invite.id}
                   onClick={() => handleAccept(invite)}
                 >
-                  Accept
+                  {loadingId === invite.id ? "Joining..." : "Accept"}
                 </Button>
               </div>
             </div>
