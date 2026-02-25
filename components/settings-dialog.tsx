@@ -1045,19 +1045,34 @@ export function SettingsDialog({
                 </p>
               </div>
 
-              {/* Commit count */}
-              <div className="p-3 rounded-lg border border-white/5 bg-white/[0.02]">
-                <div className="flex items-center gap-3">
-                  <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-white/5">
-                    <GitCommitHorizontal className="size-5 text-white/50" />
-                  </div>
-                  <div>
-                    <div className="text-2xl font-bold tabular-nums">
-                      {commitCount !== null ? commitCount.toLocaleString() : (
-                        <span className="inline-block w-12 h-7 bg-white/5 rounded animate-pulse" />
-                      )}
+              {/* Commit count & days since first commit */}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="p-3 rounded-lg border border-white/5 bg-white/[0.02]">
+                  <div className="flex items-center gap-3">
+                    <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-white/5">
+                      <GitCommitHorizontal className="size-5 text-white/50" />
                     </div>
-                    <div className="text-xs text-white/40">commits shipped</div>
+                    <div>
+                      <div className="text-2xl font-bold tabular-nums">
+                        {commitCount !== null ? commitCount.toLocaleString() : (
+                          <span className="inline-block w-12 h-7 bg-white/5 rounded animate-pulse" />
+                        )}
+                      </div>
+                      <div className="text-xs text-white/40">commits shipped</div>
+                    </div>
+                  </div>
+                </div>
+                <div className="p-3 rounded-lg border border-white/5 bg-white/[0.02]">
+                  <div className="flex items-center gap-3">
+                    <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-white/5">
+                      <span className="text-lg">🗓️</span>
+                    </div>
+                    <div>
+                      <div className="text-2xl font-bold tabular-nums">
+                        {Math.floor((Date.now() - new Date("2026-02-15").getTime()) / 86400000)}
+                      </div>
+                      <div className="text-xs text-white/40">days since first commit</div>
+                    </div>
                   </div>
                 </div>
               </div>
