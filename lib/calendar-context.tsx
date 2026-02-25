@@ -140,11 +140,6 @@ export function CalendarProvider({ children }: { children: React.ReactNode }) {
       const updatedConnections: ConnectionWithCalendars[] = [];
 
       for (const conn of connections) {
-        if (new Date(conn.expires_at) < new Date()) {
-          updatedConnections.push({ ...conn, availableCalendars: [] });
-          continue;
-        }
-
         try {
           const { flat: allEvents } = await getEventsGroupedByDay(
             conn.access_token, monday, friday, conn.selected_calendars
@@ -201,8 +196,6 @@ export function CalendarProvider({ children }: { children: React.ReactNode }) {
         if (connections.length > 0) {
           const withCalendars: ConnectionWithCalendars[] = await Promise.all(
             connections.map(async (conn) => {
-              const isExpired = new Date(conn.expires_at) < new Date();
-              if (isExpired) return { ...conn, availableCalendars: [] };
               try {
                 const calendars = await fetchCalendarList(conn.access_token);
                 return { ...conn, availableCalendars: calendars };

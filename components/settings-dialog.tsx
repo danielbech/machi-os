@@ -634,10 +634,10 @@ export function SettingsDialog({
                         <div className="min-w-0">
                           <div className="text-sm font-medium truncate">{conn.google_email || 'Google Account'}</div>
                           <div className="text-xs text-white/40">
-                            {new Date(conn.expires_at) < new Date()
-                              ? 'Expired — reconnect'
-                              : totalCount > 0
-                                ? `${selectedCount} of ${totalCount} calendars`
+                            {totalCount > 0
+                              ? `${selectedCount} of ${totalCount} calendars`
+                              : conn.selected_calendars.length > 0
+                                ? `${conn.selected_calendars.length} calendars synced`
                                 : 'Connected'}
                           </div>
                         </div>
