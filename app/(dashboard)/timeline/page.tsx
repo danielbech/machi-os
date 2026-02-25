@@ -788,7 +788,7 @@ export default function TimelinePage() {
                       <p className="flex-1 truncate text-left font-medium">
                         {parentFeature.name}
                       </p>
-                      <p className="text-muted-foreground shrink-0">
+                      <p className="text-white/20 shrink-0">
                         {parentDuration}
                       </p>
                     </div>
@@ -810,7 +810,7 @@ export default function TimelinePage() {
                         <div
                           key={child.id}
                           data-sidebar-entry
-                          className={`relative flex items-center gap-2.5 pl-8 pr-2.5 text-xs border-t border-white/[0.04] cursor-pointer hover:bg-white/[0.05] transition-colors ${selectedEntryId === child.id ? "bg-white/[0.08]" : ""}`}
+                          className={`relative flex items-center gap-2.5 pl-4 pr-2.5 text-xs border-t border-white/[0.04] cursor-pointer hover:bg-white/[0.05] transition-colors ${selectedEntryId === child.id ? "bg-white/[0.08]" : ""}`}
                           style={{ height: "var(--gantt-row-height)" }}
                           onClick={() => setSelectedEntryId(child.id)}
                         >
@@ -822,7 +822,7 @@ export default function TimelinePage() {
                           <p className="flex-1 truncate text-left font-medium">
                             {childFeature.name}
                           </p>
-                          <p className="text-muted-foreground shrink-0">
+                          <p className="text-white/20 shrink-0">
                             {isMilestone ? format(childFeature.startAt, "MMM d") : childDuration}
                           </p>
                         </div>
