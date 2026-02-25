@@ -18,7 +18,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: parsed.error.issues[0].message }, { status: 400 });
     }
 
-    const { email, projectId, role } = parsed.data;
+    const { email: rawEmail, projectId, role } = parsed.data;
+    const email = rawEmail.toLowerCase();
 
     const { supabase, user } = await authenticateRoute(request);
 
@@ -35,7 +36,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Don't invite yourself
-    if (email === user.email) {
+    if (email === user.email?.toLowerCase()) {
       return NextResponse.json({ error: "Cannot invite yourself" }, { status: 400 });
     }
 

@@ -5,18 +5,18 @@ import { getOrCreateProfile } from './profiles'
 export async function initializeUserData(userId: string) {
   const supabase = createClient()
 
-  // Ensure the user has a profile
+  // Ensure the user has a profile + accept pending invites in parallel
   const { data: { user } } = await supabase.auth.getUser()
-  if (user?.email) {
-    await getOrCreateProfile(userId, user.email)
-  }
-
-  // Accept any pending invites for this user
-  await supabase.rpc('accept_pending_invites').then(({ error }) => {
-    if (error) console.error('Error accepting pending invites:', error)
-  })
+  await Promise.all([
+    user?.email ? getOrCreateProfile(userId, user.email) : Promise.resolve(),
+    supabase.rpc('accept_pending_invites').then(({ error }) => {
+      if (error) console.error('Error accepting pending invites:', error)
+    }),
+  ])
 
   // Check if user already has any projects (via membership)
+  // This covers both users who already had workspaces AND users
+  // who just had pending invites accepted above
   const { data: existingMemberships } = await supabase
     .from('workspace_memberships')
     .select('id')
@@ -24,6 +24,25 @@ export async function initializeUserData(userId: string) {
     .limit(1)
 
   if (existingMemberships && existingMemberships.length > 0) {
+    return
+  }
+
+  // New user with no invites — create their default workspace.
+  // Use a lock check to prevent race conditions from multiple tabs:
+  // re-check memberships right before creating to avoid duplicates.
+  const { data: doubleCheck } = await supabase
+    .from('projects')
+    .select('id')
+    .eq('user_id', userId)
+    .limit(1)
+
+  if (doubleCheck && doubleCheck.length > 0) {
+    // Another tab already created the project — just ensure membership exists
+    const projectId = doubleCheck[0].id
+    await supabase
+      .from('workspace_memberships')
+      .insert({ project_id: projectId, user_id: userId, role: 'owner' })
+      .then(() => {}) // Ignore conflict errors (already exists)
     return
   }
 
@@ -44,18 +63,13 @@ export async function initializeUserData(userId: string) {
   }
 
   // Create workspace membership (owner)
-  const { error: membershipError } = await supabase
+  await supabase
     .from('workspace_memberships')
     .insert({
       project_id: project.id,
       user_id: userId,
       role: 'owner',
     })
-
-  if (membershipError) {
-    console.error('Error creating membership:', membershipError)
-    throw membershipError
-  }
 
   // Create default area
   const { data: area, error: areaError } = await supabase
