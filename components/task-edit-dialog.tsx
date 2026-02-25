@@ -589,11 +589,11 @@ function Lightbox({ url, onClose }: { url: string; onClose: () => void }) {
   return (
     <div
       className="fixed inset-0 z-[200] flex items-center justify-center bg-black/80 backdrop-blur-sm cursor-pointer"
-      onClick={onClose}
+      onPointerUp={onClose}
     >
       <button
         type="button"
-        onClick={onClose}
+        onPointerUp={onClose}
         className="absolute top-4 right-4 flex size-8 items-center justify-center rounded-full bg-white/10 hover:bg-white/20 transition-colors"
         aria-label="Close lightbox"
       >
@@ -603,7 +603,7 @@ function Lightbox({ url, onClose }: { url: string; onClose: () => void }) {
         src={url}
         alt=""
         className="max-w-[90vw] max-h-[85vh] rounded-lg object-contain cursor-default"
-        onClick={(e) => e.stopPropagation()}
+        onPointerUp={(e) => e.stopPropagation()}
       />
     </div>
   );
