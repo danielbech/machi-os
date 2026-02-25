@@ -1,4 +1,4 @@
-import type { Task } from "./types";
+import type { Task, BoardColumn } from "./types";
 import type { WeekMode } from "./types";
 
 const ALL_COLUMN_TITLES: Record<string, string> = {
@@ -11,14 +11,17 @@ const ALL_COLUMN_TITLES: Record<string, string> = {
   sunday: "Sunday",
 };
 
-export function getColumnTitles(weekMode: WeekMode) {
+export function getColumnTitles(weekMode: WeekMode, boardColumns?: BoardColumn[]) {
+  if (weekMode === "custom" && boardColumns) {
+    return Object.fromEntries(boardColumns.map((c) => [c.id, c.title]));
+  }
   if (weekMode === "7-day") return ALL_COLUMN_TITLES;
   const { saturday, sunday, ...fiveDay } = ALL_COLUMN_TITLES;
   return fiveDay;
 }
 
-export function getEmptyColumns(weekMode: WeekMode): Record<string, Task[]> {
-  const titles = getColumnTitles(weekMode);
+export function getEmptyColumns(weekMode: WeekMode, boardColumns?: BoardColumn[]): Record<string, Task[]> {
+  const titles = getColumnTitles(weekMode, boardColumns);
   return Object.fromEntries(Object.keys(titles).map((k) => [k, []]));
 }
 

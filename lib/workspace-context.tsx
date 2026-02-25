@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useState, useEffect, useCallback, useMemo } from "react";
 import type { User } from "@supabase/supabase-js";
-import type { Project, Client, Member, WeekMode, DayName } from "@/lib/types";
+import type { Project, Client, Member, WeekMode, DayName, BoardColumn } from "@/lib/types";
 import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
 import { initializeUserData, getAreaIdForProject } from "@/lib/supabase/initialize";
@@ -11,6 +11,7 @@ import type { MyPendingInvite } from "@/lib/supabase/workspace";
 import { loadWorkspaceProfiles } from "@/lib/supabase/profiles";
 import { loadClients } from "@/lib/supabase/clients";
 import { transitionWeek } from "@/lib/supabase/tasks-simple";
+import { loadBoardColumns, createBoardColumn, updateBoardColumn, deleteBoardColumn } from "@/lib/supabase/board-columns";
 
 interface WorkspaceContextValue {
   user: User | null;
@@ -34,6 +35,12 @@ interface WorkspaceContextValue {
   weekMode: WeekMode;
   setWeekMode: (mode: WeekMode) => Promise<void>;
   weekDays: DayName[];
+  // Board columns (custom mode)
+  boardColumns: BoardColumn[];
+  addBoardColumn: (title: string) => Promise<BoardColumn>;
+  renameBoardColumn: (id: string, title: string) => Promise<void>;
+  removeBoardColumn: (id: string) => Promise<void>;
+  refreshBoardColumns: () => Promise<void>;
   refreshWorkspaces: () => Promise<void>;
   areaId: string | null;
   pendingInvites: MyPendingInvite[];
@@ -93,6 +100,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
 
   // Week mode
   const [weekMode, setWeekModeState] = useState<WeekMode>("5-day");
+  const [boardColumns, setBoardColumns] = useState<BoardColumn[]>([]);
 
   // Transition schedule
   const [transitionDay, setTransitionDayState] = useState(5);
@@ -224,7 +232,50 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     setUserProjects((prev) =>
       prev.map((p) => (p.id === activeProjectId ? { ...p, week_mode: mode, transition_day: newTransitionDay } : p))
     );
+
+    // When switching to custom, seed default columns if none exist
+    if (mode === "custom") {
+      const existing = await loadBoardColumns(activeProjectId);
+      if (existing.length === 0) {
+        const defaults = ["To Do", "In Progress", "Done"];
+        const created = [];
+        for (let i = 0; i < defaults.length; i++) {
+          created.push(await createBoardColumn(activeProjectId, defaults[i], i));
+        }
+        setBoardColumns(created);
+      } else {
+        setBoardColumns(existing);
+      }
+    }
   }, [activeProjectId, transitionDay]);
+
+  // Board columns (custom mode)
+  const refreshBoardColumns = useCallback(async () => {
+    if (!activeProjectId) {
+      setBoardColumns([]);
+      return;
+    }
+    const cols = await loadBoardColumns(activeProjectId);
+    setBoardColumns(cols);
+  }, [activeProjectId]);
+
+  const addBoardColumn = useCallback(async (title: string) => {
+    if (!activeProjectId) throw new Error("No active project");
+    const sortOrder = boardColumns.length;
+    const col = await createBoardColumn(activeProjectId, title, sortOrder);
+    setBoardColumns((prev) => [...prev, col]);
+    return col;
+  }, [activeProjectId, boardColumns.length]);
+
+  const renameBoardColumn = useCallback(async (id: string, title: string) => {
+    await updateBoardColumn(id, { title });
+    setBoardColumns((prev) => prev.map((c) => (c.id === id ? { ...c, title } : c)));
+  }, []);
+
+  const removeBoardColumn = useCallback(async (id: string) => {
+    await deleteBoardColumn(id);
+    setBoardColumns((prev) => prev.filter((c) => c.id !== id));
+  }, []);
 
   // setTransitionSchedule: update day + hour in Supabase + local state
   const setTransitionSchedule = useCallback(async (day: number, hour: number) => {
@@ -271,11 +322,15 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     if (activeProjectId) {
       loadWorkspaceProfiles(activeProjectId).then(setTeamMembers).catch(() => setTeamMembers([]));
       getAreaIdForProject(activeProjectId).then(setAreaId);
+      if (weekMode === "custom") {
+        refreshBoardColumns();
+      }
     } else {
       setTeamMembers([]);
       setAreaId(null);
+      setBoardColumns([]);
     }
-  }, [refreshClients, activeProjectId]);
+  }, [refreshClients, activeProjectId, weekMode, refreshBoardColumns]);
 
   // --- Weekly Transition ---
 
@@ -290,7 +345,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
 
   // Auto-trigger: every 60s check if it's transition day >= transition hour and hasn't run this week
   useEffect(() => {
-    if (!activeProjectId) return;
+    if (!activeProjectId || weekMode === "custom") return;
 
     const check = () => {
       const now = new Date();
@@ -306,7 +361,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     check();
     const interval = setInterval(check, 60 * 1000);
     return () => clearInterval(interval);
-  }, [activeProjectId, transitionToNextWeek, transitionDay, transitionHour]);
+  }, [activeProjectId, transitionToNextWeek, transitionDay, transitionHour, weekMode]);
 
   const handleAcceptInvite = useCallback(async (invite: MyPendingInvite) => {
     await acceptInviteApi(invite.id, invite.project_id, invite.role);
@@ -327,6 +382,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     activeProject, clients, refreshClients, teamMembers, refreshTeamMembers,
     transitionToNextWeek, transitionDay, transitionHour, transitionCount,
     setTransitionSchedule, displayMonday, weekMode, setWeekMode, weekDays,
+    boardColumns, addBoardColumn, renameBoardColumn, removeBoardColumn, refreshBoardColumns,
     refreshWorkspaces, areaId,
     pendingInvites, acceptInvite: handleAcceptInvite, declineInvite: handleDeclineInvite,
   }), [
@@ -334,6 +390,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     activeProject, clients, refreshClients, teamMembers, refreshTeamMembers,
     transitionToNextWeek, transitionDay, transitionHour, transitionCount,
     setTransitionSchedule, displayMonday, weekMode, setWeekMode, weekDays,
+    boardColumns, addBoardColumn, renameBoardColumn, removeBoardColumn, refreshBoardColumns,
     refreshWorkspaces, areaId,
     pendingInvites, handleAcceptInvite, handleDeclineInvite,
   ]);

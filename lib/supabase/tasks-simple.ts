@@ -7,8 +7,8 @@ async function resolveAreaId(projectId: string, areaId?: string | null): Promise
   return getAreaIdForProject(projectId)
 }
 
-// Load all tasks for a project, grouped by day
-export async function loadTasksByDay(projectId: string, cachedAreaId?: string | null): Promise<Record<string, Task[]>> {
+// Load all tasks for a project, grouped by day (or by custom column ID)
+export async function loadTasksByDay(projectId: string, cachedAreaId?: string | null, customColumnIds?: string[]): Promise<Record<string, Task[]>> {
   const supabase = createClient()
   const areaId = await resolveAreaId(projectId, cachedAreaId)
 
@@ -22,14 +22,18 @@ export async function loadTasksByDay(projectId: string, cachedAreaId?: string | 
 
   if (!tasks) return {}
 
-  const grouped: Record<string, Task[]> = {
-    monday: [],
-    tuesday: [],
-    wednesday: [],
-    thursday: [],
-    friday: [],
-    saturday: [],
-    sunday: [],
+  const grouped: Record<string, Task[]> = {}
+
+  if (customColumnIds) {
+    // Custom mode: group by column UUID
+    for (const colId of customColumnIds) {
+      grouped[colId] = []
+    }
+  } else {
+    // Standard mode: group by weekday
+    for (const day of ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']) {
+      grouped[day] = []
+    }
   }
 
   tasks.forEach(task => {

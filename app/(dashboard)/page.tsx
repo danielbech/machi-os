@@ -15,22 +15,27 @@ import { BoardAddCard } from "@/components/board-add-card";
 import { useCardPresence } from "@/hooks/use-card-presence";
 import type { Task, DayName } from "@/lib/types";
 import { getColumnTitles, getEmptyColumns } from "@/lib/constants";
+import { Input } from "@/components/ui/input";
 import {
   Kanban,
   KanbanBoard,
   KanbanColumn,
   KanbanOverlay,
 } from "@/components/ui/kanban";
-import { Check, CheckCircle, Plus, StickyNote, User } from "lucide-react";
+import { Check, CheckCircle, Plus, StickyNote, User, X } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 export default function BoardPage() {
-  const { activeProjectId, clients, teamMembers, weekMode, weekDays, displayMonday, areaId, user } = useWorkspace();
+  const { activeProjectId, clients, teamMembers, weekMode, weekDays, displayMonday, areaId, user, boardColumns, addBoardColumn, renameBoardColumn, removeBoardColumn } = useWorkspace();
   const { calendarEvents } = useCalendar();
   const { backlogOpen, addToBacklog, backlogFolders } = useBacklog();
 
-  const columnTitles = getColumnTitles(weekMode);
-  const [columns, setColumns] = useState<Record<string, Task[]>>(() => getEmptyColumns(weekMode));
+  const isCustom = weekMode === "custom";
+  const columnTitles = getColumnTitles(weekMode, boardColumns);
+  const columnKeys = isCustom ? boardColumns.map((c) => c.id) : weekDays;
+  const [columns, setColumns] = useState<Record<string, Task[]>>(() => getEmptyColumns(weekMode, boardColumns));
+  const [renamingColumn, setRenamingColumn] = useState<string | null>(null);
+  const [renameValue, setRenameValue] = useState("");
   const [initialLoading, setInitialLoading] = useState(true);
   const [addingToColumn, setAddingToColumn] = useState<string | null>(null);
   const [addingAtIndex, setAddingAtIndex] = useState<number | null>(null);
@@ -84,12 +89,19 @@ export default function BoardPage() {
   // Load tasks
   const refreshTasks = useCallback(async () => {
     if (!activeProjectId || !areaId) return;
+    if (isCustom && boardColumns.length === 0) {
+      setColumns({});
+      setInitialLoading(false);
+      return;
+    }
     try {
-      const tasks = await loadTasksByDay(activeProjectId, areaId);
-      // Filter to only show active days based on weekMode
+      const customIds = isCustom ? boardColumns.map((c) => c.id) : undefined;
+      const tasks = await loadTasksByDay(activeProjectId, areaId, customIds);
+      // Filter to only show active columns based on weekMode
+      const keys = isCustom ? boardColumns.map((c) => c.id) : weekDays;
       const filtered: Record<string, Task[]> = {};
-      for (const day of weekDays) {
-        filtered[day] = tasks[day] || [];
+      for (const key of keys) {
+        filtered[key] = tasks[key] || [];
       }
       setColumns(filtered);
       setInitialLoading(false);
@@ -97,7 +109,7 @@ export default function BoardPage() {
       console.error("Error loading tasks:", error);
       setInitialLoading(false);
     }
-  }, [activeProjectId, weekDays, areaId]);
+  }, [activeProjectId, weekDays, areaId, isCustom, boardColumns]);
 
   // Load tasks when active project changes
   useEffect(() => {
@@ -106,12 +118,12 @@ export default function BoardPage() {
     localStorage.removeItem("flowie-filter-mine");
     localStorage.removeItem("flowie-hide-completed");
     if (!activeProjectId) {
-      setColumns(getEmptyColumns(weekMode));
+      setColumns(getEmptyColumns(weekMode, boardColumns));
       setInitialLoading(false);
       return;
     }
     refreshTasks();
-  }, [activeProjectId, weekMode, refreshTasks]);
+  }, [activeProjectId, weekMode, boardColumns, refreshTasks]);
 
   // Track previous columns for diffing on drag
   const prevColumnsRef = useRef(columns);
@@ -475,13 +487,13 @@ export default function BoardPage() {
     return (
       <main className="flex min-h-screen flex-col pt-4 pr-4 md:pr-8">
         <div className="flex gap-2 overflow-hidden p-1 pl-4 md:pl-8">
-          {weekDays.map((day) => (
-            <div key={day} className="w-[85vw] sm:w-[280px] shrink-0 p-2.5 space-y-2">
+          {columnKeys.map((key, ki) => (
+            <div key={key} className="w-[85vw] sm:w-[280px] shrink-0 p-2.5 space-y-2">
               <div className="flex items-baseline gap-2 px-1 mb-1.5">
                 <div className="h-5 w-20 bg-white/5 rounded animate-pulse" />
-                <div className="h-4 w-12 bg-white/5 rounded animate-pulse" />
+                {!isCustom && <div className="h-4 w-12 bg-white/5 rounded animate-pulse" />}
               </div>
-              {[...Array(day === "monday" ? 4 : day === "tuesday" ? 3 : 2)].map((_, i) => (
+              {[...Array(ki === 0 ? 4 : ki === 1 ? 3 : 2)].map((_, i) => (
                 <div key={i} className="h-12 bg-white/[0.02] rounded-lg border border-white/5 animate-pulse" />
               ))}
             </div>
@@ -553,16 +565,60 @@ export default function BoardPage() {
               >
                 <div className="mb-1.5 px-1">
                   <div className="flex items-baseline gap-2">
-                    <h2 className={`font-semibold ${columnId === todayName ? "text-white" : ""}`}>
-                      {columnTitles[columnId] || columnId}
-                    </h2>
-                    <span className={`text-xs ${columnId === todayName ? "text-blue-400 border border-blue-500/30 rounded px-1 py-0.5" : "text-white/40"}`}>{weekDates[columnId]}</span>
+                    {isCustom && renamingColumn === columnId ? (
+                      <input
+                        value={renameValue}
+                        onChange={(e) => setRenameValue(e.target.value)}
+                        className="font-semibold bg-transparent outline-none border-b border-white/20 w-full"
+                        autoFocus
+                        onBlur={async () => {
+                          const trimmed = renameValue.trim();
+                          if (trimmed && trimmed !== columnTitles[columnId]) {
+                            await renameBoardColumn(columnId, trimmed);
+                          }
+                          setRenamingColumn(null);
+                        }}
+                        onKeyDown={async (e) => {
+                          if (e.key === "Enter") {
+                            const trimmed = renameValue.trim();
+                            if (trimmed && trimmed !== columnTitles[columnId]) {
+                              await renameBoardColumn(columnId, trimmed);
+                            }
+                            setRenamingColumn(null);
+                          }
+                          if (e.key === "Escape") setRenamingColumn(null);
+                        }}
+                      />
+                    ) : (
+                      <h2
+                        className={`font-semibold ${isCustom ? "cursor-text hover:text-white/80" : ""} ${!isCustom && columnId === todayName ? "text-white" : ""}`}
+                        onClick={isCustom ? () => { setRenamingColumn(columnId); setRenameValue(columnTitles[columnId] || ""); } : undefined}
+                      >
+                        {columnTitles[columnId] || columnId}
+                      </h2>
+                    )}
+                    {!isCustom && (
+                      <span className={`text-xs ${columnId === todayName ? "text-blue-400 border border-blue-500/30 rounded px-1 py-0.5" : "text-white/40"}`}>{weekDates[columnId]}</span>
+                    )}
+                    {isCustom && (
+                      <button
+                        onClick={async () => {
+                          if (confirm(`Delete "${columnTitles[columnId]}" and all its tasks?`)) {
+                            await removeBoardColumn(columnId);
+                          }
+                        }}
+                        className="text-white/20 hover:text-red-400 transition-colors ml-auto"
+                        aria-label={`Delete column ${columnTitles[columnId]}`}
+                      >
+                        <X className="size-3.5" />
+                      </button>
+                    )}
                   </div>
                 </div>
 
                 <div className="flex flex-col overflow-y-auto pr-1">
-                  {/* Calendar Events */}
-                  {calendarEvents[columnId]?.map((event) => {
+                  {/* Calendar Events — only in week modes */}
+                  {!isCustom && calendarEvents[columnId]?.map((event) => {
                     const dayIndex = weekDays.indexOf(columnId as DayName);
                     const todayIndex = weekDays.indexOf(todayName as DayName);
                     return (
@@ -661,6 +717,22 @@ export default function BoardPage() {
                 </div>
               </KanbanColumn>
             ))}
+            {isCustom && (
+              <div className="w-[85vw] sm:w-[280px] shrink-0 p-2.5">
+                <button
+                  onClick={async () => {
+                    const title = prompt("Column name:");
+                    if (title?.trim()) {
+                      await addBoardColumn(title.trim());
+                    }
+                  }}
+                  className="flex items-center justify-center gap-2 w-full rounded-lg p-3 text-xs text-white/30 border border-dashed border-white/10 hover:border-white/20 hover:text-white/50 transition-colors"
+                >
+                  <Plus className="size-3.5" />
+                  Add column
+                </button>
+              </div>
+            )}
           </KanbanBoard>
 
           <KanbanOverlay>

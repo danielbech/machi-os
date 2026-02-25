@@ -25,7 +25,7 @@ export interface ChecklistItem {
 }
 
 export type DayName = "monday" | "tuesday" | "wednesday" | "thursday" | "friday" | "saturday" | "sunday";
-export type WeekMode = "5-day" | "7-day";
+export type WeekMode = "5-day" | "7-day" | "custom";
 
 export interface Task {
   id: string;
@@ -97,6 +97,13 @@ export interface TimelineMarker {
   date: string;
   entry_id?: string;
   created_at: string;
+}
+
+export interface BoardColumn {
+  id: string;
+  project_id: string;
+  title: string;
+  sort_order: number;
 }
 
 export interface FeedbackColumn {

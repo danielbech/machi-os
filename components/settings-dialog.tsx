@@ -402,12 +402,12 @@ export function SettingsDialog({
                 </div>
               </div>
 
-              {/* Week Mode */}
+              {/* Board View */}
               <div className="space-y-3">
-                <h3 className="text-sm font-medium">Week Mode</h3>
+                <h3 className="text-sm font-medium">Board View</h3>
                 <div className="p-3 rounded-lg border border-white/5 bg-white/[0.02] space-y-3">
                   <div className="text-xs text-white/40">
-                    Choose how many days to show on the board.
+                    Choose the board layout.
                   </div>
                   <div className="flex gap-1 p-1 rounded-lg bg-white/[0.04]">
                     <button
@@ -419,7 +419,7 @@ export function SettingsDialog({
                           : "text-white/40 hover:text-white/60"
                       }`}
                     >
-                      5-day work week
+                      5-day week
                     </button>
                     <button
                       type="button"
@@ -430,14 +430,25 @@ export function SettingsDialog({
                           : "text-white/40 hover:text-white/60"
                       }`}
                     >
-                      7-day full week
+                      7-day week
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => onWeekModeChange("custom")}
+                      className={`flex-1 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+                        weekMode === "custom"
+                          ? "bg-white/10 text-white"
+                          : "text-white/40 hover:text-white/60"
+                      }`}
+                    >
+                      Custom
                     </button>
                   </div>
                 </div>
               </div>
 
-              {/* Week Transition */}
-              <div className="space-y-3">
+              {/* Week Transition — hidden in custom mode */}
+              {weekMode !== "custom" && <div className="space-y-3">
                 <h3 className="text-sm font-medium">Week Transition</h3>
                 <div className="p-3 rounded-lg border border-white/5 bg-white/[0.02] space-y-3">
                   <div className="text-xs text-white/40">
@@ -493,7 +504,7 @@ export function SettingsDialog({
                     <div className="text-xs text-white/60">{transitionResult}</div>
                   )}
                 </div>
-              </div>
+              </div>}
 
               {/* Account */}
               <div className="space-y-3">
