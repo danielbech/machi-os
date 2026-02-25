@@ -19,7 +19,7 @@ import {
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Calendar, RefreshCw, Plus, X, ChevronDown, Camera, User as UserIcon, Trash2 } from "lucide-react";
+import { Calendar, RefreshCw, Plus, X, ChevronDown, Camera, User as UserIcon, Trash2, GitCommitHorizontal } from "lucide-react";
 
 interface SettingsDialogProps {
   open: boolean;
@@ -113,10 +113,27 @@ export function SettingsDialog({
   const [deletingAccount, setDeletingAccount] = useState(false);
   const [deleteAccountError, setDeleteAccountError] = useState<string | null>(null);
 
+  // About tab state
+  const [commitCount, setCommitCount] = useState<number | null>(null);
+
   // Reset tab when dialog opens
   useEffect(() => {
     if (open) setSettingsTab(defaultTab);
   }, [open, defaultTab]);
+
+  // Fetch commit count when about tab is shown
+  useEffect(() => {
+    if (!open || settingsTab !== "about" || commitCount !== null) return;
+
+    fetch("https://api.github.com/repos/danielbech/machi-os/contributors?per_page=100")
+      .then((res) => res.json())
+      .then((contributors) => {
+        if (Array.isArray(contributors)) {
+          setCommitCount(contributors.reduce((sum: number, c: { contributions: number }) => sum + c.contributions, 0));
+        }
+      })
+      .catch(() => {});
+  }, [open, settingsTab, commitCount]);
 
   // Sync workspace settings when dialog opens or active project changes
   useEffect(() => {
@@ -311,6 +328,7 @@ export function SettingsDialog({
             <TabsTrigger value="general" className="text-white/40 data-[state=active]:text-white after:bg-white">General</TabsTrigger>
             <TabsTrigger value="workspace" className="text-white/40 data-[state=active]:text-white after:bg-white">Workspace</TabsTrigger>
             <TabsTrigger value="calendar" className="text-white/40 data-[state=active]:text-white after:bg-white">Calendar</TabsTrigger>
+            <TabsTrigger value="about" className="text-white/40 data-[state=active]:text-white after:bg-white">About</TabsTrigger>
           </TabsList>
 
           {/* General Tab */}
@@ -1002,6 +1020,42 @@ export function SettingsDialog({
                   </div>
                 </div>
               )}
+            </div>
+          </TabsContent>
+          {/* About Tab */}
+          <TabsContent value="about" className="flex-1 min-h-0 overflow-y-auto">
+            <div className="space-y-6 py-4">
+              <div className="space-y-3">
+                <p className="text-sm text-white/60 leading-relaxed">
+                  Flowie is a product of{" "}
+                  <a
+                    href="https://oimachi.co"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-white underline underline-offset-2 hover:text-white/80 transition-colors"
+                  >
+                    Oimachi
+                  </a>
+                  , initially built to create better workflows and stay in the flow internally.
+                </p>
+              </div>
+
+              {/* Commit count */}
+              <div className="p-3 rounded-lg border border-white/5 bg-white/[0.02]">
+                <div className="flex items-center gap-3">
+                  <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-white/5">
+                    <GitCommitHorizontal className="size-5 text-white/50" />
+                  </div>
+                  <div>
+                    <div className="text-2xl font-bold tabular-nums">
+                      {commitCount !== null ? commitCount.toLocaleString() : (
+                        <span className="inline-block w-12 h-7 bg-white/5 rounded animate-pulse" />
+                      )}
+                    </div>
+                    <div className="text-xs text-white/40">commits shipped</div>
+                  </div>
+                </div>
+              </div>
             </div>
           </TabsContent>
         </Tabs>
