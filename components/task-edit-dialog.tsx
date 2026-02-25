@@ -8,6 +8,8 @@ import { validateImageFile } from "@/lib/validate-file";
 import {
   Dialog,
   DialogContent,
+  DialogTitle,
+  DialogDescription,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
@@ -121,6 +123,8 @@ export function TaskEditDialog({ task, onClose, onSave, onTaskChange, folders }:
           }
         }}
       >
+        <DialogTitle className="sr-only">Edit task</DialogTitle>
+        <DialogDescription className="sr-only">Edit task details</DialogDescription>
         {task && (
           <form onSubmit={(e) => { e.preventDefault(); onSave(task); }} className="space-y-4">
             {/* Type toggle */}

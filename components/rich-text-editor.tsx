@@ -2,7 +2,6 @@
 
 import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
-import Link from "@tiptap/extension-link";
 import Placeholder from "@tiptap/extension-placeholder";
 import { Bold, Italic, List, ListOrdered, Link as LinkIcon, Unlink } from "lucide-react";
 import { useCallback, useEffect } from "react";
@@ -21,10 +20,10 @@ export function RichTextEditor({ value, onChange, placeholder }: RichTextEditorP
         codeBlock: false,
         blockquote: false,
         horizontalRule: false,
-      }),
-      Link.configure({
-        openOnClick: false,
-        HTMLAttributes: { class: "text-blue-400 underline underline-offset-2" },
+        link: {
+          openOnClick: false,
+          HTMLAttributes: { class: "text-blue-400 underline underline-offset-2" },
+        },
       }),
       Placeholder.configure({ placeholder: placeholder || "Description..." }),
     ],
