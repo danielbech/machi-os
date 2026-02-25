@@ -19,7 +19,7 @@ import {
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Calendar, RefreshCw, Plus, X, ChevronDown, Camera, User as UserIcon, Trash2, GitCommitHorizontal } from "lucide-react";
+import { RefreshCw, Plus, X, ChevronDown, Camera, User as UserIcon, Trash2, GitCommitHorizontal } from "lucide-react";
 
 interface SettingsDialogProps {
   open: boolean;
@@ -638,7 +638,16 @@ export function SettingsDialog({
                         }}
                       >
                         <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-white/5 shrink-0">
-                          <Calendar className="size-4" />
+                          <svg className="size-4" viewBox="0 0 24 24" fill="none">
+                            <path d="M18.316 5.684H24v12.632h-5.684V5.684z" fill="#1967D2"/>
+                            <path d="M5.684 18.316H0V5.684h5.684v12.632z" fill="#188038"/>
+                            <path d="M18.316 24V18.316H5.684V24H3.79A3.79 3.79 0 010 20.21v-1.894h5.684v5.684h12.632z" fill="#1967D2"/>
+                            <path d="M24 5.684V3.79A3.79 3.79 0 0020.21 0h-1.894v5.684H24z" fill="#1967D2"/>
+                            <path d="M18.316 0H5.684v5.684h12.632V0z" fill="#4285F4"/>
+                            <path d="M5.684 0H3.79A3.79 3.79 0 000 3.79v1.894h5.684V0z" fill="#188038"/>
+                            <path d="M14.809 8.963l1.085-1.085.556.04a6.307 6.307 0 00-.855-1.063A6.26 6.26 0 007.84 7.84a6.26 6.26 0 00-.983 7.753l.04-.556 1.084-1.085-.027.372A4.456 4.456 0 019.26 9.26a4.456 4.456 0 015.177-.67l.372-.027z" fill="#188038"/>
+                            <path d="M16.16 8.407l-.04.556-1.085 1.085.027-.372a4.456 4.456 0 01-1.306 5.064 4.456 4.456 0 01-5.177.67l-.372.027-1.085 1.085-.556-.04a6.26 6.26 0 008.579.363 6.26 6.26 0 001.014-7.438z" fill="#1967D2"/>
+                          </svg>
                         </div>
                         <div className="min-w-0">
                           <div className="text-sm font-medium truncate">{conn.google_email || 'Google Account'}</div>
