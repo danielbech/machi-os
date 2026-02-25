@@ -575,17 +575,12 @@ export function TaskEditDialog({ task, onClose, onSave, onTaskChange, folders }:
 }
 
 function Lightbox({ url, onClose }: { url: string; onClose: () => void }) {
-  // Block all pointer/mouse events from reaching Radix Dialog underneath
+  // Block pointerdown from reaching Radix Dialog (which uses it to detect outside clicks)
   useEffect(() => {
     const stop = (e: Event) => {
-      const target = e.target as HTMLElement;
-      if (target.closest("[data-lightbox]")) {
-        e.stopPropagation();
-      }
+      e.stopPropagation();
     };
     document.addEventListener("pointerdown", stop, true);
-    document.addEventListener("mousedown", stop, true);
-    document.addEventListener("click", stop, true);
 
     const handleKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
@@ -597,8 +592,6 @@ function Lightbox({ url, onClose }: { url: string; onClose: () => void }) {
 
     return () => {
       document.removeEventListener("pointerdown", stop, true);
-      document.removeEventListener("mousedown", stop, true);
-      document.removeEventListener("click", stop, true);
       document.removeEventListener("keydown", handleKey, true);
     };
   }, [onClose]);
