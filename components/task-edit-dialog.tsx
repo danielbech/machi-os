@@ -83,7 +83,7 @@ export function TaskEditDialog({ task, onClose, onSave, onTaskChange, folders }:
 
   return (
   <>
-    <Dialog open={task !== null} onOpenChange={(open) => { if (!open && task) onSave(task); }}>
+    <Dialog open={task !== null} onOpenChange={(open) => { if (lightboxUrl) return; if (!open && task) onSave(task); }}>
       <DialogContent
         className={`sm:max-w-[500px] transition-[box-shadow] duration-150 ${isDragOver ? "ring-2 ring-blue-500/50 ring-inset" : ""}`}
         onOpenAutoFocus={(e) => {
@@ -575,31 +575,20 @@ export function TaskEditDialog({ task, onClose, onSave, onTaskChange, folders }:
 }
 
 function Lightbox({ url, onClose }: { url: string; onClose: () => void }) {
-  // Block pointerdown from reaching Radix Dialog (which uses it to detect outside clicks)
   useEffect(() => {
-    const stop = (e: Event) => {
-      e.stopPropagation();
-    };
-    document.addEventListener("pointerdown", stop, true);
-
     const handleKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
-        e.stopPropagation();
+        e.preventDefault();
         onClose();
       }
     };
-    document.addEventListener("keydown", handleKey, true);
-
-    return () => {
-      document.removeEventListener("pointerdown", stop, true);
-      document.removeEventListener("keydown", handleKey, true);
-    };
+    window.addEventListener("keydown", handleKey);
+    return () => window.removeEventListener("keydown", handleKey);
   }, [onClose]);
 
   return (
     <div
-      data-lightbox
-      className="fixed inset-0 z-[200] flex items-center justify-center bg-black/80 backdrop-blur-sm"
+      className="fixed inset-0 z-[200] flex items-center justify-center bg-black/80 backdrop-blur-sm cursor-pointer"
       onClick={onClose}
     >
       <button
@@ -613,7 +602,7 @@ function Lightbox({ url, onClose }: { url: string; onClose: () => void }) {
       <img
         src={url}
         alt=""
-        className="max-w-[90vw] max-h-[85vh] rounded-lg object-contain"
+        className="max-w-[90vw] max-h-[85vh] rounded-lg object-contain cursor-default"
         onClick={(e) => e.stopPropagation()}
       />
     </div>
