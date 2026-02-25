@@ -42,7 +42,7 @@ export function AppSidebar() {
   const { backlogOpen, toggleBacklog } = useBacklog();
   const {
     googleCalendarConnected, connectGoogleCalendar, disconnectGoogleAccount,
-    syncCalendarEvents, calendarConnections, updateSelectedCalendars,
+    syncCalendarEvents, calendarConnections, updateSelectedCalendars, lastSyncedAt,
   } = useCalendar();
   const { setOpenMobile } = useSidebar();
   const [showSettings, setShowSettings] = useState(false);
@@ -250,6 +250,7 @@ export function AppSidebar() {
           onWeekModeChange={setWeekMode}
           onProfileUpdate={refreshTeamMembers}
           activeProject={activeProject}
+          lastSyncedAt={lastSyncedAt}
           refreshWorkspaces={refreshWorkspaces}
           userProjectCount={userProjects.length}
           defaultTab={settingsDefaultTab}

@@ -34,6 +34,7 @@ interface CalendarContextValue {
   disconnectGoogleAccount: (connectionId: string) => Promise<void>;
   calendarConnections: ConnectionWithCalendars[];
   updateSelectedCalendars: (connectionId: string, calendarIds: string[]) => Promise<void>;
+  lastSyncedAt: Date | null;
 }
 
 const CalendarContext = createContext<CalendarContextValue | null>(null);
@@ -88,6 +89,7 @@ export function CalendarProvider({ children }: { children: React.ReactNode }) {
   const [calendarConnections, setCalendarConnections] = useState<ConnectionWithCalendars[]>([]);
   const [calendarEvents, setCalendarEvents] = useState<Record<string, CalendarEvent[]>>({});
   const [currentWeekStart, setCurrentWeekStart] = useState<string>("");
+  const [lastSyncedAt, setLastSyncedAt] = useState<Date | null>(null);
 
   const googleCalendarConnected = calendarConnections.length > 0;
 
@@ -170,6 +172,7 @@ export function CalendarProvider({ children }: { children: React.ReactNode }) {
 
       setCalendarConnections(updatedConnections);
       await loadSharedEvents(activeProjectId, weekMode);
+      setLastSyncedAt(new Date());
     } catch (error) {
       console.error("Failed to sync calendar events:", error);
       toast.error("Failed to sync calendar");
@@ -204,7 +207,10 @@ export function CalendarProvider({ children }: { children: React.ReactNode }) {
               }
             })
           );
-          if (!cancelled) setCalendarConnections(withCalendars);
+          if (!cancelled) {
+            setCalendarConnections(withCalendars);
+            setLastSyncedAt(new Date());
+          }
         } else {
           setCalendarConnections([]);
         }
@@ -344,10 +350,11 @@ export function CalendarProvider({ children }: { children: React.ReactNode }) {
     disconnectGoogleAccount,
     calendarConnections,
     updateSelectedCalendars: handleUpdateSelectedCalendars,
+    lastSyncedAt,
   }), [
     googleCalendarConnected, calendarEvents, syncCalendarEvents,
     connectGoogleCalendar, disconnectGoogleAccount, calendarConnections,
-    handleUpdateSelectedCalendars,
+    handleUpdateSelectedCalendars, lastSyncedAt,
   ]);
 
   return (

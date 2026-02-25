@@ -47,6 +47,7 @@ interface SettingsDialogProps {
   onProfileUpdate?: () => void;
   // Workspace management
   activeProject?: Project;
+  lastSyncedAt?: Date | null;
   refreshWorkspaces?: () => Promise<void>;
   userProjectCount: number;
   defaultTab?: string;
@@ -73,6 +74,7 @@ export function SettingsDialog({
   onWeekModeChange,
   onProfileUpdate,
   activeProject,
+  lastSyncedAt,
   refreshWorkspaces,
   userProjectCount,
   defaultTab = "general",
@@ -329,7 +331,7 @@ export function SettingsDialog({
           <TabsList variant="line" className="border-b border-white/5 px-0">
             <TabsTrigger value="general" className="text-white/40 data-[state=active]:text-white after:bg-white">General</TabsTrigger>
             <TabsTrigger value="workspace" className="text-white/40 data-[state=active]:text-white after:bg-white">Workspace</TabsTrigger>
-            <TabsTrigger value="calendar" className="text-white/40 data-[state=active]:text-white after:bg-white">Calendar</TabsTrigger>
+            <TabsTrigger value="calendar" className="text-white/40 data-[state=active]:text-white after:bg-white">Integrations</TabsTrigger>
             <TabsTrigger value="about" className="text-white/40 data-[state=active]:text-white after:bg-white">About</TabsTrigger>
           </TabsList>
 
@@ -593,7 +595,14 @@ export function SettingsDialog({
             <div className="space-y-3 py-4">
               {/* Connected accounts header + sync */}
               <div className="flex items-center justify-between">
-                <div className="text-xs text-white/40">Connected accounts</div>
+                <div className="flex items-center gap-2">
+                  <div className="text-xs text-white/40">Connected accounts</div>
+                  {lastSyncedAt && (
+                    <div className="text-[10px] text-white/20">
+                      synced {Math.max(0, Math.floor((Date.now() - lastSyncedAt.getTime()) / 60000))} min ago
+                    </div>
+                  )}
+                </div>
                 {googleCalendarConnected && (
                   <Button
                     size="icon-xs"
