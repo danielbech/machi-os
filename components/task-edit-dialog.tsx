@@ -49,6 +49,9 @@ export function TaskEditDialog({ task, onClose, onSave, onTaskChange, folders }:
           e.preventDefault();
           titleRef.current?.focus();
         }}
+        onCloseAutoFocus={(e) => {
+          e.preventDefault();
+        }}
       >
         {task && (
           <form onSubmit={(e) => { e.preventDefault(); onSave(task); }} className="space-y-4">

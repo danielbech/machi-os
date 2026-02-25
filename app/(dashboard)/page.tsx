@@ -32,7 +32,8 @@ export default function BoardPage() {
 
   const isCustom = weekMode === "custom";
   const columnTitles = getColumnTitles(weekMode, boardColumns);
-  const columnKeys = isCustom ? boardColumns.map((c) => c.id) : weekDays;
+  const boardColumnIds = useMemo(() => boardColumns.map((c) => c.id), [boardColumns]);
+  const columnKeys = isCustom ? boardColumnIds : weekDays;
   const [columns, setColumns] = useState<Record<string, Task[]>>(() => getEmptyColumns(weekMode, boardColumns));
   const [renamingColumn, setRenamingColumn] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState("");
@@ -70,6 +71,22 @@ export default function BoardPage() {
   // Suppress realtime reload while user is inline-editing a card title
   const isInlineEditing = useRef(false);
 
+  // Stable callbacks for BoardTaskCard to maximize React.memo effectiveness
+  const handleCopy = useCallback((task: Task, col: string) => setClipboard({ task, column: col }), []);
+  const handleNewlyCreatedSeen = useCallback(() => setNewlyCreatedCardId(null), []);
+  const handleCardStartEditing = useCallback((cardId: string) => {
+    isInlineEditing.current = true;
+    broadcastEditing(cardId);
+  }, [broadcastEditing]);
+  const handleCardStopEditing = useCallback(() => {
+    isInlineEditing.current = false;
+    broadcastStopEditing();
+  }, [broadcastStopEditing]);
+  const handleOpenEditDialog = useCallback((task: Task, columnId: string) => {
+    setEditingTask(task);
+    setEditingColumn(columnId);
+  }, []);
+
   const filteredColumns = useMemo(() => {
     if (!filterMine && !hideCompleted) return columns;
     const result: Record<string, Task[]> = {};
@@ -89,16 +106,16 @@ export default function BoardPage() {
   // Load tasks
   const refreshTasks = useCallback(async () => {
     if (!activeProjectId || !areaId) return;
-    if (isCustom && boardColumns.length === 0) {
+    if (isCustom && boardColumnIds.length === 0) {
       setColumns({});
       setInitialLoading(false);
       return;
     }
     try {
-      const customIds = isCustom ? boardColumns.map((c) => c.id) : undefined;
+      const customIds = isCustom ? boardColumnIds : undefined;
       const tasks = await loadTasksByDay(activeProjectId, areaId, customIds);
       // Filter to only show active columns based on weekMode
-      const keys = isCustom ? boardColumns.map((c) => c.id) : weekDays;
+      const keys = isCustom ? boardColumnIds : weekDays;
       const filtered: Record<string, Task[]> = {};
       for (const key of keys) {
         filtered[key] = tasks[key] || [];
@@ -109,7 +126,7 @@ export default function BoardPage() {
       console.error("Error loading tasks:", error);
       setInitialLoading(false);
     }
-  }, [activeProjectId, weekDays, areaId, isCustom, boardColumns]);
+  }, [activeProjectId, weekDays, areaId, isCustom, boardColumnIds]);
 
   // Load tasks when active project changes
   useEffect(() => {
@@ -123,7 +140,9 @@ export default function BoardPage() {
       return;
     }
     refreshTasks();
-  }, [activeProjectId, weekMode, boardColumns, refreshTasks]);
+    // refreshTasks already captures weekDays/boardColumnIds/isCustom
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeProjectId, refreshTasks]);
 
   // Track previous columns for diffing on drag
   const prevColumnsRef = useRef(columns);
@@ -412,20 +431,27 @@ export default function BoardPage() {
     if (!activeProjectId || !editingColumn) return;
     suppressTaskReload.current = true;
 
-    // Check if task was just completed (via checklist or manual toggle)
-    const wasCompleted = columns[editingColumn]?.find((t) => t.id === updatedTask.id)?.completed;
+    // Capture column before clearing dialog state
+    const column = editingColumn;
+    const wasCompleted = columns[column]?.find((t) => t.id === updatedTask.id)?.completed;
     const justCompleted = updatedTask.completed && !wasCompleted;
 
-    const updated = { ...columns };
-    const idx = updated[editingColumn].findIndex((t) => t.id === updatedTask.id);
-    if (idx !== -1) {
-      updated[editingColumn] = [...updated[editingColumn]];
-      updated[editingColumn][idx] = { ...updatedTask, day: editingColumn as DayName };
-      setColumns(updated);
-    }
-    await saveTask(activeProjectId, { ...updatedTask, day: editingColumn as DayName }, areaId);
+    // Close dialog immediately for responsive feel
     setEditingTask(null);
     setEditingColumn(null);
+
+    // Update board state using functional setter to avoid stale closures
+    setColumns((prev) => {
+      const updated = { ...prev };
+      const idx = updated[column]?.findIndex((t) => t.id === updatedTask.id) ?? -1;
+      if (idx !== -1) {
+        updated[column] = [...updated[column]];
+        updated[column][idx] = { ...updatedTask, day: column as DayName };
+      }
+      return updated;
+    });
+
+    await saveTask(activeProjectId, { ...updatedTask, day: column as DayName }, areaId);
     if (justCompleted) {
       setGlowingCards((prev) => new Set(prev).add(updatedTask.id));
       setTimeout(() => {
@@ -662,26 +688,17 @@ export default function BoardPage() {
                         isGlowing={glowingCards.has(item.id)}
                         isNewlyCreated={item.id === newlyCreatedCardId}
                         addingToColumn={addingToColumn}
-                        onEdit={() => {
-                          setEditingTask(item);
-                          setEditingColumn(columnId);
-                        }}
+                        onEdit={() => handleOpenEditDialog(item, columnId)}
                         onToggleComplete={toggleComplete}
                         onToggleAssignee={toggleAssignee}
                         onToggleClient={toggleClient}
                         onRemove={removeTask}
-                        onCopy={(task, col) => setClipboard({ task, column: col })}
-                        onNewlyCreatedSeen={() => setNewlyCreatedCardId(null)}
+                        onCopy={handleCopy}
+                        onNewlyCreatedSeen={handleNewlyCreatedSeen}
                         onTitleChange={handleInlineTitleChange}
                         editingBy={editors.find(e => e.cardId === item.id) || null}
-                        onStartEditing={(cardId) => {
-                          isInlineEditing.current = true;
-                          broadcastEditing(cardId);
-                        }}
-                        onStopEditing={() => {
-                          isInlineEditing.current = false;
-                          broadcastStopEditing();
-                        }}
+                        onStartEditing={handleCardStartEditing}
+                        onStopEditing={handleCardStopEditing}
                         showCheckmarks={showCheckmarks}
                       />
                     </div>

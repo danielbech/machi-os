@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, memo } from "react";
 import type { Task, Member, Client } from "@/lib/types";
 import type { CardEditingState } from "@/hooks/use-card-presence";
 import { getClientTextClassName, CLIENT_RGB_COLORS } from "@/lib/colors";
@@ -32,7 +32,7 @@ interface BoardTaskCardProps {
   showCheckmarks?: boolean;
 }
 
-export function BoardTaskCard({
+export const BoardTaskCard = memo(function BoardTaskCard({
   item,
   columnId,
   todayName,
@@ -372,4 +372,18 @@ export function BoardTaskCard({
       )}
     </KanbanItem>
   );
-}
+}, (prev, next) => {
+  // Custom comparator: only re-render when data props change, skip function props
+  return (
+    prev.item === next.item &&
+    prev.columnId === next.columnId &&
+    prev.todayName === next.todayName &&
+    prev.clients === next.clients &&
+    prev.teamMembers === next.teamMembers &&
+    prev.isGlowing === next.isGlowing &&
+    prev.isNewlyCreated === next.isNewlyCreated &&
+    !!prev.addingToColumn === !!next.addingToColumn &&
+    prev.editingBy === next.editingBy &&
+    prev.showCheckmarks === next.showCheckmarks
+  );
+});

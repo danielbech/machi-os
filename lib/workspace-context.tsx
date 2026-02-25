@@ -91,6 +91,9 @@ function getDisplayMonday(transitionDay: number) {
   return monday;
 }
 
+const ALL_FIVE_DAYS: DayName[] = ["monday", "tuesday", "wednesday", "thursday", "friday"];
+const ALL_SEVEN_DAYS: DayName[] = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"];
+
 export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
@@ -121,9 +124,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
   const [transitionHour, setTransitionHourState] = useState(17);
   const [transitionCount, setTransitionCount] = useState(0);
 
-  const ALL_FIVE_DAYS: DayName[] = ["monday", "tuesday", "wednesday", "thursday", "friday"];
-  const ALL_SEVEN_DAYS: DayName[] = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"];
-  const weekDays = weekMode === "7-day" ? ALL_SEVEN_DAYS : ALL_FIVE_DAYS;
+  const weekDays = useMemo(() => weekMode === "7-day" ? ALL_SEVEN_DAYS : ALL_FIVE_DAYS, [weekMode]);
 
   const setActiveProjectId = useCallback((id: string) => {
     setActiveProjectIdState(id);
