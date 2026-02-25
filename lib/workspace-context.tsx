@@ -3,6 +3,7 @@
 import { createContext, useContext, useState, useEffect, useCallback, useMemo } from "react";
 import type { User } from "@supabase/supabase-js";
 import type { Project, Client, Member, WeekMode, DayName } from "@/lib/types";
+import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
 import { initializeUserData, getAreaIdForProject } from "@/lib/supabase/initialize";
 import { getUserWorkspaces, getMyPendingInvites, acceptInvite as acceptInviteApi, declineInvite as declineInviteApi } from "@/lib/supabase/workspace";
@@ -177,6 +178,9 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
 
         const stored = localStorage.getItem("flowie-active-project");
         const validStored = finalProjects.find((p) => p.id === stored);
+        if (stored && !validStored && finalProjects.length > 0) {
+          toast("You were removed from a workspace");
+        }
         const projectId = validStored?.id || finalProjects[0]?.id || null;
         setActiveProjectIdState(projectId);
       } catch (error) {
