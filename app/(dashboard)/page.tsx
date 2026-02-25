@@ -26,7 +26,7 @@ import { Check, CheckCircle, Plus, StickyNote, User, X } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 export default function BoardPage() {
-  const { activeProjectId, clients, teamMembers, weekMode, weekDays, displayMonday, areaId, user, boardColumns, addBoardColumn, renameBoardColumn, removeBoardColumn } = useWorkspace();
+  const { activeProjectId, clients, teamMembers, weekMode, weekDays, displayMonday, areaId, user, boardColumns, addBoardColumn, renameBoardColumn, removeBoardColumn, showCheckmarks } = useWorkspace();
   const { calendarEvents } = useCalendar();
   const { backlogOpen, addToBacklog, backlogFolders } = useBacklog();
 
@@ -682,6 +682,7 @@ export default function BoardPage() {
                           isInlineEditing.current = false;
                           broadcastStopEditing();
                         }}
+                        showCheckmarks={showCheckmarks}
                       />
                     </div>
                   ))}

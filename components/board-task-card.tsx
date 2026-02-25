@@ -29,6 +29,7 @@ interface BoardTaskCardProps {
   editingBy: CardEditingState | null;
   onStartEditing: (cardId: string) => void;
   onStopEditing: () => void;
+  showCheckmarks?: boolean;
 }
 
 export function BoardTaskCard({
@@ -51,6 +52,7 @@ export function BoardTaskCard({
   editingBy,
   onStartEditing,
   onStopEditing,
+  showCheckmarks = true,
 }: BoardTaskCardProps) {
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [editValue, setEditValue] = useState("");
@@ -334,7 +336,9 @@ export function BoardTaskCard({
           </div>
 
           <div className={`absolute top-0.5 right-0 flex flex-col items-center gap-1 transition-opacity ${
-            /* item.completed || */ item.checklist.length > 0 ? "" : "opacity-0 group-hover:opacity-100"
+            showCheckmarks
+              ? (item.completed || item.checklist.length > 0 ? "" : "opacity-0 group-hover:opacity-100")
+              : (item.checklist.length > 0 ? "" : "opacity-0 group-hover:opacity-100")
           }`}>
             <button
               type="button"
@@ -344,7 +348,7 @@ export function BoardTaskCard({
               }}
               onMouseDown={(e) => e.stopPropagation()}
               aria-label={item.completed ? "Mark as incomplete" : "Mark as complete"}
-              className="invisible"
+              className={showCheckmarks ? "" : "hidden"}
             >
               <div
                 className={`flex size-4 items-center justify-center rounded-full border transition-all ${

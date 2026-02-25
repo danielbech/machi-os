@@ -43,6 +43,9 @@ interface SettingsDialogProps {
   // Week mode
   weekMode: WeekMode;
   onWeekModeChange: (mode: WeekMode) => Promise<void>;
+  // UI preferences
+  showCheckmarks: boolean;
+  onShowCheckmarksChange: (v: boolean) => void;
   // Profile updated callback
   onProfileUpdate?: () => void;
   // Workspace management
@@ -72,6 +75,8 @@ export function SettingsDialog({
   onSetTransitionSchedule,
   weekMode,
   onWeekModeChange,
+  showCheckmarks,
+  onShowCheckmarksChange,
   onProfileUpdate,
   activeProject,
   lastSyncedAt,
@@ -919,6 +924,24 @@ export function SettingsDialog({
                       }`}
                     >
                       Custom
+                    </button>
+                  </div>
+                  <div className="border-t border-white/5 pt-3 flex items-center justify-between">
+                    <div>
+                      <div className="text-sm">Show checkmarks</div>
+                      <div className="text-xs text-white/40">Display completion checkmarks on task cards</div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => onShowCheckmarksChange(!showCheckmarks)}
+                      className={`relative inline-flex h-5 w-9 shrink-0 rounded-full transition-colors ${
+                        showCheckmarks ? "bg-white/20" : "bg-white/[0.06]"
+                      }`}
+                      aria-label="Toggle checkmarks"
+                    >
+                      <span className={`pointer-events-none inline-block size-4 rounded-full bg-white shadow-sm transition-transform ${
+                        showCheckmarks ? "translate-x-[18px]" : "translate-x-0.5"
+                      }`} style={{ marginTop: '2px' }} />
                     </button>
                   </div>
                   {weekMode !== "custom" && (

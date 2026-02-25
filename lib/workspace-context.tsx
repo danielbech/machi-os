@@ -35,6 +35,9 @@ interface WorkspaceContextValue {
   weekMode: WeekMode;
   setWeekMode: (mode: WeekMode) => Promise<void>;
   weekDays: DayName[];
+  // UI preferences
+  showCheckmarks: boolean;
+  setShowCheckmarks: (v: boolean) => void;
   // Board columns (custom mode)
   boardColumns: BoardColumn[];
   addBoardColumn: (title: string) => Promise<BoardColumn>;
@@ -97,6 +100,17 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
   const [teamMembers, setTeamMembers] = useState<Member[]>([]);
   const [areaId, setAreaId] = useState<string | null>(null);
   const [pendingInvites, setPendingInvites] = useState<MyPendingInvite[]>([]);
+
+  // UI preferences
+  const [showCheckmarks, setShowCheckmarksState] = useState(() => {
+    if (typeof window === "undefined") return true;
+    const stored = localStorage.getItem("flowie-show-checkmarks");
+    return stored === null ? true : stored === "true";
+  });
+  const setShowCheckmarks = useCallback((v: boolean) => {
+    setShowCheckmarksState(v);
+    localStorage.setItem("flowie-show-checkmarks", String(v));
+  }, []);
 
   // Week mode
   const [weekMode, setWeekModeState] = useState<WeekMode>("5-day");
@@ -382,6 +396,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     activeProject, clients, refreshClients, teamMembers, refreshTeamMembers,
     transitionToNextWeek, transitionDay, transitionHour, transitionCount,
     setTransitionSchedule, displayMonday, weekMode, setWeekMode, weekDays,
+    showCheckmarks, setShowCheckmarks,
     boardColumns, addBoardColumn, renameBoardColumn, removeBoardColumn, refreshBoardColumns,
     refreshWorkspaces, areaId,
     pendingInvites, acceptInvite: handleAcceptInvite, declineInvite: handleDeclineInvite,
@@ -390,6 +405,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     activeProject, clients, refreshClients, teamMembers, refreshTeamMembers,
     transitionToNextWeek, transitionDay, transitionHour, transitionCount,
     setTransitionSchedule, displayMonday, weekMode, setWeekMode, weekDays,
+    showCheckmarks, setShowCheckmarks,
     boardColumns, addBoardColumn, renameBoardColumn, removeBoardColumn, refreshBoardColumns,
     refreshWorkspaces, areaId,
     pendingInvites, handleAcceptInvite, handleDeclineInvite,
