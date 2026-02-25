@@ -788,7 +788,7 @@ export default function TimelinePage() {
                       <p className="flex-1 truncate text-left font-medium">
                         {parentFeature.name}
                       </p>
-                      <p className="text-white/20 shrink-0">
+                      <p className="text-white/30 shrink-0">
                         {parentDuration}
                       </p>
                     </div>
@@ -822,7 +822,7 @@ export default function TimelinePage() {
                           <p className="flex-1 truncate text-left font-medium">
                             {childFeature.name}
                           </p>
-                          <p className="text-white/20 shrink-0">
+                          <p className="text-white/30 shrink-0">
                             {isMilestone ? format(childFeature.startAt, "MMM d") : childDuration}
                           </p>
                         </div>
