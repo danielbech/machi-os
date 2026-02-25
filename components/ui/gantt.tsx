@@ -756,6 +756,7 @@ export const GanttCreateMarkerTrigger: FC<GanttCreateMarkerTriggerProps> = ({
   const gantt = useContext(GanttContext);
   const [mousePosition, mouseRef] = useMouse<HTMLDivElement>();
   const [windowScroll] = useWindowScroll();
+  const [rowColor, setRowColor] = useState<string>("");
   const x = useThrottle(
     mousePosition.x -
       (mouseRef.current?.getBoundingClientRect().x ?? 0) -
@@ -764,6 +765,25 @@ export const GanttCreateMarkerTrigger: FC<GanttCreateMarkerTriggerProps> = ({
   );
 
   const date = getDateByMousePosition(gantt, x);
+
+  // Detect which row the cursor is over and grab its accent color
+  useEffect(() => {
+    const el = mouseRef.current;
+    if (!el || !mousePosition.y) return;
+    const rect = el.getBoundingClientRect();
+    const relY = mousePosition.y - rect.top;
+    const rows = el.querySelectorAll<HTMLElement>("[data-gantt-row]");
+    let found = "";
+    for (const row of rows) {
+      const rowRect = row.getBoundingClientRect();
+      const rowTop = rowRect.top - rect.top;
+      if (relY >= rowTop && relY < rowTop + rowRect.height) {
+        found = row.dataset.accentColor || "";
+        break;
+      }
+    }
+    setRowColor(found);
+  }, [mousePosition.y, mouseRef]);
 
   const handleClick = () => onCreateMarker(date);
 
@@ -780,11 +800,16 @@ export const GanttCreateMarkerTrigger: FC<GanttCreateMarkerTriggerProps> = ({
         style={{ transform: `translateX(${x}px)` }}
       >
         <button
-          className="z-50 inline-flex h-4 w-4 items-center justify-center rounded-full bg-card"
+          className="z-50 inline-flex h-4 w-4 items-center justify-center rounded-sm transition-colors"
+          style={{
+            backgroundColor: rowColor ? `${rowColor}25` : "var(--card)",
+            borderColor: rowColor ? `${rowColor}40` : undefined,
+            border: rowColor ? "1px solid" : undefined,
+          }}
           onClick={handleClick}
           type="button"
         >
-          <PlusIcon className="text-muted-foreground" size={12} />
+          <PlusIcon style={{ color: rowColor || undefined }} className={rowColor ? "" : "text-muted-foreground"} size={12} />
         </button>
         <div className="whitespace-nowrap rounded-full border border-white/[0.06] bg-background/90 px-2 py-1 text-foreground text-xs backdrop-blur-lg">
           {formatDate(date, "MMM dd, yyyy")}
@@ -1244,6 +1269,8 @@ export const GanttFeatureItem: FC<GanttFeatureItemProps> = ({
     <div
       className={cn("relative flex w-max min-w-full py-0.5", className)}
       style={{ height: "var(--gantt-row-height)" }}
+      data-gantt-row
+      data-accent-color={accentColor || ""}
     >
       <div
         className="pointer-events-auto absolute top-0.5"
