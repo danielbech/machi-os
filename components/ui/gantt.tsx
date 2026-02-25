@@ -1962,7 +1962,7 @@ export const GanttToday: FC<GanttTodayProps> = ({ className }) => {
       >
         {label}
       </div>
-      <div className="flex-1 w-px bg-white/50" />
+      <div className="flex-1 w-px" style={{ backgroundImage: "repeating-linear-gradient(to bottom, rgb(255 255 255 / 0.5) 0px, rgb(255 255 255 / 0.5) 4px, transparent 4px, transparent 8px)" }} />
     </div>
   );
 };
