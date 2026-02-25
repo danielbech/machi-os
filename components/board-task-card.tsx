@@ -301,7 +301,7 @@ export const BoardTaskCard = memo(function BoardTaskCard({
                 </span>
               </div>
             )}
-            {(item.client || item.assignees.length > 0) && (
+            {(item.client || item.assignees.length > 0 || (item.images && item.images.length > 0)) && (
               <div className="flex mt-1.5 items-center justify-between">
                 {item.client ?
                   (() => {
@@ -318,34 +318,39 @@ export const BoardTaskCard = memo(function BoardTaskCard({
                     ) : <div />;
                   })()
                 : <div />}
-                {item.assignees.length > 0 && (
-                  <div className="flex gap-1.5">
-                    {item.assignees.map((assigneeId) => {
-                      const member = teamMembers.find((m) => m.id === assigneeId);
-                      return member ? (
-                        <div
-                          key={member.id}
-                          className={`flex items-center justify-center w-5 h-5 rounded-full ${!member.avatar ? member.color : "bg-white/5"} text-[10px] font-semibold text-white overflow-hidden`}
-                          title={member.name}
-                        >
-                          {member.avatar ? (
-                            <img src={member.avatar} alt={member.name} className="w-full h-full object-cover" />
-                          ) : (
-                            member.initials
-                          )}
-                        </div>
-                      ) : null;
-                    })}
-                  </div>
-                )}
+                <div className="flex items-center gap-1.5">
+                  {item.images && item.images.length > 0 && (
+                    <ImageIcon className={`size-3.5 ${dimCompleted ? "text-white/15" : "text-white/30"}`} />
+                  )}
+                  {item.assignees.length > 0 && (
+                    <div className="flex gap-1.5">
+                      {item.assignees.map((assigneeId) => {
+                        const member = teamMembers.find((m) => m.id === assigneeId);
+                        return member ? (
+                          <div
+                            key={member.id}
+                            className={`flex items-center justify-center w-5 h-5 rounded-full ${!member.avatar ? member.color : "bg-white/5"} text-[10px] font-semibold text-white overflow-hidden`}
+                            title={member.name}
+                          >
+                            {member.avatar ? (
+                              <img src={member.avatar} alt={member.name} className="w-full h-full object-cover" />
+                            ) : (
+                              member.initials
+                            )}
+                          </div>
+                        ) : null;
+                      })}
+                    </div>
+                  )}
+                </div>
               </div>
             )}
           </div>
 
           <div className={`absolute top-0.5 right-0 flex flex-col items-center gap-1 transition-opacity ${
             showCheckmarks
-              ? (item.completed || item.checklist.length > 0 || (item.images && item.images.length > 0) ? "" : "opacity-0 group-hover:opacity-100")
-              : (item.checklist.length > 0 || (item.images && item.images.length > 0) ? "" : "opacity-0 group-hover:opacity-100")
+              ? (item.completed || item.checklist.length > 0 ? "" : "opacity-0 group-hover:opacity-100")
+              : (item.checklist.length > 0 ? "" : "opacity-0 group-hover:opacity-100")
           }`}>
             <button
               type="button"
@@ -373,9 +378,6 @@ export const BoardTaskCard = memo(function BoardTaskCard({
               <span className={`text-[10px] tabular-nums leading-none ${dimCompleted ? "text-white/15" : "text-white/30"}`}>
                 {item.checklist.filter((i) => i.checked).length}/{item.checklist.length}
               </span>
-            )}
-            {item.images && item.images.length > 0 && (
-              <ImageIcon className={`size-3 ${dimCompleted ? "text-white/15" : "text-white/30"}`} />
             )}
           </div>
         </div>

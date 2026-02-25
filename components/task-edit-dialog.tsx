@@ -40,6 +40,7 @@ export function TaskEditDialog({ task, onClose, onSave, onTaskChange, folders }:
   const checklistRefs = useRef<Map<string, HTMLInputElement>>(new Map());
   const [isDragOver, setIsDragOver] = useState(false);
   const [uploadingCount, setUploadingCount] = useState(0);
+  const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
   const dragCounter = useRef(0);
   const activeClients = clients.filter((c) => c.active);
   const selectedClient = activeClients.find((c) => c.id === task?.client);
@@ -367,11 +368,17 @@ export function TaskEditDialog({ task, onClose, onSave, onTaskChange, folders }:
                 <div className="flex flex-wrap gap-2">
                   {(task.images || []).map((url) => (
                     <div key={url} className="group/img relative">
-                      <img
-                        src={url}
-                        alt=""
-                        className="w-20 h-20 rounded-lg object-cover border border-white/10"
-                      />
+                      <button
+                        type="button"
+                        onClick={() => setLightboxUrl(url)}
+                        className="block rounded-lg overflow-hidden border border-white/10 hover:border-white/20 transition-colors"
+                      >
+                        <img
+                          src={url}
+                          alt=""
+                          className="w-20 h-20 object-cover"
+                        />
+                      </button>
                       <button
                         type="button"
                         onClick={() => handleRemoveImage(url)}
@@ -549,6 +556,30 @@ export function TaskEditDialog({ task, onClose, onSave, onTaskChange, folders }:
           </form>
         )}
       </DialogContent>
+
+      {/* Image lightbox */}
+      {lightboxUrl && (
+        <div
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm"
+          onClick={() => setLightboxUrl(null)}
+          onKeyDown={(e) => { if (e.key === "Escape") setLightboxUrl(null); }}
+        >
+          <button
+            type="button"
+            onClick={() => setLightboxUrl(null)}
+            className="absolute top-4 right-4 flex size-8 items-center justify-center rounded-full bg-white/10 hover:bg-white/20 transition-colors"
+            aria-label="Close lightbox"
+          >
+            <X className="size-5 text-white" />
+          </button>
+          <img
+            src={lightboxUrl}
+            alt=""
+            className="max-w-[90vw] max-h-[85vh] rounded-lg object-contain"
+            onClick={(e) => e.stopPropagation()}
+          />
+        </div>
+      )}
     </Dialog>
   );
 }
