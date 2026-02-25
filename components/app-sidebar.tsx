@@ -28,7 +28,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { CreateWorkspaceDialog } from "@/components/create-workspace-dialog";
-import { LayoutDashboard, FolderKanban, Inbox, Settings, Check, ChevronDown, MessageSquarePlus, CalendarRange, Plus, Pencil } from "lucide-react";
+import { LayoutDashboard, FolderKanban, Inbox, Settings, Check, ChevronDown, MessageSquarePlus, CalendarRange, Plus, Pencil, Mail } from "lucide-react";
+import { PendingInvitesDialog } from "@/components/pending-invites-dialog";
 
 export function AppSidebar() {
   const pathname = usePathname();
@@ -36,7 +37,7 @@ export function AppSidebar() {
     userProjects, activeProjectId, setActiveProjectId, activeProject, user,
     transitionToNextWeek, refreshTeamMembers,
     weekMode, setWeekMode, transitionDay, transitionHour, setTransitionSchedule,
-    refreshWorkspaces,
+    refreshWorkspaces, pendingInvites,
   } = useWorkspace();
   const { backlogOpen, toggleBacklog } = useBacklog();
   const {
@@ -49,6 +50,7 @@ export function AppSidebar() {
   const [showCreateWorkspace, setShowCreateWorkspace] = useState(false);
   const [workspaceMembers, setWorkspaceMembers] = useState<WorkspaceMember[]>([]);
   const [logoError, setLogoError] = useState<Set<string>>(new Set());
+  const [showInvites, setShowInvites] = useState(false);
 
   const handleLogoError = useCallback((projectId: string) => {
     setLogoError(prev => new Set(prev).add(projectId));
@@ -195,6 +197,19 @@ export function AppSidebar() {
 
         <SidebarFooter>
           <SidebarMenu>
+            {pendingInvites.length > 0 && (
+              <SidebarMenuItem>
+                <SidebarMenuButton onClick={() => { setShowInvites(true); setOpenMobile(false); }} tooltip="Invites">
+                  <div className="relative">
+                    <Mail />
+                    <span className="absolute -top-1 -right-1 flex size-3.5 items-center justify-center rounded-full bg-blue-500 text-[9px] font-bold text-white">
+                      {pendingInvites.length}
+                    </span>
+                  </div>
+                  <span>Invites</span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            )}
             <SidebarMenuItem>
               <SidebarMenuButton asChild isActive={pathname === "/feedback"} tooltip="Feedback">
                 <Link href="/feedback" onClick={() => setOpenMobile(false)}>
@@ -244,6 +259,11 @@ export function AppSidebar() {
       <CreateWorkspaceDialog
         open={showCreateWorkspace}
         onOpenChange={setShowCreateWorkspace}
+      />
+
+      <PendingInvitesDialog
+        open={showInvites}
+        onOpenChange={setShowInvites}
       />
     </>
   );

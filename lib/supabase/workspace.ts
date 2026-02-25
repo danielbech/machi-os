@@ -96,6 +96,82 @@ export async function getPendingInvites(projectId: string): Promise<PendingInvit
   return data || []
 }
 
+// Get pending invites for the current user (invites addressed to their email)
+export interface MyPendingInvite {
+  id: string
+  project_id: string
+  role: 'admin' | 'member'
+  created_at: string
+  workspace_name: string
+  workspace_color: string
+}
+
+export async function getMyPendingInvites(): Promise<MyPendingInvite[]> {
+  const supabase = createClient()
+
+  const { data, error } = await supabase
+    .from('pending_invites')
+    .select('id, project_id, role, created_at, projects:project_id (name, color)')
+    .order('created_at')
+
+  if (error) {
+    console.error('Error fetching my pending invites:', error)
+    return []
+  }
+
+  return (data || [])
+    .filter((d: any) => d.projects)
+    .map((d: any) => ({
+      id: d.id,
+      project_id: d.project_id,
+      role: d.role,
+      created_at: d.created_at,
+      workspace_name: d.projects.name,
+      workspace_color: d.projects.color,
+    }))
+}
+
+// Accept a pending invite — insert membership then delete the invite
+export async function acceptInvite(inviteId: string, projectId: string, role: string): Promise<void> {
+  const supabase = createClient()
+
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) throw new Error('Not authenticated')
+
+  const { error: membershipError } = await supabase
+    .from('workspace_memberships')
+    .insert({ project_id: projectId, user_id: user.id, role })
+
+  if (membershipError) {
+    console.error('Error accepting invite:', membershipError)
+    throw membershipError
+  }
+
+  const { error: deleteError } = await supabase
+    .from('pending_invites')
+    .delete()
+    .eq('id', inviteId)
+
+  if (deleteError) {
+    console.error('Error deleting invite after accept:', deleteError)
+  }
+}
+
+// Decline a pending invite — just delete it
+export async function declineInvite(inviteId: string): Promise<void> {
+  const supabase = createClient()
+
+  const { error } = await supabase
+    .from('pending_invites')
+    .delete()
+    .eq('id', inviteId)
+
+  if (error) {
+    console.error('Error declining invite:', error)
+    throw error
+  }
+}
+
 // Cancel a pending invite
 export async function cancelInvite(inviteId: string): Promise<void> {
   const supabase = createClient()

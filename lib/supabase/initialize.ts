@@ -5,14 +5,11 @@ import { getOrCreateProfile } from './profiles'
 export async function initializeUserData(userId: string) {
   const supabase = createClient()
 
-  // Ensure the user has a profile + accept pending invites in parallel
+  // Ensure the user has a profile
   const { data: { user } } = await supabase.auth.getUser()
-  await Promise.all([
-    user?.email ? getOrCreateProfile(userId, user.email) : Promise.resolve(),
-    supabase.rpc('accept_pending_invites').then(({ error }) => {
-      if (error) console.error('Error accepting pending invites:', error)
-    }),
-  ])
+  if (user?.email) {
+    await getOrCreateProfile(userId, user.email)
+  }
 
   // Check if user already has any projects (via membership)
   // This covers both users who already had workspaces AND users

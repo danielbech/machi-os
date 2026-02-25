@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { WorkspaceProvider, useWorkspace } from "@/lib/workspace-context";
 import { BacklogProvider, useBacklog } from "@/lib/backlog-context";
 import { CalendarProvider } from "@/lib/calendar-context";
@@ -13,15 +13,24 @@ import { BacklogShell } from "@/components/backlog-shell";
 import { ErrorBoundary } from "@/components/error-boundary";
 import { CursorOverlay } from "@/components/cursor-overlay";
 import { WelcomeDialog } from "@/components/welcome-dialog";
+import { PendingInvitesDialog } from "@/components/pending-invites-dialog";
 
 function DashboardGate({ children }: { children: React.ReactNode }) {
-  const { user, loading } = useWorkspace();
+  const { user, loading, pendingInvites } = useWorkspace();
   const { backlogOpen, backlogWidth } = useBacklog();
   const isMobile = useIsMobile();
   const [showWelcome, setShowWelcome] = useState(() => {
     if (typeof window === "undefined") return false;
     return !localStorage.getItem("flowie-welcome-seen");
   });
+  const [showInvites, setShowInvites] = useState(false);
+
+  // Auto-open invites dialog when pending invites arrive
+  useEffect(() => {
+    if (pendingInvites.length > 0 && !showWelcome) {
+      setShowInvites(true);
+    }
+  }, [pendingInvites.length, showWelcome]);
 
   if (loading) {
     return <div className="min-h-screen bg-zinc-950" />;
@@ -53,6 +62,10 @@ function DashboardGate({ children }: { children: React.ReactNode }) {
             localStorage.setItem("flowie-welcome-seen", "true");
             setShowWelcome(false);
           }}
+        />
+        <PendingInvitesDialog
+          open={showInvites}
+          onOpenChange={setShowInvites}
         />
       </SidebarProvider>
     </TooltipProvider>

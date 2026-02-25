@@ -5,7 +5,8 @@ import type { User } from "@supabase/supabase-js";
 import type { Project, Client, Member, WeekMode, DayName } from "@/lib/types";
 import { createClient } from "@/lib/supabase/client";
 import { initializeUserData, getAreaIdForProject } from "@/lib/supabase/initialize";
-import { getUserWorkspaces } from "@/lib/supabase/workspace";
+import { getUserWorkspaces, getMyPendingInvites, acceptInvite as acceptInviteApi, declineInvite as declineInviteApi } from "@/lib/supabase/workspace";
+import type { MyPendingInvite } from "@/lib/supabase/workspace";
 import { loadWorkspaceProfiles } from "@/lib/supabase/profiles";
 import { loadClients } from "@/lib/supabase/clients";
 import { transitionWeek } from "@/lib/supabase/tasks-simple";
@@ -34,6 +35,9 @@ interface WorkspaceContextValue {
   weekDays: DayName[];
   refreshWorkspaces: () => Promise<void>;
   areaId: string | null;
+  pendingInvites: MyPendingInvite[];
+  acceptInvite: (invite: MyPendingInvite) => Promise<void>;
+  declineInvite: (invite: MyPendingInvite) => Promise<void>;
 }
 
 const WorkspaceContext = createContext<WorkspaceContextValue | null>(null);
@@ -84,6 +88,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
   const [clients, setClients] = useState<Client[]>([]);
   const [teamMembers, setTeamMembers] = useState<Member[]>([]);
   const [areaId, setAreaId] = useState<string | null>(null);
+  const [pendingInvites, setPendingInvites] = useState<MyPendingInvite[]>([]);
 
   // Week mode
   const [weekMode, setWeekModeState] = useState<WeekMode>("5-day");
@@ -141,6 +146,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
       setUserProjects([]);
       setActiveProjectIdState(null);
       setClients([]);
+      setPendingInvites([]);
       return;
     }
 
@@ -152,9 +158,10 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
         // initializeUserData returns early (just a membership check), so
         // getUserWorkspaces can safely run alongside it. For brand-new users
         // we retry if the first load returns empty.
-        const [, projects] = await Promise.all([
+        const [, projects, invites] = await Promise.all([
           initializeUserData(user!.id),
           getUserWorkspaces(),
+          getMyPendingInvites(),
         ]);
 
         let finalProjects = projects;
@@ -166,6 +173,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
         if (cancelled) return;
 
         setUserProjects(finalProjects);
+        setPendingInvites(invites);
 
         const stored = localStorage.getItem("flowie-active-project");
         const validStored = finalProjects.find((p) => p.id === stored);
@@ -296,6 +304,17 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     return () => clearInterval(interval);
   }, [activeProjectId, transitionToNextWeek, transitionDay, transitionHour]);
 
+  const handleAcceptInvite = useCallback(async (invite: MyPendingInvite) => {
+    await acceptInviteApi(invite.id, invite.project_id, invite.role);
+    setPendingInvites((prev) => prev.filter((i) => i.id !== invite.id));
+    await refreshWorkspaces();
+  }, [refreshWorkspaces]);
+
+  const handleDeclineInvite = useCallback(async (invite: MyPendingInvite) => {
+    await declineInviteApi(invite.id);
+    setPendingInvites((prev) => prev.filter((i) => i.id !== invite.id));
+  }, []);
+
   const activeProject = userProjects.find((p) => p.id === activeProjectId);
   const displayMonday = getDisplayMonday(transitionDay);
 
@@ -305,12 +324,14 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     transitionToNextWeek, transitionDay, transitionHour, transitionCount,
     setTransitionSchedule, displayMonday, weekMode, setWeekMode, weekDays,
     refreshWorkspaces, areaId,
+    pendingInvites, acceptInvite: handleAcceptInvite, declineInvite: handleDeclineInvite,
   }), [
     user, loading, userProjects, activeProjectId, setActiveProjectId,
     activeProject, clients, refreshClients, teamMembers, refreshTeamMembers,
     transitionToNextWeek, transitionDay, transitionHour, transitionCount,
     setTransitionSchedule, displayMonday, weekMode, setWeekMode, weekDays,
     refreshWorkspaces, areaId,
+    pendingInvites, handleAcceptInvite, handleDeclineInvite,
   ]);
 
   return (
