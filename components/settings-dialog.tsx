@@ -125,11 +125,12 @@ export function SettingsDialog({
   useEffect(() => {
     if (!open || settingsTab !== "about" || commitCount !== null) return;
 
-    fetch("https://api.github.com/repos/danielbech/machi-os/contributors?per_page=100")
-      .then((res) => res.json())
-      .then((contributors) => {
-        if (Array.isArray(contributors)) {
-          setCommitCount(contributors.reduce((sum: number, c: { contributions: number }) => sum + c.contributions, 0));
+    fetch("https://api.github.com/repos/danielbech/machi-os/commits?per_page=1", { method: "HEAD" })
+      .then((res) => {
+        const link = res.headers.get("link");
+        if (link) {
+          const match = link.match(/[&?]page=(\d+)>;\s*rel="last"/);
+          if (match) setCommitCount(parseInt(match[1], 10));
         }
       })
       .catch(() => {});
