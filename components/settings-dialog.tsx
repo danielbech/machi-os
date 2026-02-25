@@ -77,6 +77,7 @@ export function SettingsDialog({
   userProjectCount,
   defaultTab = "general",
 }: SettingsDialogProps) {
+  const isAdmin = activeProject?.role === 'owner' || activeProject?.role === 'admin';
   const [settingsTab, setSettingsTab] = useState(defaultTab);
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteRole, setInviteRole] = useState<"admin" | "member">("member");
@@ -873,7 +874,7 @@ export function SettingsDialog({
                         <div className="text-xs text-white/40 truncate">{member.email}</div>
                       )}
                     </div>
-                    {member.role !== 'owner' && (
+                    {isAdmin && member.role !== 'owner' && (
                       <Button
                         size="sm"
                         variant="destructive-ghost"
@@ -897,45 +898,47 @@ export function SettingsDialog({
                 ))}
               </div>
 
-              {/* Invite form */}
-              <div className="p-3 rounded-lg border border-white/5 bg-white/[0.02] space-y-3">
-                <div className="text-xs text-white/40">
-                  Invite members to collaborate on this workspace
-                </div>
-                <div className="flex gap-2">
-                  <Input
-                    type="email"
-                    placeholder="email@example.com"
-                    value={inviteEmail}
-                    onChange={(e) => setInviteEmail(e.target.value)}
-                    onKeyDown={(e) => { if (e.key === 'Enter') handleInvite(); }}
-                    className="flex-1"
-                  />
-                  <select
-                    value={inviteRole}
-                    onChange={(e) => setInviteRole(e.target.value as "admin" | "member")}
-                    className="px-3 py-1.5 rounded-md border border-white/10 bg-white/[0.02] text-sm outline-none focus:border-white/30 focus:ring-1 focus:ring-white/20"
-                  >
-                    <option value="member">Member</option>
-                    <option value="admin">Admin</option>
-                  </select>
-                  <Button
-                    size="sm"
-                    onClick={handleInvite}
-                    disabled={inviteLoading || !inviteEmail.trim()}
-                  >
-                    {inviteLoading ? '...' : 'Invite'}
-                  </Button>
-                </div>
-                {inviteMessage && (
-                  <div className={`text-xs ${inviteMessage.type === 'success' ? 'text-green-400' : 'text-red-400'}`}>
-                    {inviteMessage.text}
+              {/* Invite form — only for owners/admins */}
+              {isAdmin && (
+                <div className="p-3 rounded-lg border border-white/5 bg-white/[0.02] space-y-3">
+                  <div className="text-xs text-white/40">
+                    Invite members to collaborate on this workspace
                   </div>
-                )}
-              </div>
+                  <div className="flex gap-2">
+                    <Input
+                      type="email"
+                      placeholder="email@example.com"
+                      value={inviteEmail}
+                      onChange={(e) => setInviteEmail(e.target.value)}
+                      onKeyDown={(e) => { if (e.key === 'Enter') handleInvite(); }}
+                      className="flex-1"
+                    />
+                    <select
+                      value={inviteRole}
+                      onChange={(e) => setInviteRole(e.target.value as "admin" | "member")}
+                      className="px-3 py-1.5 rounded-md border border-white/10 bg-white/[0.02] text-sm outline-none focus:border-white/30 focus:ring-1 focus:ring-white/20"
+                    >
+                      <option value="member">Member</option>
+                      <option value="admin">Admin</option>
+                    </select>
+                    <Button
+                      size="sm"
+                      onClick={handleInvite}
+                      disabled={inviteLoading || !inviteEmail.trim()}
+                    >
+                      {inviteLoading ? '...' : 'Invite'}
+                    </Button>
+                  </div>
+                  {inviteMessage && (
+                    <div className={`text-xs ${inviteMessage.type === 'success' ? 'text-green-400' : 'text-red-400'}`}>
+                      {inviteMessage.text}
+                    </div>
+                  )}
+                </div>
+              )}
 
-              {/* Pending invites */}
-              {pendingInvites.length > 0 && (
+              {/* Pending invites — only for owners/admins */}
+              {isAdmin && pendingInvites.length > 0 && (
                 <div className="space-y-2">
                   <div className="text-xs text-white/40 px-1">Pending invites</div>
                   {pendingInvites.map((invite) => (
