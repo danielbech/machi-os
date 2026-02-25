@@ -1119,10 +1119,10 @@ export const GanttFeatureItemCard: FC<GanttFeatureItemCardProps> = ({
       )}
       style={{
         ...(accentColor
-          ? { borderWidth: 1, borderLeftWidth: 2, borderColor: `${accentColor}30`, borderLeftColor: accentColor }
+          ? { borderWidth: 1, borderLeftWidth: 2, borderTopColor: `${accentColor}30`, borderRightColor: `${accentColor}30`, borderBottomColor: `${accentColor}30`, borderLeftColor: accentColor }
           : {}),
         ...(selected && accentColor
-          ? { "--tw-ring-color": `${accentColor}50`, borderColor: `${accentColor}50` } as React.CSSProperties
+          ? { "--tw-ring-color": `${accentColor}50`, borderTopColor: `${accentColor}50`, borderRightColor: `${accentColor}50`, borderBottomColor: `${accentColor}50`, borderLeftColor: `${accentColor}50` } as React.CSSProperties
           : {}),
       }}
       onClick={globalDragging ? undefined : onSelect}
