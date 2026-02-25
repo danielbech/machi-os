@@ -329,10 +329,10 @@ export function SettingsDialog({
         </DialogHeader>
         <Tabs value={settingsTab} onValueChange={setSettingsTab} className="flex-1 min-h-0 flex flex-col">
           <TabsList variant="line" className="border-b border-white/5 px-0">
-            <TabsTrigger value="workspace" className="text-white/40 data-[state=active]:text-white after:bg-white">Workspace</TabsTrigger>
-            <TabsTrigger value="general" className="text-white/40 data-[state=active]:text-white after:bg-white">General</TabsTrigger>
-            <TabsTrigger value="calendar" className="text-white/40 data-[state=active]:text-white after:bg-white">Integrations</TabsTrigger>
-            <TabsTrigger value="about" className="text-white/40 data-[state=active]:text-white after:bg-white">About</TabsTrigger>
+            <TabsTrigger value="workspace" className="text-white/40 data-[state=active]:text-white">Workspace</TabsTrigger>
+            <TabsTrigger value="general" className="text-white/40 data-[state=active]:text-white">General</TabsTrigger>
+            <TabsTrigger value="calendar" className="text-white/40 data-[state=active]:text-white">Integrations</TabsTrigger>
+            <TabsTrigger value="about" className="text-white/40 data-[state=active]:text-white">About</TabsTrigger>
           </TabsList>
 
           {/* General Tab */}
