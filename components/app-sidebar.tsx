@@ -200,9 +200,9 @@ export function AppSidebar() {
             {pendingInvites.length > 0 && (
               <SidebarMenuItem>
                 <SidebarMenuButton onClick={() => { setShowInvites(true); setOpenMobile(false); }} tooltip="Invites">
-                  <div className="relative">
-                    <Mail />
-                    <span className="absolute -top-1 -right-1 flex size-3.5 items-center justify-center rounded-full bg-blue-500 text-[9px] font-bold text-white">
+                  <div className="relative shrink-0">
+                    <Mail className="size-4" />
+                    <span className="absolute -top-1.5 -right-2 flex size-3 items-center justify-center rounded-full bg-blue-500 text-[8px] font-bold text-white">
                       {pendingInvites.length}
                     </span>
                   </div>
