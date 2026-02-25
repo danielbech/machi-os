@@ -289,7 +289,7 @@ export function CalendarProvider({ children }: { children: React.ReactNode }) {
   // Auto-sync every 30 minutes
   useEffect(() => {
     if (!googleCalendarConnected) return;
-    const interval = setInterval(syncCalendarEvents, 30 * 60 * 1000);
+    const interval = setInterval(syncCalendarEvents, 10 * 60 * 1000);
     return () => clearInterval(interval);
   }, [googleCalendarConnected, syncCalendarEvents]);
 
