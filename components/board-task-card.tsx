@@ -7,7 +7,7 @@ import { getClientTextClassName, CLIENT_RGB_COLORS } from "@/lib/colors";
 import { getHexFromTailwind } from "@/hooks/use-presence-cursors";
 import { ClientIcon } from "@/components/client-icon";
 import { KanbanItem } from "@/components/ui/kanban";
-import { Check, StickyNote } from "lucide-react";
+import { Check, ImageIcon, StickyNote } from "lucide-react";
 
 interface BoardTaskCardProps {
   item: Task;
@@ -251,10 +251,17 @@ export const BoardTaskCard = memo(function BoardTaskCard({
               {item.title}
             </span>
           )}
-          {item.checklist.length > 0 && (
-            <span className="text-[10px] text-amber-400/40 tabular-nums shrink-0 mt-0.5">
-              {item.checklist.filter((i) => i.checked).length}/{item.checklist.length}
-            </span>
+          {(item.checklist.length > 0 || (item.images && item.images.length > 0)) && (
+            <div className="flex items-center gap-1.5 shrink-0 mt-0.5">
+              {item.images && item.images.length > 0 && (
+                <ImageIcon className="size-3 text-amber-400/40" />
+              )}
+              {item.checklist.length > 0 && (
+                <span className="text-[10px] text-amber-400/40 tabular-nums">
+                  {item.checklist.filter((i) => i.checked).length}/{item.checklist.length}
+                </span>
+              )}
+            </div>
           )}
         </div>
       ) : (
@@ -337,8 +344,8 @@ export const BoardTaskCard = memo(function BoardTaskCard({
 
           <div className={`absolute top-0.5 right-0 flex flex-col items-center gap-1 transition-opacity ${
             showCheckmarks
-              ? (item.completed || item.checklist.length > 0 ? "" : "opacity-0 group-hover:opacity-100")
-              : (item.checklist.length > 0 ? "" : "opacity-0 group-hover:opacity-100")
+              ? (item.completed || item.checklist.length > 0 || (item.images && item.images.length > 0) ? "" : "opacity-0 group-hover:opacity-100")
+              : (item.checklist.length > 0 || (item.images && item.images.length > 0) ? "" : "opacity-0 group-hover:opacity-100")
           }`}>
             <button
               type="button"
@@ -366,6 +373,9 @@ export const BoardTaskCard = memo(function BoardTaskCard({
               <span className={`text-[10px] tabular-nums leading-none ${dimCompleted ? "text-white/15" : "text-white/30"}`}>
                 {item.checklist.filter((i) => i.checked).length}/{item.checklist.length}
               </span>
+            )}
+            {item.images && item.images.length > 0 && (
+              <ImageIcon className={`size-3 ${dimCompleted ? "text-white/15" : "text-white/30"}`} />
             )}
           </div>
         </div>
