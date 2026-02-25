@@ -1,7 +1,17 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { toast } from "sonner";
+import {
+  useReactTable,
+  getCoreRowModel,
+  getFilteredRowModel,
+  getSortedRowModel,
+  type ColumnDef,
+  type SortingState,
+  type ColumnFiltersState,
+  flexRender,
+} from "@tanstack/react-table";
 import { useWorkspace } from "@/lib/workspace-context";
 import { updateClientRecord, deleteClientRecord } from "@/lib/supabase/clients";
 import { getClientTextClassName, CLIENT_DOT_COLORS } from "@/lib/colors";
@@ -9,13 +19,73 @@ import { ClientIcon } from "@/components/client-icon";
 import type { Client } from "@/lib/types";
 import { ProjectDialog } from "@/components/project-dialog";
 import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
-import { Plus, Pencil, Trash2 } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import {
+  Plus,
+  Pencil,
+  Trash2,
+  MoreHorizontal,
+  ArrowUpDown,
+  ArrowUp,
+  ArrowDown,
+  Search,
+  X,
+} from "lucide-react";
+
+function StatusFilter({
+  value,
+  onChange,
+}: {
+  value: string;
+  onChange: (value: string) => void;
+}) {
+  const options = ["all", "active", "idle"] as const;
+  return (
+    <div className="flex items-center gap-0.5 rounded-md bg-white/5 p-0.5">
+      {options.map((opt) => (
+        <button
+          key={opt}
+          onClick={() => onChange(opt)}
+          className={`px-2.5 py-1 rounded text-xs font-medium transition-all capitalize ${
+            value === opt
+              ? "bg-white/10 text-white"
+              : "text-white/30 hover:text-white/50"
+          }`}
+        >
+          {opt}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function SortIcon({ sorted }: { sorted: false | "asc" | "desc" }) {
+  if (sorted === "asc") return <ArrowUp className="size-3.5" />;
+  if (sorted === "desc") return <ArrowDown className="size-3.5" />;
+  return <ArrowUpDown className="size-3.5 opacity-30" />;
+}
 
 export default function ProjectsPage() {
   const { activeProjectId, clients, refreshClients } = useWorkspace();
@@ -29,8 +99,11 @@ export default function ProjectsPage() {
   const [editingClient, setEditingClient] = useState<Client | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
 
-  const activeClients = clients.filter((c) => c.active);
-  const idleClients = clients.filter((c) => !c.active);
+  // Table state
+  const [sorting, setSorting] = useState<SortingState>([]);
+  const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
+  const [globalFilter, setGlobalFilter] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
 
   const openAdd = () => {
     setEditingClient(null);
@@ -63,67 +136,159 @@ export default function ProjectsPage() {
     }
   };
 
-  const ClientRow = ({ client }: { client: Client }) => (
-    <div className="group flex items-center gap-4 px-4 py-3 rounded-lg border border-white/5 bg-white/[0.02] hover:bg-white/[0.04] hover:border-white/10 transition-all">
-      {/* Logo / Icon / Avatar */}
-      {client.logo_url ? (
-        <img
-          src={client.logo_url}
-          alt={client.name}
-          className="size-8 rounded-lg object-cover bg-white/5 shrink-0"
-        />
-      ) : (
-        <div className={`size-8 rounded-lg ${CLIENT_DOT_COLORS[client.color] || "bg-blue-500"} flex items-center justify-center text-white shrink-0`}>
-          {client.icon ? (
-            <ClientIcon icon={client.icon} className="size-4" />
-          ) : (
-            <span className="font-bold text-xs">{client.name.charAt(0).toUpperCase()}</span>
-          )}
-        </div>
-      )}
+  const filteredClients = useMemo(() => {
+    if (statusFilter === "all") return clients;
+    if (statusFilter === "active") return clients.filter((c) => c.active);
+    return clients.filter((c) => !c.active);
+  }, [clients, statusFilter]);
 
-      {/* Name */}
-      <span className={`flex-1 min-w-0 font-medium truncate ${getClientTextClassName(client.color)}`}>{client.name}</span>
-
-      {/* Shortcut */}
-      <span className="text-xs text-white/30 font-mono w-8 text-center shrink-0">{client.slug}</span>
-
-      {/* Status toggle */}
-      <Button
-        variant="ghost"
-        size="sm"
-        className={client.active
-          ? "text-green-400 hover:text-orange-400 hover:bg-orange-500/10"
-          : "text-white/30 hover:text-green-400 hover:bg-green-500/10"
-        }
-        onClick={() => handleToggleActive(client)}
-      >
-        {client.active ? "Active" : "Idle"}
-      </Button>
-
-      {/* Actions */}
-      <div className="flex gap-1 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity">
-        <Button
-          variant="ghost"
-          size="icon-xs"
-          className="text-white/40 hover:text-white hover:bg-white/10"
-          onClick={() => openEdit(client)}
-          aria-label={`Edit ${client.name}`}
-        >
-          <Pencil className="size-3.5" />
-        </Button>
-        <Button
-          variant="ghost"
-          size="icon-xs"
-          className="text-white/40 hover:text-red-400 hover:bg-red-500/10"
-          onClick={() => setDeleteConfirm(client.id)}
-          aria-label={`Delete ${client.name}`}
-        >
-          <Trash2 className="size-3.5" />
-        </Button>
-      </div>
-    </div>
+  const columns = useMemo<ColumnDef<Client>[]>(
+    () => [
+      {
+        accessorKey: "name",
+        header: "Project",
+        cell: ({ row }) => {
+          const client = row.original;
+          return (
+            <div className="flex items-center gap-3">
+              {client.logo_url ? (
+                <img
+                  src={client.logo_url}
+                  alt={client.name}
+                  className="size-7 rounded-lg object-cover bg-white/5 shrink-0"
+                />
+              ) : (
+                <div
+                  className={`size-7 rounded-lg ${CLIENT_DOT_COLORS[client.color] || "bg-blue-500"} flex items-center justify-center text-white shrink-0`}
+                >
+                  {client.icon ? (
+                    <ClientIcon icon={client.icon} className="size-3.5" />
+                  ) : (
+                    <span className="font-bold text-[10px]">
+                      {client.name.charAt(0).toUpperCase()}
+                    </span>
+                  )}
+                </div>
+              )}
+              <span
+                className={`font-medium ${getClientTextClassName(client.color)}`}
+              >
+                {client.name}
+              </span>
+            </div>
+          );
+        },
+        filterFn: "includesString",
+      },
+      {
+        accessorKey: "slug",
+        header: "Shortcut",
+        cell: ({ getValue }) => (
+          <span className="text-xs text-white/30 font-mono">
+            {getValue<string>()}
+          </span>
+        ),
+      },
+      {
+        accessorKey: "color",
+        header: "Color",
+        cell: ({ getValue }) => {
+          const color = getValue<string>();
+          return (
+            <div className="flex items-center gap-2">
+              <div
+                className={`size-3 rounded-full ${CLIENT_DOT_COLORS[color] || "bg-blue-500"}`}
+              />
+              <span className="text-xs text-white/50 capitalize">{color}</span>
+            </div>
+          );
+        },
+      },
+      {
+        accessorKey: "active",
+        header: "Status",
+        cell: ({ getValue }) => {
+          const active = getValue<boolean>();
+          return (
+            <Badge
+              className={
+                active
+                  ? "bg-green-500/10 text-green-400 border-green-500/20"
+                  : "bg-white/5 text-white/30 border-white/10"
+              }
+            >
+              {active ? "Active" : "Idle"}
+            </Badge>
+          );
+        },
+        sortingFn: (rowA, rowB) => {
+          const a = rowA.original.active ? 1 : 0;
+          const b = rowB.original.active ? 1 : 0;
+          return a - b;
+        },
+      },
+      {
+        id: "actions",
+        header: "",
+        cell: ({ row }) => {
+          const client = row.original;
+          return (
+            <div className="flex justify-end">
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon-xs"
+                    className="text-white/30 hover:text-white/60"
+                    aria-label={`Actions for ${client.name}`}
+                  >
+                    <MoreHorizontal className="size-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={() => openEdit(client)}>
+                    <Pencil className="size-4" />
+                    Edit
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handleToggleActive(client)}>
+                    {client.active ? "Set Idle" : "Set Active"}
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    className="text-destructive"
+                    onClick={() => setDeleteConfirm(client.id)}
+                  >
+                    <Trash2 className="size-4" />
+                    Delete
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+          );
+        },
+        enableSorting: false,
+      },
+    ],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    []
   );
+
+  const table = useReactTable({
+    data: filteredClients,
+    columns,
+    state: {
+      sorting,
+      columnFilters,
+      globalFilter,
+    },
+    onSortingChange: setSorting,
+    onColumnFiltersChange: setColumnFilters,
+    onGlobalFilterChange: setGlobalFilter,
+    getCoreRowModel: getCoreRowModel(),
+    getSortedRowModel: getSortedRowModel(),
+    getFilteredRowModel: getFilteredRowModel(),
+    globalFilterFn: "includesString",
+  });
 
   if (initialLoading) {
     return (
@@ -134,7 +299,10 @@ export default function ProjectsPage() {
         </div>
         <div className="space-y-2">
           {[1, 2, 3].map((i) => (
-            <div key={i} className="h-14 bg-white/[0.02] rounded-lg border border-white/5 animate-pulse" />
+            <div
+              key={i}
+              className="h-14 bg-white/[0.02] rounded-lg border border-white/5 animate-pulse"
+            />
           ))}
         </div>
       </main>
@@ -155,40 +323,109 @@ export default function ProjectsPage() {
         <div className="flex-1 flex items-center justify-center">
           <div className="text-center space-y-3">
             <div className="text-white/40 text-sm">No projects yet</div>
-            <Button variant="link" onClick={openAdd} className="text-white/60 hover:text-white">
+            <Button
+              variant="link"
+              onClick={openAdd}
+              className="text-white/60 hover:text-white"
+            >
               Add your first project
             </Button>
           </div>
         </div>
       ) : (
-        <div className="space-y-6">
-          {/* Active projects */}
-          {activeClients.length > 0 && (
-            <div className="space-y-2">
-              <div className="text-xs font-medium text-white/40 uppercase tracking-wider px-1">
-                Active ({activeClients.length})
-              </div>
-              <div className="space-y-1">
-                {activeClients.map((client) => (
-                  <ClientRow key={client.id} client={client} />
-                ))}
-              </div>
+        <div className="space-y-4">
+          {/* Toolbar */}
+          <div className="flex items-center gap-3">
+            <div className="relative flex-1 max-w-xs">
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3.5 text-white/30" />
+              <Input
+                placeholder="Search projects..."
+                value={globalFilter}
+                onChange={(e) => setGlobalFilter(e.target.value)}
+                className="pl-8 h-8 text-xs"
+              />
+              {globalFilter && (
+                <button
+                  onClick={() => setGlobalFilter("")}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-white/30 hover:text-white/60"
+                >
+                  <X className="size-3" />
+                </button>
+              )}
             </div>
-          )}
+            <StatusFilter value={statusFilter} onChange={setStatusFilter} />
+            <div className="ml-auto text-xs text-white/30">
+              {table.getFilteredRowModel().rows.length} project
+              {table.getFilteredRowModel().rows.length !== 1 ? "s" : ""}
+            </div>
+          </div>
 
-          {/* Idle projects */}
-          {idleClients.length > 0 && (
-            <div className="space-y-2">
-              <div className="text-xs font-medium text-white/40 uppercase tracking-wider px-1">
-                Idle ({idleClients.length})
-              </div>
-              <div className="space-y-1 opacity-60">
-                {idleClients.map((client) => (
-                  <ClientRow key={client.id} client={client} />
+          {/* Table */}
+          <div className="rounded-lg border border-white/[0.06] overflow-hidden">
+            <Table>
+              <TableHeader>
+                {table.getHeaderGroups().map((headerGroup) => (
+                  <TableRow
+                    key={headerGroup.id}
+                    className="border-white/[0.06] bg-white/[0.02] hover:bg-white/[0.02]"
+                  >
+                    {headerGroup.headers.map((header) => (
+                      <TableHead
+                        key={header.id}
+                        className={
+                          header.column.getCanSort()
+                            ? "cursor-pointer select-none hover:text-white/60 transition-colors"
+                            : ""
+                        }
+                        onClick={header.column.getToggleSortingHandler()}
+                      >
+                        <div className="flex items-center gap-1.5">
+                          {header.isPlaceholder
+                            ? null
+                            : flexRender(
+                                header.column.columnDef.header,
+                                header.getContext()
+                              )}
+                          {header.column.getCanSort() && (
+                            <SortIcon
+                              sorted={header.column.getIsSorted()}
+                            />
+                          )}
+                        </div>
+                      </TableHead>
+                    ))}
+                  </TableRow>
                 ))}
-              </div>
-            </div>
-          )}
+              </TableHeader>
+              <TableBody>
+                {table.getRowModel().rows.length ? (
+                  table.getRowModel().rows.map((row) => (
+                    <TableRow key={row.id}>
+                      {row.getVisibleCells().map((cell) => (
+                        <TableCell key={cell.id}>
+                          {flexRender(
+                            cell.column.columnDef.cell,
+                            cell.getContext()
+                          )}
+                        </TableCell>
+                      ))}
+                    </TableRow>
+                  ))
+                ) : (
+                  <TableRow className="hover:bg-transparent">
+                    <TableCell
+                      colSpan={columns.length}
+                      className="h-24 text-center text-white/30"
+                    >
+                      {globalFilter || statusFilter !== "all"
+                        ? "No matching projects."
+                        : "No projects yet."}
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </div>
         </div>
       )}
 
@@ -200,17 +437,25 @@ export default function ProjectsPage() {
       />
 
       {/* Delete Confirmation Dialog */}
-      <Dialog open={deleteConfirm !== null} onOpenChange={() => setDeleteConfirm(null)}>
+      <Dialog
+        open={deleteConfirm !== null}
+        onOpenChange={() => setDeleteConfirm(null)}
+      >
         <DialogContent className="sm:max-w-[360px]">
           <DialogHeader>
             <DialogTitle>Delete Project</DialogTitle>
           </DialogHeader>
           <div className="py-4 space-y-4">
             <p className="text-sm text-white/60">
-              Are you sure you want to delete this project? Tasks assigned to this project will keep their assignment but it won&apos;t be visible.
+              Are you sure you want to delete this project? Tasks assigned to
+              this project will keep their assignment but it won&apos;t be
+              visible.
             </p>
             <div className="flex justify-end gap-2">
-              <Button variant="ghost" onClick={() => setDeleteConfirm(null)}>
+              <Button
+                variant="ghost"
+                onClick={() => setDeleteConfirm(null)}
+              >
                 Cancel
               </Button>
               <Button
