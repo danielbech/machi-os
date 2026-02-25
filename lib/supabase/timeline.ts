@@ -6,7 +6,7 @@ export async function loadTimelineEntries(projectId: string): Promise<TimelineEn
 
   const { data, error } = await supabase
     .from('timeline_entries')
-    .select('id, project_id, client_id, parent_id, title, start_date, end_date, color, sort_order, type, created_at')
+    .select('id, project_id, client_id, parent_id, title, start_date, end_date, color, icon, sort_order, type, created_at')
     .eq('project_id', projectId)
     .order('sort_order')
 
@@ -24,6 +24,7 @@ export async function loadTimelineEntries(projectId: string): Promise<TimelineEn
     start_date: e.start_date,
     end_date: e.end_date,
     color: e.color,
+    icon: e.icon || undefined,
     sort_order: e.sort_order,
     type: e.type || 'project',
     created_at: e.created_at,
@@ -32,7 +33,7 @@ export async function loadTimelineEntries(projectId: string): Promise<TimelineEn
 
 export async function createTimelineEntry(
   projectId: string,
-  entry: { client_id?: string; parent_id?: string; title: string; start_date: string; end_date: string; color: string; sort_order: number; type?: string }
+  entry: { client_id?: string; parent_id?: string; title: string; start_date: string; end_date: string; color: string; icon?: string; sort_order: number; type?: string }
 ): Promise<TimelineEntry> {
   const supabase = createClient()
 
@@ -46,6 +47,7 @@ export async function createTimelineEntry(
       start_date: entry.start_date,
       end_date: entry.end_date,
       color: entry.color,
+      icon: entry.icon || null,
       sort_order: entry.sort_order,
       type: entry.type || 'project',
     })
@@ -66,6 +68,7 @@ export async function createTimelineEntry(
     start_date: data.start_date,
     end_date: data.end_date,
     color: data.color,
+    icon: data.icon || undefined,
     sort_order: data.sort_order,
     type: data.type || 'project',
     created_at: data.created_at,
@@ -74,7 +77,7 @@ export async function createTimelineEntry(
 
 export async function updateTimelineEntry(
   entryId: string,
-  updates: { title?: string; start_date?: string; end_date?: string; color?: string; sort_order?: number }
+  updates: { title?: string; start_date?: string; end_date?: string; color?: string; icon?: string | null; sort_order?: number }
 ): Promise<void> {
   const supabase = createClient()
 

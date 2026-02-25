@@ -84,6 +84,7 @@ export interface TimelineEntry {
   start_date: string;
   end_date: string;
   color: string;
+  icon?: string;
   sort_order: number;
   type: TimelineEntryType;
   created_at: string;

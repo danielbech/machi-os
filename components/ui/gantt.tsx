@@ -1130,7 +1130,7 @@ export const GanttFeatureItemCard: FC<GanttFeatureItemCardProps> = ({
       {accentColor && (
         <div
           className="absolute inset-0 pointer-events-none"
-          style={{ backgroundColor: accentColor, opacity: 0.05 }}
+          style={{ backgroundColor: accentColor, opacity: 0.08 }}
         />
       )}
       <div

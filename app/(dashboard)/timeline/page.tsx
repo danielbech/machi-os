@@ -44,7 +44,23 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Plus, Trash2, CalendarPlus, Pencil, MoreHorizontal, ChevronRight, Diamond, Filter } from "lucide-react";
+import { Plus, Trash2, CalendarPlus, Pencil, MoreHorizontal, Diamond, Filter, Palette, Code, MessageSquare, Headphones, Rocket, Bug, FileText, Settings, Megaphone, Star, Target, Lightbulb, Zap } from "lucide-react";
+
+const SUB_ITEM_ICONS = [
+  { name: "palette", icon: Palette, label: "Design" },
+  { name: "code", icon: Code, label: "Dev" },
+  { name: "message-square", icon: MessageSquare, label: "Feedback" },
+  { name: "headphones", icon: Headphones, label: "Support" },
+  { name: "rocket", icon: Rocket, label: "Launch" },
+  { name: "bug", icon: Bug, label: "QA" },
+  { name: "file-text", icon: FileText, label: "Docs" },
+  { name: "settings", icon: Settings, label: "Config" },
+  { name: "megaphone", icon: Megaphone, label: "Marketing" },
+  { name: "star", icon: Star, label: "Milestone" },
+  { name: "target", icon: Target, label: "Goals" },
+  { name: "lightbulb", icon: Lightbulb, label: "Ideas" },
+  { name: "zap", icon: Zap, label: "Sprint" },
+];
 
 const ZOOM_LEVELS: { range: Range; zoom: number }[] = [
   { range: "quarterly", zoom: 75 },
@@ -201,6 +217,7 @@ export default function TimelinePage() {
   const [subItemStartDate, setSubItemStartDate] = useState("");
   const [subItemEndDate, setSubItemEndDate] = useState("");
   const [subItemColor, setSubItemColor] = useState("blue");
+  const [subItemIcon, setSubItemIcon] = useState("");
   const [subItemSubmitting, setSubItemSubmitting] = useState(false);
 
   // Event form state
@@ -220,6 +237,7 @@ export default function TimelinePage() {
   const [editStartDate, setEditStartDate] = useState("");
   const [editEndDate, setEditEndDate] = useState("");
   const [editColor, setEditColor] = useState("blue");
+  const [editIcon, setEditIcon] = useState("");
   const [editSaving, setEditSaving] = useState(false);
 
   const activeClients = clients.filter((c) => c.active);
@@ -418,6 +436,7 @@ export default function TimelinePage() {
       start_date: subItemStartDate,
       end_date: subItemEndDate,
       color: subItemColor,
+      icon: subItemIcon || undefined,
       sort_order: entries.length,
       type: "event",
       created_at: new Date().toISOString(),
@@ -428,6 +447,7 @@ export default function TimelinePage() {
     setExpandedEntries((prev) => new Set(prev).add(subItemParent.id));
     setSubItemParent(null);
     setSubItemTitle("");
+    setSubItemIcon("");
     setSubItemSubmitting(false);
 
     try {
@@ -437,6 +457,7 @@ export default function TimelinePage() {
         start_date: subItemStartDate,
         end_date: subItemEndDate,
         color: subItemColor,
+        icon: subItemIcon || undefined,
         sort_order: entries.length,
         type: "event",
       });
@@ -451,6 +472,7 @@ export default function TimelinePage() {
   const openSubItemDialog = (parent: TimelineEntry) => {
     setSubItemParent(parent);
     setSubItemTitle("");
+    setSubItemIcon("");
     setSubItemStartDate(parent.start_date);
     setSubItemEndDate(parent.start_date);
     setSubItemColor(parent.color);
@@ -499,6 +521,7 @@ export default function TimelinePage() {
     setEditStartDate(entry.start_date);
     setEditEndDate(entry.end_date);
     setEditColor(entry.color);
+    setEditIcon(entry.icon || "");
   };
 
   const handleSaveEdit = async () => {
@@ -510,10 +533,11 @@ export default function TimelinePage() {
       start_date: editStartDate,
       end_date: editEndDate,
       color: editColor,
+      icon: editIcon || null,
     };
 
     setEntries((prev) =>
-      prev.map((e) => (e.id === editingEntry.id ? { ...e, ...updates } : e))
+      prev.map((e) => (e.id === editingEntry.id ? { ...e, ...updates, icon: editIcon || undefined } : e))
     );
     setEditingEntry(null);
     setEditSaving(false);
@@ -734,7 +758,7 @@ export default function TimelinePage() {
                 return (
                   <div
                     key={parent.id}
-                    className="mx-2 mb-2 rounded-lg border bg-white/[0.02] overflow-hidden transition-colors"
+                    className="mx-2 mb-3 rounded-lg border bg-white/[0.02] overflow-hidden transition-colors"
                     style={{
                       borderColor: selectedEntryId === parent.id || group.children.some((c) => c.id === selectedEntryId)
                         ? `${getAccentColor(parent)}50`
@@ -751,17 +775,6 @@ export default function TimelinePage() {
                         if (hasChildren) toggleExpanded(parent.id);
                       }}
                     >
-                      {hasChildren && (
-                        <button
-                          onClick={(e) => { e.stopPropagation(); toggleExpanded(parent.id); }}
-                          className="shrink-0 text-white/30 hover:text-white/60 transition-colors"
-                          aria-label={isExpanded ? "Collapse" : "Expand"}
-                        >
-                          <ChevronRight
-                            className={`size-3.5 transition-transform ${isExpanded ? "rotate-90" : ""}`}
-                          />
-                        </button>
-                      )}
                       {parent.type === "event" ? (
                         <EventDot color={parent.color} size="sm" />
                       ) : parentClient ? (
@@ -775,11 +788,6 @@ export default function TimelinePage() {
                       <p className="flex-1 truncate text-left font-medium">
                         {parentFeature.name}
                       </p>
-                      {childCount > 0 && (
-                        <span className="shrink-0 rounded-full bg-white/[0.08] px-1.5 py-0.5 text-[10px] text-white/40">
-                          {childCount}
-                        </span>
-                      )}
                       <p className="text-muted-foreground shrink-0">
                         {parentDuration}
                       </p>
@@ -808,12 +816,9 @@ export default function TimelinePage() {
                         >
                           {isMilestone ? (
                             <Diamond className="size-3.5 shrink-0 text-white/40" />
-                          ) : (
-                            <div
-                              className="size-2 shrink-0 rounded-full"
-                              style={{ backgroundColor: childFeature.status.color }}
-                            />
-                          )}
+                          ) : child.icon ? (
+                            <ClientIcon icon={child.icon} className="size-3.5 shrink-0 text-white/40" />
+                          ) : null}
                           <p className="flex-1 truncate text-left font-medium">
                             {childFeature.name}
                           </p>
@@ -833,7 +838,7 @@ export default function TimelinePage() {
                 {visibleGroups.map((group) => {
                   const allGroupEntries = [group.parent, ...group.children];
                   return (
-                    <div key={group.parent.id} className="mb-2">
+                    <div key={group.parent.id} className="mb-3">
                       {allGroupEntries.map((entry) => {
                         const feature = visibleFeatures.find((f) => f.id === entry.id);
                         if (!feature) return null;
@@ -859,12 +864,10 @@ export default function TimelinePage() {
                           >
                             {isChild && isMilestone ? (
                               <Diamond className="size-2.5 shrink-0 text-white/60" />
-                            ) : isChild ? (
-                              <div
-                                className="size-2 shrink-0 rounded-full"
-                                style={{ backgroundColor: feature.status.color }}
-                              />
-                            ) : entry.type === "event" ? (
+                            ) : isChild && entry.icon ? (
+                              <ClientIcon icon={entry.icon} className="size-3 shrink-0 text-white/50" />
+                            ) : isChild ? null
+                            : entry.type === "event" ? (
                               <EventDot color={entry.color} size="xs" />
                             ) : client ? (
                               <ClientAvatar client={client} size="xs" />
@@ -1111,6 +1114,29 @@ export default function TimelinePage() {
                 />
               </div>
             </div>
+            {editingEntry?.parent_id && (
+              <div className="space-y-1.5">
+                <label className="text-xs text-white/40">Icon (optional)</label>
+                <div className="flex flex-wrap gap-1.5">
+                  {SUB_ITEM_ICONS.map((opt) => (
+                    <button
+                      key={opt.name}
+                      type="button"
+                      onClick={() => setEditIcon(editIcon === opt.name ? "" : opt.name)}
+                      className={`size-7 rounded-md flex items-center justify-center transition-all ${
+                        editIcon === opt.name
+                          ? "bg-white/15 text-white ring-1 ring-white/30"
+                          : "bg-white/5 text-white/30 hover:text-white/60 hover:bg-white/10"
+                      }`}
+                      title={opt.label}
+                      aria-label={opt.label}
+                    >
+                      <opt.icon className="size-3.5" />
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
             <div className="space-y-1.5">
               <label className="text-xs text-white/40">Color</label>
               <div className="flex gap-2">
@@ -1183,6 +1209,27 @@ export default function TimelinePage() {
             <p className="text-xs text-white/30">
               Set start and end to the same date for a milestone.
             </p>
+            <div className="space-y-1.5">
+              <label className="text-xs text-white/40">Icon (optional)</label>
+              <div className="flex flex-wrap gap-1.5">
+                {SUB_ITEM_ICONS.map((opt) => (
+                  <button
+                    key={opt.name}
+                    type="button"
+                    onClick={() => setSubItemIcon(subItemIcon === opt.name ? "" : opt.name)}
+                    className={`size-7 rounded-md flex items-center justify-center transition-all ${
+                      subItemIcon === opt.name
+                        ? "bg-white/15 text-white ring-1 ring-white/30"
+                        : "bg-white/5 text-white/30 hover:text-white/60 hover:bg-white/10"
+                    }`}
+                    title={opt.label}
+                    aria-label={opt.label}
+                  >
+                    <opt.icon className="size-3.5" />
+                  </button>
+                ))}
+              </div>
+            </div>
             <div className="space-y-1.5">
               <label className="text-xs text-white/40">Color</label>
               <div className="flex gap-2">
