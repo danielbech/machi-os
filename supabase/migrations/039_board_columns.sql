@@ -12,8 +12,16 @@ ALTER TABLE board_columns ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "Users can view board columns for their projects"
   ON board_columns FOR SELECT
-  USING (project_id IN (SELECT get_user_project_ids()));
+  USING (project_id IN (SELECT get_user_project_ids(auth.uid())));
 
-CREATE POLICY "Admins can manage board columns"
-  ON board_columns FOR ALL
-  USING (project_id IN (SELECT get_user_project_ids()));
+CREATE POLICY "board_columns_insert"
+  ON board_columns FOR INSERT
+  WITH CHECK (project_id IN (SELECT get_user_project_ids(auth.uid())));
+
+CREATE POLICY "board_columns_update"
+  ON board_columns FOR UPDATE
+  USING (project_id IN (SELECT get_user_admin_project_ids(auth.uid())));
+
+CREATE POLICY "board_columns_delete"
+  ON board_columns FOR DELETE
+  USING (project_id IN (SELECT get_user_admin_project_ids(auth.uid())));
