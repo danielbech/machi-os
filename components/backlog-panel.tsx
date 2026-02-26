@@ -188,6 +188,7 @@ export function BacklogPanel({
   // DnD state
   const [localTasks, setLocalTasks] = useState<Task[] | null>(null);
   const [activeTask, setActiveTask] = useState<Task | null>(null);
+  const [dragOverContainer, setDragOverContainer] = useState<string | null>(null);
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
 
@@ -234,7 +235,10 @@ export function BacklogPanel({
 
   const handleDragOver = (event: DragOverEvent) => {
     const { active, over } = event;
-    if (!over || !localTasks) return;
+    if (!over || !localTasks) {
+      setDragOverContainer(null);
+      return;
+    }
 
     const activeId = active.id as string;
     const overId = over.id as string;
@@ -255,6 +259,9 @@ export function BacklogPanel({
       if (!overTask) return;
       overContainerId = getContainerId(overTask);
     }
+
+    // Track hovered container for visual feedback
+    setDragOverContainer(overContainerId !== activeContainerId ? overContainerId : null);
 
     // Block cross-client moves
     const activeClient = getClientForContainer(activeContainerId);
@@ -309,6 +316,7 @@ export function BacklogPanel({
 
   const handleDragEnd = (event: DragEndEvent) => {
     onDragActiveChange?.(false);
+    setDragOverContainer(null);
 
     if (!localTasks) {
       setActiveTask(null);
@@ -631,8 +639,10 @@ export function BacklogPanel({
     const isCollapsed = collapsedFolders.has(folder.id);
     const containerId = `folder:${folder.id}`;
 
+    const isFolderDragTarget = dragOverContainer === containerId;
+
     return (
-      <div key={folder.id} data-backlog-folder={folder.id} data-backlog-client={folder.client_id}>
+      <div key={folder.id} data-backlog-folder={folder.id} data-backlog-client={folder.client_id} className={`transition-all duration-150 ${isFolderDragTarget ? "ring-1 ring-white/15 ring-inset bg-white/[0.04] rounded-lg" : ""}`}>
         {/* Folder header */}
         <div className="flex items-center gap-1 group/folder border-b border-white/[0.04] hover:bg-white/[0.04] transition-colors px-3 py-1.5">
           <button
@@ -810,18 +820,22 @@ export function BacklogPanel({
                   {clientFolders.map((folder) => renderFolderSection(folder, clientTasks))}
 
                   {/* Unsorted tasks (siblings to folders) */}
-                  <div>
-                    <DroppableArea id={unsortedContainerId}>
-                      <SortableContext items={unsortedTasks.map((t) => t.id)} strategy={verticalListSortingStrategy}>
-                        {unsortedTasks.map(renderTaskRow)}
-                      </SortableContext>
-                      {activeTask && activeTask.folder_id && activeTask.client === client.id && unsortedTasks.length === 0 && (
-                        <div className="mx-2 my-1.5 py-2 rounded border border-dashed border-white/10 text-center text-[11px] text-white/20">
-                          Drop here for root
-                        </div>
-                      )}
-                    </DroppableArea>
-                  </div>
+                  {(() => {
+                    const isUnsortedDragTarget = dragOverContainer === unsortedContainerId;
+                    const showExpandedDropZone = activeTask && activeTask.folder_id && activeTask.client === client.id;
+                    return (
+                      <div className={`transition-all duration-150 ${isUnsortedDragTarget ? "ring-1 ring-white/15 ring-inset bg-white/[0.04] rounded-lg" : ""}`}>
+                        <DroppableArea id={unsortedContainerId}>
+                          <SortableContext items={unsortedTasks.map((t) => t.id)} strategy={verticalListSortingStrategy}>
+                            {unsortedTasks.map(renderTaskRow)}
+                          </SortableContext>
+                          {showExpandedDropZone && unsortedTasks.length === 0 && (
+                            <div className="h-8" />
+                          )}
+                        </DroppableArea>
+                      </div>
+                    );
+                  })()}
 
                   {/* Add task / Add folder */}
                   {addingTaskIn === `${client.id}:unsorted` ? (
