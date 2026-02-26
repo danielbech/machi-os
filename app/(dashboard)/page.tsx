@@ -51,6 +51,9 @@ export default function BoardPage() {
   const [kanbanDragActive, setKanbanDragActive] = useState(false);
   const [dragOverTarget, setDragOverTarget] = useState<string | null>(null);
   const [backlogDragOverColumn, setBacklogDragOverColumn] = useState<string | null>(null);
+  // Refs for real-time drag target (used in onDragEnd where state would be stale)
+  const dragOverTargetRef = useRef<string | null>(null);
+  const dragBacklogPlacementRef = useRef<{ clientId?: string; folderId?: string } | null>(null);
   const [glowingCards, setGlowingCards] = useState<Set<string>>(new Set());
   const [filterMine, setFilterMine] = useState(() => {
     if (typeof window === "undefined") return false;
@@ -399,6 +402,8 @@ export default function BoardPage() {
   useEffect(() => {
     if (!kanbanDragActive) {
       setDragOverTarget(null);
+      dragOverTargetRef.current = null;
+      dragBacklogPlacementRef.current = null;
       return;
     }
     let current: string | null = null;
@@ -408,11 +413,30 @@ export default function BoardPage() {
       const col = els.find((el) => el.hasAttribute("data-column-id"));
       if (col) {
         target = col.getAttribute("data-column-id");
+        dragBacklogPlacementRef.current = null;
       } else if (els.some((el) => el.hasAttribute("data-backlog-panel"))) {
         target = "backlog";
+        // Track specific folder/client under cursor
+        const folderEl = els.find((el) => el.hasAttribute("data-backlog-folder"));
+        const clientEl = els.find((el) => el.hasAttribute("data-backlog-client"));
+        if (folderEl) {
+          dragBacklogPlacementRef.current = {
+            folderId: folderEl.getAttribute("data-backlog-folder")!,
+            clientId: folderEl.getAttribute("data-backlog-client")!,
+          };
+        } else if (clientEl) {
+          dragBacklogPlacementRef.current = {
+            clientId: clientEl.getAttribute("data-backlog-client")!,
+          };
+        } else {
+          dragBacklogPlacementRef.current = null;
+        }
+      } else {
+        dragBacklogPlacementRef.current = null;
       }
       if (target !== current) {
         current = target;
+        dragOverTargetRef.current = target;
         setDragOverTarget(target);
       }
     };
@@ -612,29 +636,13 @@ export default function BoardPage() {
           onDragEnd={(event) => {
             setKanbanDragActive(false);
             if (!backlogOpen) return;
-            const { activatorEvent, delta } = event;
-            const pe = activatorEvent as PointerEvent | undefined;
-            if (pe && typeof pe.clientX === "number") {
-              const x = pe.clientX + delta.x;
-              const y = pe.clientY + delta.y;
-              const elements = document.elementsFromPoint(x, y);
-              if (elements.some((el) => el.hasAttribute("data-backlog-panel"))) {
-                // Prevent Kanban's internal onDragEnd from calling onValueChange
-                // (which would put the card back in its column)
-                activatorEvent.preventDefault();
-                const taskId = event.active.id as string;
-                // Detect specific folder or client target
-                const folderEl = elements.find((el) => el.hasAttribute("data-backlog-folder"));
-                const clientEl = elements.find((el) => el.hasAttribute("data-backlog-client"));
-                const placement: { clientId?: string; folderId?: string } = {};
-                if (folderEl) {
-                  placement.folderId = folderEl.getAttribute("data-backlog-folder")!;
-                  placement.clientId = folderEl.getAttribute("data-backlog-client")!;
-                } else if (clientEl) {
-                  placement.clientId = clientEl.getAttribute("data-backlog-client")!;
-                }
-                handleSendToBacklog(taskId, Object.keys(placement).length > 0 ? placement : undefined);
-              }
+            // Use ref (updated in real-time by pointermove) — state would be stale here
+            if (dragOverTargetRef.current === "backlog") {
+              // Prevent Kanban's internal onDragEnd from processing the drop
+              event.activatorEvent.preventDefault();
+              const taskId = event.active.id as string;
+              const placement = dragBacklogPlacementRef.current;
+              handleSendToBacklog(taskId, placement || undefined);
             }
           }}
         >
