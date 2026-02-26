@@ -46,6 +46,8 @@ interface WorkspaceContextValue {
   refreshBoardColumns: () => Promise<void>;
   refreshWorkspaces: () => Promise<void>;
   areaId: string | null;
+  taskRefreshKey: number;
+  triggerTaskRefresh: () => void;
   pendingInvites: MyPendingInvite[];
   acceptInvite: (invite: MyPendingInvite) => Promise<void>;
   declineInvite: (invite: MyPendingInvite) => Promise<void>;
@@ -118,6 +120,8 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
   // Week mode
   const [weekMode, setWeekModeState] = useState<WeekMode>("5-day");
   const [boardColumns, setBoardColumns] = useState<BoardColumn[]>([]);
+  const [taskRefreshKey, setTaskRefreshKey] = useState(0);
+  const triggerTaskRefresh = useCallback(() => setTaskRefreshKey((k) => k + 1), []);
 
   // Transition schedule
   const [transitionDay, setTransitionDayState] = useState(5);
@@ -399,7 +403,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     setTransitionSchedule, displayMonday, weekMode, setWeekMode, weekDays,
     showCheckmarks, setShowCheckmarks,
     boardColumns, addBoardColumn, renameBoardColumn, removeBoardColumn, refreshBoardColumns,
-    refreshWorkspaces, areaId,
+    refreshWorkspaces, areaId, taskRefreshKey, triggerTaskRefresh,
     pendingInvites, acceptInvite: handleAcceptInvite, declineInvite: handleDeclineInvite,
   }), [
     user, loading, userProjects, activeProjectId, setActiveProjectId,
@@ -408,7 +412,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     setTransitionSchedule, displayMonday, weekMode, setWeekMode, weekDays,
     showCheckmarks, setShowCheckmarks,
     boardColumns, addBoardColumn, renameBoardColumn, removeBoardColumn, refreshBoardColumns,
-    refreshWorkspaces, areaId,
+    refreshWorkspaces, areaId, taskRefreshKey, triggerTaskRefresh,
     pendingInvites, handleAcceptInvite, handleDeclineInvite,
   ]);
 

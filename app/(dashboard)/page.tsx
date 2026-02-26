@@ -26,7 +26,7 @@ import { Check, CheckCircle, Plus, StickyNote, User, X } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 export default function BoardPage() {
-  const { activeProjectId, clients, teamMembers, weekMode, weekDays, displayMonday, areaId, user, boardColumns, addBoardColumn, renameBoardColumn, removeBoardColumn, showCheckmarks } = useWorkspace();
+  const { activeProjectId, clients, teamMembers, weekMode, weekDays, displayMonday, areaId, user, boardColumns, addBoardColumn, renameBoardColumn, removeBoardColumn, showCheckmarks, taskRefreshKey } = useWorkspace();
   const { calendarEvents } = useCalendar();
   const { backlogOpen, addToBacklog, backlogFolders } = useBacklog();
 
@@ -143,6 +143,12 @@ export default function BoardPage() {
     // refreshTasks already captures weekDays/boardColumnIds/isCustom
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeProjectId, refreshTasks]);
+
+  // Reload tasks when triggered externally (e.g. after task migration)
+  useEffect(() => {
+    if (taskRefreshKey > 0) refreshTasks();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [taskRefreshKey]);
 
   // Track previous columns for diffing on drag
   const prevColumnsRef = useRef(columns);

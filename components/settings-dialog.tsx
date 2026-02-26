@@ -46,6 +46,7 @@ interface SettingsDialogProps {
   onWeekModeChange: (mode: WeekMode) => Promise<void>;
   boardColumns: BoardColumn[];
   areaId: string | null;
+  onTasksMigrated?: () => void;
   // UI preferences
   showCheckmarks: boolean;
   onShowCheckmarksChange: (v: boolean) => void;
@@ -80,6 +81,7 @@ export function SettingsDialog({
   onWeekModeChange,
   boardColumns,
   areaId,
+  onTasksMigrated,
   showCheckmarks,
   onShowCheckmarksChange,
   onProfileUpdate,
@@ -1019,6 +1021,7 @@ export function SettingsDialog({
                                 );
                                 toast.success(`Moved ${migrated} task${migrated !== 1 ? "s" : ""} to Friday`);
                               }
+                              onTasksMigrated?.();
                             } catch (err) {
                               toast.error("Failed to migrate tasks");
                             } finally {

@@ -38,7 +38,7 @@ export function AppSidebar() {
     transitionToNextWeek, refreshTeamMembers,
     weekMode, setWeekMode, transitionDay, transitionHour, setTransitionSchedule,
     showCheckmarks, setShowCheckmarks,
-    boardColumns, areaId,
+    boardColumns, areaId, triggerTaskRefresh,
     refreshWorkspaces, pendingInvites,
   } = useWorkspace();
   const { backlogOpen, toggleBacklog } = useBacklog();
@@ -252,6 +252,7 @@ export function AppSidebar() {
           onWeekModeChange={setWeekMode}
           boardColumns={boardColumns}
           areaId={areaId}
+          onTasksMigrated={triggerTaskRefresh}
           showCheckmarks={showCheckmarks}
           onShowCheckmarksChange={setShowCheckmarks}
           onProfileUpdate={refreshTeamMembers}
