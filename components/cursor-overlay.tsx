@@ -44,12 +44,7 @@ function Cursor({ cursor }: { cursor: CursorState }) {
   );
 }
 
-// DEBUG: remove after troubleshooting
-let _cursorRenders = 0;
-
 export function CursorOverlay() {
-  _cursorRenders++;
-  if (_cursorRenders % 50 === 0) console.warn(`[DEBUG] CursorOverlay rendered ${_cursorRenders} times`);
   const { user, teamMembers, activeProjectId } = useWorkspace();
   const pathname = usePathname();
 

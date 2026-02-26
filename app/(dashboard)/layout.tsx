@@ -15,12 +15,7 @@ import { CursorOverlay } from "@/components/cursor-overlay";
 import { WelcomeDialog } from "@/components/welcome-dialog";
 import { PendingInvitesDialog } from "@/components/pending-invites-dialog";
 
-// DEBUG: remove after troubleshooting
-let _gateRenders = 0;
-
 function DashboardGate({ children }: { children: React.ReactNode }) {
-  _gateRenders++;
-  if (_gateRenders % 10 === 0) console.warn(`[DEBUG] DashboardGate rendered ${_gateRenders} times`);
   const { user, loading, pendingInvites } = useWorkspace();
   const { backlogOpen, backlogWidth } = useBacklog();
   const isMobile = useIsMobile();

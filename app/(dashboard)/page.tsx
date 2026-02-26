@@ -25,12 +25,7 @@ import {
 import { Check, CheckCircle, Plus, StickyNote, User, X } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
-// DEBUG: remove after troubleshooting
-let _boardRenders = 0;
-
 export default function BoardPage() {
-  _boardRenders++;
-  if (_boardRenders % 10 === 0) console.warn(`[DEBUG] BoardPage rendered ${_boardRenders} times`);
   const { activeProjectId, clients, teamMembers, weekMode, weekDays, displayMonday, areaId, user, boardColumns, addBoardColumn, renameBoardColumn, removeBoardColumn, showCheckmarks, taskRefreshKey } = useWorkspace();
   const { calendarEvents } = useCalendar();
   const { backlogOpen, addToBacklog, backlogFolders } = useBacklog();
