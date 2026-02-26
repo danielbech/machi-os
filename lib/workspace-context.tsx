@@ -96,7 +96,12 @@ function getDisplayMonday(transitionDay: number) {
 const ALL_FIVE_DAYS: DayName[] = ["monday", "tuesday", "wednesday", "thursday", "friday"];
 const ALL_SEVEN_DAYS: DayName[] = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"];
 
+// DEBUG: remove after troubleshooting
+let _wsRenders = 0;
+
 export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
+  _wsRenders++;
+  if (_wsRenders % 10 === 0) console.warn(`[DEBUG] WorkspaceProvider rendered ${_wsRenders} times`);
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [userProjects, setUserProjects] = useState<Project[]>([]);
