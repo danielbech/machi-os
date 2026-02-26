@@ -522,7 +522,7 @@ export default function BoardPage() {
   };
 
   // Send kanban task to backlog (via drag or action)
-  const handleSendToBacklog = async (taskId: string) => {
+  const handleSendToBacklog = async (taskId: string, placement?: { clientId?: string; folderId?: string }) => {
     if (!activeProjectId) return;
     // Use functional update to read latest columns (avoids stale closure during drag)
     let task: Task | null = null;
@@ -543,7 +543,7 @@ export default function BoardPage() {
     });
     if (!task || !sourceColumn) return;
     try {
-      await addToBacklog(task);
+      await addToBacklog(task, placement);
       await updateDayTasks(activeProjectId, sourceColumn, updatedColumnItems, areaId);
     } catch {
       // Restore card to its column on failure
@@ -620,7 +620,17 @@ export default function BoardPage() {
               const elements = document.elementsFromPoint(x, y);
               if (elements.some((el) => el.hasAttribute("data-backlog-panel"))) {
                 const taskId = event.active.id as string;
-                handleSendToBacklog(taskId);
+                // Detect specific folder or client target
+                const folderEl = elements.find((el) => el.hasAttribute("data-backlog-folder"));
+                const clientEl = elements.find((el) => el.hasAttribute("data-backlog-client"));
+                const placement: { clientId?: string; folderId?: string } = {};
+                if (folderEl) {
+                  placement.folderId = folderEl.getAttribute("data-backlog-folder")!;
+                  placement.clientId = folderEl.getAttribute("data-backlog-client")!;
+                } else if (clientEl) {
+                  placement.clientId = clientEl.getAttribute("data-backlog-client")!;
+                }
+                handleSendToBacklog(taskId, Object.keys(placement).length > 0 ? placement : undefined);
               }
             }
           }}

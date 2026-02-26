@@ -612,7 +612,7 @@ export function BacklogPanel({
     const containerId = `folder:${folder.id}`;
 
     return (
-      <div key={folder.id}>
+      <div key={folder.id} data-backlog-folder={folder.id} data-backlog-client={folder.client_id}>
         {/* Folder header */}
         <div className="flex items-center gap-1 group/folder border-b border-white/[0.04] hover:bg-white/[0.04] transition-colors px-3 py-1.5">
           <button
@@ -749,7 +749,7 @@ export function BacklogPanel({
           const unsortedContainerId = `unsorted:${client.id}`;
 
           return (
-            <div key={client.id} className="mb-3 rounded-lg border border-white/[0.06] bg-white/[0.02] overflow-hidden">
+            <div key={client.id} data-backlog-client={client.id} className="mb-3 rounded-lg border border-white/[0.06] bg-white/[0.02] overflow-hidden">
               {/* Client header */}
               <div className="group/client flex items-center gap-2 px-3 py-2 bg-white/[0.03] hover:bg-white/[0.05] transition-colors">
                 <button

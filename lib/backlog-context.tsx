@@ -15,7 +15,7 @@ interface BacklogContextValue {
   backlogFolders: BacklogFolder[];
   sendBacklogToDay: (taskId: string, day: DayName) => Promise<void>;
   sendFolderToDay: (folderId: string, day: DayName) => Promise<void>;
-  addToBacklog: (task: Task) => Promise<void>;
+  addToBacklog: (task: Task, placement?: { clientId?: string; folderId?: string }) => Promise<void>;
   createBacklogTask: (title: string, clientId: string, folderId?: string) => Promise<void>;
   saveBacklogTask: (task: Task) => Promise<void>;
   deleteBacklogTask: (taskId: string) => Promise<void>;
@@ -150,9 +150,14 @@ export function BacklogProvider({ children }: { children: React.ReactNode }) {
     setTimeout(() => { suppressBacklogReload.current = false; }, 2000);
   }, [activeProjectId, backlogTasks, areaId]);
 
-  const addToBacklog = useCallback(async (task: Task) => {
+  const addToBacklog = useCallback(async (task: Task, placement?: { clientId?: string; folderId?: string }) => {
     if (!activeProjectId) return;
-    const backlogTask = { ...task, day: undefined };
+    const backlogTask = {
+      ...task,
+      day: undefined,
+      ...(placement?.clientId ? { client: placement.clientId } : {}),
+      ...(placement?.folderId !== undefined ? { folder_id: placement.folderId } : {}),
+    };
     setBacklogTasks((prev) => [...prev, backlogTask]);
     suppressBacklogReload.current = true;
     await saveTask(activeProjectId, backlogTask, areaId);

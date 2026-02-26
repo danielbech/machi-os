@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useWorkspace } from "@/lib/workspace-context";
 import { useBacklog } from "@/lib/backlog-context";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -22,6 +22,33 @@ export function BacklogShell() {
 
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const isMobile = useIsMobile();
+  const panelRef = useRef<HTMLDivElement>(null);
+
+  // Highlight the specific folder/client section when a kanban card is dragged over the backlog
+  useEffect(() => {
+    if (!kanbanDragOverBacklog || !panelRef.current) return;
+    let currentEl: Element | null = null;
+    const highlightClass = "ring-1 ring-white/15 ring-inset bg-white/[0.04] rounded-lg";
+    const classes = highlightClass.split(" ");
+
+    const onPointerMove = (e: PointerEvent) => {
+      const els = document.elementsFromPoint(e.clientX, e.clientY);
+      const folderEl = els.find((el) => el.hasAttribute("data-backlog-folder"));
+      const clientEl = els.find((el) => el.hasAttribute("data-backlog-client"));
+      const target = folderEl || clientEl || null;
+      if (target !== currentEl) {
+        if (currentEl) currentEl.classList.remove(...classes);
+        currentEl = target;
+        if (currentEl) currentEl.classList.add(...classes);
+      }
+    };
+
+    window.addEventListener("pointermove", onPointerMove);
+    return () => {
+      window.removeEventListener("pointermove", onPointerMove);
+      if (currentEl) currentEl.classList.remove(...classes);
+    };
+  }, [kanbanDragOverBacklog]);
 
   // "." shortcut to toggle backlog panel
   useEffect(() => {
@@ -67,6 +94,7 @@ export function BacklogShell() {
   return (
     <>
       <div
+        ref={panelRef}
         data-backlog-panel
         className={`fixed top-0 bottom-0 left-0 md:left-[3rem] z-[5] border-r bg-black/80 backdrop-blur-md overflow-y-auto transition-[transform,visibility,box-shadow,border-color] duration-200 ease-in-out ${
           backlogOpen ? "translate-x-0 visible" : "-translate-x-full invisible"
