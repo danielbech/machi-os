@@ -43,12 +43,20 @@ export function usePresenceCursors(
   const throttleRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastBroadcast = useRef(0);
 
+  // Store latest values in refs so broadcast never needs to be recreated
+  const userIdRef = useRef(userId);
+  const userMetaRef = useRef(userMeta);
+  const pageRef = useRef(page);
+  userIdRef.current = userId;
+  userMetaRef.current = userMeta;
+  pageRef.current = page;
+
+  // Stable broadcast function — never changes identity
   const broadcast = useCallback(
     (x: number, y: number) => {
-      if (!channelRef.current || !userId || !userMeta) return;
+      if (!channelRef.current || !userIdRef.current || !userMetaRef.current) return;
 
       const now = Date.now();
-      // Throttle to ~30ms (roughly 30fps)
       if (now - lastBroadcast.current < 30) {
         if (throttleRef.current) clearTimeout(throttleRef.current);
         throttleRef.current = setTimeout(() => broadcast(x, y), 30);
@@ -60,17 +68,17 @@ export function usePresenceCursors(
         type: "broadcast",
         event: "cursor",
         payload: {
-          userId,
-          name: userMeta.name,
-          initials: userMeta.initials,
-          color: userMeta.color,
+          userId: userIdRef.current,
+          name: userMetaRef.current.name,
+          initials: userMetaRef.current.initials,
+          color: userMetaRef.current.color,
           x,
           y,
-          page,
+          page: pageRef.current,
         } satisfies CursorState,
       });
     },
-    [userId, userMeta, page]
+    [] // stable — reads from refs
   );
 
   useEffect(() => {
@@ -115,17 +123,6 @@ export function usePresenceCursors(
       if (throttleRef.current) clearTimeout(throttleRef.current);
     };
   }, [projectId, userId]);
-
-  // Stale cursor cleanup — remove cursors that haven't updated in 10s
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setCursors((prev) => {
-        if (prev.length === 0) return prev;
-        return prev; // Keep simple — stale cleanup via leave events
-      });
-    }, 10000);
-    return () => clearInterval(interval);
-  }, []);
 
   return { cursors, broadcast };
 }

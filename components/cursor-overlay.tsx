@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useCallback, useRef } from "react";
+import { useEffect, useRef } from "react";
 import { usePathname } from "next/navigation";
 import { useWorkspace } from "@/lib/workspace-context";
 import {
@@ -63,17 +63,17 @@ export function CursorOverlay() {
     pathname
   );
 
-  const handleMouseMove = useCallback(
-    (e: MouseEvent) => {
-      broadcast(e.clientX, e.clientY);
-    },
-    [broadcast]
-  );
+  // Use a ref so the mousemove listener is added exactly once
+  const broadcastRef = useRef(broadcast);
+  broadcastRef.current = broadcast;
 
   useEffect(() => {
-    window.addEventListener("mousemove", handleMouseMove);
-    return () => window.removeEventListener("mousemove", handleMouseMove);
-  }, [handleMouseMove]);
+    const handler = (e: MouseEvent) => {
+      broadcastRef.current(e.clientX, e.clientY);
+    };
+    window.addEventListener("mousemove", handler);
+    return () => window.removeEventListener("mousemove", handler);
+  }, []);
 
   // Only show cursors on the same page
   const visible = cursors.filter((c) => c.page === pathname);
