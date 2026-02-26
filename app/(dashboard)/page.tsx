@@ -561,6 +561,7 @@ export default function BoardPage() {
   // Send kanban task to backlog (via drag or action)
   const handleSendToBacklog = async (task: Task, sourceColumn: string, placement?: { clientId?: string; folderId?: string }) => {
     if (!activeProjectId) return;
+    suppressTaskReload.current = true;
     // Remove card from column
     let updatedColumnItems: Task[] = [];
     setColumns((prev) => {
@@ -577,6 +578,7 @@ export default function BoardPage() {
         [sourceColumn]: [...(prev[sourceColumn] || []), task],
       }));
     }
+    setTimeout(() => { suppressTaskReload.current = false; }, 2000);
   };
 
   if (initialLoading) {

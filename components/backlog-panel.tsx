@@ -204,7 +204,11 @@ export function BacklogPanel({
 
   // --- DnD helpers ---
   const getContainerId = (task: Task): string => {
-    return task.folder_id ? `folder:${task.folder_id}` : `unsorted:${task.client}`;
+    // Only treat as folder task if the folder actually exists (orphaned folder_ids fall to unsorted)
+    if (task.folder_id && folders.some((f) => f.id === task.folder_id)) {
+      return `folder:${task.folder_id}`;
+    }
+    return `unsorted:${task.client}`;
   };
 
   const getClientForContainer = (containerId: string): string | null => {

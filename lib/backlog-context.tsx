@@ -225,7 +225,7 @@ export function BacklogProvider({ children }: { children: React.ReactNode }) {
 
   const value = useMemo(() => ({
     backlogOpen, toggleBacklog, backlogTasks, backlogFolders,
-    sendBacklogToDay, sendFolderToDay: sendFolderToDay,
+    sendBacklogToDay, sendFolderToDay,
     addToBacklog, createBacklogTask, saveBacklogTask,
     deleteBacklogTask, reorderBacklogTasks,
     createFolder, renameFolder, deleteFolder,
