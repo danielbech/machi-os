@@ -451,6 +451,15 @@ export default function BoardPage() {
     setKanbanDragOverBacklog(dragOverTarget === "backlog");
   }, [dragOverTarget, setKanbanDragOverBacklog]);
 
+  // Refresh board when a backlog drag ends (task may have been sent to a column)
+  const prevBacklogDragActive = useRef(false);
+  useEffect(() => {
+    if (prevBacklogDragActive.current && !backlogDragActive) {
+      refreshTasks();
+    }
+    prevBacklogDragActive.current = backlogDragActive;
+  }, [backlogDragActive, refreshTasks]);
+
   // Track which column the cursor is over during backlog drag (for column highlighting)
   useEffect(() => {
     if (!backlogDragActive) {

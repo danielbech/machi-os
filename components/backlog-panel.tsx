@@ -764,7 +764,8 @@ export function BacklogPanel({
         {relevantClients.map((client) => {
           const clientTasks = activeTasks.filter((t) => t.client === client.id);
           const clientFolders = folders.filter((f) => f.client_id === client.id);
-          const unsortedTasks = clientTasks.filter((t) => !t.folder_id);
+          const clientFolderIds = new Set(clientFolders.map((f) => f.id));
+          const unsortedTasks = clientTasks.filter((t) => !t.folder_id || !clientFolderIds.has(t.folder_id));
           const isCollapsed = isClientCollapsed(client.id);
           const unsortedContainerId = `unsorted:${client.id}`;
 
