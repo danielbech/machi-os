@@ -547,6 +547,7 @@ export default function BoardPage() {
 
   // Send kanban task to backlog (via drag or action)
   const handleSendToBacklog = async (taskId: string, placement?: { clientId?: string; folderId?: string }) => {
+    console.log("[handleSendToBacklog] start", { taskId, activeProjectId });
     if (!activeProjectId) return;
     // Use functional update to read latest columns (avoids stale closure during drag)
     let task: Task | null = null;
@@ -565,11 +566,16 @@ export default function BoardPage() {
       updatedColumnItems = prev[sourceColumn].filter((t) => t.id !== taskId);
       return { ...prev, [sourceColumn]: updatedColumnItems };
     });
+    console.log("[handleSendToBacklog] after setColumns", { task: !!task, sourceColumn });
     if (!task || !sourceColumn) return;
     try {
+      console.log("[handleSendToBacklog] calling addToBacklog");
       await addToBacklog(task, placement);
+      console.log("[handleSendToBacklog] addToBacklog done, calling updateDayTasks");
       await updateDayTasks(activeProjectId, sourceColumn, updatedColumnItems, areaId);
-    } catch {
+      console.log("[handleSendToBacklog] all done");
+    } catch (err) {
+      console.error("[handleSendToBacklog] ERROR", err);
       // Restore card to its column on failure
       setColumns((prev) => ({
         ...prev,
