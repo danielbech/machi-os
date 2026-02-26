@@ -106,9 +106,6 @@ export const BoardTaskCard = memo(function BoardTaskCard({
             }, 100);
           }
         }}
-        onMouseEnter={(e: any) => {
-          if (!addingToColumn) e.currentTarget.focus();
-        }}
         onKeyDownCapture={(e: any) => {
           const key = e.key;
           if ((e.metaKey || e.ctrlKey) && key === "c") {
@@ -162,8 +159,11 @@ export const BoardTaskCard = memo(function BoardTaskCard({
           }, 100);
         }
       }}
-      onMouseEnter={(e: any) => {
-        if (!addingToColumn) e.currentTarget.focus();
+      onPointerDown={(e: any) => {
+        // Focus on click so keyboard shortcuts work, but not on hover (avoids focus storm)
+        if (!e.target.closest("button") && !e.target.closest("[data-title-area]") && !e.target.closest("input")) {
+          e.currentTarget.focus();
+        }
       }}
       onKeyDownCapture={(e: any) => {
         if (isEditingTitle) return;
