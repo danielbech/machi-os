@@ -8,7 +8,7 @@ import { removeUserFromWorkspace, getPendingInvites, cancelInvite, updateWorkspa
 import { loadCurrentProfile, updateProfile, uploadAvatar } from "@/lib/supabase/profiles";
 import { uploadWorkspaceLogo, deleteWorkspaceLogo } from "@/lib/supabase/storage";
 import { WORKSPACE_COLORS } from "@/lib/colors";
-import { countBoardTasksForMode, migrateBoardTasks } from "@/lib/supabase/tasks-simple";
+import { countOrphanedTasks, migrateBoardTasks } from "@/lib/supabase/tasks-simple";
 import type { PendingInvite, WeekMode, Project, BoardColumn } from "@/lib/types";
 import type { ConnectionWithCalendars } from "@/lib/calendar-context";
 import {
@@ -130,6 +130,7 @@ export function SettingsDialog({
   const [modeSwitchPending, setModeSwitchPending] = useState<WeekMode | null>(null);
   const [modeSwitchTaskCount, setModeSwitchTaskCount] = useState(0);
   const [modeSwitchLoading, setModeSwitchLoading] = useState(false);
+  const [modeSwitchDescription, setModeSwitchDescription] = useState("");
 
   // About tab state
   const [commitCount, setCommitCount] = useState<number | null>(null);
@@ -909,26 +910,41 @@ export function SettingsDialog({
                         disabled={modeSwitchLoading}
                         onClick={async () => {
                           if (mode === weekMode) return;
-                          // Switching between 5-day and 7-day is safe (same day keys)
-                          const isCrossModeSwitch =
-                            (weekMode === "custom" && mode !== "custom") ||
-                            (weekMode !== "custom" && mode === "custom");
-                          if (!isCrossModeSwitch) {
+                          const weekdays = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
+                          const weekdaySet = new Set(weekdays);
+                          const weekendSet = new Set(['saturday', 'sunday']);
+
+                          // Determine which tasks would be orphaned
+                          let orphanFilter: ((day: string) => boolean) | null = null;
+                          let description = "";
+
+                          if (weekMode === "custom" && mode !== "custom") {
+                            // Custom → weekly: tasks with UUID day values get orphaned
+                            orphanFilter = (day) => !weekdaySet.has(day);
+                            description = "Move tasks to Monday";
+                          } else if (weekMode !== "custom" && mode === "custom") {
+                            // Weekly → custom: tasks with weekday day values get orphaned
+                            orphanFilter = (day) => weekdaySet.has(day);
+                            description = "Move tasks to first column";
+                          } else if (weekMode === "7-day" && mode === "5-day") {
+                            // 7-day → 5-day: only weekend tasks get orphaned
+                            orphanFilter = (day) => weekendSet.has(day);
+                            description = "Move weekend tasks to Friday";
+                          }
+
+                          // 5-day → 7-day is always safe (only adds days)
+                          if (!orphanFilter) {
                             onWeekModeChange(mode);
                             return;
                           }
-                          // Check if there are board tasks that would be orphaned
-                          const currentKind = weekMode === "custom" ? "custom" : "weekly";
-                          const count = await countBoardTasksForMode(
-                            activeProjectId!,
-                            currentKind as "weekly" | "custom",
-                            areaId
-                          );
+
+                          const count = await countOrphanedTasks(activeProjectId!, orphanFilter, areaId);
                           if (count === 0) {
                             onWeekModeChange(mode);
                             return;
                           }
                           setModeSwitchTaskCount(count);
+                          setModeSwitchDescription(description);
                           setModeSwitchPending(mode);
                         }}
                         className={`flex-1 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
@@ -946,7 +962,7 @@ export function SettingsDialog({
                   {modeSwitchPending && (
                     <div className="rounded-lg border border-amber-500/20 bg-amber-500/5 p-3 space-y-3">
                       <div className="text-sm text-amber-200/90">
-                        You have <span className="font-semibold text-amber-100">{modeSwitchTaskCount} task{modeSwitchTaskCount !== 1 ? "s" : ""}</span> on the board. What would you like to do with them?
+                        You have <span className="font-semibold text-amber-100">{modeSwitchTaskCount} task{modeSwitchTaskCount !== 1 ? "s" : ""}</span> that won&apos;t be visible. What would you like to do?
                       </div>
                       <div className="flex gap-2">
                         <Button
@@ -973,31 +989,35 @@ export function SettingsDialog({
                           onClick={async () => {
                             setModeSwitchLoading(true);
                             try {
-                              const goingToCustom = modeSwitchPending === "custom";
-                              // Switch mode first (creates default columns if needed)
-                              await onWeekModeChange(modeSwitchPending);
-                              // Now migrate — need to determine target column
-                              if (goingToCustom) {
-                                // Reload board columns to get the first one
+                              const weekdays = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
+                              const weekdaySet = new Set(weekdays);
+                              const weekendSet = new Set(['saturday', 'sunday']);
+
+                              if (weekMode !== "custom" && modeSwitchPending === "custom") {
+                                // Weekly → custom
+                                await onWeekModeChange(modeSwitchPending);
                                 const { loadBoardColumns } = await import("@/lib/supabase/board-columns");
                                 const cols = await loadBoardColumns(activeProjectId!);
                                 if (cols.length > 0) {
                                   const migrated = await migrateBoardTasks(
-                                    activeProjectId!,
-                                    "weekly-to-custom",
-                                    cols[0].id,
-                                    areaId
+                                    activeProjectId!, (day) => weekdaySet.has(day), cols[0].id, areaId
                                   );
                                   toast.success(`Moved ${migrated} task${migrated !== 1 ? "s" : ""} to ${cols[0].title}`);
                                 }
-                              } else {
+                              } else if (weekMode === "custom" && modeSwitchPending !== "custom") {
+                                // Custom → weekly
+                                await onWeekModeChange(modeSwitchPending);
                                 const migrated = await migrateBoardTasks(
-                                  activeProjectId!,
-                                  "custom-to-weekly",
-                                  "monday",
-                                  areaId
+                                  activeProjectId!, (day) => !weekdaySet.has(day), "monday", areaId
                                 );
                                 toast.success(`Moved ${migrated} task${migrated !== 1 ? "s" : ""} to Monday`);
+                              } else if (weekMode === "7-day" && modeSwitchPending === "5-day") {
+                                // 7-day → 5-day: move weekend tasks to Friday
+                                await onWeekModeChange(modeSwitchPending);
+                                const migrated = await migrateBoardTasks(
+                                  activeProjectId!, (day) => weekendSet.has(day), "friday", areaId
+                                );
+                                toast.success(`Moved ${migrated} task${migrated !== 1 ? "s" : ""} to Friday`);
                               }
                             } catch (err) {
                               toast.error("Failed to migrate tasks");
@@ -1007,7 +1027,7 @@ export function SettingsDialog({
                             }
                           }}
                         >
-                          {modeSwitchLoading ? "Moving..." : "Move tasks"}
+                          {modeSwitchLoading ? "Moving..." : modeSwitchDescription}
                         </Button>
                       </div>
                       <button

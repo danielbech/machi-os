@@ -268,16 +268,15 @@ export async function transitionWeek(projectId: string, cachedAreaId?: string | 
 }
 
 // Count board tasks that would be orphaned when switching modes
-export async function countBoardTasksForMode(
+// orphanFilter: which day values to count as "would be orphaned"
+export async function countOrphanedTasks(
   projectId: string,
-  currentMode: 'weekly' | 'custom',
+  orphanFilter: (day: string) => boolean,
   cachedAreaId?: string | null
 ): Promise<number> {
   const supabase = createClient()
   const areaId = await resolveAreaId(projectId, cachedAreaId)
   if (!areaId) return 0
-
-  const weekdays = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']
 
   const { data: tasks } = await supabase
     .from('tasks')
@@ -286,28 +285,19 @@ export async function countBoardTasksForMode(
     .not('day', 'is', null)
 
   if (!tasks) return 0
-
-  if (currentMode === 'weekly') {
-    // Count tasks with weekday names (these would be orphaned when switching to custom)
-    return tasks.filter(t => weekdays.includes(t.day!)).length
-  } else {
-    // Count tasks with non-weekday day values (UUIDs — these would be orphaned when switching to weekly)
-    return tasks.filter(t => !weekdays.includes(t.day!)).length
-  }
+  return tasks.filter(t => orphanFilter(t.day!)).length
 }
 
-// Migrate board tasks when switching between weekly and custom modes
+// Migrate board tasks: move tasks matching a filter to a target column
 export async function migrateBoardTasks(
   projectId: string,
-  direction: 'weekly-to-custom' | 'custom-to-weekly',
+  matchFilter: (day: string) => boolean,
   targetColumnId: string,
   cachedAreaId?: string | null
 ): Promise<number> {
   const supabase = createClient()
   const areaId = await resolveAreaId(projectId, cachedAreaId)
   if (!areaId) return 0
-
-  const weekdays = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']
 
   const { data: tasks } = await supabase
     .from('tasks')
@@ -317,13 +307,7 @@ export async function migrateBoardTasks(
 
   if (!tasks || tasks.length === 0) return 0
 
-  let toMigrate: typeof tasks
-  if (direction === 'weekly-to-custom') {
-    toMigrate = tasks.filter(t => weekdays.includes(t.day!))
-  } else {
-    toMigrate = tasks.filter(t => !weekdays.includes(t.day!))
-  }
-
+  const toMigrate = tasks.filter(t => matchFilter(t.day!))
   if (toMigrate.length === 0) return 0
 
   // Get current max sort_order in the target column
