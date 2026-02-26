@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, KeyboardEvent } from "react";
+import { useState, useEffect, useRef, KeyboardEvent } from "react";
 import { createPortal } from "react-dom";
 import DOMPurify from "dompurify";
 import type { Task, BacklogFolder, Client, DayName, Member } from "@/lib/types";
@@ -155,6 +155,26 @@ export function BacklogPanel({
   useEffect(() => {
     localStorage.setItem("flowie-backlog-folders", JSON.stringify([...collapsedFolders]));
   }, [collapsedFolders]);
+  // Auto-expand client/folder when a new task arrives (e.g. dropped from board)
+  const prevTaskIdsRef = useRef(new Set(tasks.map((t) => t.id)));
+  useEffect(() => {
+    const prevIds = prevTaskIdsRef.current;
+    const newTasks = tasks.filter((t) => !prevIds.has(t.id));
+    for (const task of newTasks) {
+      if (task.client) {
+        setClientToggleOverrides((prev) => ({ ...prev, [task.client!]: true }));
+      }
+      if (task.folder_id) {
+        setCollapsedFolders((prev) => {
+          const next = new Set(prev);
+          next.delete(task.folder_id!);
+          return next;
+        });
+      }
+    }
+    prevTaskIdsRef.current = new Set(tasks.map((t) => t.id));
+  }, [tasks]);
+
   const [addingTaskIn, setAddingTaskIn] = useState<string | null>(null);
   const [newTaskTitle, setNewTaskTitle] = useState("");
   const [addingFolderFor, setAddingFolderFor] = useState<string | null>(null);
