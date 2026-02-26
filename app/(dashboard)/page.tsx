@@ -498,21 +498,34 @@ export default function BoardPage() {
   // Send kanban task to backlog (via drag or action)
   const handleSendToBacklog = async (taskId: string) => {
     if (!activeProjectId) return;
+    // Use functional update to read latest columns (avoids stale closure during drag)
     let task: Task | null = null;
     let sourceColumn: string | null = null;
-    for (const [col, items] of Object.entries(columns)) {
-      const found = items.find((t) => t.id === taskId);
-      if (found) {
-        task = found;
-        sourceColumn = col;
-        break;
+    let updatedColumnItems: Task[] = [];
+    setColumns((prev) => {
+      for (const [col, items] of Object.entries(prev)) {
+        const found = items.find((t) => t.id === taskId);
+        if (found) {
+          task = found;
+          sourceColumn = col;
+          break;
+        }
       }
-    }
+      if (!task || !sourceColumn) return prev;
+      updatedColumnItems = prev[sourceColumn].filter((t) => t.id !== taskId);
+      return { ...prev, [sourceColumn]: updatedColumnItems };
+    });
     if (!task || !sourceColumn) return;
-    const updatedColumnItems = columns[sourceColumn].filter((t) => t.id !== taskId);
-    setColumns({ ...columns, [sourceColumn]: updatedColumnItems });
-    await addToBacklog(task);
-    await updateDayTasks(activeProjectId, sourceColumn, updatedColumnItems, areaId);
+    try {
+      await addToBacklog(task);
+      await updateDayTasks(activeProjectId, sourceColumn, updatedColumnItems, areaId);
+    } catch {
+      // Restore card to its column on failure
+      setColumns((prev) => ({
+        ...prev,
+        [sourceColumn!]: [...(prev[sourceColumn!] || []), task!],
+      }));
+    }
   };
 
   if (initialLoading) {
