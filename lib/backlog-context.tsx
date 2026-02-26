@@ -155,8 +155,10 @@ export function BacklogProvider({ children }: { children: React.ReactNode }) {
     const backlogTask = {
       ...task,
       day: undefined,
-      ...(placement?.clientId ? { client: placement.clientId } : {}),
-      ...(placement?.folderId !== undefined ? { folder_id: placement.folderId } : {}),
+      ...(placement ? {
+        client: placement.clientId || task.client,
+        folder_id: placement.folderId || undefined,
+      } : {}),
     };
     setBacklogTasks((prev) => [...prev, backlogTask]);
     suppressBacklogReload.current = true;
