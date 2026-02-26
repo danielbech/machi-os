@@ -54,6 +54,8 @@ export default function BoardPage() {
   // Refs for real-time drag target (used in onDragEnd where state would be stale)
   const dragOverTargetRef = useRef<string | null>(null);
   const dragBacklogPlacementRef = useRef<{ clientId?: string; folderId?: string } | null>(null);
+  // Save dragged task data at drag start so we can use it at drop time
+  const draggedTaskRef = useRef<{ task: Task; column: string } | null>(null);
   const [glowingCards, setGlowingCards] = useState<Set<string>>(new Set());
   const [filterMine, setFilterMine] = useState(() => {
     if (typeof window === "undefined") return false;
@@ -546,40 +548,22 @@ export default function BoardPage() {
   };
 
   // Send kanban task to backlog (via drag or action)
-  const handleSendToBacklog = async (taskId: string, placement?: { clientId?: string; folderId?: string }) => {
-    console.log("[handleSendToBacklog] start", { taskId, activeProjectId });
+  const handleSendToBacklog = async (task: Task, sourceColumn: string, placement?: { clientId?: string; folderId?: string }) => {
     if (!activeProjectId) return;
-    // Use functional update to read latest columns (avoids stale closure during drag)
-    let task: Task | null = null;
-    let sourceColumn: string | null = null;
+    // Remove card from column
     let updatedColumnItems: Task[] = [];
     setColumns((prev) => {
-      for (const [col, items] of Object.entries(prev)) {
-        const found = items.find((t) => t.id === taskId);
-        if (found) {
-          task = found;
-          sourceColumn = col;
-          break;
-        }
-      }
-      if (!task || !sourceColumn) return prev;
-      updatedColumnItems = prev[sourceColumn].filter((t) => t.id !== taskId);
+      updatedColumnItems = (prev[sourceColumn] || []).filter((t) => t.id !== task.id);
       return { ...prev, [sourceColumn]: updatedColumnItems };
     });
-    console.log("[handleSendToBacklog] after setColumns", { task: !!task, sourceColumn });
-    if (!task || !sourceColumn) return;
     try {
-      console.log("[handleSendToBacklog] calling addToBacklog");
       await addToBacklog(task, placement);
-      console.log("[handleSendToBacklog] addToBacklog done, calling updateDayTasks");
       await updateDayTasks(activeProjectId, sourceColumn, updatedColumnItems, areaId);
-      console.log("[handleSendToBacklog] all done");
-    } catch (err) {
-      console.error("[handleSendToBacklog] ERROR", err);
+    } catch {
       // Restore card to its column on failure
       setColumns((prev) => ({
         ...prev,
-        [sourceColumn!]: [...(prev[sourceColumn!] || []), task!],
+        [sourceColumn]: [...(prev[sourceColumn] || []), task],
       }));
     }
   };
@@ -610,12 +594,8 @@ export default function BoardPage() {
         <Kanban
           value={filteredColumns}
           onValueChange={async (newCols) => {
-            console.log("[onValueChange]", { dragOverTargetRef: dragOverTargetRef.current, newColKeys: Object.keys(newCols).map(k => `${k}:${newCols[k]?.length}`) });
-            // If a backlog drop is in progress, skip — our handleSendToBacklog manages state
-            if (dragOverTargetRef.current === "backlog") {
-              console.log("[onValueChange] SKIPPED — backlog drop in progress");
-              return;
-            }
+            // If cursor is over the backlog, skip — handleSendToBacklog manages state
+            if (dragOverTargetRef.current === "backlog") return;
             const prev = prevColumnsRef.current;
             // When filtering, merge drag changes back into full columns
             let merged: Record<string, Task[]>;
@@ -644,24 +624,24 @@ export default function BoardPage() {
             }
           }}
           getItemValue={(item) => item.id}
-          onDragStart={() => setKanbanDragActive(true)}
+          onDragStart={(event) => {
+            setKanbanDragActive(true);
+            // Snapshot the dragged task so we can use it at drop time
+            const taskId = event.active.id as string;
+            for (const [col, items] of Object.entries(columns)) {
+              const task = items.find((t) => t.id === taskId);
+              if (task) { draggedTaskRef.current = { task, column: col }; break; }
+            }
+          }}
           onDragEnd={(event) => {
-            console.log("[onDragEnd]", {
-              backlogOpen,
-              dragOverTargetRef: dragOverTargetRef.current,
-              activeId: event.active.id,
-              overId: event.over?.id,
-            });
             setKanbanDragActive(false);
-            if (!backlogOpen) return;
-            // Use ref (updated in real-time by pointermove) — state would be stale here
+            const saved = draggedTaskRef.current;
+            draggedTaskRef.current = null;
+            if (!backlogOpen || !saved) return;
             if (dragOverTargetRef.current === "backlog") {
-              // Prevent Kanban's internal onDragEnd from processing the drop
               event.activatorEvent.preventDefault();
-              const taskId = event.active.id as string;
               const placement = dragBacklogPlacementRef.current;
-              console.log("[onDragEnd] sending to backlog", { taskId, placement });
-              handleSendToBacklog(taskId, placement || undefined);
+              handleSendToBacklog(saved.task, saved.column, placement || undefined);
             }
           }}
         >
