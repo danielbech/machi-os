@@ -604,6 +604,12 @@ export default function BoardPage() {
         <Kanban
           value={filteredColumns}
           onValueChange={async (newCols) => {
+            console.log("[onValueChange]", { dragOverTargetRef: dragOverTargetRef.current, newColKeys: Object.keys(newCols).map(k => `${k}:${newCols[k]?.length}`) });
+            // If a backlog drop is in progress, skip — our handleSendToBacklog manages state
+            if (dragOverTargetRef.current === "backlog") {
+              console.log("[onValueChange] SKIPPED — backlog drop in progress");
+              return;
+            }
             const prev = prevColumnsRef.current;
             // When filtering, merge drag changes back into full columns
             let merged: Record<string, Task[]>;
