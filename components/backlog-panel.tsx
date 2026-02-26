@@ -815,6 +815,11 @@ export function BacklogPanel({
                       <SortableContext items={unsortedTasks.map((t) => t.id)} strategy={verticalListSortingStrategy}>
                         {unsortedTasks.map(renderTaskRow)}
                       </SortableContext>
+                      {activeTask && activeTask.folder_id && activeTask.client === client.id && unsortedTasks.length === 0 && (
+                        <div className="mx-2 my-1.5 py-2 rounded border border-dashed border-white/10 text-center text-[11px] text-white/20">
+                          Drop here for root
+                        </div>
+                      )}
                     </DroppableArea>
                   </div>
 
