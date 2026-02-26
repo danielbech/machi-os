@@ -267,6 +267,104 @@ export async function transitionWeek(projectId: string, cachedAreaId?: string | 
   return { deleted: toDelete.length, carriedOver: incomplete.length }
 }
 
+// Count board tasks that would be orphaned when switching modes
+export async function countBoardTasksForMode(
+  projectId: string,
+  currentMode: 'weekly' | 'custom',
+  cachedAreaId?: string | null
+): Promise<number> {
+  const supabase = createClient()
+  const areaId = await resolveAreaId(projectId, cachedAreaId)
+  if (!areaId) return 0
+
+  const weekdays = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']
+
+  const { data: tasks } = await supabase
+    .from('tasks')
+    .select('id, day')
+    .eq('area_id', areaId)
+    .not('day', 'is', null)
+
+  if (!tasks) return 0
+
+  if (currentMode === 'weekly') {
+    // Count tasks with weekday names (these would be orphaned when switching to custom)
+    return tasks.filter(t => weekdays.includes(t.day!)).length
+  } else {
+    // Count tasks with non-weekday day values (UUIDs — these would be orphaned when switching to weekly)
+    return tasks.filter(t => !weekdays.includes(t.day!)).length
+  }
+}
+
+// Migrate board tasks when switching between weekly and custom modes
+export async function migrateBoardTasks(
+  projectId: string,
+  direction: 'weekly-to-custom' | 'custom-to-weekly',
+  targetColumnId: string,
+  cachedAreaId?: string | null
+): Promise<number> {
+  const supabase = createClient()
+  const areaId = await resolveAreaId(projectId, cachedAreaId)
+  if (!areaId) return 0
+
+  const weekdays = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']
+
+  const { data: tasks } = await supabase
+    .from('tasks')
+    .select('*')
+    .eq('area_id', areaId)
+    .not('day', 'is', null)
+
+  if (!tasks || tasks.length === 0) return 0
+
+  let toMigrate: typeof tasks
+  if (direction === 'weekly-to-custom') {
+    toMigrate = tasks.filter(t => weekdays.includes(t.day!))
+  } else {
+    toMigrate = tasks.filter(t => !weekdays.includes(t.day!))
+  }
+
+  if (toMigrate.length === 0) return 0
+
+  // Get current max sort_order in the target column
+  const { data: existingInTarget } = await supabase
+    .from('tasks')
+    .select('sort_order')
+    .eq('area_id', areaId)
+    .eq('day', targetColumnId)
+    .order('sort_order', { ascending: false })
+    .limit(1)
+
+  const startOrder = existingInTarget && existingInTarget.length > 0
+    ? existingInTarget[0].sort_order + 1
+    : 0
+
+  const updates = toMigrate.map((t, i) => ({
+    id: t.id,
+    area_id: areaId,
+    title: t.title,
+    description: t.description || null,
+    day: targetColumnId,
+    completed: t.completed || false,
+    sort_order: startOrder + i,
+    assignees: t.assignees || [],
+    client: t.client || null,
+    priority: t.priority || null,
+    type: t.type || 'task',
+    folder_id: t.folder_id || null,
+    checklist: t.checklist || [],
+    images: t.images || [],
+  }))
+
+  const { error } = await supabase.from('tasks').upsert(updates)
+  if (error) {
+    console.error('Error migrating board tasks:', error)
+    throw error
+  }
+
+  return toMigrate.length
+}
+
 // Load backlog tasks (have a client, NOT on the kanban)
 export async function loadBacklogTasks(projectId: string, cachedAreaId?: string | null): Promise<Task[]> {
   const supabase = createClient()

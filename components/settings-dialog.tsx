@@ -8,7 +8,8 @@ import { removeUserFromWorkspace, getPendingInvites, cancelInvite, updateWorkspa
 import { loadCurrentProfile, updateProfile, uploadAvatar } from "@/lib/supabase/profiles";
 import { uploadWorkspaceLogo, deleteWorkspaceLogo } from "@/lib/supabase/storage";
 import { WORKSPACE_COLORS } from "@/lib/colors";
-import type { PendingInvite, WeekMode, Project } from "@/lib/types";
+import { countBoardTasksForMode, migrateBoardTasks } from "@/lib/supabase/tasks-simple";
+import type { PendingInvite, WeekMode, Project, BoardColumn } from "@/lib/types";
 import type { ConnectionWithCalendars } from "@/lib/calendar-context";
 import {
   Dialog,
@@ -43,6 +44,8 @@ interface SettingsDialogProps {
   // Week mode
   weekMode: WeekMode;
   onWeekModeChange: (mode: WeekMode) => Promise<void>;
+  boardColumns: BoardColumn[];
+  areaId: string | null;
   // UI preferences
   showCheckmarks: boolean;
   onShowCheckmarksChange: (v: boolean) => void;
@@ -75,6 +78,8 @@ export function SettingsDialog({
   onSetTransitionSchedule,
   weekMode,
   onWeekModeChange,
+  boardColumns,
+  areaId,
   showCheckmarks,
   onShowCheckmarksChange,
   onProfileUpdate,
@@ -120,6 +125,11 @@ export function SettingsDialog({
   const [deleteAccountConfirm, setDeleteAccountConfirm] = useState("");
   const [deletingAccount, setDeletingAccount] = useState(false);
   const [deleteAccountError, setDeleteAccountError] = useState<string | null>(null);
+
+  // Mode switch confirmation state
+  const [modeSwitchPending, setModeSwitchPending] = useState<WeekMode | null>(null);
+  const [modeSwitchTaskCount, setModeSwitchTaskCount] = useState(0);
+  const [modeSwitchLoading, setModeSwitchLoading] = useState(false);
 
   // About tab state
   const [commitCount, setCommitCount] = useState<number | null>(null);
@@ -892,40 +902,124 @@ export function SettingsDialog({
                 <div className="text-xs text-white/40 px-1">Board view</div>
                 <div className="p-3 rounded-lg border border-white/5 bg-white/[0.02] space-y-3">
                   <div className="flex gap-1 p-1 rounded-lg bg-white/[0.04]">
-                    <button
-                      type="button"
-                      onClick={() => onWeekModeChange("5-day")}
-                      className={`flex-1 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
-                        weekMode === "5-day"
-                          ? "bg-white/10 text-white"
-                          : "text-white/40 hover:text-white/60"
-                      }`}
-                    >
-                      5-day week
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => onWeekModeChange("7-day")}
-                      className={`flex-1 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
-                        weekMode === "7-day"
-                          ? "bg-white/10 text-white"
-                          : "text-white/40 hover:text-white/60"
-                      }`}
-                    >
-                      7-day week
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => onWeekModeChange("custom")}
-                      className={`flex-1 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
-                        weekMode === "custom"
-                          ? "bg-white/10 text-white"
-                          : "text-white/40 hover:text-white/60"
-                      }`}
-                    >
-                      Custom
-                    </button>
+                    {(["5-day", "7-day", "custom"] as WeekMode[]).map((mode) => (
+                      <button
+                        key={mode}
+                        type="button"
+                        disabled={modeSwitchLoading}
+                        onClick={async () => {
+                          if (mode === weekMode) return;
+                          // Switching between 5-day and 7-day is safe (same day keys)
+                          const isCrossModeSwitch =
+                            (weekMode === "custom" && mode !== "custom") ||
+                            (weekMode !== "custom" && mode === "custom");
+                          if (!isCrossModeSwitch) {
+                            onWeekModeChange(mode);
+                            return;
+                          }
+                          // Check if there are board tasks that would be orphaned
+                          const currentKind = weekMode === "custom" ? "custom" : "weekly";
+                          const count = await countBoardTasksForMode(
+                            activeProjectId!,
+                            currentKind as "weekly" | "custom",
+                            areaId
+                          );
+                          if (count === 0) {
+                            onWeekModeChange(mode);
+                            return;
+                          }
+                          setModeSwitchTaskCount(count);
+                          setModeSwitchPending(mode);
+                        }}
+                        className={`flex-1 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+                          weekMode === mode
+                            ? "bg-white/10 text-white"
+                            : "text-white/40 hover:text-white/60"
+                        }`}
+                      >
+                        {mode === "5-day" ? "5-day week" : mode === "7-day" ? "7-day week" : "Custom"}
+                      </button>
+                    ))}
                   </div>
+
+                  {/* Mode switch confirmation */}
+                  {modeSwitchPending && (
+                    <div className="rounded-lg border border-amber-500/20 bg-amber-500/5 p-3 space-y-3">
+                      <div className="text-sm text-amber-200/90">
+                        You have <span className="font-semibold text-amber-100">{modeSwitchTaskCount} task{modeSwitchTaskCount !== 1 ? "s" : ""}</span> on the board. What would you like to do with them?
+                      </div>
+                      <div className="flex gap-2">
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="flex-1 border border-white/10"
+                          disabled={modeSwitchLoading}
+                          onClick={async () => {
+                            setModeSwitchLoading(true);
+                            try {
+                              await onWeekModeChange(modeSwitchPending);
+                            } finally {
+                              setModeSwitchPending(null);
+                              setModeSwitchLoading(false);
+                            }
+                          }}
+                        >
+                          Clean slate
+                        </Button>
+                        <Button
+                          size="sm"
+                          className="flex-1 bg-white text-black hover:bg-white/90"
+                          disabled={modeSwitchLoading}
+                          onClick={async () => {
+                            setModeSwitchLoading(true);
+                            try {
+                              const goingToCustom = modeSwitchPending === "custom";
+                              // Switch mode first (creates default columns if needed)
+                              await onWeekModeChange(modeSwitchPending);
+                              // Now migrate — need to determine target column
+                              if (goingToCustom) {
+                                // Reload board columns to get the first one
+                                const { loadBoardColumns } = await import("@/lib/supabase/board-columns");
+                                const cols = await loadBoardColumns(activeProjectId!);
+                                if (cols.length > 0) {
+                                  const migrated = await migrateBoardTasks(
+                                    activeProjectId!,
+                                    "weekly-to-custom",
+                                    cols[0].id,
+                                    areaId
+                                  );
+                                  toast.success(`Moved ${migrated} task${migrated !== 1 ? "s" : ""} to ${cols[0].title}`);
+                                }
+                              } else {
+                                const migrated = await migrateBoardTasks(
+                                  activeProjectId!,
+                                  "custom-to-weekly",
+                                  "monday",
+                                  areaId
+                                );
+                                toast.success(`Moved ${migrated} task${migrated !== 1 ? "s" : ""} to Monday`);
+                              }
+                            } catch (err) {
+                              toast.error("Failed to migrate tasks");
+                            } finally {
+                              setModeSwitchPending(null);
+                              setModeSwitchLoading(false);
+                            }
+                          }}
+                        >
+                          {modeSwitchLoading ? "Moving..." : "Move tasks"}
+                        </Button>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setModeSwitchPending(null)}
+                        className="text-xs text-white/30 hover:text-white/50 transition-colors"
+                        disabled={modeSwitchLoading}
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  )}
                   <div className="border-t border-white/5 pt-3 flex items-center justify-between">
                     <div>
                       <div className="text-sm">Show checkmarks</div>

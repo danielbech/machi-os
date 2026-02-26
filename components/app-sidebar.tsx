@@ -38,6 +38,7 @@ export function AppSidebar() {
     transitionToNextWeek, refreshTeamMembers,
     weekMode, setWeekMode, transitionDay, transitionHour, setTransitionSchedule,
     showCheckmarks, setShowCheckmarks,
+    boardColumns, areaId,
     refreshWorkspaces, pendingInvites,
   } = useWorkspace();
   const { backlogOpen, toggleBacklog } = useBacklog();
@@ -249,6 +250,8 @@ export function AppSidebar() {
           onSetTransitionSchedule={setTransitionSchedule}
           weekMode={weekMode}
           onWeekModeChange={setWeekMode}
+          boardColumns={boardColumns}
+          areaId={areaId}
           showCheckmarks={showCheckmarks}
           onShowCheckmarksChange={setShowCheckmarks}
           onProfileUpdate={refreshTeamMembers}
