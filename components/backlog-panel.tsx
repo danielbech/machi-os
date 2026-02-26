@@ -189,6 +189,7 @@ export function BacklogPanel({
   const [localTasks, setLocalTasks] = useState<Task[] | null>(null);
   const [activeTask, setActiveTask] = useState<Task | null>(null);
   const [dragOverContainer, setDragOverContainer] = useState<string | null>(null);
+  const dragStartContainerRef = useRef<string | null>(null);
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
 
@@ -229,6 +230,7 @@ export function BacklogPanel({
     if (task) {
       setActiveTask(task);
       setLocalTasks([...tasks]);
+      dragStartContainerRef.current = getContainerId(task);
       onDragActiveChange?.(true);
     }
   };
@@ -260,13 +262,17 @@ export function BacklogPanel({
       overContainerId = getContainerId(overTask);
     }
 
-    // Track hovered container for visual feedback
-    setDragOverContainer(overContainerId !== activeContainerId ? overContainerId : null);
-
     // Block cross-client moves
     const activeClient = getClientForContainer(activeContainerId);
     const overClient = getClientForContainer(overContainerId);
-    if (activeClient !== overClient) return;
+    if (activeClient !== overClient) {
+      setDragOverContainer(null);
+      return;
+    }
+
+    // Track hovered container for visual feedback (compare to original, not current)
+    const startContainer = dragStartContainerRef.current;
+    setDragOverContainer(overContainerId !== startContainer ? overContainerId : null);
 
     if (activeContainerId === overContainerId) {
       // Same container — reorder in place
@@ -317,6 +323,7 @@ export function BacklogPanel({
   const handleDragEnd = (event: DragEndEvent) => {
     onDragActiveChange?.(false);
     setDragOverContainer(null);
+    dragStartContainerRef.current = null;
 
     if (!localTasks) {
       setActiveTask(null);
