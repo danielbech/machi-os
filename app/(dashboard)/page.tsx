@@ -619,6 +619,9 @@ export default function BoardPage() {
               const y = pe.clientY + delta.y;
               const elements = document.elementsFromPoint(x, y);
               if (elements.some((el) => el.hasAttribute("data-backlog-panel"))) {
+                // Prevent Kanban's internal onDragEnd from calling onValueChange
+                // (which would put the card back in its column)
+                activatorEvent.preventDefault();
                 const taskId = event.active.id as string;
                 // Detect specific folder or client target
                 const folderEl = elements.find((el) => el.hasAttribute("data-backlog-folder"));
