@@ -25,6 +25,10 @@ interface BacklogContextValue {
   deleteFolder: (folderId: string) => Promise<void>;
   backlogWidth: number;
   setBacklogWidth: (width: number) => void;
+  backlogDragActive: boolean;
+  setBacklogDragActive: (active: boolean) => void;
+  kanbanDragOverBacklog: boolean;
+  setKanbanDragOverBacklog: (over: boolean) => void;
 }
 
 const BacklogContext = createContext<BacklogContextValue | null>(null);
@@ -52,6 +56,11 @@ export function BacklogProvider({ children }: { children: React.ReactNode }) {
   const [backlogTasks, setBacklogTasks] = useState<Task[]>([]);
   const [backlogFolders, setBacklogFolders] = useState<BacklogFolder[]>([]);
   const suppressBacklogReload = useRef(false);
+
+  // Backlog drag state (true when dragging a backlog task)
+  const [backlogDragActive, setBacklogDragActive] = useState(false);
+  // Set by board page when kanban drag is hovering over the backlog panel
+  const [kanbanDragOverBacklog, setKanbanDragOverBacklog] = useState(false);
 
   // Backlog panel width (persisted)
   const [backlogWidth, setBacklogWidthState] = useState(400);
@@ -208,6 +217,8 @@ export function BacklogProvider({ children }: { children: React.ReactNode }) {
     deleteBacklogTask, reorderBacklogTasks,
     createFolder, renameFolder, deleteFolder,
     backlogWidth, setBacklogWidth,
+    backlogDragActive, setBacklogDragActive,
+    kanbanDragOverBacklog, setKanbanDragOverBacklog,
   }), [
     backlogOpen, toggleBacklog, backlogTasks, backlogFolders,
     sendBacklogToDay, sendFolderToDay,
@@ -215,6 +226,8 @@ export function BacklogProvider({ children }: { children: React.ReactNode }) {
     deleteBacklogTask, reorderBacklogTasks,
     createFolder, renameFolder, deleteFolder,
     backlogWidth, setBacklogWidth,
+    backlogDragActive,
+    kanbanDragOverBacklog,
   ]);
 
   return (

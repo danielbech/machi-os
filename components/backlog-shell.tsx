@@ -17,6 +17,7 @@ export function BacklogShell() {
     sendBacklogToDay, sendFolderToDay,
     createBacklogTask, saveBacklogTask, deleteBacklogTask,
     createFolder, renameFolder, deleteFolder, reorderBacklogTasks,
+    setBacklogDragActive, kanbanDragOverBacklog,
   } = useBacklog();
 
   const [editingTask, setEditingTask] = useState<Task | null>(null);
@@ -67,9 +68,9 @@ export function BacklogShell() {
     <>
       <div
         data-backlog-panel
-        className={`fixed top-0 bottom-0 left-0 md:left-[3rem] z-[5] border-r bg-black/80 backdrop-blur-md overflow-y-auto transition-[transform,visibility] duration-200 ease-in-out ${
+        className={`fixed top-0 bottom-0 left-0 md:left-[3rem] z-[5] border-r bg-black/80 backdrop-blur-md overflow-y-auto transition-[transform,visibility,box-shadow,border-color] duration-200 ease-in-out ${
           backlogOpen ? "translate-x-0 visible" : "-translate-x-full invisible"
-        } border-white/[0.06] w-full md:w-auto`}
+        } ${kanbanDragOverBacklog ? "border-white/20 shadow-[inset_0_0_30px_rgba(255,255,255,0.03)]" : "border-white/[0.06]"} w-full md:w-auto`}
         style={!isMobile ? { width: backlogWidth } : undefined}
       >
         <div className="p-4">
@@ -99,6 +100,7 @@ export function BacklogShell() {
             onReorderTasks={reorderBacklogTasks}
             teamMembers={teamMembers}
             weekMode={weekMode}
+            onDragActiveChange={setBacklogDragActive}
           />
         </div>
 

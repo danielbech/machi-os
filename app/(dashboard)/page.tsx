@@ -28,7 +28,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 export default function BoardPage() {
   const { activeProjectId, clients, teamMembers, weekMode, weekDays, displayMonday, areaId, user, boardColumns, addBoardColumn, renameBoardColumn, removeBoardColumn, showCheckmarks, taskRefreshKey } = useWorkspace();
   const { calendarEvents } = useCalendar();
-  const { backlogOpen, addToBacklog, backlogFolders } = useBacklog();
+  const { backlogOpen, addToBacklog, backlogFolders, backlogDragActive, setKanbanDragOverBacklog } = useBacklog();
 
   const isCustom = weekMode === "custom";
   const columnTitles = getColumnTitles(weekMode, boardColumns);
@@ -50,6 +50,7 @@ export default function BoardPage() {
   const [newCardType, setNewCardType] = useState<"task" | "note">("task");
   const [kanbanDragActive, setKanbanDragActive] = useState(false);
   const [dragOverTarget, setDragOverTarget] = useState<string | null>(null);
+  const [backlogDragOverColumn, setBacklogDragOverColumn] = useState<string | null>(null);
   const [glowingCards, setGlowingCards] = useState<Set<string>>(new Set());
   const [filterMine, setFilterMine] = useState(() => {
     if (typeof window === "undefined") return false;
@@ -419,6 +420,31 @@ export default function BoardPage() {
     return () => window.removeEventListener("pointermove", onPointerMove);
   }, [kanbanDragActive]);
 
+  // Sync kanban-drag-over-backlog state to context for visual feedback in BacklogShell
+  useEffect(() => {
+    setKanbanDragOverBacklog(dragOverTarget === "backlog");
+  }, [dragOverTarget, setKanbanDragOverBacklog]);
+
+  // Track which column the cursor is over during backlog drag (for column highlighting)
+  useEffect(() => {
+    if (!backlogDragActive) {
+      setBacklogDragOverColumn(null);
+      return;
+    }
+    let current: string | null = null;
+    const onPointerMove = (e: PointerEvent) => {
+      const els = document.elementsFromPoint(e.clientX, e.clientY);
+      const col = els.find((el) => el.hasAttribute("data-column-id"));
+      const target = col ? col.getAttribute("data-column-id") : null;
+      if (target !== current) {
+        current = target;
+        setBacklogDragOverColumn(target);
+      }
+    };
+    window.addEventListener("pointermove", onPointerMove);
+    return () => window.removeEventListener("pointermove", onPointerMove);
+  }, [backlogDragActive]);
+
   const removeTask = async (taskId: string) => {
     if (!activeProjectId) return;
     const updated = { ...columns };
@@ -605,7 +631,13 @@ export default function BoardPage() {
                 key={columnId}
                 value={columnId}
                 data-column-id={columnId}
-                className={`w-[85vw] sm:w-[280px] shrink-0 rounded-lg transition-all duration-150 ${dragOverTarget === columnId ? "bg-white/[0.04] ring-1 ring-white/15 ring-inset" : ""}`}
+                className={`w-[85vw] sm:w-[280px] shrink-0 rounded-lg transition-all duration-150 ${
+                  dragOverTarget === columnId || backlogDragOverColumn === columnId
+                    ? "bg-white/[0.04] ring-1 ring-white/15 ring-inset"
+                    : backlogDragActive
+                      ? "bg-white/[0.02] ring-1 ring-white/[0.08] ring-inset"
+                      : ""
+                }`}
                 onMouseEnter={() => setHoveredColumn(columnId)}
               >
                 <div className="mb-1.5 px-1">
