@@ -634,6 +634,12 @@ export default function BoardPage() {
           getItemValue={(item) => item.id}
           onDragStart={() => setKanbanDragActive(true)}
           onDragEnd={(event) => {
+            console.log("[onDragEnd]", {
+              backlogOpen,
+              dragOverTargetRef: dragOverTargetRef.current,
+              activeId: event.active.id,
+              overId: event.over?.id,
+            });
             setKanbanDragActive(false);
             if (!backlogOpen) return;
             // Use ref (updated in real-time by pointermove) — state would be stale here
@@ -642,6 +648,7 @@ export default function BoardPage() {
               event.activatorEvent.preventDefault();
               const taskId = event.active.id as string;
               const placement = dragBacklogPlacementRef.current;
+              console.log("[onDragEnd] sending to backlog", { taskId, placement });
               handleSendToBacklog(taskId, placement || undefined);
             }
           }}
