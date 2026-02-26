@@ -28,7 +28,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 export default function BoardPage() {
   const { activeProjectId, clients, teamMembers, weekMode, weekDays, displayMonday, areaId, user, boardColumns, addBoardColumn, renameBoardColumn, removeBoardColumn, showCheckmarks, taskRefreshKey } = useWorkspace();
   const { calendarEvents } = useCalendar();
-  const { backlogOpen, addToBacklog, backlogFolders, backlogDragActive, setKanbanDragOverBacklog } = useBacklog();
+  const { backlogOpen, addToBacklog, backlogFolders, backlogDragActive, setKanbanDragOverBacklog, onTaskSentToDayRef } = useBacklog();
 
   const isCustom = weekMode === "custom";
   const columnTitles = getColumnTitles(weekMode, boardColumns);
@@ -451,14 +451,16 @@ export default function BoardPage() {
     setKanbanDragOverBacklog(dragOverTarget === "backlog");
   }, [dragOverTarget, setKanbanDragOverBacklog]);
 
-  // Refresh board when a backlog drag ends (task may have been sent to a column)
-  const prevBacklogDragActive = useRef(false);
+  // Register callback so backlog-to-column drops optimistically add the task
   useEffect(() => {
-    if (prevBacklogDragActive.current && !backlogDragActive) {
-      refreshTasks();
-    }
-    prevBacklogDragActive.current = backlogDragActive;
-  }, [backlogDragActive, refreshTasks]);
+    onTaskSentToDayRef.current = (task, day) => {
+      setColumns((prev) => ({
+        ...prev,
+        [day]: [...(prev[day] || []), task],
+      }));
+    };
+    return () => { onTaskSentToDayRef.current = null; };
+  }, [onTaskSentToDayRef]);
 
   // Track which column the cursor is over during backlog drag (for column highlighting)
   useEffect(() => {

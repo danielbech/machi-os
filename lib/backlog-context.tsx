@@ -29,6 +29,8 @@ interface BacklogContextValue {
   setBacklogDragActive: (active: boolean) => void;
   kanbanDragOverBacklog: boolean;
   setKanbanDragOverBacklog: (over: boolean) => void;
+  /** Ref for board page to register a callback when a backlog task is sent to a day column */
+  onTaskSentToDayRef: React.MutableRefObject<((task: Task, day: DayName) => void) | null>;
 }
 
 const BacklogContext = createContext<BacklogContextValue | null>(null);
@@ -56,6 +58,9 @@ export function BacklogProvider({ children }: { children: React.ReactNode }) {
   const [backlogTasks, setBacklogTasks] = useState<Task[]>([]);
   const [backlogFolders, setBacklogFolders] = useState<BacklogFolder[]>([]);
   const suppressBacklogReload = useRef(false);
+
+  // Callback ref: board page sets this to optimistically add tasks to columns
+  const onTaskSentToDayRef = useRef<((task: Task, day: DayName) => void) | null>(null);
 
   // Backlog drag state (true when dragging a backlog task)
   const [backlogDragActive, setBacklogDragActive] = useState(false);
@@ -134,6 +139,7 @@ export function BacklogProvider({ children }: { children: React.ReactNode }) {
     if (!task) return;
     const updatedTask = { ...task, day };
     setBacklogTasks((prev) => prev.filter((t) => t.id !== taskId));
+    onTaskSentToDayRef.current?.(updatedTask, day);
     suppressBacklogReload.current = true;
     await saveTask(activeProjectId, updatedTask, areaId);
     setTimeout(() => { suppressBacklogReload.current = false; }, 2000);
@@ -226,6 +232,7 @@ export function BacklogProvider({ children }: { children: React.ReactNode }) {
     backlogWidth, setBacklogWidth,
     backlogDragActive, setBacklogDragActive,
     kanbanDragOverBacklog, setKanbanDragOverBacklog,
+    onTaskSentToDayRef,
   }), [
     backlogOpen, toggleBacklog, backlogTasks, backlogFolders,
     sendBacklogToDay, sendFolderToDay,
