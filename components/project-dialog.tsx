@@ -7,13 +7,21 @@ import { createClientRecord, updateClientRecord } from "@/lib/supabase/clients";
 import { uploadClientLogo, deleteClientLogo } from "@/lib/supabase/storage";
 import { CLIENT_DOT_COLORS, COLOR_NAMES } from "@/lib/colors";
 import { ClientIcon } from "@/components/client-icon";
-import type { Client } from "@/lib/types";
+import type { Client, ClientGroup } from "@/lib/types";
+import { createClientGroup as createClientGroupDb } from "@/lib/supabase/client-groups";
 import {
   Dialog,
   DialogContent,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Upload, X, Search } from "lucide-react";
+import { Upload, X, Search, Building2, Check, Plus } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { iconNames } from "lucide-react/dynamic";
 
 function generateSlug(name: string, existingSlugs: string[]): string {
@@ -35,7 +43,7 @@ interface ProjectDialogProps {
 }
 
 export function ProjectDialog({ open, onOpenChange, editingClient = null }: ProjectDialogProps) {
-  const { activeProjectId, clients, refreshClients } = useWorkspace();
+  const { activeProjectId, clients, refreshClients, clientGroups, refreshClientGroups } = useWorkspace();
 
   const [formName, setFormName] = useState("");
   const [formSlug, setFormSlug] = useState("");
@@ -44,9 +52,11 @@ export function ProjectDialog({ open, onOpenChange, editingClient = null }: Proj
   const [formLogoUrl, setFormLogoUrl] = useState("");
   const [formLogoFile, setFormLogoFile] = useState<File | null>(null);
   const [formLogoPreview, setFormLogoPreview] = useState<string | null>(null);
+  const [formClientGroupId, setFormClientGroupId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [showIconPicker, setShowIconPicker] = useState(false);
   const [iconSearch, setIconSearch] = useState("");
+  const [newGroupName, setNewGroupName] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
   const titleRef = useRef<HTMLInputElement>(null);
   const iconSearchRef = useRef<HTMLInputElement>(null);
@@ -69,6 +79,7 @@ export function ProjectDialog({ open, onOpenChange, editingClient = null }: Proj
       setFormLogoUrl(editingClient.logo_url || "");
       setFormLogoFile(null);
       setFormLogoPreview(editingClient.logo_url || null);
+      setFormClientGroupId(editingClient.client_group_id || null);
     } else {
       setFormName("");
       setFormSlug("");
@@ -77,9 +88,11 @@ export function ProjectDialog({ open, onOpenChange, editingClient = null }: Proj
       setFormLogoUrl("");
       setFormLogoFile(null);
       setFormLogoPreview(null);
+      setFormClientGroupId(null);
     }
     setShowIconPicker(false);
     setIconSearch("");
+    setNewGroupName("");
   }, [open, editingClient]);
 
   // Focus search when icon picker opens
@@ -131,6 +144,7 @@ export function ProjectDialog({ open, onOpenChange, editingClient = null }: Proj
           color: formColor,
           icon: formIcon || null,
           logo_url: logoUrl,
+          client_group_id: formClientGroupId,
         });
       } else {
         const newClient = await createClientRecord(activeProjectId, {
@@ -140,6 +154,7 @@ export function ProjectDialog({ open, onOpenChange, editingClient = null }: Proj
           icon: formIcon || undefined,
           sort_order: clients.length,
           active: true,
+          client_group_id: formClientGroupId || undefined,
         });
         if (formLogoFile) {
           logoUrl = await uploadClientLogo(formLogoFile, newClient.id);
@@ -298,6 +313,74 @@ export function ProjectDialog({ open, onOpenChange, editingClient = null }: Proj
               </div>
             </div>
           )}
+
+          {/* Client group */}
+          <div className="flex items-center gap-2">
+            <label className="text-xs text-white/40">Client</label>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button
+                  type="button"
+                  className="flex items-center gap-1.5 px-2 py-1 rounded-md text-xs hover:bg-white/[0.06] transition-colors"
+                >
+                  <Building2 className="size-3 text-white/30" />
+                  {formClientGroupId
+                    ? clientGroups.find((g) => g.id === formClientGroupId)?.name || "Unknown"
+                    : <span className="text-white/30">None</span>}
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start" className="w-48">
+                <DropdownMenuItem onClick={() => setFormClientGroupId(null)}>
+                  <span className="text-white/30">None</span>
+                  {!formClientGroupId && <Check className="size-3.5 ml-auto" />}
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                {clientGroups.map((g) => (
+                  <DropdownMenuItem
+                    key={g.id}
+                    onClick={() => setFormClientGroupId(g.id)}
+                  >
+                    {g.name}
+                    {formClientGroupId === g.id && <Check className="size-3.5 ml-auto" />}
+                  </DropdownMenuItem>
+                ))}
+                {clientGroups.length === 0 && (
+                  <div className="px-2 py-1.5 text-xs text-white/20">No clients yet</div>
+                )}
+                <DropdownMenuSeparator />
+                <div className="px-2 py-1.5">
+                  <form
+                    onSubmit={async (e) => {
+                      e.preventDefault();
+                      if (!activeProjectId || !newGroupName.trim()) return;
+                      try {
+                        const group = await createClientGroupDb(activeProjectId, newGroupName.trim(), clientGroups.length);
+                        setFormClientGroupId(group.id);
+                        setNewGroupName("");
+                        await refreshClientGroups();
+                      } catch {
+                        toast.error("Failed to create client");
+                      }
+                    }}
+                    className="flex items-center gap-1"
+                  >
+                    <input
+                      type="text"
+                      value={newGroupName}
+                      onChange={(e) => setNewGroupName(e.target.value)}
+                      placeholder="New client..."
+                      className="flex-1 text-xs bg-transparent outline-none placeholder:text-white/20"
+                    />
+                    {newGroupName.trim() && (
+                      <button type="submit" className="text-white/40 hover:text-white/60">
+                        <Plus className="size-3" />
+                      </button>
+                    )}
+                  </form>
+                </div>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
 
           {/* Text color */}
           <div className="flex items-center gap-2">

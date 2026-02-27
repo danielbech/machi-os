@@ -6,6 +6,15 @@ export interface Member {
   avatar?: string;
 }
 
+export interface ClientGroup {
+  id: string;
+  project_id: string;
+  name: string;
+  logo_url?: string;
+  sort_order: number;
+  created_at: string;
+}
+
 export interface Client {
   id: string;
   project_id: string;
@@ -16,6 +25,7 @@ export interface Client {
   icon?: string;
   sort_order: number;
   active: boolean;
+  client_group_id?: string;
 }
 
 export interface ChecklistItem {
