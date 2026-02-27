@@ -14,7 +14,7 @@ import {
 } from "@tanstack/react-table";
 import { useWorkspace } from "@/lib/workspace-context";
 import { updateClientRecord, deleteClientRecord } from "@/lib/supabase/clients";
-import { getClientTextClassName, CLIENT_DOT_COLORS } from "@/lib/colors";
+import { CLIENT_DOT_COLORS } from "@/lib/colors";
 import { ClientIcon } from "@/components/client-icon";
 import type { Client } from "@/lib/types";
 import { ProjectDialog } from "@/components/project-dialog";
@@ -170,9 +170,7 @@ export default function ProjectsPage() {
                   )}
                 </div>
               )}
-              <span
-                className={`font-medium ${getClientTextClassName(client.color)}`}
-              >
+              <span className="font-medium">
                 {client.name}
               </span>
             </div>
