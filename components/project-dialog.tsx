@@ -16,12 +16,10 @@ import {
 import { Button } from "@/components/ui/button";
 import { Upload, X, Search, Building2, Check, Plus } from "lucide-react";
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { iconNames } from "lucide-react/dynamic";
 
 function generateSlug(name: string, existingSlugs: string[]): string {
@@ -317,8 +315,8 @@ export function ProjectDialog({ open, onOpenChange, editingClient = null }: Proj
           {/* Client group */}
           <div className="flex items-center gap-2">
             <label className="text-xs text-white/40">Client</label>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
+            <Popover>
+              <PopoverTrigger asChild>
                 <button
                   type="button"
                   className="flex items-center gap-1.5 px-2 py-1 rounded-md text-xs hover:bg-white/[0.06] transition-colors"
@@ -328,26 +326,32 @@ export function ProjectDialog({ open, onOpenChange, editingClient = null }: Proj
                     ? clientGroups.find((g) => g.id === formClientGroupId)?.name || "Unknown"
                     : <span className="text-white/30">None</span>}
                 </button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="start" className="w-48">
-                <DropdownMenuItem onClick={() => setFormClientGroupId(null)}>
-                  <span className="text-white/30">None</span>
+              </PopoverTrigger>
+              <PopoverContent align="start" className="w-48 p-1">
+                <button
+                  type="button"
+                  onClick={() => setFormClientGroupId(null)}
+                  className={`w-full flex items-center gap-2 px-2 py-1.5 rounded-sm text-xs hover:bg-white/[0.06] transition-colors ${!formClientGroupId ? "text-white" : "text-white/30"}`}
+                >
+                  None
                   {!formClientGroupId && <Check className="size-3.5 ml-auto" />}
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
+                </button>
+                <div className="h-px bg-white/[0.06] my-1" />
                 {clientGroups.map((g) => (
-                  <DropdownMenuItem
+                  <button
                     key={g.id}
+                    type="button"
                     onClick={() => setFormClientGroupId(g.id)}
+                    className={`w-full flex items-center gap-2 px-2 py-1.5 rounded-sm text-xs hover:bg-white/[0.06] transition-colors ${formClientGroupId === g.id ? "text-white" : "text-white/80"}`}
                   >
                     {g.name}
                     {formClientGroupId === g.id && <Check className="size-3.5 ml-auto" />}
-                  </DropdownMenuItem>
+                  </button>
                 ))}
                 {clientGroups.length === 0 && (
                   <div className="px-2 py-1.5 text-xs text-white/20">No clients yet</div>
                 )}
-                <DropdownMenuSeparator />
+                <div className="h-px bg-white/[0.06] my-1" />
                 <div className="px-2 py-1.5">
                   <form
                     onSubmit={async (e) => {
@@ -378,8 +382,8 @@ export function ProjectDialog({ open, onOpenChange, editingClient = null }: Proj
                     )}
                   </form>
                 </div>
-              </DropdownMenuContent>
-            </DropdownMenu>
+              </PopoverContent>
+            </Popover>
           </div>
 
           {/* Text color */}
