@@ -5,7 +5,7 @@ import { toast } from "sonner";
 import { useWorkspace } from "@/lib/workspace-context";
 import { createClientRecord, updateClientRecord } from "@/lib/supabase/clients";
 import { uploadClientLogo, deleteClientLogo } from "@/lib/supabase/storage";
-import { getClientTextClassName, CLIENT_DOT_COLORS, COLOR_NAMES } from "@/lib/colors";
+import { CLIENT_DOT_COLORS, COLOR_NAMES } from "@/lib/colors";
 import { ClientIcon } from "@/components/client-icon";
 import type { Client } from "@/lib/types";
 import {
@@ -228,7 +228,7 @@ export function ProjectDialog({ open, onOpenChange, editingClient = null }: Proj
               type="text"
               value={formName}
               onChange={(e) => handleNameChange(e.target.value)}
-              className={`flex-1 text-lg font-semibold bg-transparent outline-none placeholder:text-white/20 ${getClientTextClassName(formColor)}`}
+              className="flex-1 text-lg font-semibold bg-transparent outline-none placeholder:text-white/20"
               placeholder="Project name..."
             />
           </div>
