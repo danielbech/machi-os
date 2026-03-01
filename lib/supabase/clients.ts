@@ -6,7 +6,7 @@ export async function loadClients(projectId: string): Promise<Client[]> {
 
   const { data, error } = await supabase
     .from('clients')
-    .select('id, project_id, name, slug, color, logo_url, icon, sort_order, active, client_group_id')
+    .select('id, project_id, name, slug, color, logo_url, icon, sort_order, active, status, client_group_id')
     .eq('project_id', projectId)
     .order('sort_order')
 
@@ -25,13 +25,14 @@ export async function loadClients(projectId: string): Promise<Client[]> {
     icon: c.icon || undefined,
     sort_order: c.sort_order,
     active: c.active ?? true,
+    status: (c as any).status || (c.active ? 'active' : 'idle'),
     client_group_id: c.client_group_id || undefined,
   }))
 }
 
 export async function createClientRecord(
   projectId: string,
-  client: { name: string; slug: string; color: string; logo_url?: string; icon?: string; sort_order: number; active?: boolean; client_group_id?: string }
+  client: { name: string; slug: string; color: string; logo_url?: string; icon?: string; sort_order: number; active?: boolean; status?: string; client_group_id?: string }
 ): Promise<Client> {
   const supabase = createClient()
 
@@ -46,6 +47,7 @@ export async function createClientRecord(
       icon: client.icon || null,
       sort_order: client.sort_order,
       active: client.active ?? true,
+      status: client.status || 'active',
       client_group_id: client.client_group_id || null,
     })
     .select()
@@ -66,13 +68,14 @@ export async function createClientRecord(
     icon: data.icon || undefined,
     sort_order: data.sort_order,
     active: data.active ?? true,
+    status: (data as any).status || (data.active ? 'active' : 'idle'),
     client_group_id: data.client_group_id || undefined,
   }
 }
 
 export async function updateClientRecord(
   clientId: string,
-  updates: { name?: string; slug?: string; color?: string; logo_url?: string | null; icon?: string | null; sort_order?: number; active?: boolean; client_group_id?: string | null }
+  updates: { name?: string; slug?: string; color?: string; logo_url?: string | null; icon?: string | null; sort_order?: number; active?: boolean; status?: string; client_group_id?: string | null }
 ): Promise<void> {
   const supabase = createClient()
 

@@ -15,6 +15,8 @@ export interface ClientGroup {
   created_at: string;
 }
 
+export type ClientStatus = "active" | "upcoming" | "expected" | "idle";
+
 export interface Client {
   id: string;
   project_id: string;
@@ -25,6 +27,7 @@ export interface Client {
   icon?: string;
   sort_order: number;
   active: boolean;
+  status: ClientStatus;
   client_group_id?: string;
 }
 

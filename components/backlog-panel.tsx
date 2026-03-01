@@ -367,9 +367,9 @@ export function BacklogPanel({
   };
 
   // All active clients + any inactive clients that have backlog tasks
-  const activeClients = clients.filter((c) => c.active);
+  const activeClients = clients.filter((c) => c.status !== "idle");
   const inactiveWithTasks = clients.filter(
-    (c) => !c.active && activeTasks.some((t) => t.client === c.id)
+    (c) => c.status === "idle" && activeTasks.some((t) => t.client === c.id)
   );
   const relevantClients = [...activeClients, ...inactiveWithTasks];
 

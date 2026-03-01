@@ -18,7 +18,7 @@ import { deleteClientGroup } from "@/lib/supabase/client-groups";
 import { ClientGroupDialog } from "@/components/client-group-dialog";
 import { CLIENT_DOT_COLORS } from "@/lib/colors";
 import { ClientIcon } from "@/components/client-icon";
-import type { Client, ClientGroup } from "@/lib/types";
+import type { Client, ClientGroup, ClientStatus } from "@/lib/types";
 import { ProjectDialog } from "@/components/project-dialog";
 import {
   Table,
@@ -65,6 +65,22 @@ import {
 
 // ─── Shared helpers ──────────────────────────────────────────────────────────
 
+const STATUS_OPTIONS = ["all", "active", "upcoming", "expected", "idle"] as const;
+
+const STATUS_BADGE_STYLES: Record<ClientStatus, string> = {
+  active: "bg-green-500/10 text-green-400 border-green-500/20",
+  upcoming: "bg-blue-500/10 text-blue-400 border-blue-500/20",
+  expected: "bg-amber-500/10 text-amber-400 border-amber-500/20",
+  idle: "bg-white/5 text-white/30 border-white/10",
+};
+
+const STATUS_LABELS: Record<ClientStatus, string> = {
+  active: "Active",
+  upcoming: "Upcoming",
+  expected: "Expected",
+  idle: "Idle",
+};
+
 function StatusFilter({
   value,
   onChange,
@@ -72,10 +88,9 @@ function StatusFilter({
   value: string;
   onChange: (value: string) => void;
 }) {
-  const options = ["all", "active", "idle"] as const;
   return (
     <div className="flex items-center gap-0.5 rounded-md bg-white/5 p-0.5">
-      {options.map((opt) => (
+      {STATUS_OPTIONS.map((opt) => (
         <button
           key={opt}
           onClick={() => onChange(opt)}
@@ -89,6 +104,36 @@ function StatusFilter({
         </button>
       ))}
     </div>
+  );
+}
+
+function StatusPicker({
+  status,
+  onChangeStatus,
+}: {
+  status: ClientStatus;
+  onChangeStatus: (status: ClientStatus) => void;
+}) {
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <button className="focus:outline-none">
+          <Badge className={`${STATUS_BADGE_STYLES[status]} cursor-pointer hover:opacity-80 transition-opacity`}>
+            {STATUS_LABELS[status]}
+          </Badge>
+        </button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="start" className="w-36">
+        {(Object.keys(STATUS_LABELS) as ClientStatus[]).map((s) => (
+          <DropdownMenuItem key={s} onClick={() => onChangeStatus(s)}>
+            <Badge className={`${STATUS_BADGE_STYLES[s]} text-[10px] px-1.5 py-0`}>
+              {STATUS_LABELS[s]}
+            </Badge>
+            {status === s && <Check className="size-3.5 ml-auto" />}
+          </DropdownMenuItem>
+        ))}
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }
 
@@ -385,12 +430,12 @@ function ProjectsTab() {
     setDialogOpen(true);
   };
 
-  const handleToggleActive = async (client: Client) => {
+  const handleChangeStatus = async (clientId: string, status: ClientStatus) => {
     try {
-      await updateClientRecord(client.id, { active: !client.active });
+      await updateClientRecord(clientId, { status, active: status !== "idle" });
       await refreshClients();
     } catch (error) {
-      console.error("Error toggling project status:", error);
+      console.error("Error updating project status:", error);
       toast.error("Failed to update project");
     }
   };
@@ -431,8 +476,7 @@ function ProjectsTab() {
 
   const filteredClients = useMemo(() => {
     if (statusFilter === "all") return clients;
-    if (statusFilter === "active") return clients.filter((c) => c.active);
-    return clients.filter((c) => !c.active);
+    return clients.filter((c) => c.status === statusFilter);
   }, [clients, statusFilter]);
 
   const columns = useMemo<ColumnDef<Client>[]>(
@@ -511,26 +555,16 @@ function ProjectsTab() {
         },
       },
       {
-        accessorKey: "active",
+        accessorKey: "status",
         header: "Status",
-        cell: ({ getValue }) => {
-          const active = getValue<boolean>();
+        cell: ({ row }) => {
+          const client = row.original;
           return (
-            <Badge
-              className={
-                active
-                  ? "bg-green-500/10 text-green-400 border-green-500/20"
-                  : "bg-white/5 text-white/30 border-white/10"
-              }
-            >
-              {active ? "Active" : "Idle"}
-            </Badge>
+            <StatusPicker
+              status={client.status}
+              onChangeStatus={(s) => handleChangeStatus(client.id, s)}
+            />
           );
-        },
-        sortingFn: (rowA, rowB) => {
-          const a = rowA.original.active ? 1 : 0;
-          const b = rowB.original.active ? 1 : 0;
-          return a - b;
         },
       },
       {
@@ -555,9 +589,6 @@ function ProjectsTab() {
                   <DropdownMenuItem onClick={() => openEdit(client)}>
                     <Pencil className="size-4" />
                     Edit
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => handleToggleActive(client)}>
-                    {client.active ? "Set Idle" : "Set Active"}
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem
