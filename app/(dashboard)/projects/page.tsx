@@ -513,7 +513,7 @@ function StatusesTab() {
                 </TableCell>
                 <TableCell>
                   <span className={`text-xs ${status.treat_as_active ? "text-white/50" : "text-white/20"}`}>
-                    {status.treat_as_active ? "Shown in board" : "Hidden from board"}
+                    {status.treat_as_active ? "Shown in backlog" : "Hidden from backlog"}
                   </span>
                 </TableCell>
                 <TableCell>
@@ -713,7 +713,7 @@ function StatusDialog({
                   : "bg-white/5 text-white/30"
               }`}
             >
-              {treatAsActive ? "Shown in board" : "Hidden from board"}
+              {treatAsActive ? "Shown in backlog" : "Hidden from backlog"}
             </button>
           </div>
 
