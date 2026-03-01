@@ -13,13 +13,13 @@ CREATE TABLE IF NOT EXISTS client_statuses (
 ALTER TABLE client_statuses ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "client_statuses_select" ON client_statuses
-  FOR SELECT USING (project_id IN (SELECT get_user_project_ids()));
+  FOR SELECT USING (project_id IN (SELECT get_user_project_ids(auth.uid())));
 CREATE POLICY "client_statuses_insert" ON client_statuses
-  FOR INSERT WITH CHECK (project_id IN (SELECT get_user_admin_project_ids()));
+  FOR INSERT WITH CHECK (project_id IN (SELECT get_user_admin_project_ids(auth.uid())));
 CREATE POLICY "client_statuses_update" ON client_statuses
-  FOR UPDATE USING (project_id IN (SELECT get_user_admin_project_ids()));
+  FOR UPDATE USING (project_id IN (SELECT get_user_admin_project_ids(auth.uid())));
 CREATE POLICY "client_statuses_delete" ON client_statuses
-  FOR DELETE USING (project_id IN (SELECT get_user_admin_project_ids()));
+  FOR DELETE USING (project_id IN (SELECT get_user_admin_project_ids(auth.uid())));
 
 -- Seed default statuses for every existing project
 INSERT INTO client_statuses (project_id, name, color, sort_order, treat_as_active)
