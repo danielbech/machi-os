@@ -14,7 +14,7 @@ import {
 } from "@tanstack/react-table";
 import { useWorkspace } from "@/lib/workspace-context";
 import { updateClientRecord, deleteClientRecord } from "@/lib/supabase/clients";
-import { createClientGroup, updateClientGroup, deleteClientGroup } from "@/lib/supabase/client-groups";
+import { ClientGroupDialog } from "@/components/client-group-dialog";
 import { CLIENT_DOT_COLORS } from "@/lib/colors";
 import { ClientIcon } from "@/components/client-icon";
 import type { Client, ClientGroup } from "@/lib/types";
@@ -58,7 +58,6 @@ import {
   ArrowDown,
   Search,
   X,
-  Building2,
   Check,
 } from "lucide-react";
 
@@ -100,19 +99,18 @@ function ClientGroupPicker({
   currentGroupName,
   clientGroups,
   onSelect,
-  onCreateAndSelect,
+  onRequestCreate,
 }: {
   currentGroupId?: string;
   currentGroupName?: string;
   clientGroups: ClientGroup[];
   onSelect: (groupId: string | null) => void;
-  onCreateAndSelect: (name: string) => Promise<void>;
+  onRequestCreate: () => void;
 }) {
   const [open, setOpen] = useState(false);
-  const [inputName, setInputName] = useState("");
 
   return (
-    <Popover open={open} onOpenChange={(v) => { setOpen(v); if (!v) setInputName(""); }}>
+    <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
         <button className="flex items-center gap-1.5 text-xs hover:text-white/60 transition-colors text-left">
           {currentGroupName ? (
@@ -122,10 +120,10 @@ function ClientGroupPicker({
           )}
         </button>
       </PopoverTrigger>
-      <PopoverContent align="start" className="w-48 p-1">
+      <PopoverContent align="start" className="w-48 p-1 bg-zinc-900/95 backdrop-blur-md border-white/10">
         <button
           onClick={() => { onSelect(null); setOpen(false); }}
-          className={`w-full flex items-center gap-2 px-2 py-1.5 rounded-sm text-xs hover:bg-white/[0.06] transition-colors ${!currentGroupId ? "text-white" : "text-white/30"}`}
+          className={`w-full flex items-center gap-2 px-2 py-1.5 rounded-sm text-sm hover:bg-white/[0.08] transition-colors ${!currentGroupId ? "text-white" : "text-white/40"}`}
         >
           None
           {!currentGroupId && <Check className="size-3.5 ml-auto" />}
@@ -135,7 +133,7 @@ function ClientGroupPicker({
           <button
             key={g.id}
             onClick={() => { onSelect(g.id); setOpen(false); }}
-            className={`w-full flex items-center gap-2 px-2 py-1.5 rounded-sm text-xs hover:bg-white/[0.06] transition-colors ${currentGroupId === g.id ? "text-white" : "text-white/80"}`}
+            className={`w-full flex items-center gap-2 px-2 py-1.5 rounded-sm text-sm hover:bg-white/[0.08] transition-colors ${currentGroupId === g.id ? "text-white" : ""}`}
           >
             {g.name}
             {currentGroupId === g.id && <Check className="size-3.5 ml-auto" />}
@@ -145,31 +143,13 @@ function ClientGroupPicker({
           <div className="px-2 py-1.5 text-xs text-white/20">No clients yet</div>
         )}
         <div className="h-px bg-white/[0.06] my-1" />
-        <div className="px-2 py-1.5">
-          <form
-            onSubmit={async (e) => {
-              e.preventDefault();
-              if (!inputName.trim()) return;
-              await onCreateAndSelect(inputName.trim());
-              setInputName("");
-              setOpen(false);
-            }}
-            className="flex items-center gap-1"
-          >
-            <input
-              type="text"
-              value={inputName}
-              onChange={(e) => setInputName(e.target.value)}
-              placeholder="New client..."
-              className="flex-1 text-xs bg-transparent outline-none placeholder:text-white/20"
-            />
-            {inputName.trim() && (
-              <button type="submit" className="text-white/40 hover:text-white/60">
-                <Plus className="size-3" />
-              </button>
-            )}
-          </form>
-        </div>
+        <button
+          onClick={() => { setOpen(false); onRequestCreate(); }}
+          className="w-full flex items-center gap-2 px-2 py-1.5 rounded-sm text-sm text-white/40 hover:text-white/60 hover:bg-white/[0.08] transition-colors"
+        >
+          <Plus className="size-3.5" />
+          New client
+        </button>
       </PopoverContent>
     </Popover>
   );
@@ -186,6 +166,8 @@ export default function ProjectsPage() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingClient, setEditingClient] = useState<Client | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
+  const [clientGroupDialogOpen, setClientGroupDialogOpen] = useState(false);
+  const [pendingGroupAssignClientId, setPendingGroupAssignClientId] = useState<string | null>(null);
 
   // Table state
   const [sorting, setSorting] = useState<SortingState>([]);
@@ -234,16 +216,16 @@ export default function ProjectsPage() {
     }
   };
 
-  const handleCreateAndAssignGroup = async (clientId: string, name: string) => {
-    if (!activeProjectId) return;
-    try {
-      const group = await createClientGroup(activeProjectId, name, clientGroups.length);
-      await updateClientRecord(clientId, { client_group_id: group.id });
-      await Promise.all([refreshClients(), refreshClientGroups()]);
-    } catch (error) {
-      console.error("Error creating client group:", error);
-      toast.error("Failed to create client");
+  const handleGroupCreated = async (groupId: string) => {
+    if (pendingGroupAssignClientId) {
+      await handleChangeClientGroup(pendingGroupAssignClientId, groupId);
+      setPendingGroupAssignClientId(null);
     }
+  };
+
+  const openCreateGroupForClient = (clientId: string) => {
+    setPendingGroupAssignClientId(clientId);
+    setClientGroupDialogOpen(true);
   };
 
   const filteredClients = useMemo(() => {
@@ -300,7 +282,7 @@ export default function ProjectsPage() {
               currentGroupName={group?.name}
               clientGroups={clientGroups}
               onSelect={(groupId) => handleChangeClientGroup(client.id, groupId)}
-              onCreateAndSelect={(name) => handleCreateAndAssignGroup(client.id, name)}
+              onRequestCreate={() => openCreateGroupForClient(client.id)}
             />
           );
         },
@@ -564,6 +546,13 @@ export default function ProjectsPage() {
         open={dialogOpen}
         onOpenChange={setDialogOpen}
         editingClient={editingClient}
+      />
+
+      {/* New Client Group Dialog */}
+      <ClientGroupDialog
+        open={clientGroupDialogOpen}
+        onOpenChange={setClientGroupDialogOpen}
+        onCreated={handleGroupCreated}
       />
 
       {/* Delete Confirmation Dialog */}
