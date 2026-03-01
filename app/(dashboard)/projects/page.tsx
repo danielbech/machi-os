@@ -135,6 +135,9 @@ function ClientGroupPicker({
             onClick={() => { onSelect(g.id); setOpen(false); }}
             className={`w-full flex items-center gap-2 px-2 py-1.5 rounded-sm text-sm hover:bg-white/[0.08] transition-colors ${currentGroupId === g.id ? "text-white" : ""}`}
           >
+            {g.logo_url && (
+              <img src={g.logo_url} alt="" className="size-4 rounded object-cover shrink-0" />
+            )}
             {g.name}
             {currentGroupId === g.id && <Check className="size-3.5 ml-auto" />}
           </button>
@@ -217,6 +220,8 @@ export default function ProjectsPage() {
   };
 
   const handleGroupCreated = async (groupId: string) => {
+    // Ensure client groups are refreshed on this side too
+    await refreshClientGroups();
     if (pendingGroupAssignClientId) {
       await handleChangeClientGroup(pendingGroupAssignClientId, groupId);
       setPendingGroupAssignClientId(null);
@@ -241,11 +246,13 @@ export default function ProjectsPage() {
         header: "Project",
         cell: ({ row }) => {
           const client = row.original;
+          const group = clientGroups.find((g) => g.id === client.client_group_id);
+          const logoUrl = group?.logo_url || client.logo_url;
           return (
             <div className="flex items-center gap-3">
-              {client.logo_url ? (
+              {logoUrl ? (
                 <img
-                  src={client.logo_url}
+                  src={logoUrl}
                   alt={client.name}
                   className="size-7 rounded-lg object-cover bg-white/5 shrink-0"
                 />

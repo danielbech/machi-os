@@ -4,7 +4,6 @@ import { useState, useRef, useEffect, useMemo } from "react";
 import { toast } from "sonner";
 import { useWorkspace } from "@/lib/workspace-context";
 import { createClientRecord, updateClientRecord } from "@/lib/supabase/clients";
-import { uploadClientLogo, deleteClientLogo } from "@/lib/supabase/storage";
 import { CLIENT_DOT_COLORS, COLOR_NAMES } from "@/lib/colors";
 import { ClientIcon } from "@/components/client-icon";
 import type { Client } from "@/lib/types";
@@ -14,7 +13,7 @@ import {
   DialogContent,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Upload, X, Search, Building2, Check, Plus } from "lucide-react";
+import { Search, Building2, Check, Plus } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -49,22 +48,23 @@ export function ProjectDialog({ open, onOpenChange, editingClient = null }: Proj
   const [formSlug, setFormSlug] = useState("");
   const [formColor, setFormColor] = useState("blue");
   const [formIcon, setFormIcon] = useState<string | null>(null);
-  const [formLogoUrl, setFormLogoUrl] = useState("");
-  const [formLogoFile, setFormLogoFile] = useState<File | null>(null);
-  const [formLogoPreview, setFormLogoPreview] = useState<string | null>(null);
   const [formClientGroupId, setFormClientGroupId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [showIconPicker, setShowIconPicker] = useState(false);
   const [iconSearch, setIconSearch] = useState("");
   const [clientGroupDialogOpen, setClientGroupDialogOpen] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const titleRef = useRef<HTMLInputElement>(null);
   const iconSearchRef = useRef<HTMLInputElement>(null);
+
+  // Resolve selected client group
+  const selectedGroup = formClientGroupId
+    ? clientGroups.find((g) => g.id === formClientGroupId)
+    : null;
 
   // Filter icons based on search
   const filteredIcons = useMemo(() => {
     const query = iconSearch.toLowerCase().trim();
-    if (!query) return iconNames.slice(0, 80); // Show first 80 by default
+    if (!query) return iconNames.slice(0, 80);
     return iconNames.filter((name) => name.includes(query)).slice(0, 80);
   }, [iconSearch]);
 
@@ -76,18 +76,12 @@ export function ProjectDialog({ open, onOpenChange, editingClient = null }: Proj
       setFormSlug(editingClient.slug);
       setFormColor(editingClient.color);
       setFormIcon(editingClient.icon || null);
-      setFormLogoUrl(editingClient.logo_url || "");
-      setFormLogoFile(null);
-      setFormLogoPreview(editingClient.logo_url || null);
       setFormClientGroupId(editingClient.client_group_id || null);
     } else {
       setFormName("");
       setFormSlug("");
       setFormColor("blue");
       setFormIcon(null);
-      setFormLogoUrl("");
-      setFormLogoFile(null);
-      setFormLogoPreview(null);
       setFormClientGroupId(null);
     }
     setShowIconPicker(false);
@@ -101,21 +95,6 @@ export function ProjectDialog({ open, onOpenChange, editingClient = null }: Proj
     }
   }, [showIconPicker]);
 
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    setFormLogoFile(file);
-    setFormLogoPreview(URL.createObjectURL(file));
-    setFormIcon(null); // logo takes precedence
-  };
-
-  const clearLogo = () => {
-    setFormLogoFile(null);
-    setFormLogoPreview(null);
-    setFormLogoUrl("");
-    if (fileInputRef.current) fileInputRef.current.value = "";
-  };
-
   const handleNameChange = (name: string) => {
     setFormName(name);
     const existingSlugs = clients
@@ -128,25 +107,16 @@ export function ProjectDialog({ open, onOpenChange, editingClient = null }: Proj
     if (!formName.trim() || !activeProjectId) return;
     setSaving(true);
     try {
-      let logoUrl = formLogoUrl.trim() || null;
-
       if (editingClient) {
-        if (formLogoFile) {
-          logoUrl = await uploadClientLogo(formLogoFile, editingClient.id);
-        }
-        if (!logoUrl && editingClient.logo_url) {
-          await deleteClientLogo(editingClient.logo_url);
-        }
         await updateClientRecord(editingClient.id, {
           name: formName.trim(),
           slug: formSlug.trim().toLowerCase(),
           color: formColor,
           icon: formIcon || null,
-          logo_url: logoUrl,
           client_group_id: formClientGroupId,
         });
       } else {
-        const newClient = await createClientRecord(activeProjectId, {
+        await createClientRecord(activeProjectId, {
           name: formName.trim(),
           slug: formSlug.trim().toLowerCase(),
           color: formColor,
@@ -155,10 +125,6 @@ export function ProjectDialog({ open, onOpenChange, editingClient = null }: Proj
           active: true,
           client_group_id: formClientGroupId || undefined,
         });
-        if (formLogoFile) {
-          logoUrl = await uploadClientLogo(formLogoFile, newClient.id);
-          await updateClientRecord(newClient.id, { logo_url: logoUrl });
-        }
       }
       await refreshClients();
       onOpenChange(false);
@@ -170,25 +136,16 @@ export function ProjectDialog({ open, onOpenChange, editingClient = null }: Proj
     }
   };
 
-  // What to show in the avatar area next to the title
+  // Avatar: show client_group logo > project icon > empty
   const renderAvatar = () => {
-    if (formLogoPreview) {
+    if (selectedGroup?.logo_url) {
       return (
-        <div className="group relative shrink-0">
+        <div className="size-10 rounded-xl overflow-hidden shrink-0">
           <img
-            src={formLogoPreview}
-            alt="Logo preview"
-            className="size-10 rounded-xl object-cover bg-white/5 cursor-pointer"
-            onClick={() => setShowIconPicker(!showIconPicker)}
+            src={selectedGroup.logo_url}
+            alt={selectedGroup.name}
+            className="size-10 object-cover bg-white/5"
           />
-          <button
-            type="button"
-            onClick={clearLogo}
-            className="absolute -top-1 -right-1 size-4 rounded-full bg-white/10 hover:bg-red-500/80 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
-            aria-label="Remove logo"
-          >
-            <X className="size-2.5" />
-          </button>
         </div>
       );
     }
@@ -226,15 +183,8 @@ export function ProjectDialog({ open, onOpenChange, editingClient = null }: Proj
         }}
       >
         <form onSubmit={(e) => { e.preventDefault(); handleSave(); }} className="space-y-5">
-          {/* Name — big, freestanding, auto-focused */}
+          {/* Name */}
           <div className="flex items-center gap-3">
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/*,.svg"
-              onChange={handleFileSelect}
-              className="hidden"
-            />
             {renderAvatar()}
 
             <input
@@ -247,10 +197,9 @@ export function ProjectDialog({ open, onOpenChange, editingClient = null }: Proj
             />
           </div>
 
-          {/* Icon picker — collapsible */}
-          {showIconPicker && (
+          {/* Icon picker — collapsible (only when no client_group logo) */}
+          {showIconPicker && !selectedGroup?.logo_url && (
             <div className="space-y-2">
-              {/* Search */}
               <div className="relative">
                 <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3.5 text-white/20" />
                 <input
@@ -263,7 +212,6 @@ export function ProjectDialog({ open, onOpenChange, editingClient = null }: Proj
                 />
               </div>
 
-              {/* Icon grid */}
               <div className="grid grid-cols-8 gap-1 max-h-[200px] overflow-y-auto">
                 {filteredIcons.map((name) => (
                   <button
@@ -290,26 +238,15 @@ export function ProjectDialog({ open, onOpenChange, editingClient = null }: Proj
                 )}
               </div>
 
-              {/* Actions below grid */}
-              <div className="flex items-center gap-2">
+              {formIcon && (
                 <button
                   type="button"
-                  onClick={() => fileInputRef.current?.click()}
-                  className="flex items-center gap-1.5 text-xs text-white/30 hover:text-white/50 transition-colors"
+                  onClick={() => { setFormIcon(null); setShowIconPicker(false); setIconSearch(""); }}
+                  className="text-xs text-white/30 hover:text-white/50 transition-colors"
                 >
-                  <Upload className="size-3" />
-                  Upload logo instead
+                  Remove icon
                 </button>
-                {formIcon && (
-                  <button
-                    type="button"
-                    onClick={() => { setFormIcon(null); setShowIconPicker(false); setIconSearch(""); }}
-                    className="text-xs text-white/30 hover:text-white/50 ml-auto transition-colors"
-                  >
-                    Remove icon
-                  </button>
-                )}
-              </div>
+              )}
             </div>
           )}
 
@@ -339,6 +276,9 @@ export function ProjectDialog({ open, onOpenChange, editingClient = null }: Proj
                     key={g.id}
                     onClick={() => setFormClientGroupId(g.id)}
                   >
+                    {g.logo_url && (
+                      <img src={g.logo_url} alt="" className="size-4 rounded object-cover shrink-0" />
+                    )}
                     {g.name}
                     {formClientGroupId === g.id && <Check className="size-3.5 ml-auto" />}
                   </DropdownMenuItem>

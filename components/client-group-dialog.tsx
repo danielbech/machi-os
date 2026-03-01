@@ -3,43 +3,90 @@
 import { useState, useRef, useEffect } from "react";
 import { toast } from "sonner";
 import { useWorkspace } from "@/lib/workspace-context";
-import { createClientGroup } from "@/lib/supabase/client-groups";
+import { createClientGroup, updateClientGroup } from "@/lib/supabase/client-groups";
+import { uploadClientLogo, deleteClientLogo } from "@/lib/supabase/storage";
+import type { ClientGroup } from "@/lib/types";
 import {
   Dialog,
   DialogContent,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { Upload, X } from "lucide-react";
 
 interface ClientGroupDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  editingGroup?: ClientGroup | null;
   onCreated?: (groupId: string) => void;
 }
 
-export function ClientGroupDialog({ open, onOpenChange, onCreated }: ClientGroupDialogProps) {
+export function ClientGroupDialog({ open, onOpenChange, editingGroup = null, onCreated }: ClientGroupDialogProps) {
   const { activeProjectId, clientGroups, refreshClientGroups } = useWorkspace();
   const [name, setName] = useState("");
+  const [logoFile, setLogoFile] = useState<File | null>(null);
+  const [logoPreview, setLogoPreview] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    if (open) {
+    if (!open) return;
+    if (editingGroup) {
+      setName(editingGroup.name);
+      setLogoFile(null);
+      setLogoPreview(editingGroup.logo_url || null);
+    } else {
       setName("");
-      setTimeout(() => inputRef.current?.focus(), 50);
+      setLogoFile(null);
+      setLogoPreview(null);
     }
-  }, [open]);
+    setTimeout(() => inputRef.current?.focus(), 50);
+  }, [open, editingGroup]);
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setLogoFile(file);
+    setLogoPreview(URL.createObjectURL(file));
+  };
+
+  const clearLogo = () => {
+    setLogoFile(null);
+    setLogoPreview(null);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  };
 
   const handleSave = async () => {
     if (!name.trim() || !activeProjectId) return;
     setSaving(true);
     try {
-      const group = await createClientGroup(activeProjectId, name.trim(), clientGroups.length);
-      await refreshClientGroups();
-      onCreated?.(group.id);
-      onOpenChange(false);
+      if (editingGroup) {
+        let logoUrl: string | null = editingGroup.logo_url || null;
+        if (logoFile) {
+          logoUrl = await uploadClientLogo(logoFile, `group-${editingGroup.id}`);
+        } else if (!logoPreview && editingGroup.logo_url) {
+          await deleteClientLogo(editingGroup.logo_url);
+          logoUrl = null;
+        }
+        await updateClientGroup(editingGroup.id, {
+          name: name.trim(),
+          logo_url: logoUrl,
+        });
+        await refreshClientGroups();
+        onOpenChange(false);
+      } else {
+        const group = await createClientGroup(activeProjectId, name.trim(), clientGroups.length);
+        if (logoFile) {
+          const logoUrl = await uploadClientLogo(logoFile, `group-${group.id}`);
+          await updateClientGroup(group.id, { logo_url: logoUrl });
+        }
+        await refreshClientGroups();
+        onCreated?.(group.id);
+        onOpenChange(false);
+      }
     } catch (error) {
-      console.error("Error creating client:", error);
-      toast.error("Failed to create client");
+      console.error("Error saving client:", error);
+      toast.error("Failed to save client");
     } finally {
       setSaving(false);
     }
@@ -56,13 +103,49 @@ export function ClientGroupDialog({ open, onOpenChange, onCreated }: ClientGroup
       >
         <form onSubmit={(e) => { e.preventDefault(); handleSave(); }} className="space-y-4">
           <input
-            ref={inputRef}
-            type="text"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            className="w-full text-lg font-semibold bg-transparent outline-none placeholder:text-white/20"
-            placeholder="Client name..."
+            ref={fileInputRef}
+            type="file"
+            accept="image/*,.svg"
+            onChange={handleFileSelect}
+            className="hidden"
           />
+          <div className="flex items-center gap-3">
+            {logoPreview ? (
+              <div className="group relative shrink-0">
+                <img
+                  src={logoPreview}
+                  alt="Logo preview"
+                  className="size-10 rounded-xl object-cover bg-white/5"
+                />
+                <button
+                  type="button"
+                  onClick={clearLogo}
+                  className="absolute -top-1 -right-1 size-4 rounded-full bg-white/10 hover:bg-red-500/80 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                  aria-label="Remove logo"
+                >
+                  <X className="size-2.5" />
+                </button>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                className="size-10 rounded-xl border-2 border-dashed border-white/10 bg-white/[0.03] flex items-center justify-center cursor-pointer shrink-0 transition-colors hover:border-white/20 hover:bg-white/[0.06]"
+                aria-label="Upload logo"
+              >
+                <Upload className="size-4 text-white/20" />
+              </button>
+            )}
+            <input
+              ref={inputRef}
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              className="flex-1 text-lg font-semibold bg-transparent outline-none placeholder:text-white/20"
+              placeholder="Client name..."
+            />
+          </div>
+
           <div className="flex justify-end gap-2 pt-2 border-t border-white/[0.06]">
             <Button variant="ghost" type="button" onClick={() => onOpenChange(false)}>
               Cancel
@@ -72,7 +155,7 @@ export function ClientGroupDialog({ open, onOpenChange, onCreated }: ClientGroup
               disabled={saving || !name.trim()}
               className="bg-white text-black hover:bg-white/90"
             >
-              {saving ? "Creating..." : "Add Client"}
+              {saving ? "Saving..." : editingGroup ? "Save" : "Add Client"}
             </Button>
           </div>
         </form>
