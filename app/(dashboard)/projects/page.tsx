@@ -389,7 +389,7 @@ export default function ProjectsPage() {
       },
     ],
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    []
+    [clientGroups]
   );
 
   const table = useReactTable({
