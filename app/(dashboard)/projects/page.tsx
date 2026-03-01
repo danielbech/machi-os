@@ -846,6 +846,7 @@ function ProjectsTab() {
                 </div>
               )}
               <span className="font-medium">
+                {group && <><span className="text-white/40">{group.name}</span><span className="text-white/15 mx-1">/</span></>}
                 {client.name}
               </span>
             </div>
