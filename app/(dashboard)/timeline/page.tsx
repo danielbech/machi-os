@@ -240,7 +240,7 @@ export default function TimelinePage() {
   const [editIcon, setEditIcon] = useState("");
   const [editSaving, setEditSaving] = useState(false);
 
-  const activeClients = clients.filter((c) => c.status !== "idle");
+  const activeClients = clients.filter((c) => c.active);
   const clientsOnTimeline = new Set(
     entries.filter((e) => e.client_id).map((e) => e.client_id)
   );
@@ -253,7 +253,7 @@ export default function TimelinePage() {
   // Split entries into parents and children, optionally filtering by active clients
   const { parentEntries, childrenMap } = useMemo(() => {
     const activeClientIds = activeOnly
-      ? new Set(clients.filter((c) => c.status !== "idle").map((c) => c.id))
+      ? new Set(clients.filter((c) => c.active).map((c) => c.id))
       : null;
 
     const parents: TimelineEntry[] = [];

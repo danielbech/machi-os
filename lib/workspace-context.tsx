@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useState, useEffect, useCallback, useMemo } from "react";
 import type { User } from "@supabase/supabase-js";
-import type { Project, Client, ClientGroup, Member, WeekMode, DayName, BoardColumn } from "@/lib/types";
+import type { Project, Client, ClientGroup, ClientStatusDef, Member, WeekMode, DayName, BoardColumn } from "@/lib/types";
 import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
 import { initializeUserData, getAreaIdForProject } from "@/lib/supabase/initialize";
@@ -11,6 +11,7 @@ import type { MyPendingInvite } from "@/lib/supabase/workspace";
 import { loadWorkspaceProfiles } from "@/lib/supabase/profiles";
 import { loadClients } from "@/lib/supabase/clients";
 import { loadClientGroups } from "@/lib/supabase/client-groups";
+import { loadClientStatuses, seedDefaultStatuses } from "@/lib/supabase/client-statuses";
 import { transitionWeek } from "@/lib/supabase/tasks-simple";
 import { loadBoardColumns, createBoardColumn, updateBoardColumn, deleteBoardColumn } from "@/lib/supabase/board-columns";
 
@@ -25,6 +26,8 @@ interface WorkspaceContextValue {
   refreshClients: () => Promise<void>;
   clientGroups: ClientGroup[];
   refreshClientGroups: () => Promise<void>;
+  clientStatuses: ClientStatusDef[];
+  refreshClientStatuses: () => Promise<void>;
   teamMembers: Member[];
   refreshTeamMembers: () => Promise<void>;
   // Weekly transition
@@ -106,6 +109,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
   const [activeProjectId, setActiveProjectIdState] = useState<string | null>(null);
   const [clients, setClients] = useState<Client[]>([]);
   const [clientGroups, setClientGroups] = useState<ClientGroup[]>([]);
+  const [clientStatuses, setClientStatuses] = useState<ClientStatusDef[]>([]);
   const [teamMembers, setTeamMembers] = useState<Member[]>([]);
   const [areaId, setAreaId] = useState<string | null>(null);
   const [pendingInvites, setPendingInvites] = useState<MyPendingInvite[]>([]);
@@ -179,6 +183,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
       setActiveProjectIdState(null);
       setClients([]);
       setClientGroups([]);
+      setClientStatuses([]);
       setPendingInvites([]);
       return;
     }
@@ -355,9 +360,27 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     }
   }, [activeProjectId]);
 
+  // Load client statuses when active project changes
+  const refreshClientStatuses = useCallback(async () => {
+    if (!activeProjectId) {
+      setClientStatuses([]);
+      return;
+    }
+    try {
+      let data = await loadClientStatuses(activeProjectId);
+      if (data.length === 0) {
+        data = await seedDefaultStatuses(activeProjectId);
+      }
+      setClientStatuses(data);
+    } catch (error) {
+      console.error("Error loading client statuses:", error);
+    }
+  }, [activeProjectId]);
+
   useEffect(() => {
     refreshClients();
     refreshClientGroups();
+    refreshClientStatuses();
     if (activeProjectId) {
       loadWorkspaceProfiles(activeProjectId).then(setTeamMembers).catch(() => setTeamMembers([]));
       getAreaIdForProject(activeProjectId).then(setAreaId);
@@ -369,7 +392,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
       setAreaId(null);
       setBoardColumns([]);
     }
-  }, [refreshClients, refreshClientGroups, activeProjectId, weekMode, refreshBoardColumns]);
+  }, [refreshClients, refreshClientGroups, refreshClientStatuses, activeProjectId, weekMode, refreshBoardColumns]);
 
   // --- Weekly Transition ---
 
@@ -418,7 +441,8 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
 
   const value = useMemo(() => ({
     user, loading, userProjects, activeProjectId, setActiveProjectId,
-    activeProject, clients, refreshClients, clientGroups, refreshClientGroups, teamMembers, refreshTeamMembers,
+    activeProject, clients, refreshClients, clientGroups, refreshClientGroups,
+    clientStatuses, refreshClientStatuses, teamMembers, refreshTeamMembers,
     transitionToNextWeek, transitionDay, transitionHour, transitionCount,
     setTransitionSchedule, displayMonday, weekMode, setWeekMode, weekDays,
     showCheckmarks, setShowCheckmarks,
@@ -427,7 +451,8 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     pendingInvites, acceptInvite: handleAcceptInvite, declineInvite: handleDeclineInvite,
   }), [
     user, loading, userProjects, activeProjectId, setActiveProjectId,
-    activeProject, clients, refreshClients, clientGroups, refreshClientGroups, teamMembers, refreshTeamMembers,
+    activeProject, clients, refreshClients, clientGroups, refreshClientGroups,
+    clientStatuses, refreshClientStatuses, teamMembers, refreshTeamMembers,
     transitionToNextWeek, transitionDay, transitionHour, transitionCount,
     setTransitionSchedule, displayMonday, weekMode, setWeekMode, weekDays,
     showCheckmarks, setShowCheckmarks,

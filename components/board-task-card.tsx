@@ -186,7 +186,7 @@ export const BoardTaskCard = memo(function BoardTaskCard({
             onToggleAssignee(item.id, teamMembers[memberIndex].id);
           }
         } else {
-          const matches = clients.filter((c) => c.name.charAt(0).toLowerCase() === key.toLowerCase() && c.status !== "idle");
+          const matches = clients.filter((c) => c.name.charAt(0).toLowerCase() === key.toLowerCase() && c.active);
           if (matches.length > 0) {
             e.preventDefault();
             const currentIdx = matches.findIndex((c) => c.id === item.client);

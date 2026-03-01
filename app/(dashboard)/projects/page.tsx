@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { toast } from "sonner";
 import {
   useReactTable,
@@ -18,7 +18,8 @@ import { deleteClientGroup } from "@/lib/supabase/client-groups";
 import { ClientGroupDialog } from "@/components/client-group-dialog";
 import { CLIENT_DOT_COLORS } from "@/lib/colors";
 import { ClientIcon } from "@/components/client-icon";
-import type { Client, ClientGroup, ClientStatus } from "@/lib/types";
+import type { Client, ClientGroup, ClientStatusDef } from "@/lib/types";
+import { createClientStatus, updateClientStatus, deleteClientStatus } from "@/lib/supabase/client-statuses";
 import { ProjectDialog } from "@/components/project-dialog";
 import {
   Table,
@@ -65,42 +66,68 @@ import {
 
 // ─── Shared helpers ──────────────────────────────────────────────────────────
 
-const STATUS_OPTIONS = ["all", "active", "upcoming", "expected", "idle"] as const;
-
-const STATUS_BADGE_STYLES: Record<ClientStatus, string> = {
-  active: "bg-green-500/10 text-green-400 border-green-500/20",
-  upcoming: "bg-blue-500/10 text-blue-400 border-blue-500/20",
-  expected: "bg-amber-500/10 text-amber-400 border-amber-500/20",
-  idle: "bg-white/5 text-white/30 border-white/10",
+const STATUS_COLOR_STYLES: Record<string, string> = {
+  green: "bg-green-500/10 text-green-400 border-green-500/20",
+  blue: "bg-blue-500/10 text-blue-400 border-blue-500/20",
+  amber: "bg-amber-500/10 text-amber-400 border-amber-500/20",
+  red: "bg-red-500/10 text-red-400 border-red-500/20",
+  purple: "bg-purple-500/10 text-purple-400 border-purple-500/20",
+  cyan: "bg-cyan-500/10 text-cyan-400 border-cyan-500/20",
+  pink: "bg-pink-500/10 text-pink-400 border-pink-500/20",
+  orange: "bg-orange-500/10 text-orange-400 border-orange-500/20",
+  gray: "bg-white/5 text-white/30 border-white/10",
 };
 
-const STATUS_LABELS: Record<ClientStatus, string> = {
-  active: "Active",
-  upcoming: "Upcoming",
-  expected: "Expected",
-  idle: "Idle",
+const STATUS_DOT_COLORS: Record<string, string> = {
+  green: "bg-green-500",
+  blue: "bg-blue-500",
+  amber: "bg-amber-500",
+  red: "bg-red-500",
+  purple: "bg-purple-500",
+  cyan: "bg-cyan-500",
+  pink: "bg-pink-500",
+  orange: "bg-orange-500",
+  gray: "bg-white/30",
 };
+
+const STATUS_COLOR_NAMES = Object.keys(STATUS_COLOR_STYLES);
+
+function getStatusBadgeStyle(color: string) {
+  return STATUS_COLOR_STYLES[color] || STATUS_COLOR_STYLES.gray;
+}
 
 function StatusFilter({
   value,
   onChange,
+  statuses,
 }: {
   value: string;
   onChange: (value: string) => void;
+  statuses: ClientStatusDef[];
 }) {
   return (
     <div className="flex items-center gap-0.5 rounded-md bg-white/5 p-0.5">
-      {STATUS_OPTIONS.map((opt) => (
+      <button
+        onClick={() => onChange("all")}
+        className={`px-2.5 py-1 rounded text-xs font-medium transition-all ${
+          value === "all"
+            ? "bg-white/10 text-white"
+            : "text-white/30 hover:text-white/50"
+        }`}
+      >
+        All
+      </button>
+      {statuses.map((s) => (
         <button
-          key={opt}
-          onClick={() => onChange(opt)}
-          className={`px-2.5 py-1 rounded text-xs font-medium transition-all capitalize ${
-            value === opt
+          key={s.id}
+          onClick={() => onChange(s.id)}
+          className={`px-2.5 py-1 rounded text-xs font-medium transition-all ${
+            value === s.id
               ? "bg-white/10 text-white"
               : "text-white/30 hover:text-white/50"
           }`}
         >
-          {opt}
+          {s.name}
         </button>
       ))}
     </div>
@@ -108,28 +135,35 @@ function StatusFilter({
 }
 
 function StatusPicker({
-  status,
+  statusId,
+  statuses,
   onChangeStatus,
 }: {
-  status: ClientStatus;
-  onChangeStatus: (status: ClientStatus) => void;
+  statusId?: string;
+  statuses: ClientStatusDef[];
+  onChangeStatus: (statusId: string) => void;
 }) {
+  const current = statuses.find((s) => s.id === statusId);
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <button className="focus:outline-none">
-          <Badge className={`${STATUS_BADGE_STYLES[status]} cursor-pointer hover:opacity-80 transition-opacity`}>
-            {STATUS_LABELS[status]}
-          </Badge>
+          {current ? (
+            <Badge className={`${getStatusBadgeStyle(current.color)} cursor-pointer hover:opacity-80 transition-opacity`}>
+              {current.name}
+            </Badge>
+          ) : (
+            <span className="text-xs text-white/20 cursor-pointer">None</span>
+          )}
         </button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="start" className="w-36">
-        {(Object.keys(STATUS_LABELS) as ClientStatus[]).map((s) => (
-          <DropdownMenuItem key={s} onClick={() => onChangeStatus(s)}>
-            <Badge className={`${STATUS_BADGE_STYLES[s]} text-[10px] px-1.5 py-0`}>
-              {STATUS_LABELS[s]}
+      <DropdownMenuContent align="start" className="w-40">
+        {statuses.map((s) => (
+          <DropdownMenuItem key={s.id} onClick={() => onChangeStatus(s.id)}>
+            <Badge className={`${getStatusBadgeStyle(s.color)} text-[10px] px-1.5 py-0`}>
+              {s.name}
             </Badge>
-            {status === s && <Check className="size-3.5 ml-auto" />}
+            {statusId === s.id && <Check className="size-3.5 ml-auto" />}
           </DropdownMenuItem>
         ))}
       </DropdownMenuContent>
@@ -403,10 +437,308 @@ function ClientsTab() {
   );
 }
 
+// ─── Statuses Tab ───────────────────────────────────────────────────────────
+
+function StatusesTab() {
+  const { activeProjectId, clientStatuses, refreshClientStatuses, clients } = useWorkspace();
+  const [editingStatus, setEditingStatus] = useState<ClientStatusDef | null>(null);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
+
+  const openAdd = () => {
+    setEditingStatus(null);
+    setDialogOpen(true);
+  };
+
+  const openEdit = (status: ClientStatusDef) => {
+    setEditingStatus(status);
+    setDialogOpen(true);
+  };
+
+  const handleDelete = async (statusId: string) => {
+    try {
+      await deleteClientStatus(statusId);
+      await refreshClientStatuses();
+      setDeleteConfirm(null);
+    } catch (error) {
+      console.error("Error deleting status:", error);
+      toast.error("Failed to delete status");
+    }
+  };
+
+  const projectCountByStatus = useMemo(() => {
+    const counts: Record<string, number> = {};
+    for (const c of clients) {
+      if (c.status_id) {
+        counts[c.status_id] = (counts[c.status_id] || 0) + 1;
+      }
+    }
+    return counts;
+  }, [clients]);
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <div className="text-xs text-white/30">
+          {clientStatuses.length} status{clientStatuses.length !== 1 ? "es" : ""}
+        </div>
+        <Button size="sm" onClick={openAdd}>
+          <Plus className="size-4" />
+          Add Status
+        </Button>
+      </div>
+
+      <div className="rounded-lg border border-white/[0.06] overflow-hidden">
+        <Table>
+          <TableHeader>
+            <TableRow className="border-white/[0.06] bg-white/[0.02] hover:bg-white/[0.02]">
+              <TableHead>Status</TableHead>
+              <TableHead>Projects</TableHead>
+              <TableHead>Visibility</TableHead>
+              <TableHead className="w-[50px]" />
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {clientStatuses.map((status) => (
+              <TableRow key={status.id}>
+                <TableCell>
+                  <Badge className={getStatusBadgeStyle(status.color)}>
+                    {status.name}
+                  </Badge>
+                </TableCell>
+                <TableCell>
+                  <span className="text-xs text-white/30">
+                    {projectCountByStatus[status.id] || 0}
+                  </span>
+                </TableCell>
+                <TableCell>
+                  <span className={`text-xs ${status.treat_as_active ? "text-white/50" : "text-white/20"}`}>
+                    {status.treat_as_active ? "Shown in board" : "Hidden from board"}
+                  </span>
+                </TableCell>
+                <TableCell>
+                  <div className="flex justify-end">
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="icon-xs"
+                          className="text-white/30 hover:text-white/60"
+                          aria-label={`Actions for ${status.name}`}
+                        >
+                          <MoreHorizontal className="size-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => openEdit(status)}>
+                          <Pencil className="size-4" />
+                          Edit
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem
+                          className="text-destructive"
+                          onClick={() => setDeleteConfirm(status.id)}
+                        >
+                          <Trash2 className="size-4" />
+                          Delete
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
+                </TableCell>
+              </TableRow>
+            ))}
+            {clientStatuses.length === 0 && (
+              <TableRow className="hover:bg-transparent">
+                <TableCell colSpan={4} className="h-24 text-center text-white/30">
+                  No statuses yet.
+                </TableCell>
+              </TableRow>
+            )}
+          </TableBody>
+        </Table>
+      </div>
+
+      <StatusDialog
+        open={dialogOpen}
+        onOpenChange={setDialogOpen}
+        editingStatus={editingStatus}
+      />
+
+      <Dialog
+        open={deleteConfirm !== null}
+        onOpenChange={() => setDeleteConfirm(null)}
+      >
+        <DialogContent className="sm:max-w-[360px]">
+          <DialogHeader>
+            <DialogTitle>Delete Status</DialogTitle>
+          </DialogHeader>
+          <div className="py-4 space-y-4">
+            <p className="text-sm text-white/60">
+              Are you sure you want to delete this status? Projects with this
+              status will become unset.
+            </p>
+            <div className="flex justify-end gap-2">
+              <Button
+                variant="ghost"
+                onClick={() => setDeleteConfirm(null)}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={() => deleteConfirm && handleDelete(deleteConfirm)}
+              >
+                Delete
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
+
+function StatusDialog({
+  open,
+  onOpenChange,
+  editingStatus,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  editingStatus?: ClientStatusDef | null;
+}) {
+  const { activeProjectId, clientStatuses, refreshClientStatuses } = useWorkspace();
+  const [name, setName] = useState("");
+  const [color, setColor] = useState("green");
+  const [treatAsActive, setTreatAsActive] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    if (editingStatus) {
+      setName(editingStatus.name);
+      setColor(editingStatus.color);
+      setTreatAsActive(editingStatus.treat_as_active);
+    } else {
+      setName("");
+      setColor("green");
+      setTreatAsActive(true);
+    }
+    setTimeout(() => inputRef.current?.focus(), 50);
+  }, [open, editingStatus]);
+
+  const handleSave = async () => {
+    if (!name.trim() || !activeProjectId) return;
+    setSaving(true);
+    try {
+      if (editingStatus) {
+        await updateClientStatus(editingStatus.id, {
+          name: name.trim(),
+          color,
+          treat_as_active: treatAsActive,
+        });
+      } else {
+        await createClientStatus(
+          activeProjectId,
+          name.trim(),
+          color,
+          clientStatuses.length,
+          treatAsActive,
+        );
+      }
+      await refreshClientStatuses();
+      onOpenChange(false);
+    } catch (error) {
+      console.error("Error saving status:", error);
+      toast.error("Failed to save status");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent
+        className="sm:max-w-[360px]"
+        onOpenAutoFocus={(e) => {
+          e.preventDefault();
+          inputRef.current?.focus();
+        }}
+      >
+        <form onSubmit={(e) => { e.preventDefault(); handleSave(); }} className="space-y-4">
+          <div className="flex items-center gap-3">
+            <Badge className={`${getStatusBadgeStyle(color)} shrink-0`}>
+              {name || "Preview"}
+            </Badge>
+            <input
+              ref={inputRef}
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              className="flex-1 text-lg font-semibold bg-transparent outline-none placeholder:text-white/20"
+              placeholder="Status name..."
+            />
+          </div>
+
+          <div className="flex items-center gap-2">
+            <label className="text-xs text-white/40">Color</label>
+            <div className="flex gap-1">
+              {STATUS_COLOR_NAMES.map((c) => (
+                <button
+                  key={c}
+                  type="button"
+                  onClick={() => setColor(c)}
+                  className={`size-5 rounded-full ${STATUS_DOT_COLORS[c]} transition-all ${
+                    color === c
+                      ? "ring-2 ring-white/80 ring-offset-1 ring-offset-background"
+                      : "opacity-40 hover:opacity-80"
+                  }`}
+                  title={c}
+                  aria-label={`Select ${c} color`}
+                />
+              ))}
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <label className="text-xs text-white/40">Board visibility</label>
+            <button
+              type="button"
+              onClick={() => setTreatAsActive(!treatAsActive)}
+              className={`px-2.5 py-1 rounded text-xs font-medium transition-all ${
+                treatAsActive
+                  ? "bg-green-500/10 text-green-400"
+                  : "bg-white/5 text-white/30"
+              }`}
+            >
+              {treatAsActive ? "Shown in board" : "Hidden from board"}
+            </button>
+          </div>
+
+          <div className="flex justify-end gap-2 pt-2 border-t border-white/[0.06]">
+            <Button variant="ghost" type="button" onClick={() => onOpenChange(false)}>
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              disabled={saving || !name.trim()}
+              className="bg-white text-black hover:bg-white/90"
+            >
+              {saving ? "Saving..." : editingStatus ? "Save" : "Add Status"}
+            </Button>
+          </div>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 // ─── Projects Tab ────────────────────────────────────────────────────────────
 
 function ProjectsTab() {
-  const { activeProjectId, clients, refreshClients, clientGroups, refreshClientGroups } = useWorkspace();
+  const { activeProjectId, clients, refreshClients, clientGroups, refreshClientGroups, clientStatuses, refreshClientStatuses } = useWorkspace();
 
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingClient, setEditingClient] = useState<Client | null>(null);
@@ -430,9 +762,13 @@ function ProjectsTab() {
     setDialogOpen(true);
   };
 
-  const handleChangeStatus = async (clientId: string, status: ClientStatus) => {
+  const handleChangeStatus = async (clientId: string, statusId: string) => {
     try {
-      await updateClientRecord(clientId, { status, active: status !== "idle" });
+      const statusDef = clientStatuses.find((s) => s.id === statusId);
+      await updateClientRecord(clientId, {
+        status_id: statusId,
+        active: statusDef?.treat_as_active ?? true,
+      });
       await refreshClients();
     } catch (error) {
       console.error("Error updating project status:", error);
@@ -476,7 +812,7 @@ function ProjectsTab() {
 
   const filteredClients = useMemo(() => {
     if (statusFilter === "all") return clients;
-    return clients.filter((c) => c.status === statusFilter);
+    return clients.filter((c) => c.status_id === statusFilter);
   }, [clients, statusFilter]);
 
   const columns = useMemo<ColumnDef<Client>[]>(
@@ -555,16 +891,22 @@ function ProjectsTab() {
         },
       },
       {
-        accessorKey: "status",
+        accessorKey: "status_id",
         header: "Status",
         cell: ({ row }) => {
           const client = row.original;
           return (
             <StatusPicker
-              status={client.status}
+              statusId={client.status_id}
+              statuses={clientStatuses}
               onChangeStatus={(s) => handleChangeStatus(client.id, s)}
             />
           );
+        },
+        sortingFn: (rowA, rowB) => {
+          const sA = clientStatuses.find((s) => s.id === rowA.original.status_id);
+          const sB = clientStatuses.find((s) => s.id === rowB.original.status_id);
+          return (sA?.sort_order ?? 99) - (sB?.sort_order ?? 99);
         },
       },
       {
@@ -607,7 +949,7 @@ function ProjectsTab() {
       },
     ],
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [clientGroups]
+    [clientGroups, clientStatuses]
   );
 
   const table = useReactTable({
@@ -673,10 +1015,16 @@ function ProjectsTab() {
               </button>
             )}
           </div>
-          <StatusFilter value={statusFilter} onChange={setStatusFilter} />
-          <div className="ml-auto text-xs text-white/30">
-            {table.getFilteredRowModel().rows.length} project
-            {table.getFilteredRowModel().rows.length !== 1 ? "s" : ""}
+          <StatusFilter value={statusFilter} onChange={setStatusFilter} statuses={clientStatuses} />
+          <div className="ml-auto flex items-center gap-3">
+            <span className="text-xs text-white/30">
+              {table.getFilteredRowModel().rows.length} project
+              {table.getFilteredRowModel().rows.length !== 1 ? "s" : ""}
+            </span>
+            <Button size="sm" onClick={openAdd}>
+              <Plus className="size-4" />
+              Add Project
+            </Button>
           </div>
         </div>
 
@@ -800,7 +1148,7 @@ function ProjectsTab() {
 export default function ProjectsPage() {
   const { activeProjectId } = useWorkspace();
   const [initialLoading, setInitialLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<"projects" | "clients">("projects");
+  const [activeTab, setActiveTab] = useState<"projects" | "clients" | "statuses">("projects");
 
   useEffect(() => {
     if (activeProjectId) setInitialLoading(false);
@@ -835,10 +1183,13 @@ export default function ProjectsPage() {
           <TabButton active={activeTab === "clients"} onClick={() => setActiveTab("clients")}>
             Clients
           </TabButton>
+          <TabButton active={activeTab === "statuses"} onClick={() => setActiveTab("statuses")}>
+            Statuses
+          </TabButton>
         </div>
       </div>
 
-      {activeTab === "projects" ? <ProjectsTab /> : <ClientsTab />}
+      {activeTab === "projects" ? <ProjectsTab /> : activeTab === "clients" ? <ClientsTab /> : <StatusesTab />}
     </main>
   );
 }

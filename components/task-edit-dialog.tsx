@@ -45,7 +45,7 @@ export function TaskEditDialog({ task, onClose, onSave, onTaskChange, folders }:
   const [uploadingCount, setUploadingCount] = useState(0);
   const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
   const dragCounter = useRef(0);
-  const activeClients = clients.filter((c) => c.status !== "idle");
+  const activeClients = clients.filter((c) => c.active);
   const selectedClient = activeClients.find((c) => c.id === task?.client);
   const clientFolders = folders?.filter((f) => f.client_id === task?.client) || [];
   const selectedFolder = clientFolders.find((f) => f.id === task?.folder_id);
