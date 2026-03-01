@@ -23,16 +23,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { iconNames } from "lucide-react/dynamic";
 
-function generateSlug(name: string, existingSlugs: string[]): string {
-  const first = name.charAt(0).toLowerCase();
-  if (first && !existingSlugs.includes(first)) return first;
-  const two = name.slice(0, 2).toLowerCase();
-  if (two.length === 2 && !existingSlugs.includes(two)) return two;
-  for (let i = 1; i <= 9; i++) {
-    const slug = `${first}${i}`;
-    if (!existingSlugs.includes(slug)) return slug;
-  }
-  return first;
+function generateSlug(name: string): string {
+  return name.charAt(0).toLowerCase() || "";
 }
 
 interface ProjectDialogProps {
@@ -97,10 +89,7 @@ export function ProjectDialog({ open, onOpenChange, editingClient = null }: Proj
 
   const handleNameChange = (name: string) => {
     setFormName(name);
-    const existingSlugs = clients
-      .filter((c) => c.id !== editingClient?.id)
-      .map((c) => c.slug);
-    setFormSlug(generateSlug(name, existingSlugs));
+    setFormSlug(generateSlug(name));
   };
 
   const handleSave = async () => {

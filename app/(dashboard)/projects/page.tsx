@@ -496,15 +496,6 @@ function ProjectsTab() {
         },
       },
       {
-        accessorKey: "slug",
-        header: "Shortcut",
-        cell: ({ getValue }) => (
-          <span className="text-xs text-white/30 font-mono">
-            {getValue<string>()}
-          </span>
-        ),
-      },
-      {
         accessorKey: "color",
         header: "Color",
         cell: ({ getValue }) => {
