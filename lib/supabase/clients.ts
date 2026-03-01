@@ -6,7 +6,7 @@ export async function loadClients(projectId: string): Promise<Client[]> {
 
   const { data, error } = await supabase
     .from('clients')
-    .select('id, project_id, name, slug, color, logo_url, icon, sort_order, active, status_id, client_group_id')
+    .select('*')
     .eq('project_id', projectId)
     .order('sort_order')
 
@@ -15,7 +15,7 @@ export async function loadClients(projectId: string): Promise<Client[]> {
     return []
   }
 
-  return (data || []).map(c => ({
+  return (data || []).map((c: any) => ({
     id: c.id,
     project_id: c.project_id,
     name: c.name,
@@ -36,20 +36,22 @@ export async function createClientRecord(
 ): Promise<Client> {
   const supabase = createClient()
 
+  const row: Record<string, any> = {
+    project_id: projectId,
+    name: client.name,
+    slug: client.slug,
+    color: client.color,
+    logo_url: client.logo_url || null,
+    icon: client.icon || null,
+    sort_order: client.sort_order,
+    active: client.active ?? true,
+    client_group_id: client.client_group_id || null,
+  }
+  if (client.status_id) row.status_id = client.status_id
+
   const { data, error } = await supabase
     .from('clients')
-    .insert({
-      project_id: projectId,
-      name: client.name,
-      slug: client.slug,
-      color: client.color,
-      logo_url: client.logo_url || null,
-      icon: client.icon || null,
-      sort_order: client.sort_order,
-      active: client.active ?? true,
-      status_id: client.status_id || null,
-      client_group_id: client.client_group_id || null,
-    })
+    .insert(row)
     .select()
     .single()
 
@@ -68,7 +70,7 @@ export async function createClientRecord(
     icon: data.icon || undefined,
     sort_order: data.sort_order,
     active: data.active ?? true,
-    status_id: data.status_id || undefined,
+    status_id: (data as any).status_id || undefined,
     client_group_id: data.client_group_id || undefined,
   }
 }
