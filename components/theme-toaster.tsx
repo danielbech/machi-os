@@ -31,6 +31,7 @@ export function ThemeToaster() {
           fontSize: "13px",
           padding: "10px 14px",
           width: "fit-content",
+          gap: "12px",
         },
         actionButtonStyle: {
           background: "var(--primary)",
