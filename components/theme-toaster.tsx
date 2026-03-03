@@ -28,10 +28,14 @@ export function ThemeToaster() {
           background: "var(--popover)",
           color: "var(--popover-foreground)",
           border: "1px solid var(--border)",
+          fontSize: "13px",
+          padding: "10px 14px",
         },
         actionButtonStyle: {
           background: "var(--primary)",
           color: "var(--primary-foreground)",
+          fontSize: "12px",
+          padding: "2px 8px",
         },
       }}
     />
