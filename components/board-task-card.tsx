@@ -185,6 +185,7 @@ export const BoardTaskCard = memo(function BoardTaskCard({
       }}
       onKeyDownCapture={(e: any) => {
         if (isEditingTitle) return;
+        if (e.repeat) return;
         const key = e.key;
         if ((e.metaKey || e.ctrlKey) && key === "c") {
           e.preventDefault();
