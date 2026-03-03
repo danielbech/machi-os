@@ -335,16 +335,21 @@ export const BoardTaskCard = memo(function BoardTaskCard({
                 {item.client ?
                   (() => {
                     const client = clients.find((c) => c.id === item.client);
-                    return client ? (
+                    if (!client) return <div />;
+                    const group = client.client_group_id ? clientGroups.find(g => g.id === client.client_group_id) : null;
+                    const displayName = group?.name || client.name;
+                    const displayLogo = group?.logo_url || client.logo_url;
+                    const displayIcon = !group?.logo_url ? client.icon : undefined;
+                    return (
                       <div className={`flex items-center gap-1.5 ${getClientTextClassName(client.color)} text-xs font-medium`}>
-                        {client.logo_url ? (
-                          <img src={client.logo_url} alt="" className="w-5 h-5 rounded-full object-cover" />
-                        ) : client.icon ? (
-                          <ClientIcon icon={client.icon} className="size-3.5" />
+                        {displayLogo ? (
+                          <img src={displayLogo} alt="" className="w-5 h-5 rounded-full object-cover" />
+                        ) : displayIcon ? (
+                          <ClientIcon icon={displayIcon} className="size-3.5" />
                         ) : null}
-                        {client.name}
+                        {displayName}
                       </div>
-                    ) : <div />;
+                    );
                   })()
                 : <div />}
                 <div className="flex items-center gap-1.5">

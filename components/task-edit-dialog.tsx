@@ -38,7 +38,7 @@ interface TaskEditDialogProps {
 }
 
 export function TaskEditDialog({ task, onClose, onSave, onTaskChange, folders }: TaskEditDialogProps) {
-  const { clients, teamMembers } = useWorkspace();
+  const { clients, clientGroups, teamMembers } = useWorkspace();
   const titleRef = useRef<HTMLInputElement>(null);
   const checklistRefs = useRef<Map<string, HTMLInputElement>>(new Map());
   const [isDragOver, setIsDragOver] = useState(false);
@@ -47,8 +47,38 @@ export function TaskEditDialog({ task, onClose, onSave, onTaskChange, folders }:
   const dragCounter = useRef(0);
   const activeClients = clients.filter((c) => c.active);
   const selectedClient = activeClients.find((c) => c.id === task?.client);
+  const selectedGroup = selectedClient?.client_group_id ? clientGroups.find(g => g.id === selectedClient.client_group_id) : null;
   const clientFolders = folders?.filter((f) => f.client_id === task?.client) || [];
   const selectedFolder = clientFolders.find((f) => f.id === task?.folder_id);
+
+  // Build dropdown items: one entry per client group (using first active client), plus ungrouped clients
+  const clientDropdownItems = (() => {
+    const items: { id: string; clientId: string; name: string; logo_url?: string; icon?: string }[] = [];
+    const usedGroupIds = new Set<string>();
+    for (const client of activeClients) {
+      if (client.client_group_id) {
+        if (usedGroupIds.has(client.client_group_id)) continue;
+        usedGroupIds.add(client.client_group_id);
+        const group = clientGroups.find(g => g.id === client.client_group_id);
+        items.push({
+          id: client.client_group_id,
+          clientId: client.id,
+          name: group?.name || client.name,
+          logo_url: group?.logo_url || client.logo_url,
+          icon: !group?.logo_url ? client.icon : undefined,
+        });
+      } else {
+        items.push({
+          id: client.id,
+          clientId: client.id,
+          name: client.name,
+          logo_url: client.logo_url,
+          icon: client.icon,
+        });
+      }
+    }
+    return items;
+  })();
   const assignedMembers = teamMembers.filter((m) => task?.assignees?.includes(m.id));
 
   const handleImageUpload = useCallback(async (files: File[]) => {
@@ -187,10 +217,10 @@ export function TaskEditDialog({ task, onClose, onSave, onTaskChange, folders }:
               />
             </div>
 
-            {/* Project, Folder, Assignees — compact row */}
+            {/* Client, Folder, Assignees — compact row */}
             {task.type !== "note" && (
               <div className="flex items-center gap-2 flex-wrap">
-                {/* Project */}
+                {/* Client */}
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <button
@@ -198,14 +228,23 @@ export function TaskEditDialog({ task, onClose, onSave, onTaskChange, folders }:
                       className="flex items-center gap-1.5 px-2 py-1 rounded-md border border-white/10 bg-white/[0.02] text-xs hover:bg-white/[0.04] hover:border-white/20 transition-colors"
                     >
                       {selectedClient ? (
-                        <>
-                          {selectedClient.logo_url && (
-                            <img src={selectedClient.logo_url} alt="" className="size-3.5 rounded-sm object-cover" />
-                          )}
-                          <span className="text-white/70">{selectedClient.name}</span>
-                        </>
+                        (() => {
+                          const logo = selectedGroup?.logo_url || selectedClient.logo_url;
+                          const icon = !selectedGroup?.logo_url ? selectedClient.icon : undefined;
+                          const name = selectedGroup?.name || selectedClient.name;
+                          return (
+                            <>
+                              {logo ? (
+                                <img src={logo} alt="" className="size-3.5 rounded-sm object-cover" />
+                              ) : icon ? (
+                                <ClientIcon icon={icon} className="size-3.5" />
+                              ) : null}
+                              <span className="text-white/70">{name}</span>
+                            </>
+                          );
+                        })()
                       ) : (
-                        <span className="text-white/25">Project</span>
+                        <span className="text-white/25">Client</span>
                       )}
                       <ChevronDown className="size-3 text-white/30" />
                     </button>
@@ -215,22 +254,22 @@ export function TaskEditDialog({ task, onClose, onSave, onTaskChange, folders }:
                       onClick={() => onTaskChange({ ...task, client: undefined })}
                       className="text-white/50"
                     >
-                      No project
+                      No client
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
-                    {activeClients.map((client) => (
+                    {clientDropdownItems.map((item) => (
                       <DropdownMenuItem
-                        key={client.id}
-                        onClick={() => onTaskChange({ ...task, client: client.id })}
+                        key={item.id}
+                        onClick={() => onTaskChange({ ...task, client: item.clientId })}
                         className="flex items-center gap-2"
                       >
-                        {client.logo_url ? (
-                          <img src={client.logo_url} alt="" className="size-4 rounded-sm object-cover shrink-0" />
-                        ) : client.icon ? (
-                          <ClientIcon icon={client.icon} className="size-3.5 shrink-0" />
+                        {item.logo_url ? (
+                          <img src={item.logo_url} alt="" className="size-4 rounded-sm object-cover shrink-0" />
+                        ) : item.icon ? (
+                          <ClientIcon icon={item.icon} className="size-3.5 shrink-0" />
                         ) : null}
-                        <span>{client.name}</span>
-                        {task.client === client.id && (
+                        <span>{item.name}</span>
+                        {task.client === item.clientId && (
                           <Circle className="size-2 fill-white ml-auto" />
                         )}
                       </DropdownMenuItem>
