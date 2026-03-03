@@ -352,7 +352,7 @@ export const BoardTaskCard = memo(function BoardTaskCard({
                     return (
                       <div className={`flex items-center gap-1.5 ${getClientTextClassName(client.color)} text-xs font-medium`}>
                         {displayLogo ? (
-                          <img src={displayLogo} alt="" className="w-5 h-5 rounded-full object-cover" />
+                          <img src={displayLogo} alt="" className="w-5 h-5 rounded-md object-cover" />
                         ) : displayIcon ? (
                           <ClientIcon icon={displayIcon} className="size-3.5" />
                         ) : null}
