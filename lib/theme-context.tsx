@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useCallback, useEffect, useState } from "react";
+import { createContext, useContext, useCallback, useEffect, useRef, useState } from "react";
 import { THEMES, getThemeById, type Theme } from "@/lib/themes";
 
 interface ThemeContextValue {
@@ -84,8 +84,17 @@ export function ThemeProvider({
   const resolvedId = workspaceThemeId || globalThemeId;
   const activeTheme = getThemeById(resolvedId) || THEMES[0];
 
-  // Apply CSS variables whenever theme changes
+  // On initial mount, the blocking script in <head> already applied the
+  // cached theme. Skip the first effect to avoid clearing those styles
+  // while activeProjectId is still loading (which would cause a flash).
+  const initialMount = useRef(true);
+
   useEffect(() => {
+    if (initialMount.current) {
+      initialMount.current = false;
+      const cached = localStorage.getItem(CACHE_KEY);
+      if (cached) return;
+    }
     if (resolvedId === "default") {
       clearInlineTheme();
     } else {

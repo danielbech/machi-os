@@ -199,11 +199,11 @@ export function TaskEditDialog({ task, onClose, onSave, onTaskChange, folders }:
                   <div
                     className={`flex size-5 items-center justify-center rounded-full border transition-all ${
                       task.completed
-                        ? "border-green-500/80 bg-green-500/80"
+                        ? "border-primary bg-primary"
                         : "border-foreground/20 hover:border-foreground/40"
                     }`}
                   >
-                    {task.completed && <Check className="size-3.5 text-white" strokeWidth={3} />}
+                    {task.completed && <Check className="size-3.5 text-primary-foreground" strokeWidth={3} />}
                   </div>
                 </button>
               )}
@@ -212,7 +212,7 @@ export function TaskEditDialog({ task, onClose, onSave, onTaskChange, folders }:
                 type="text"
                 value={task.title}
                 onChange={(e) => onTaskChange({ ...task, title: e.target.value })}
-                className={`flex-1 text-lg font-semibold bg-transparent outline-none placeholder:text-foreground/20 ${task.completed && task.type !== "note" ? "text-green-500" : ""}`}
+                className={`flex-1 text-lg font-semibold bg-transparent outline-none placeholder:text-foreground/20 ${task.completed && task.type !== "note" ? "text-primary" : ""}`}
                 placeholder={task.type === "note" ? "Note title..." : "Task title..."}
               />
             </div>
@@ -484,11 +484,11 @@ export function TaskEditDialog({ task, onClose, onSave, onTaskChange, folders }:
                       <div
                         className={`flex size-4 items-center justify-center rounded-full border transition-all ${
                           item.checked
-                            ? "border-green-500/80 bg-green-500/80"
+                            ? "border-primary bg-primary"
                             : "border-foreground/20 hover:border-foreground/40"
                         }`}
                       >
-                        {item.checked && <Check className="size-2.5 text-white" strokeWidth={3} />}
+                        {item.checked && <Check className="size-2.5 text-primary-foreground" strokeWidth={3} />}
                       </div>
                     </button>
                     <input
