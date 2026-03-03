@@ -26,8 +26,23 @@ import {
   DropdownMenuCheckboxItem,
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
-import { Check, ChevronDown, Circle, StickyNote, ListTodo, Folder, X, Plus, ImageIcon } from "lucide-react";
+import { Check, ChevronDown, Circle, StickyNote, ListTodo, Folder, X, Plus, ImageIcon, GripVertical } from "lucide-react";
 import { ClientIcon } from "@/components/client-icon";
+import {
+  DndContext,
+  type DragEndEvent,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  closestCenter,
+} from "@dnd-kit/core";
+import {
+  SortableContext,
+  verticalListSortingStrategy,
+  useSortable,
+  arrayMove,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 
 interface TaskEditDialogProps {
   task: Task | null;
@@ -454,140 +469,7 @@ export function TaskEditDialog({ task, onClose, onSave, onTaskChange, folders }:
             )}
 
             {/* Checklist */}
-            <div className="flex flex-col gap-2">
-              <div className="flex items-center justify-between">
-                <label className="text-sm font-medium">Checklist</label>
-                {task.checklist && task.checklist.length > 0 && (
-                  <span className="text-xs text-foreground/30 tabular-nums">
-                    {task.checklist.filter((i) => i.checked).length}/{task.checklist.length}
-                  </span>
-                )}
-              </div>
-              <div className="flex flex-col gap-1">
-                {(task.checklist || []).map((item, idx) => (
-                  <div key={item.id} className="group/item flex items-center gap-2 rounded-md bg-foreground/[0.04] px-2 py-1.5">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const updated = [...(task.checklist || [])];
-                        updated[idx] = { ...updated[idx], checked: !updated[idx].checked };
-                        const allChecked = updated.length > 0 && updated.every((i) => i.checked);
-                        const anyUnchecked = updated.some((i) => !i.checked);
-                        onTaskChange({
-                          ...task,
-                          checklist: updated,
-                          completed: task.type !== "note" ? (allChecked ? true : anyUnchecked ? false : task.completed) : task.completed,
-                        });
-                      }}
-                      className="shrink-0"
-                    >
-                      <div
-                        className={`flex size-4 items-center justify-center rounded-full border transition-all ${
-                          item.checked
-                            ? "border-primary bg-primary"
-                            : "border-foreground/20 hover:border-foreground/40"
-                        }`}
-                      >
-                        {item.checked && <Check className="size-2.5 text-primary-foreground" strokeWidth={3} />}
-                      </div>
-                    </button>
-                    <input
-                      type="text"
-                      value={item.text}
-                      ref={(el) => {
-                        if (el) checklistRefs.current.set(item.id, el);
-                        else checklistRefs.current.delete(item.id);
-                      }}
-                      onChange={(e) => {
-                        const updated = [...(task.checklist || [])];
-                        updated[idx] = { ...updated[idx], text: e.target.value };
-                        onTaskChange({ ...task, checklist: updated });
-                      }}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter") {
-                          e.preventDefault();
-                          const newItem: ChecklistItem = { id: crypto.randomUUID(), text: "", checked: false };
-                          const updated = [...(task.checklist || [])];
-                          updated.splice(idx + 1, 0, newItem);
-                          onTaskChange({
-                            ...task,
-                            checklist: updated,
-                            completed: task.type !== "note" ? false : task.completed,
-                          });
-                          requestAnimationFrame(() => {
-                            checklistRefs.current.get(newItem.id)?.focus();
-                          });
-                        } else if (e.key === "Backspace" && item.text === "") {
-                          e.preventDefault();
-                          const updated = (task.checklist || []).filter((_, i) => i !== idx);
-                          const allChecked = updated.length > 0 && updated.every((i) => i.checked);
-                          onTaskChange({
-                            ...task,
-                            checklist: updated,
-                            completed: task.type !== "note" && updated.length > 0 ? allChecked : task.completed,
-                          });
-                          const prevItem = (task.checklist || [])[idx - 1];
-                          if (prevItem) {
-                            requestAnimationFrame(() => {
-                              const el = checklistRefs.current.get(prevItem.id);
-                              if (el) {
-                                el.focus();
-                                el.setSelectionRange(el.value.length, el.value.length);
-                              }
-                            });
-                          }
-                        } else if (e.key === "ArrowUp") {
-                          e.preventDefault();
-                          const prevItem = (task.checklist || [])[idx - 1];
-                          if (prevItem) checklistRefs.current.get(prevItem.id)?.focus();
-                        } else if (e.key === "ArrowDown") {
-                          e.preventDefault();
-                          const nextItem = (task.checklist || [])[idx + 1];
-                          if (nextItem) checklistRefs.current.get(nextItem.id)?.focus();
-                        }
-                      }}
-                      className={`flex-1 text-sm bg-transparent outline-none placeholder:text-foreground/20 ${
-                        item.checked ? "line-through text-foreground/30" : ""
-                      }`}
-                      placeholder="Item..."
-                    />
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const updated = (task.checklist || []).filter((_, i) => i !== idx);
-                        const allChecked = updated.length > 0 && updated.every((i) => i.checked);
-                        onTaskChange({
-                          ...task,
-                          checklist: updated,
-                          completed: task.type !== "note" && updated.length > 0 ? allChecked : task.completed,
-                        });
-                      }}
-                      className="shrink-0 opacity-0 group-hover/item:opacity-100 transition-opacity p-0.5 rounded hover:bg-foreground/10"
-                    >
-                      <X className="size-3 text-foreground/30" />
-                    </button>
-                  </div>
-                ))}
-              </div>
-              <button
-                type="button"
-                onClick={() => {
-                  const newItem: ChecklistItem = { id: crypto.randomUUID(), text: "", checked: false };
-                  onTaskChange({
-                    ...task,
-                    checklist: [...(task.checklist || []), newItem],
-                    completed: task.type !== "note" ? false : task.completed,
-                  });
-                  requestAnimationFrame(() => {
-                    checklistRefs.current.get(newItem.id)?.focus();
-                  });
-                }}
-                className="flex items-center gap-1.5 text-xs text-foreground/30 hover:text-foreground/50 transition-colors w-fit"
-              >
-                <Plus className="size-3" />
-                Add item
-              </button>
-            </div>
+            <ChecklistSection task={task} onTaskChange={onTaskChange} checklistRefs={checklistRefs} />
 
             {/* Actions */}
             <div className="flex justify-end gap-2 pt-4">
@@ -610,6 +492,225 @@ export function TaskEditDialog({ task, onClose, onSave, onTaskChange, folders }:
       document.body
     )}
   </>
+  );
+}
+
+function SortableChecklistItem({
+  item,
+  idx,
+  task,
+  onTaskChange,
+  checklistRefs,
+}: {
+  item: ChecklistItem;
+  idx: number;
+  task: Task;
+  onTaskChange: (task: Task) => void;
+  checklistRefs: React.RefObject<Map<string, HTMLInputElement>>;
+}) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: item.id });
+
+  const style: React.CSSProperties = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.4 : undefined,
+    zIndex: isDragging ? 10 : undefined,
+  };
+
+  return (
+    <div ref={setNodeRef} style={style} className="group/item flex items-center gap-1 rounded-md bg-muted/50 px-1 py-1.5">
+      <button
+        type="button"
+        className="shrink-0 cursor-grab active:cursor-grabbing touch-none p-0.5 text-foreground/15 hover:text-foreground/30 transition-colors"
+        aria-label="Drag to reorder"
+        {...attributes}
+        {...listeners}
+      >
+        <GripVertical className="size-3" />
+      </button>
+      <button
+        type="button"
+        onClick={() => {
+          const updated = [...(task.checklist || [])];
+          updated[idx] = { ...updated[idx], checked: !updated[idx].checked };
+          const allChecked = updated.length > 0 && updated.every((i) => i.checked);
+          const anyUnchecked = updated.some((i) => !i.checked);
+          onTaskChange({
+            ...task,
+            checklist: updated,
+            completed: task.type !== "note" ? (allChecked ? true : anyUnchecked ? false : task.completed) : task.completed,
+          });
+        }}
+        className="shrink-0"
+      >
+        <div
+          className={`flex size-4 items-center justify-center rounded-full border transition-all ${
+            item.checked
+              ? "border-primary bg-primary"
+              : "border-foreground/20 hover:border-foreground/40"
+          }`}
+        >
+          {item.checked && <Check className="size-2.5 text-primary-foreground" strokeWidth={3} />}
+        </div>
+      </button>
+      <input
+        type="text"
+        value={item.text}
+        ref={(el) => {
+          if (el) checklistRefs.current.set(item.id, el);
+          else checklistRefs.current.delete(item.id);
+        }}
+        onChange={(e) => {
+          const updated = [...(task.checklist || [])];
+          updated[idx] = { ...updated[idx], text: e.target.value };
+          onTaskChange({ ...task, checklist: updated });
+        }}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") {
+            e.preventDefault();
+            const newItem: ChecklistItem = { id: crypto.randomUUID(), text: "", checked: false };
+            const updated = [...(task.checklist || [])];
+            updated.splice(idx + 1, 0, newItem);
+            onTaskChange({
+              ...task,
+              checklist: updated,
+              completed: task.type !== "note" ? false : task.completed,
+            });
+            requestAnimationFrame(() => {
+              checklistRefs.current.get(newItem.id)?.focus();
+            });
+          } else if (e.key === "Backspace" && item.text === "") {
+            e.preventDefault();
+            const updated = (task.checklist || []).filter((_, i) => i !== idx);
+            const allChecked = updated.length > 0 && updated.every((i) => i.checked);
+            onTaskChange({
+              ...task,
+              checklist: updated,
+              completed: task.type !== "note" && updated.length > 0 ? allChecked : task.completed,
+            });
+            const prevItem = (task.checklist || [])[idx - 1];
+            if (prevItem) {
+              requestAnimationFrame(() => {
+                const el = checklistRefs.current.get(prevItem.id);
+                if (el) {
+                  el.focus();
+                  el.setSelectionRange(el.value.length, el.value.length);
+                }
+              });
+            }
+          } else if (e.key === "ArrowUp") {
+            e.preventDefault();
+            const prevItem = (task.checklist || [])[idx - 1];
+            if (prevItem) checklistRefs.current.get(prevItem.id)?.focus();
+          } else if (e.key === "ArrowDown") {
+            e.preventDefault();
+            const nextItem = (task.checklist || [])[idx + 1];
+            if (nextItem) checklistRefs.current.get(nextItem.id)?.focus();
+          }
+        }}
+        className={`flex-1 text-sm bg-transparent outline-none placeholder:text-foreground/20 ${
+          item.checked ? "line-through text-foreground/30" : ""
+        }`}
+        placeholder="Item..."
+      />
+      <button
+        type="button"
+        onClick={() => {
+          const updated = (task.checklist || []).filter((_, i) => i !== idx);
+          const allChecked = updated.length > 0 && updated.every((i) => i.checked);
+          onTaskChange({
+            ...task,
+            checklist: updated,
+            completed: task.type !== "note" && updated.length > 0 ? allChecked : task.completed,
+          });
+        }}
+        className="shrink-0 opacity-0 group-hover/item:opacity-100 transition-opacity p-0.5 rounded hover:bg-foreground/10"
+      >
+        <X className="size-3 text-foreground/30" />
+      </button>
+    </div>
+  );
+}
+
+function ChecklistSection({
+  task,
+  onTaskChange,
+  checklistRefs,
+}: {
+  task: Task;
+  onTaskChange: (task: Task) => void;
+  checklistRefs: React.RefObject<Map<string, HTMLInputElement>>;
+}) {
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
+  );
+
+  const items = task.checklist || [];
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+
+    const oldIndex = items.findIndex((i) => i.id === active.id);
+    const newIndex = items.findIndex((i) => i.id === over.id);
+    if (oldIndex === -1 || newIndex === -1) return;
+
+    const reordered = arrayMove(items, oldIndex, newIndex);
+    onTaskChange({ ...task, checklist: reordered });
+  };
+
+  return (
+    <div className="flex flex-col gap-2">
+      <div className="flex items-center justify-between">
+        <label className="text-sm font-medium">Checklist</label>
+        {items.length > 0 && (
+          <span className="text-xs text-foreground/30 tabular-nums">
+            {items.filter((i) => i.checked).length}/{items.length}
+          </span>
+        )}
+      </div>
+      <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+        <SortableContext items={items.map((i) => i.id)} strategy={verticalListSortingStrategy}>
+          <div className="flex flex-col gap-1">
+            {items.map((item, idx) => (
+              <SortableChecklistItem
+                key={item.id}
+                item={item}
+                idx={idx}
+                task={task}
+                onTaskChange={onTaskChange}
+                checklistRefs={checklistRefs}
+              />
+            ))}
+          </div>
+        </SortableContext>
+      </DndContext>
+      <button
+        type="button"
+        onClick={() => {
+          const newItem: ChecklistItem = { id: crypto.randomUUID(), text: "", checked: false };
+          onTaskChange({
+            ...task,
+            checklist: [...items, newItem],
+            completed: task.type !== "note" ? false : task.completed,
+          });
+          requestAnimationFrame(() => {
+            checklistRefs.current.get(newItem.id)?.focus();
+          });
+        }}
+        className="flex items-center gap-1.5 text-xs text-foreground/30 hover:text-foreground/50 transition-colors w-fit"
+      >
+        <Plus className="size-3" />
+        Add item
+      </button>
+    </div>
   );
 }
 
