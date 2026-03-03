@@ -1138,8 +1138,8 @@ export const GanttFeatureItemCard: FC<GanttFeatureItemCardProps> = ({
     <Card
       className={cn(
         "relative h-full w-full rounded-md bg-background p-2 text-xs shadow-sm transition-colors cursor-pointer overflow-hidden",
-        !accentColor && "border-foreground/10 hover:border-foreground/20",
-        selected && !accentColor && "ring-1 ring-foreground/20 border-foreground/20",
+        !accentColor && "border-foreground/[0.06] hover:border-foreground/10",
+        selected && !accentColor && "ring-1 ring-foreground/15 border-foreground/15",
         selected && accentColor && "ring-1"
       )}
       style={{
