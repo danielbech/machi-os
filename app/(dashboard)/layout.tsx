@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { WorkspaceProvider, useWorkspace } from "@/lib/workspace-context";
 import { BacklogProvider, useBacklog } from "@/lib/backlog-context";
 import { CalendarProvider } from "@/lib/calendar-context";
+import { ThemeProvider } from "@/lib/theme-context";
 import { AuthForm } from "@/components/auth-form";
 import { AppSidebar } from "@/components/app-sidebar";
 import { SidebarProvider, SidebarInset, SidebarTrigger } from "@/components/ui/sidebar";
@@ -14,6 +15,11 @@ import { ErrorBoundary } from "@/components/error-boundary";
 import { CursorOverlay } from "@/components/cursor-overlay";
 import { WelcomeDialog } from "@/components/welcome-dialog";
 import { PendingInvitesDialog } from "@/components/pending-invites-dialog";
+
+function ThemeBridge({ children }: { children: React.ReactNode }) {
+  const { activeProjectId } = useWorkspace();
+  return <ThemeProvider activeProjectId={activeProjectId}>{children}</ThemeProvider>;
+}
 
 function DashboardGate({ children }: { children: React.ReactNode }) {
   const { user, loading, pendingInvites } = useWorkspace();
@@ -76,11 +82,13 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   return (
     <ErrorBoundary>
       <WorkspaceProvider>
-        <CalendarProvider>
-          <BacklogProvider>
-            <DashboardGate>{children}</DashboardGate>
-          </BacklogProvider>
-        </CalendarProvider>
+        <ThemeBridge>
+          <CalendarProvider>
+            <BacklogProvider>
+              <DashboardGate>{children}</DashboardGate>
+            </BacklogProvider>
+          </CalendarProvider>
+        </ThemeBridge>
       </WorkspaceProvider>
     </ErrorBoundary>
   );

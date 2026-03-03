@@ -8,6 +8,8 @@ import { removeUserFromWorkspace, getPendingInvites, cancelInvite, updateWorkspa
 import { loadCurrentProfile, updateProfile, uploadAvatar } from "@/lib/supabase/profiles";
 import { uploadWorkspaceLogo, deleteWorkspaceLogo } from "@/lib/supabase/storage";
 import { WORKSPACE_COLORS } from "@/lib/colors";
+import { THEMES } from "@/lib/themes";
+import { useTheme } from "@/lib/theme-context";
 import { countOrphanedTasks, migrateBoardTasks } from "@/lib/supabase/tasks-simple";
 import type { PendingInvite, WeekMode, Project, BoardColumn } from "@/lib/types";
 import type { ConnectionWithCalendars } from "@/lib/calendar-context";
@@ -20,7 +22,7 @@ import {
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { RefreshCw, Plus, X, ChevronDown, Camera, User as UserIcon, Trash2, GitCommitHorizontal } from "lucide-react";
+import { RefreshCw, Plus, X, ChevronDown, Camera, User as UserIcon, Trash2, GitCommitHorizontal, Check } from "lucide-react";
 
 interface SettingsDialogProps {
   open: boolean;
@@ -58,6 +60,89 @@ interface SettingsDialogProps {
   refreshWorkspaces?: () => Promise<void>;
   userProjectCount: number;
   defaultTab?: string;
+}
+
+function ThemeTabContent({ activeProject }: { activeProject?: Project }) {
+  const { globalThemeId, workspaceThemeId, setGlobalTheme, setWorkspaceTheme } = useTheme();
+  const hasOverride = workspaceThemeId !== null;
+  const activeId = workspaceThemeId || globalThemeId;
+
+  return (
+    <TabsContent value="theme" className="flex-1 min-h-0 overflow-y-auto">
+      <div className="space-y-6 py-4">
+        {/* Scope toggle */}
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <h3 className="text-sm font-medium">Colour theme</h3>
+            {activeProject && (
+              <button
+                type="button"
+                onClick={() => {
+                  if (hasOverride) {
+                    setWorkspaceTheme(null);
+                  } else {
+                    setWorkspaceTheme(globalThemeId);
+                  }
+                }}
+                className={`text-xs px-2 py-1 rounded-md transition-colors ${
+                  hasOverride
+                    ? "bg-foreground/10 text-foreground/80"
+                    : "text-foreground/40 hover:text-foreground/60"
+                }`}
+              >
+                {hasOverride ? `This workspace only` : "All workspaces"}
+              </button>
+            )}
+          </div>
+          <p className="text-xs text-foreground/40">
+            {hasOverride
+              ? `Theme applies to "${activeProject?.name || "this workspace"}" only. Other workspaces use the global theme.`
+              : "Theme applies to all your workspaces."}
+          </p>
+        </div>
+
+        {/* Theme grid */}
+        <div className="grid grid-cols-3 gap-3">
+          {THEMES.map((theme) => {
+            const isActive = theme.id === activeId;
+            return (
+              <button
+                key={theme.id}
+                type="button"
+                onClick={() => {
+                  if (hasOverride) {
+                    setWorkspaceTheme(theme.id);
+                  } else {
+                    setGlobalTheme(theme.id);
+                  }
+                }}
+                className={`group relative rounded-lg border p-1 transition-colors text-left ${
+                  isActive
+                    ? "border-foreground/20 bg-foreground/[0.04]"
+                    : "border-foreground/[0.06] hover:border-foreground/10"
+                }`}
+              >
+                {/* Preview */}
+                <div
+                  className="rounded-md h-16 w-full flex items-end p-2 gap-1.5"
+                  style={{ backgroundColor: theme.preview[0] }}
+                >
+                  <div className="h-3 w-8 rounded-sm" style={{ backgroundColor: theme.preview[1] }} />
+                  <div className="h-3 w-5 rounded-sm" style={{ backgroundColor: theme.preview[1] }} />
+                  <div className="flex-1" />
+                  <div className="h-2 w-2 rounded-full" style={{ backgroundColor: theme.preview[2] }} />
+                </div>
+                <div className="flex items-center justify-between px-1 py-1.5">
+                  <span className="text-xs text-foreground/70">{theme.name}</span>
+                  {isActive && <Check className="size-3 text-foreground/50" />}
+                </div>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    </TabsContent>
+  );
 }
 
 export function SettingsDialog({
@@ -350,6 +435,7 @@ export function SettingsDialog({
             <TabsTrigger value="workspace" className="text-foreground/40 data-[state=active]:text-white">Workspace</TabsTrigger>
             <TabsTrigger value="general" className="text-foreground/40 data-[state=active]:text-white">General</TabsTrigger>
             <TabsTrigger value="calendar" className="text-foreground/40 data-[state=active]:text-white">Integrations</TabsTrigger>
+            <TabsTrigger value="theme" className="text-foreground/40 data-[state=active]:text-white">Theme</TabsTrigger>
             <TabsTrigger value="about" className="text-foreground/40 data-[state=active]:text-white">About</TabsTrigger>
           </TabsList>
 
@@ -1181,6 +1267,9 @@ export function SettingsDialog({
               )}
             </div>
           </TabsContent>
+          {/* Theme Tab */}
+          <ThemeTabContent activeProject={activeProject} />
+
           {/* About Tab */}
           <TabsContent value="about" className="flex-1 min-h-0 overflow-y-auto">
             <div className="space-y-6 py-4">
