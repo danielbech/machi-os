@@ -16,7 +16,7 @@ import { useWorkspace } from "@/lib/workspace-context";
 import { updateClientRecord, deleteClientRecord } from "@/lib/supabase/clients";
 import { deleteClientGroup } from "@/lib/supabase/client-groups";
 import { ClientGroupDialog } from "@/components/client-group-dialog";
-import { CLIENT_DOT_COLORS } from "@/lib/colors";
+import { CLIENT_DOT_COLORS, BADGE_COLOR_STYLES, getBadgeColorStyle, COLOR_NAMES } from "@/lib/colors";
 import { ClientIcon } from "@/components/client-icon";
 import type { Client, ClientGroup, ClientStatusDef } from "@/lib/types";
 import { createClientStatus, updateClientStatus, deleteClientStatus } from "@/lib/supabase/client-statuses";
@@ -66,35 +66,7 @@ import {
 
 // ─── Shared helpers ──────────────────────────────────────────────────────────
 
-const STATUS_COLOR_STYLES: Record<string, string> = {
-  green: "bg-green-500/10 text-green-400 border-green-500/20",
-  blue: "bg-blue-500/10 text-blue-400 border-blue-500/20",
-  amber: "bg-amber-500/10 text-amber-400 border-amber-500/20",
-  red: "bg-red-500/10 text-red-400 border-red-500/20",
-  purple: "bg-purple-500/10 text-purple-400 border-purple-500/20",
-  cyan: "bg-cyan-500/10 text-cyan-400 border-cyan-500/20",
-  pink: "bg-pink-500/10 text-pink-400 border-pink-500/20",
-  orange: "bg-orange-500/10 text-orange-400 border-orange-500/20",
-  gray: "bg-white/5 text-white/30 border-white/10",
-};
-
-const STATUS_DOT_COLORS: Record<string, string> = {
-  green: "bg-green-500",
-  blue: "bg-blue-500",
-  amber: "bg-amber-500",
-  red: "bg-red-500",
-  purple: "bg-purple-500",
-  cyan: "bg-cyan-500",
-  pink: "bg-pink-500",
-  orange: "bg-orange-500",
-  gray: "bg-white/30",
-};
-
-const STATUS_COLOR_NAMES = Object.keys(STATUS_COLOR_STYLES);
-
-function getStatusBadgeStyle(color: string) {
-  return STATUS_COLOR_STYLES[color] || STATUS_COLOR_STYLES.gray;
-}
+// Status colors use the central BADGE_COLOR_STYLES, CLIENT_DOT_COLORS, and COLOR_NAMES from lib/colors.ts
 
 function StatusFilter({
   value,
@@ -149,7 +121,7 @@ function StatusPicker({
       <DropdownMenuTrigger asChild>
         <button className="focus:outline-none">
           {current ? (
-            <Badge className={`${getStatusBadgeStyle(current.color)} cursor-pointer hover:opacity-80 transition-opacity`}>
+            <Badge className={`${getBadgeColorStyle(current.color)} cursor-pointer hover:opacity-80 transition-opacity`}>
               {current.name}
             </Badge>
           ) : (
@@ -160,7 +132,7 @@ function StatusPicker({
       <DropdownMenuContent align="start" className="w-40">
         {statuses.map((s) => (
           <DropdownMenuItem key={s.id} onClick={() => onChangeStatus(s.id)}>
-            <Badge className={`${getStatusBadgeStyle(s.color)} text-[10px] px-1.5 py-0`}>
+            <Badge className={`${getBadgeColorStyle(s.color)} text-[10px] px-1.5 py-0`}>
               {s.name}
             </Badge>
             {statusId === s.id && <Check className="size-3.5 ml-auto" />}
@@ -502,7 +474,7 @@ function StatusesTab() {
             {clientStatuses.map((status) => (
               <TableRow key={status.id}>
                 <TableCell>
-                  <Badge className={getStatusBadgeStyle(status.color)}>
+                  <Badge className={getBadgeColorStyle(status.color)}>
                     {status.name}
                   </Badge>
                 </TableCell>
@@ -669,7 +641,7 @@ function StatusDialog({
       >
         <form onSubmit={(e) => { e.preventDefault(); handleSave(); }} className="space-y-4">
           <div className="flex items-center gap-3">
-            <Badge className={`${getStatusBadgeStyle(color)} shrink-0`}>
+            <Badge className={`${getBadgeColorStyle(color)} shrink-0`}>
               {name || "Preview"}
             </Badge>
             <input
@@ -685,12 +657,12 @@ function StatusDialog({
           <div className="flex items-center gap-2">
             <label className="text-xs text-white/40">Color</label>
             <div className="flex gap-1">
-              {STATUS_COLOR_NAMES.map((c) => (
+              {COLOR_NAMES.map((c) => (
                 <button
                   key={c}
                   type="button"
                   onClick={() => setColor(c)}
-                  className={`size-5 rounded-full ${STATUS_DOT_COLORS[c]} transition-all ${
+                  className={`size-5 rounded-full ${CLIENT_DOT_COLORS[c]} transition-all ${
                     color === c
                       ? "ring-2 ring-white/80 ring-offset-1 ring-offset-background"
                       : "opacity-40 hover:opacity-80"

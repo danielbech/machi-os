@@ -14,23 +14,8 @@ export interface CursorState {
   page: string;
 }
 
-// Map Tailwind bg classes to hex for cursor rendering
-const COLOR_MAP: Record<string, string> = {
-  "bg-blue-500": "#3b82f6",
-  "bg-green-500": "#22c55e",
-  "bg-purple-500": "#a855f7",
-  "bg-orange-500": "#f97316",
-  "bg-pink-500": "#ec4899",
-  "bg-red-500": "#ef4444",
-  "bg-yellow-500": "#eab308",
-  "bg-cyan-500": "#06b6d4",
-  "bg-indigo-500": "#6366f1",
-  "bg-teal-500": "#14b8a6",
-};
-
-export function getHexFromTailwind(tw: string): string {
-  return COLOR_MAP[tw] || "#3b82f6";
-}
+// Re-export from central color system
+export { getHexFromTailwind } from "@/lib/colors";
 
 export function usePresenceCursors(
   projectId: string | null,
