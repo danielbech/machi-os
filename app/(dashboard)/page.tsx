@@ -3,6 +3,7 @@
 import { useState, useCallback, useRef, useEffect, useMemo } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { loadTasksByDay, saveTask, updateDayTasks, deleteTask } from "@/lib/supabase/tasks-simple";
+import { toast } from "sonner";
 import { seedDemoTasks } from "@/lib/supabase/initialize";
 import { useWorkspace } from "@/lib/workspace-context";
 import { useBacklog } from "@/lib/backlog-context";
@@ -488,20 +489,52 @@ export default function BoardPage() {
     return () => window.removeEventListener("pointermove", onPointerMove);
   }, [backlogDragActive]);
 
-  const removeTask = async (taskId: string) => {
+  const removeTask = (taskId: string) => {
     if (!activeProjectId) return;
+
+    // Capture task + position before removing
+    let removedTask: Task | null = null;
+    let removedColumn: string | null = null;
+    let removedIndex = -1;
+    for (const [col, tasks] of Object.entries(columns)) {
+      const idx = tasks.findIndex((t) => t.id === taskId);
+      if (idx !== -1) {
+        removedTask = tasks[idx];
+        removedColumn = col;
+        removedIndex = idx;
+        break;
+      }
+    }
+    if (!removedTask || !removedColumn) return;
+
+    // Remove from local state immediately
     setColumns((prev) => {
       const updated = { ...prev };
-      for (const col of Object.keys(updated)) {
-        const idx = updated[col].findIndex((t) => t.id === taskId);
-        if (idx !== -1) {
-          updated[col] = updated[col].filter((t) => t.id !== taskId);
-          break;
-        }
-      }
+      updated[removedColumn!] = updated[removedColumn!].filter((t) => t.id !== taskId);
       return updated;
     });
-    await deleteTask(taskId);
+
+    // Delay actual DB delete — allow undo
+    let undone = false;
+    const timeout = setTimeout(() => { if (!undone) deleteTask(taskId); }, 5000);
+
+    toast("Task deleted", {
+      duration: 5000,
+      action: {
+        label: "Undo",
+        onClick: () => {
+          undone = true;
+          clearTimeout(timeout);
+          setColumns((prev) => {
+            const updated = { ...prev };
+            const col = [...(updated[removedColumn!] || [])];
+            col.splice(Math.min(removedIndex, col.length), 0, removedTask!);
+            updated[removedColumn!] = col;
+            return updated;
+          });
+        },
+      },
+    });
   };
 
   const saveEditedTask = async (updatedTask: Task) => {

@@ -100,7 +100,7 @@ interface BacklogPanelProps {
   onSendFolderToDay: (folderId: string, day: DayName) => Promise<void>;
   onCreateTask: (title: string, clientId: string, folderId?: string) => Promise<void>;
   onEditTask: (task: Task) => void;
-  onDeleteTask: (taskId: string) => Promise<void>;
+  onDeleteTask: (taskId: string) => void;
   onCreateFolder: (clientId: string, name: string) => Promise<void>;
   onRenameFolder: (folderId: string, name: string) => Promise<void>;
   onDeleteFolder: (folderId: string) => Promise<void>;

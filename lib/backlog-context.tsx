@@ -18,7 +18,7 @@ interface BacklogContextValue {
   addToBacklog: (task: Task, placement?: { clientId?: string; folderId?: string }) => Promise<void>;
   createBacklogTask: (title: string, clientId: string, folderId?: string) => Promise<void>;
   saveBacklogTask: (task: Task) => Promise<void>;
-  deleteBacklogTask: (taskId: string) => Promise<void>;
+  deleteBacklogTask: (taskId: string) => void;
   reorderBacklogTasks: (tasks: Task[]) => Promise<void>;
   createFolder: (clientId: string, name: string) => Promise<void>;
   renameFolder: (folderId: string, name: string) => Promise<void>;
@@ -191,11 +191,45 @@ export function BacklogProvider({ children }: { children: React.ReactNode }) {
     setTimeout(() => { suppressBacklogReload.current = false; }, 2000);
   }, [activeProjectId, areaId]);
 
-  const deleteBacklogTask = useCallback(async (taskId: string) => {
-    setBacklogTasks((prev) => prev.filter((t) => t.id !== taskId));
+  const deleteBacklogTask = useCallback((taskId: string) => {
+    // Capture task + position before removing
+    let removedTask: Task | null = null;
+    let removedIndex = -1;
+    setBacklogTasks((prev) => {
+      removedIndex = prev.findIndex((t) => t.id === taskId);
+      if (removedIndex !== -1) removedTask = prev[removedIndex];
+      return prev.filter((t) => t.id !== taskId);
+    });
+
     suppressBacklogReload.current = true;
-    await deleteTask(taskId);
-    setTimeout(() => { suppressBacklogReload.current = false; }, 2000);
+    let undone = false;
+    const timeout = setTimeout(() => {
+      if (!undone) {
+        deleteTask(taskId);
+        setTimeout(() => { suppressBacklogReload.current = false; }, 2000);
+      } else {
+        suppressBacklogReload.current = false;
+      }
+    }, 5000);
+
+    toast("Task deleted", {
+      duration: 5000,
+      action: {
+        label: "Undo",
+        onClick: () => {
+          undone = true;
+          clearTimeout(timeout);
+          suppressBacklogReload.current = false;
+          if (removedTask) {
+            setBacklogTasks((prev) => {
+              const restored = [...prev];
+              restored.splice(Math.min(removedIndex, restored.length), 0, removedTask!);
+              return restored;
+            });
+          }
+        },
+      },
+    });
   }, []);
 
   const reorderBacklogTasks = useCallback(async (updatedTasks: Task[]) => {
