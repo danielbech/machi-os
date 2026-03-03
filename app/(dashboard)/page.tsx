@@ -277,20 +277,22 @@ export default function BoardPage() {
 
   const toggleComplete = async (taskId: string) => {
     if (!activeProjectId) return;
-    const updated = { ...columns };
     let updatedTask: Task | null = null;
     let wasCompleted = false;
-    for (const col of Object.keys(updated)) {
-      const idx = updated[col].findIndex((t) => t.id === taskId);
-      if (idx !== -1) {
-        updated[col] = [...updated[col]];
-        wasCompleted = updated[col][idx].completed || false;
-        updated[col][idx] = { ...updated[col][idx], completed: !wasCompleted, day: col as DayName };
-        updatedTask = updated[col][idx];
-        break;
+    setColumns((prev) => {
+      const updated = { ...prev };
+      for (const col of Object.keys(updated)) {
+        const idx = updated[col].findIndex((t) => t.id === taskId);
+        if (idx !== -1) {
+          updated[col] = [...updated[col]];
+          wasCompleted = updated[col][idx].completed || false;
+          updated[col][idx] = { ...updated[col][idx], completed: !wasCompleted, day: col as DayName };
+          updatedTask = updated[col][idx];
+          break;
+        }
       }
-    }
-    setColumns(updated);
+      return updated;
+    });
     if (!wasCompleted) {
       setGlowingCards((prev) => new Set(prev).add(taskId));
       setTimeout(() => {
@@ -312,47 +314,51 @@ export default function BoardPage() {
 
   const toggleAssignee = async (taskId: string, memberId: string) => {
     if (!activeProjectId) return;
-    const updated = { ...columns };
     let updatedTask: Task | null = null;
-    for (const col of Object.keys(updated)) {
-      const idx = updated[col].findIndex((t) => t.id === taskId);
-      if (idx !== -1) {
-        updated[col] = [...updated[col]];
-        const task = updated[col][idx];
-        const assignees = task.assignees || [];
-        const isAssigned = assignees.includes(memberId);
-        updated[col][idx] = {
-          ...task,
-          assignees: isAssigned ? assignees.filter((id) => id !== memberId) : [...assignees, memberId],
-          day: col as DayName,
-        };
-        updatedTask = updated[col][idx];
-        break;
+    setColumns((prev) => {
+      const updated = { ...prev };
+      for (const col of Object.keys(updated)) {
+        const idx = updated[col].findIndex((t) => t.id === taskId);
+        if (idx !== -1) {
+          updated[col] = [...updated[col]];
+          const task = updated[col][idx];
+          const assignees = task.assignees || [];
+          const isAssigned = assignees.includes(memberId);
+          updated[col][idx] = {
+            ...task,
+            assignees: isAssigned ? assignees.filter((id) => id !== memberId) : [...assignees, memberId],
+            day: col as DayName,
+          };
+          updatedTask = updated[col][idx];
+          break;
+        }
       }
-    }
-    setColumns(updated);
+      return updated;
+    });
     if (updatedTask) await saveTask(activeProjectId, updatedTask, areaId);
   };
 
   const toggleClient = async (taskId: string, clientId: string) => {
     if (!activeProjectId) return;
-    const updated = { ...columns };
     let updatedTask: Task | null = null;
-    for (const col of Object.keys(updated)) {
-      const idx = updated[col].findIndex((t) => t.id === taskId);
-      if (idx !== -1) {
-        updated[col] = [...updated[col]];
-        const task = updated[col][idx];
-        updated[col][idx] = {
-          ...task,
-          client: task.client === clientId ? undefined : clientId,
-          day: col as DayName,
-        };
-        updatedTask = updated[col][idx];
-        break;
+    setColumns((prev) => {
+      const updated = { ...prev };
+      for (const col of Object.keys(updated)) {
+        const idx = updated[col].findIndex((t) => t.id === taskId);
+        if (idx !== -1) {
+          updated[col] = [...updated[col]];
+          const task = updated[col][idx];
+          updated[col][idx] = {
+            ...task,
+            client: task.client === clientId ? undefined : clientId,
+            day: col as DayName,
+          };
+          updatedTask = updated[col][idx];
+          break;
+        }
       }
-    }
-    setColumns(updated);
+      return updated;
+    });
     if (updatedTask) await saveTask(activeProjectId, updatedTask, areaId);
   };
 
@@ -484,15 +490,17 @@ export default function BoardPage() {
 
   const removeTask = async (taskId: string) => {
     if (!activeProjectId) return;
-    const updated = { ...columns };
-    for (const col of Object.keys(updated)) {
-      const idx = updated[col].findIndex((t) => t.id === taskId);
-      if (idx !== -1) {
-        updated[col] = updated[col].filter((t) => t.id !== taskId);
-        break;
+    setColumns((prev) => {
+      const updated = { ...prev };
+      for (const col of Object.keys(updated)) {
+        const idx = updated[col].findIndex((t) => t.id === taskId);
+        if (idx !== -1) {
+          updated[col] = updated[col].filter((t) => t.id !== taskId);
+          break;
+        }
       }
-    }
-    setColumns(updated);
+      return updated;
+    });
     await deleteTask(taskId);
   };
 
