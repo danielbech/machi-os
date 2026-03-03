@@ -39,7 +39,7 @@ function DashboardGate({ children }: { children: React.ReactNode }) {
   }, [pendingInvites.length, showWelcome]);
 
   if (loading) {
-    return <div className="min-h-screen bg-zinc-950" />;
+    return <div className="min-h-screen bg-background" />;
   }
 
   if (!user) {
@@ -49,7 +49,7 @@ function DashboardGate({ children }: { children: React.ReactNode }) {
   return (
     <TooltipProvider>
       <SidebarProvider defaultOpen={false}>
-        <div className="flex w-full animate-in fade-in duration-300 bg-zinc-950">
+        <div className="flex w-full animate-in fade-in duration-300 bg-background">
           <AppSidebar />
           <BacklogShell />
           <SidebarInset className="overflow-hidden min-w-0 transition-[margin] duration-200 ease-in-out bg-transparent" style={!isMobile && backlogOpen ? { marginLeft: backlogWidth } : undefined}>

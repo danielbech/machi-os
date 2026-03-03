@@ -916,7 +916,7 @@ export default function BoardPage() {
       />
 
       <TooltipProvider>
-        <div className="fixed bottom-5 right-[4.25rem] z-50 flex items-center gap-px rounded-full border border-foreground/10 bg-zinc-900/90 shadow-lg overflow-hidden">
+        <div className="fixed bottom-5 right-[4.25rem] z-50 flex items-center gap-px rounded-full border border-border bg-popover/90 shadow-lg overflow-hidden">
           {teamMembers.length > 1 && (
             <Tooltip>
               <TooltipTrigger asChild>

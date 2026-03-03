@@ -153,7 +153,7 @@ export function ClientGroupDialog({ open, onOpenChange, editingGroup = null, onC
             <Button
               type="submit"
               disabled={saving || !name.trim()}
-              className="bg-white text-black hover:bg-foreground/90"
+              className="bg-primary text-primary-foreground hover:bg-primary/90"
             >
               {saving ? "Saving..." : editingGroup ? "Save" : "Add Client"}
             </Button>

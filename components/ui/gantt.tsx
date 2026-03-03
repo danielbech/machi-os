@@ -1983,7 +1983,7 @@ export const GanttToday: FC<GanttTodayProps> = ({ className }) => {
     >
       <div
         className={cn(
-          "pointer-events-auto sticky top-0 z-30 flex select-auto items-center justify-center whitespace-nowrap rounded-b-md border border-foreground/80 bg-white px-1.5 py-0.5 text-black font-semibold text-[10px] leading-tight",
+          "pointer-events-auto sticky top-0 z-30 flex select-auto items-center justify-center whitespace-nowrap rounded-b-md border border-primary bg-primary px-1.5 py-0.5 text-primary-foreground font-semibold text-[10px] leading-tight",
           className
         )}
       >

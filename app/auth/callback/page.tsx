@@ -32,7 +32,7 @@ export default function AuthCallback() {
   }, []);
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-950">
+    <div className="flex min-h-screen items-center justify-center bg-background">
       <div className="text-center">
         <div className="mb-4 text-lg">Completing authentication...</div>
         <div className="text-sm text-foreground/60">This window will close automatically.</div>

@@ -930,7 +930,7 @@ export function BacklogPanel({
       {mounted && createPortal(
         <DragOverlay>
           {activeTask ? (
-            <div className="rounded-md border border-foreground/10 bg-zinc-900 px-3 py-2 shadow-lg">
+            <div className="rounded-md border border-border bg-popover px-3 py-2 shadow-lg">
               <span className="text-sm text-foreground/80">{activeTask.title}</span>
             </div>
           ) : null}

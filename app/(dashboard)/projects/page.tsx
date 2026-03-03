@@ -175,7 +175,7 @@ function ClientGroupPicker({
           )}
         </button>
       </PopoverTrigger>
-      <PopoverContent align="start" className="w-48 p-1 bg-zinc-900/95 backdrop-blur-md border-foreground/10">
+      <PopoverContent align="start" className="w-48 p-1 bg-popover/95 backdrop-blur-md border-border">
         <button
           onClick={() => { onSelect(null); setOpen(false); }}
           className={`w-full flex items-center gap-2 px-2 py-1.5 rounded-sm text-sm hover:bg-foreground/[0.08] transition-colors ${!currentGroupId ? "text-white" : "text-foreground/40"}`}

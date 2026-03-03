@@ -594,7 +594,7 @@ export function TaskEditDialog({ task, onClose, onSave, onTaskChange, folders }:
               <Button type="button" variant="ghost" onClick={onClose}>
                 Cancel
               </Button>
-              <Button type="submit" className="bg-white text-black hover:bg-foreground/90">
+              <Button type="submit" className="bg-primary text-primary-foreground hover:bg-primary/90">
                 Save
               </Button>
             </div>

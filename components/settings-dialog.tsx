@@ -1145,7 +1145,7 @@ export function SettingsDialog({
                       }`}
                       aria-label="Toggle checkmarks"
                     >
-                      <span className={`pointer-events-none inline-block size-4 rounded-full bg-white shadow-sm transition-transform ${
+                      <span className={`pointer-events-none inline-block size-4 rounded-full bg-foreground shadow-sm transition-transform ${
                         showCheckmarks ? "translate-x-[18px]" : "translate-x-0.5"
                       }`} style={{ marginTop: '2px' }} />
                     </button>
@@ -1283,7 +1283,7 @@ export function SettingsDialog({
                     href="https://oimachi.co"
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-white underline underline-offset-2 hover:text-foreground/80 transition-colors"
+                    className="text-primary underline underline-offset-2 hover:text-primary/80 transition-colors"
                   >
                     Oimachi
                   </a>

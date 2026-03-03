@@ -14,7 +14,7 @@ export function BoardShortcuts({ open, onToggle, teamMembers }: BoardShortcutsPr
   return (
     <div className="fixed bottom-5 right-5 z-50">
       {open && (
-        <div className="absolute bottom-12 right-0 w-64 rounded-xl border border-foreground/10 bg-zinc-900/95 backdrop-blur-md p-4 shadow-2xl mb-2 animate-in fade-in slide-in-from-bottom-2 duration-200">
+        <div className="absolute bottom-12 right-0 w-64 rounded-xl border border-border bg-popover/95 backdrop-blur-md p-4 shadow-2xl mb-2 animate-in fade-in slide-in-from-bottom-2 duration-200">
           <div className="text-xs font-medium text-foreground/40 uppercase tracking-wider mb-3">Keyboard Shortcuts</div>
           <div className="space-y-2.5">
             <ShortcutRow label="Toggle complete" shortcut="space" />
@@ -22,11 +22,11 @@ export function BoardShortcuts({ open, onToggle, teamMembers }: BoardShortcutsPr
             <ShortcutRow label="Copy card" shortcut="⌘C" />
             <ShortcutRow label="Paste card" shortcut="⌘V" />
             <ShortcutRow label="Toggle backlog" shortcut="." />
-            <div className="border-t border-foreground/5 my-1" />
+            <div className="border-t border-border my-1" />
             {teamMembers.map((member, i) => (
               <ShortcutRow key={member.id} label={`Assign ${member.name}`} shortcut={String(i + 1)} />
             ))}
-            <div className="border-t border-foreground/5 my-1" />
+            <div className="border-t border-border my-1" />
             <div className="flex items-center justify-between">
               <span className="text-sm text-foreground/70">Assign client</span>
               <span className="text-[11px] text-foreground/40">first letter</span>
@@ -42,7 +42,7 @@ export function BoardShortcuts({ open, onToggle, teamMembers }: BoardShortcutsPr
               className={`flex items-center justify-center size-10 rounded-full border shadow-lg transition-all ${
                 open
                   ? "bg-foreground/10 border-foreground/20 text-foreground"
-                  : "bg-zinc-900/90 border-foreground/10 text-foreground/40 hover:text-foreground/70 hover:border-foreground/20"
+                  : "bg-popover/90 border-border text-muted-foreground hover:text-foreground hover:border-ring/20"
               }`}
               aria-label="Keyboard shortcuts"
             >
