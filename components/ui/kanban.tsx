@@ -820,7 +820,7 @@ function KanbanColumn(props: KanbanColumnProps) {
           ref={composedRef}
           style={composedStyle}
           className={cn(
-            "flex size-full flex-col gap-2 p-2.5 aria-disabled:pointer-events-none aria-disabled:opacity-50",
+            "flex size-full flex-col gap-2.5 p-2.5 aria-disabled:pointer-events-none aria-disabled:opacity-50",
             {
               "touch-none select-none": asHandle,
               "cursor-default": context.flatCursor,
