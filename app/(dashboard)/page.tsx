@@ -26,7 +26,7 @@ import { Check, CheckCircle, Plus, StickyNote, User, X } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 export default function BoardPage() {
-  const { activeProjectId, clients, teamMembers, weekMode, weekDays, displayMonday, areaId, user, boardColumns, addBoardColumn, renameBoardColumn, removeBoardColumn, showCheckmarks, taskRefreshKey } = useWorkspace();
+  const { activeProjectId, clients, clientGroups, teamMembers, weekMode, weekDays, displayMonday, areaId, user, boardColumns, addBoardColumn, renameBoardColumn, removeBoardColumn, showCheckmarks, taskRefreshKey } = useWorkspace();
   const { calendarEvents } = useCalendar();
   const { backlogOpen, addToBacklog, backlogFolders, backlogDragActive, setKanbanDragOverBacklog, onTaskSentToDayRef } = useBacklog();
 
@@ -776,6 +776,7 @@ export default function BoardPage() {
                         columnId={columnId}
                         todayName={todayName}
                         clients={clients}
+                        clientGroups={clientGroups}
                         teamMembers={teamMembers}
                         isGlowing={glowingCards.has(item.id)}
                         isNewlyCreated={item.id === newlyCreatedCardId}

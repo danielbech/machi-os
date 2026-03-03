@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect, memo } from "react";
-import type { Task, Member, Client } from "@/lib/types";
+import type { Task, Member, Client, ClientGroup } from "@/lib/types";
 import type { CardEditingState } from "@/hooks/use-card-presence";
 import { getClientTextClassName, CLIENT_RGB_COLORS } from "@/lib/colors";
 import { getHexFromTailwind } from "@/hooks/use-presence-cursors";
@@ -14,6 +14,7 @@ interface BoardTaskCardProps {
   columnId: string;
   todayName: string;
   clients: Client[];
+  clientGroups: ClientGroup[];
   teamMembers: Member[];
   isGlowing: boolean;
   isNewlyCreated: boolean;
@@ -37,6 +38,7 @@ export const BoardTaskCard = memo(function BoardTaskCard({
   columnId,
   todayName,
   clients,
+  clientGroups,
   teamMembers,
   isGlowing,
   isNewlyCreated,
@@ -205,7 +207,15 @@ export const BoardTaskCard = memo(function BoardTaskCard({
             onToggleAssignee(item.id, teamMembers[memberIndex].id);
           }
         } else {
-          const matches = clients.filter((c) => c.name.charAt(0).toLowerCase() === key.toLowerCase() && c.active);
+          // Match by client group name (the actual client), falling back to client name for ungrouped
+          const matches = clients.filter((c) => {
+            if (!c.active) return false;
+            if (c.client_group_id) {
+              const group = clientGroups.find(g => g.id === c.client_group_id);
+              if (group) return group.name.charAt(0).toLowerCase() === key.toLowerCase();
+            }
+            return c.name.charAt(0).toLowerCase() === key.toLowerCase();
+          });
           if (matches.length > 0) {
             e.preventDefault();
             const currentIdx = matches.findIndex((c) => c.id === item.client);
@@ -410,6 +420,7 @@ export const BoardTaskCard = memo(function BoardTaskCard({
     prev.columnId === next.columnId &&
     prev.todayName === next.todayName &&
     prev.clients === next.clients &&
+    prev.clientGroups === next.clientGroups &&
     prev.teamMembers === next.teamMembers &&
     prev.isGlowing === next.isGlowing &&
     prev.isNewlyCreated === next.isNewlyCreated &&

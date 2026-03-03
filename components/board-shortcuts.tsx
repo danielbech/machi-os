@@ -28,7 +28,7 @@ export function BoardShortcuts({ open, onToggle, teamMembers }: BoardShortcutsPr
             ))}
             <div className="border-t border-white/5 my-1" />
             <div className="flex items-center justify-between">
-              <span className="text-sm text-white/70">Assign project</span>
+              <span className="text-sm text-white/70">Assign client</span>
               <span className="text-[11px] text-white/40">first letter</span>
             </div>
           </div>
