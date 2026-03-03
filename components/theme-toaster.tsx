@@ -30,6 +30,7 @@ export function ThemeToaster() {
           border: "1px solid var(--border)",
           fontSize: "13px",
           padding: "10px 14px",
+          width: "fit-content",
         },
         actionButtonStyle: {
           background: "var(--primary)",
