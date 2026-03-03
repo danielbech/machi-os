@@ -28,7 +28,7 @@ export default function RootLayout({
       <head>
         <script
           dangerouslySetInnerHTML={{
-            __html: `try{var m=localStorage.getItem("flowie-theme-mode");if(m==="light"){document.documentElement.classList.remove("dark")}var c=localStorage.getItem("flowie-theme-cache");if(c){var v=JSON.parse(c),s=document.documentElement.style;for(var k in v)s.setProperty(k,v[k])}}catch(e){}`,
+            __html: `try{var m=localStorage.getItem("flowie-theme-mode");if(m==="light"||(m==="system"&&window.matchMedia("(prefers-color-scheme:light)").matches)){document.documentElement.classList.remove("dark")}var c=localStorage.getItem("flowie-theme-cache");if(c){var v=JSON.parse(c),s=document.documentElement.style;for(var k in v)s.setProperty(k,v[k])}}catch(e){}`,
           }}
         />
       </head>

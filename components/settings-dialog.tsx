@@ -22,7 +22,7 @@ import {
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { RefreshCw, Plus, X, ChevronDown, Camera, User as UserIcon, Trash2, GitCommitHorizontal, Check, Sun, Moon } from "lucide-react";
+import { RefreshCw, Plus, X, ChevronDown, Camera, User as UserIcon, Trash2, GitCommitHorizontal, Check, Sun, Moon, Monitor } from "lucide-react";
 
 interface SettingsDialogProps {
   open: boolean;
@@ -62,8 +62,54 @@ interface SettingsDialogProps {
   defaultTab?: string;
 }
 
+function ModeButton({ active, onClick, icon: Icon, label }: { active: boolean; onClick: () => void; icon: React.ComponentType<{ className?: string }>; label: string }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`flex items-center gap-2 px-3 py-2 rounded-lg border text-sm transition-colors ${
+        active
+          ? "border-ring/30 bg-muted text-foreground"
+          : "border-border text-muted-foreground hover:border-ring/20 hover:text-foreground"
+      }`}
+    >
+      <Icon className="size-4" />
+      {label}
+    </button>
+  );
+}
+
+function ThemePreview({ theme, mode }: { theme: typeof THEMES[number]; mode: "light" | "dark" }) {
+  const v = mode === "dark" ? theme.darkVariables : theme.lightVariables;
+  return (
+    <div className="rounded-md h-20 w-full overflow-hidden flex" style={{ backgroundColor: v["--background"] }}>
+      {/* Sidebar strip */}
+      <div className="w-5 shrink-0 flex flex-col items-center gap-1 pt-2" style={{ backgroundColor: v["--sidebar"], borderRight: `1px solid ${v["--border"]}` }}>
+        <div className="size-2 rounded-sm" style={{ backgroundColor: v["--sidebar-primary"] }} />
+        <div className="size-2 rounded-sm" style={{ backgroundColor: v["--sidebar-accent"] }} />
+      </div>
+      {/* Main area */}
+      <div className="flex-1 p-1.5 flex flex-col gap-1">
+        {/* Card */}
+        <div className="flex-1 rounded-sm p-1.5 flex flex-col gap-1" style={{ backgroundColor: v["--card"], border: `1px solid ${v["--border"]}` }}>
+          <div className="h-1 w-10 rounded-full" style={{ backgroundColor: v["--foreground"], opacity: 0.7 }} />
+          <div className="h-1 w-6 rounded-full" style={{ backgroundColor: v["--muted-foreground"], opacity: 0.5 }} />
+        </div>
+        {/* Bottom row: button + accent */}
+        <div className="flex items-center gap-1">
+          <div className="h-3 px-1.5 rounded-sm flex items-center" style={{ backgroundColor: v["--primary"] }}>
+            <div className="h-1 w-4 rounded-full" style={{ backgroundColor: v["--primary-foreground"] }} />
+          </div>
+          <div className="flex-1" />
+          <div className="size-2 rounded-full" style={{ backgroundColor: v["--ring"] }} />
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function ThemeTabContent({ activeProject }: { activeProject?: Project }) {
-  const { globalThemeId, workspaceThemeId, setGlobalTheme, setWorkspaceTheme, mode, setMode } = useTheme();
+  const { globalThemeId, workspaceThemeId, setGlobalTheme, setWorkspaceTheme, mode, resolvedMode, setMode } = useTheme();
   const hasOverride = workspaceThemeId !== null;
   const activeId = workspaceThemeId || globalThemeId;
 
@@ -74,30 +120,9 @@ function ThemeTabContent({ activeProject }: { activeProject?: Project }) {
         <div className="space-y-3">
           <h3 className="text-sm font-medium">Appearance</h3>
           <div className="flex gap-2">
-            <button
-              type="button"
-              onClick={() => setMode("light")}
-              className={`flex items-center gap-2 px-3 py-2 rounded-lg border text-sm transition-colors ${
-                mode === "light"
-                  ? "border-ring/30 bg-muted text-foreground"
-                  : "border-border text-muted-foreground hover:border-ring/20 hover:text-foreground"
-              }`}
-            >
-              <Sun className="size-4" />
-              Light
-            </button>
-            <button
-              type="button"
-              onClick={() => setMode("dark")}
-              className={`flex items-center gap-2 px-3 py-2 rounded-lg border text-sm transition-colors ${
-                mode === "dark"
-                  ? "border-ring/30 bg-muted text-foreground"
-                  : "border-border text-muted-foreground hover:border-ring/20 hover:text-foreground"
-              }`}
-            >
-              <Moon className="size-4" />
-              Dark
-            </button>
+            <ModeButton active={mode === "light"} onClick={() => setMode("light")} icon={Sun} label="Light" />
+            <ModeButton active={mode === "dark"} onClick={() => setMode("dark")} icon={Moon} label="Dark" />
+            <ModeButton active={mode === "system"} onClick={() => setMode("system")} icon={Monitor} label="System" />
           </div>
         </div>
 
@@ -136,7 +161,6 @@ function ThemeTabContent({ activeProject }: { activeProject?: Project }) {
         <div className="grid grid-cols-3 gap-3">
           {THEMES.map((theme) => {
             const isActive = theme.id === activeId;
-            const preview = mode === "dark" ? theme.preview.dark : theme.preview.light;
             return (
               <button
                 key={theme.id}
@@ -154,16 +178,7 @@ function ThemeTabContent({ activeProject }: { activeProject?: Project }) {
                     : "border-border hover:border-ring/20"
                 }`}
               >
-                {/* Preview */}
-                <div
-                  className="rounded-md h-16 w-full flex items-end p-2 gap-1.5"
-                  style={{ backgroundColor: preview[0] }}
-                >
-                  <div className="h-3 w-8 rounded-sm" style={{ backgroundColor: preview[1] }} />
-                  <div className="h-3 w-5 rounded-sm" style={{ backgroundColor: preview[1] }} />
-                  <div className="flex-1" />
-                  <div className="h-2 w-2 rounded-full" style={{ backgroundColor: preview[2] }} />
-                </div>
+                <ThemePreview theme={theme} mode={resolvedMode} />
                 <div className="flex items-center justify-between px-1 py-1.5">
                   <span className="text-xs text-foreground/70">{theme.name}</span>
                   {isActive && <Check className="size-3 text-foreground/50" />}

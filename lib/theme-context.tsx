@@ -3,20 +3,18 @@
 import { createContext, useContext, useCallback, useEffect, useRef, useState } from "react";
 import { THEMES, getThemeById, type Theme, type ThemeMode } from "@/lib/themes";
 
+type EffectiveMode = "light" | "dark";
+
 interface ThemeContextValue {
-  /** Resolved theme for the current workspace */
   activeTheme: Theme;
-  /** Current colour mode */
+  /** User-chosen mode preference (may be "system") */
   mode: ThemeMode;
-  /** Global theme id (fallback for all workspaces) */
+  /** Resolved mode — always "light" or "dark" */
+  resolvedMode: EffectiveMode;
   globalThemeId: string;
-  /** Per-workspace theme id override (or null = use global) */
   workspaceThemeId: string | null;
-  /** Set the global theme */
   setGlobalTheme: (themeId: string) => void;
-  /** Set per-workspace theme (null = inherit global) */
   setWorkspaceTheme: (themeId: string | null) => void;
-  /** Toggle or set mode */
   setMode: (mode: ThemeMode) => void;
 }
 
@@ -31,27 +29,34 @@ export function useTheme() {
 const GLOBAL_KEY = "flowie-global-theme";
 const MODE_KEY = "flowie-theme-mode";
 const wsKey = (id: string) => `flowie-workspace-theme-${id}`;
-
 const CACHE_KEY = "flowie-theme-cache";
 
-function applyTheme(theme: Theme, mode: ThemeMode) {
-  const root = document.documentElement;
-  const vars = mode === "dark" ? theme.darkVariables : theme.lightVariables;
+function getSystemMode(): EffectiveMode {
+  if (typeof window === "undefined") return "dark";
+  return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+}
 
+function resolveMode(mode: ThemeMode): EffectiveMode {
+  if (mode === "system") return getSystemMode();
+  return mode;
+}
+
+function applyTheme(theme: Theme, effective: EffectiveMode) {
+  const root = document.documentElement;
+  const vars = effective === "dark" ? theme.darkVariables : theme.lightVariables;
   for (const [prop, value] of Object.entries(vars)) {
     root.style.setProperty(prop, value);
   }
   localStorage.setItem(CACHE_KEY, JSON.stringify(vars));
 }
 
-function applyMode(mode: ThemeMode) {
+function applyDarkClass(effective: EffectiveMode) {
   const root = document.documentElement;
-  if (mode === "dark") {
+  if (effective === "dark") {
     root.classList.add("dark");
   } else {
     root.classList.remove("dark");
   }
-  localStorage.setItem(MODE_KEY, mode);
 }
 
 function clearInlineTheme() {
@@ -69,6 +74,15 @@ function clearInlineTheme() {
     root.style.removeProperty(prop);
   }
   localStorage.removeItem(CACHE_KEY);
+}
+
+function applyAll(themeId: string, theme: Theme, effective: EffectiveMode) {
+  applyDarkClass(effective);
+  if (themeId === "default") {
+    clearInlineTheme();
+  } else {
+    applyTheme(theme, effective);
+  }
 }
 
 export function ThemeProvider({
@@ -93,6 +107,21 @@ export function ThemeProvider({
     return (localStorage.getItem(MODE_KEY) as ThemeMode) || "dark";
   });
 
+  const [resolvedMode, setResolvedMode] = useState<EffectiveMode>(() => resolveMode(mode));
+
+  // Listen to OS preference changes when mode is "system"
+  useEffect(() => {
+    if (mode !== "system") {
+      setResolvedMode(resolveMode(mode));
+      return;
+    }
+    const mq = window.matchMedia("(prefers-color-scheme: dark)");
+    const update = () => setResolvedMode(mq.matches ? "dark" : "light");
+    update();
+    mq.addEventListener("change", update);
+    return () => mq.removeEventListener("change", update);
+  }, [mode]);
+
   // When workspace changes, load its theme override
   useEffect(() => {
     if (!activeProjectId) {
@@ -106,9 +135,8 @@ export function ThemeProvider({
   const resolvedId = workspaceThemeId || globalThemeId;
   const activeTheme = getThemeById(resolvedId) || THEMES[0];
 
-  // On initial mount, the blocking script in <head> already applied the
-  // cached theme + mode. Skip the first effect to avoid clearing those styles
-  // while activeProjectId is still loading (which would cause a flash).
+  // On initial mount, the blocking script already applied cached theme + mode.
+  // Skip first effect to avoid flash while activeProjectId is still loading.
   const initialMount = useRef(true);
 
   useEffect(() => {
@@ -117,17 +145,8 @@ export function ThemeProvider({
       const cached = localStorage.getItem(CACHE_KEY);
       if (cached) return;
     }
-
-    // Always apply mode (dark class)
-    applyMode(mode);
-
-    if (resolvedId === "default") {
-      // Default theme = CSS stylesheet defaults, clear inline overrides
-      clearInlineTheme();
-    } else {
-      applyTheme(activeTheme, mode);
-    }
-  }, [resolvedId, activeTheme, mode]);
+    applyAll(resolvedId, activeTheme, resolvedMode);
+  }, [resolvedId, activeTheme, resolvedMode]);
 
   const setGlobalTheme = useCallback((themeId: string) => {
     setGlobalThemeIdState(themeId);
@@ -146,20 +165,18 @@ export function ThemeProvider({
 
   const setMode = useCallback((newMode: ThemeMode) => {
     setModeState(newMode);
-    applyMode(newMode);
+    localStorage.setItem(MODE_KEY, newMode);
+    const effective = resolveMode(newMode);
+    setResolvedMode(effective);
 
-    // Re-apply the theme variables for the new mode
+    // Re-apply immediately
     const id = workspaceThemeId || globalThemeId;
     const theme = getThemeById(id) || THEMES[0];
-    if (id === "default") {
-      clearInlineTheme();
-    } else {
-      applyTheme(theme, newMode);
-    }
+    applyAll(id, theme, effective);
   }, [workspaceThemeId, globalThemeId]);
 
   return (
-    <ThemeContext.Provider value={{ activeTheme, mode, globalThemeId, workspaceThemeId, setGlobalTheme, setWorkspaceTheme, setMode }}>
+    <ThemeContext.Provider value={{ activeTheme, mode, resolvedMode, globalThemeId, workspaceThemeId, setGlobalTheme, setWorkspaceTheme, setMode }}>
       {children}
     </ThemeContext.Provider>
   );

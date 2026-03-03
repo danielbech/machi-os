@@ -1,14 +1,10 @@
-export type ThemeMode = "light" | "dark";
+export type ThemeMode = "light" | "dark" | "system";
 
 export interface Theme {
   id: string;
   name: string;
   lightVariables: Record<string, string>;
   darkVariables: Record<string, string>;
-  preview: {
-    light: [string, string, string]; // [bg, accent, fg]
-    dark: [string, string, string];
-  };
 }
 
 export const THEMES: Theme[] = [
@@ -73,10 +69,6 @@ export const THEMES: Theme[] = [
       "--sidebar-border": "hsl(0 0% 12%)",
       "--sidebar-ring": "hsl(0 0% 30%)",
     },
-    preview: {
-      light: ["#ffffff", "#171717", "#0a0a0a"],
-      dark: ["#0a0a0a", "#262626", "#fafafa"],
-    },
   },
   {
     id: "ember",
@@ -139,10 +131,6 @@ export const THEMES: Theme[] = [
       "--sidebar-border": "hsl(222.8571 6.4220% 21.3725%)",
       "--sidebar-ring": "hsl(15.3913 90.5512% 49.8039%)",
     },
-    preview: {
-      light: ["#fdfdfd", "#f06820", "#000000"],
-      dark: ["#0a0a0a", "#f06820", "#f0f0f0"],
-    },
   },
   {
     id: "verdant",
@@ -204,10 +192,6 @@ export const THEMES: Theme[] = [
       "--sidebar-accent-foreground": "hsl(210 40% 98.0392%)",
       "--sidebar-border": "hsl(217.2414 32.5843% 17.451%)",
       "--sidebar-ring": "hsl(82.5414 88.2927% 59.8039%)",
-    },
-    preview: {
-      light: ["#f9faf5", "#a3e635", "#1e293b"],
-      dark: ["#0a0f1f", "#a3e635", "#f5f7fa"],
     },
   },
 ];
