@@ -35,7 +35,7 @@ components/
 lib/
   types.ts                # Shared TypeScript types (Task, Member, Client, Project, PendingInvite)
   constants.ts            # Team members, column config
-  colors.ts               # Client color name → Tailwind class mapping
+  colors.ts               # Central color system — all palettes, mappings, and helpers (see Color System section)
   workspace-context.tsx   # React context: auth, workspace, clients, calendar (consumed by dashboard pages)
   google-calendar.ts      # Google Calendar OAuth + API helpers (fetchCalendarList, fetchGoogleEmail, etc.)
   supabase/
@@ -87,8 +87,39 @@ Task metadata (assignees, client, priority) is stored in dedicated columns on th
 - **Button variants:** `default` = white primary, `ghost` = cancel/subtle, `destructive` = soft red bg, `destructive-ghost` = text-only red. Sizes: `default`, `sm`, `xs`, `icon`, `icon-xs`, `icon-sm`.
 - **Accessibility:** Add `aria-label` to all icon-only buttons.
 - Keep it simple — minimal abstractions, no over-engineering
-- Dark theme throughout (bg-black/50, white/opacity text)
 - Import shared types from `@/lib/types`, constants from `@/lib/constants`
+
+## Color System
+
+The UI is fully themeable via CSS custom properties. **Never use hardcoded `white` or `black` for semantic colors.**
+
+### Rules
+
+1. **Use `foreground` with opacity, not `white`:**
+   - `bg-foreground/[0.02]` not ~~`bg-white/[0.02]`~~ (subtle surfaces)
+   - `text-foreground/40` not ~~`text-white/40`~~ (subdued text)
+   - `border-foreground/10` not ~~`border-white/10`~~ (borders)
+   - `text-foreground` not ~~`text-white`~~ (primary text)
+   - Same for `ring-`, `divide-`, etc.
+2. **Exception — literal white on colored backgrounds stays `text-white`:** checkmarks inside green circles, member initials on colored avatars, notification badges on `bg-blue-500`, etc. These are always white regardless of theme.
+3. **Overlays use `bg-black/50` or `bg-black/80`** — these should be dark in any theme.
+4. **shadcn semantic tokens** (`bg-card`, `text-muted-foreground`, `bg-popover`, `border-border`, etc.) are used by shadcn primitives in `components/ui/`. Use these when appropriate.
+5. **Project-specific colors** (client colors, status badges, timeline) are centralized in `lib/colors.ts`. All color palettes, mappings, and helpers live there. Never define color maps inline in components.
+
+### `lib/colors.ts` exports
+
+| Export | Purpose |
+|---|---|
+| `CLIENT_DOT_COLORS` | Color picker swatches (`bg-blue-500`, etc.) |
+| `CLIENT_TEXT_COLORS` | Client label text on cards (`text-blue-400`, etc.) |
+| `CLIENT_RGB_COLORS` | RGB strings for CSS variables (glow effects) |
+| `CLIENT_HEX_COLORS` | Hex values (timeline bars, presence cursors) |
+| `BADGE_COLOR_STYLES` | Status badge classes (bg + text + border) |
+| `COLOR_NAMES` | Array of all color names in the palette |
+| `getClientTextClassName(color)` | Look up text color class, defaults to blue |
+| `getBadgeColorStyle(color)` | Look up badge style, defaults to gray |
+| `getHexFromTailwind(tw)` | Convert Tailwind bg class to hex |
+| `WORKSPACE_COLORS` | Hex array for workspace/member profile swatches |
 
 ## Running Locally
 
