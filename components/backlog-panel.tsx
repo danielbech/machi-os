@@ -451,7 +451,7 @@ export function BacklogPanel({
     return (
       <SortableTaskRow key={task.id} id={task.id}>
           <div
-            className={`group border-b border-white/[0.04] last:border-b-0 hover:bg-white/[0.03] transition-colors cursor-grab active:cursor-grabbing focus:outline-none ${task.completed ? "opacity-40" : ""}`}
+            className={`group border-b border-foreground/[0.04] last:border-b-0 hover:bg-foreground/[0.03] transition-colors cursor-grab active:cursor-grabbing focus:outline-none ${task.completed ? "opacity-40" : ""}`}
             tabIndex={0}
             onMouseEnter={(e) => {
               if (!addingTaskIn) e.currentTarget.focus();
@@ -492,7 +492,7 @@ export function BacklogPanel({
                   className={`flex size-4 items-center justify-center rounded-full border transition-all ${
                     task.completed
                       ? "border-green-500/80 bg-green-500/80"
-                      : "border-white/20 hover:border-white/40"
+                      : "border-foreground/20 hover:border-foreground/40"
                   }`}
                 >
                   {task.completed && <Check className="size-3 text-white" strokeWidth={3} />}
@@ -503,7 +503,7 @@ export function BacklogPanel({
               <button
                 type="button"
                 onClick={() => onEditTask(task)}
-                className={`flex-1 text-left text-sm text-white/80 truncate hover:text-white transition-colors ${task.completed ? "line-through" : ""}`}
+                className={`flex-1 text-left text-sm text-foreground/80 truncate hover:text-foreground transition-colors ${task.completed ? "line-through" : ""}`}
               >
                 {task.title}
               </button>
@@ -511,8 +511,8 @@ export function BacklogPanel({
               {/* Checklist indicator */}
               {task.checklist && task.checklist.length > 0 && (
                 <div className="flex items-center gap-1 shrink-0">
-                  <ListChecks className="size-3 text-white/30" />
-                  <span className="text-[11px] text-white/30 tabular-nums">
+                  <ListChecks className="size-3 text-foreground/30" />
+                  <span className="text-[11px] text-foreground/30 tabular-nums">
                     {task.checklist.filter((i) => i.checked).length}/{task.checklist.length}
                   </span>
                 </div>
@@ -526,7 +526,7 @@ export function BacklogPanel({
                     return member ? (
                       <div
                         key={member.id}
-                        className={`flex items-center justify-center w-5 h-5 rounded-full ${!member.avatar ? member.color : "bg-white/5"} text-[9px] font-semibold text-white overflow-hidden`}
+                        className={`flex items-center justify-center w-5 h-5 rounded-full ${!member.avatar ? member.color : "bg-foreground/5"} text-[9px] font-semibold text-white overflow-hidden`}
                         title={member.name}
                       >
                         {member.avatar ? (
@@ -549,9 +549,9 @@ export function BacklogPanel({
                   aria-label={isExpanded ? "Collapse description" : "Expand description"}
                 >
                   {isExpanded ? (
-                    <ChevronDown className="size-3 text-white/30" />
+                    <ChevronDown className="size-3 text-foreground/30" />
                   ) : (
-                    <ChevronRight className="size-3 text-white/30" />
+                    <ChevronRight className="size-3 text-foreground/30" />
                   )}
                 </button>
               )}
@@ -563,7 +563,7 @@ export function BacklogPanel({
                   <DropdownMenuTrigger asChild>
                     <button
                       type="button"
-                      className="flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded bg-white/5 text-white/40 hover:bg-white/10 hover:text-white/60 shrink-0"
+                      className="flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded bg-foreground/5 text-foreground/40 hover:bg-foreground/10 hover:text-foreground/60 shrink-0"
                       aria-label="Send to day"
                     >
                       <Send className="size-2.5" />
@@ -583,10 +583,10 @@ export function BacklogPanel({
                 <button
                   type="button"
                   onClick={() => onDeleteTask(task.id)}
-                  className="shrink-0 p-1 rounded hover:bg-white/[0.06]"
+                  className="shrink-0 p-1 rounded hover:bg-foreground/[0.06]"
                   aria-label="Delete task"
                 >
-                  <Trash2 className="size-3 text-white/20 hover:text-red-400" />
+                  <Trash2 className="size-3 text-foreground/20 hover:text-red-400" />
                 </button>
               </div>
             </div>
@@ -595,7 +595,7 @@ export function BacklogPanel({
             {isExpanded && task.description && (
               <div className="px-2 pb-2 pl-3">
                 <div
-                  className="tiptap text-xs text-white/40 break-words [&_a]:text-blue-400 [&_a]:underline"
+                  className="tiptap text-xs text-foreground/40 break-words [&_a]:text-blue-400 [&_a]:underline"
                   dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(task.description) }}
                 />
               </div>
@@ -615,7 +615,7 @@ export function BacklogPanel({
             setAddingTaskIn(key);
             setNewTaskTitle("");
           }}
-          className="flex items-center gap-1.5 px-2 py-1 rounded-md text-xs text-white/30 bg-white/[0.03] hover:text-white/50 hover:bg-white/[0.06] transition-colors"
+          className="flex items-center gap-1.5 px-2 py-1 rounded-md text-xs text-foreground/30 bg-foreground/[0.03] hover:text-foreground/50 hover:bg-foreground/[0.06] transition-colors"
         >
           <Plus className="size-3" />
           Add task
@@ -639,7 +639,7 @@ export function BacklogPanel({
           }}
           placeholder="Task title..."
           autoFocus
-          className="w-full bg-transparent text-sm outline-none placeholder:text-white/15 text-white/80"
+          className="w-full bg-transparent text-sm outline-none placeholder:text-foreground/15 text-foreground/80"
         />
       </div>
     );
@@ -653,18 +653,18 @@ export function BacklogPanel({
     const isFolderDragTarget = dragOverContainer === containerId;
 
     return (
-      <div key={folder.id} data-backlog-folder={folder.id} data-backlog-client={folder.client_id} className={`transition-all duration-150 ${isFolderDragTarget ? "ring-1 ring-white/15 ring-inset bg-white/[0.04] rounded-lg" : ""}`}>
+      <div key={folder.id} data-backlog-folder={folder.id} data-backlog-client={folder.client_id} className={`transition-all duration-150 ${isFolderDragTarget ? "ring-1 ring-foreground/15 ring-inset bg-foreground/[0.04] rounded-lg" : ""}`}>
         {/* Folder header */}
-        <div className="flex items-center gap-1 group/folder border-b border-white/[0.04] hover:bg-white/[0.04] transition-colors px-3 py-1.5">
+        <div className="flex items-center gap-1 group/folder border-b border-foreground/[0.04] hover:bg-foreground/[0.04] transition-colors px-3 py-1.5">
           <button
             type="button"
             onClick={() => toggleFolder(folder.id)}
             className="flex items-center gap-1.5 flex-1"
           >
             <ChevronRight
-              className={`size-3 text-white/30 transition-transform ${isCollapsed ? "" : "rotate-90"}`}
+              className={`size-3 text-foreground/30 transition-transform ${isCollapsed ? "" : "rotate-90"}`}
             />
-            <Folder className="size-3.5 text-white/30" />
+            <Folder className="size-3.5 text-foreground/30" />
             {renamingFolder === folder.id ? (
               <input
                 type="text"
@@ -680,19 +680,19 @@ export function BacklogPanel({
                 }}
                 onClick={(e) => e.stopPropagation()}
                 autoFocus
-                className="bg-transparent text-sm text-white/50 outline-none flex-1"
+                className="bg-transparent text-sm text-foreground/50 outline-none flex-1"
               />
             ) : (
-              <span className="text-sm text-white/50">{folder.name}</span>
+              <span className="text-sm text-foreground/50">{folder.name}</span>
             )}
-            <span className="text-[10px] text-white/20 ml-1">{folderTasks.length}</span>
+            <span className="text-[10px] text-foreground/20 ml-1">{folderTasks.length}</span>
           </button>
           {folderTasks.length > 0 && (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <button
                   type="button"
-                  className="opacity-0 group-hover/folder:opacity-100 transition-opacity flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded bg-white/5 text-white/40 hover:bg-white/10 hover:text-white/60 shrink-0 mr-0.5"
+                  className="opacity-0 group-hover/folder:opacity-100 transition-opacity flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded bg-foreground/5 text-foreground/40 hover:bg-foreground/10 hover:text-foreground/60 shrink-0 mr-0.5"
                   aria-label="Send folder to day"
                 >
                   <Send className="size-2.5" />
@@ -714,18 +714,18 @@ export function BacklogPanel({
               setRenamingFolder(folder.id);
               setRenameValue(folder.name);
             }}
-            className="opacity-0 group-hover/folder:opacity-100 transition-opacity p-1 rounded hover:bg-white/[0.06]"
+            className="opacity-0 group-hover/folder:opacity-100 transition-opacity p-1 rounded hover:bg-foreground/[0.06]"
             aria-label="Rename folder"
           >
-            <Pencil className="size-3 text-white/20 hover:text-white/50" />
+            <Pencil className="size-3 text-foreground/20 hover:text-foreground/50" />
           </button>
           <button
             type="button"
             onClick={() => onDeleteFolder(folder.id)}
-            className="opacity-0 group-hover/folder:opacity-100 transition-opacity p-1 rounded hover:bg-white/[0.06]"
+            className="opacity-0 group-hover/folder:opacity-100 transition-opacity p-1 rounded hover:bg-foreground/[0.06]"
             aria-label="Delete folder"
           >
-            <Trash2 className="size-3 text-white/20 hover:text-red-400" />
+            <Trash2 className="size-3 text-foreground/20 hover:text-red-400" />
           </button>
         </div>
 
@@ -754,13 +754,13 @@ export function BacklogPanel({
     >
       <div className="flex flex-col">
         <div className="flex items-center justify-between mb-4 px-1">
-          <h2 className="text-sm font-semibold text-white/60 uppercase tracking-wider">Backlog</h2>
+          <h2 className="text-sm font-semibold text-foreground/60 uppercase tracking-wider">Backlog</h2>
           <div className="flex items-center gap-2">
-            <span className="text-xs text-white/40 tabular-nums">{tasks.length} tasks</span>
+            <span className="text-xs text-foreground/40 tabular-nums">{tasks.length} tasks</span>
             <button
               type="button"
               onClick={() => { setEditingProject(null); setProjectDialogOpen(true); }}
-              className="flex items-center gap-1 px-2 py-1 rounded-md text-xs text-white/40 bg-white/[0.04] hover:text-white/70 border border-white/10 hover:border-white/20 hover:bg-white/[0.08] transition-colors"
+              className="flex items-center gap-1 px-2 py-1 rounded-md text-xs text-foreground/40 bg-foreground/[0.04] hover:text-foreground/70 border border-foreground/10 hover:border-foreground/20 hover:bg-foreground/[0.08] transition-colors"
               aria-label="Add project"
             >
               <Plus className="size-3" />
@@ -779,7 +779,7 @@ export function BacklogPanel({
         />
 
         {relevantClients.length === 0 && (
-          <p className="text-sm text-white/20 px-1">No projects yet. Add projects to get started.</p>
+          <p className="text-sm text-foreground/20 px-1">No projects yet. Add projects to get started.</p>
         )}
 
         {relevantClients.map((client) => {
@@ -791,25 +791,25 @@ export function BacklogPanel({
           const unsortedContainerId = `unsorted:${client.id}`;
 
           return (
-            <div key={client.id} data-backlog-client={client.id} className="mb-3 rounded-lg border border-white/[0.06] bg-white/[0.02] overflow-hidden">
+            <div key={client.id} data-backlog-client={client.id} className="mb-3 rounded-lg border border-foreground/[0.06] bg-foreground/[0.02] overflow-hidden">
               {/* Client header */}
-              <div className="group/client flex items-center gap-2 px-3 py-2 bg-white/[0.03] hover:bg-white/[0.05] transition-colors">
+              <div className="group/client flex items-center gap-2 px-3 py-2 bg-foreground/[0.03] hover:bg-foreground/[0.05] transition-colors">
                 <button
                   type="button"
                   onClick={() => toggleClient(client.id)}
                   className="flex items-center gap-2 flex-1 min-w-0"
                 >
                   <ChevronRight
-                    className={`size-3.5 text-white/30 transition-transform ${isCollapsed ? "" : "rotate-90"}`}
+                    className={`size-3.5 text-foreground/30 transition-transform ${isCollapsed ? "" : "rotate-90"}`}
                   />
                   {client.logo_url ? (
                     <img src={client.logo_url} alt="" className="size-5 rounded-sm object-cover shrink-0" />
                   ) : client.icon ? (
                     <ClientIcon icon={client.icon} className="size-4 text-zinc-400 shrink-0" />
                   ) : null}
-                  <span className="text-base font-medium text-white/80 truncate">{client.name}</span>
+                  <span className="text-base font-medium text-foreground/80 truncate">{client.name}</span>
                   {clientTasks.length > 0 && (
-                    <span className="size-5 rounded-full bg-white/[0.06] flex items-center justify-center text-[10px] text-white/30 shrink-0">{clientTasks.length}</span>
+                    <span className="size-5 rounded-full bg-foreground/[0.06] flex items-center justify-center text-[10px] text-foreground/30 shrink-0">{clientTasks.length}</span>
                   )}
                 </button>
                 <button
@@ -818,10 +818,10 @@ export function BacklogPanel({
                     setEditingProject(client);
                     setProjectDialogOpen(true);
                   }}
-                  className="opacity-0 group-hover/client:opacity-100 transition-opacity p-1 rounded bg-white/[0.06] hover:bg-white/[0.10] shrink-0"
+                  className="opacity-0 group-hover/client:opacity-100 transition-opacity p-1 rounded bg-foreground/[0.06] hover:bg-foreground/[0.10] shrink-0"
                   aria-label={`Edit ${client.name}`}
                 >
-                  <Pencil className="size-3 text-white/20 hover:text-white/50" />
+                  <Pencil className="size-3 text-foreground/20 hover:text-foreground/50" />
                 </button>
               </div>
 
@@ -835,7 +835,7 @@ export function BacklogPanel({
                     const isUnsortedDragTarget = dragOverContainer === unsortedContainerId;
                     const showExpandedDropZone = activeTask && activeTask.folder_id && activeTask.client === client.id;
                     return (
-                      <div className={`transition-all duration-150 ${isUnsortedDragTarget ? "ring-1 ring-white/15 ring-inset bg-white/[0.04] rounded-lg" : ""}`}>
+                      <div className={`transition-all duration-150 ${isUnsortedDragTarget ? "ring-1 ring-foreground/15 ring-inset bg-foreground/[0.04] rounded-lg" : ""}`}>
                         <DroppableArea id={unsortedContainerId}>
                           <SortableContext items={unsortedTasks.map((t) => t.id)} strategy={verticalListSortingStrategy}>
                             {unsortedTasks.map(renderTaskRow)}
@@ -865,13 +865,13 @@ export function BacklogPanel({
                         }}
                         placeholder="Task title..."
                         autoFocus
-                        className="w-full bg-transparent text-sm outline-none placeholder:text-white/15 text-white/80"
+                        className="w-full bg-transparent text-sm outline-none placeholder:text-foreground/15 text-foreground/80"
                       />
                     </div>
                   ) : addingFolderFor === client.id ? (
                     <div className="px-3 py-1.5">
                       <div className="flex items-center gap-1.5">
-                        <Folder className="size-3 text-white/30" />
+                        <Folder className="size-3 text-foreground/30" />
                         <input
                           type="text"
                           value={newFolderName}
@@ -886,7 +886,7 @@ export function BacklogPanel({
                           }}
                           placeholder="Folder name..."
                           autoFocus
-                          className="bg-transparent text-xs text-white/50 outline-none flex-1 placeholder:text-white/15"
+                          className="bg-transparent text-xs text-foreground/50 outline-none flex-1 placeholder:text-foreground/15"
                         />
                       </div>
                     </div>
@@ -899,7 +899,7 @@ export function BacklogPanel({
                           setAddingTaskIn(key);
                           setNewTaskTitle("");
                         }}
-                        className="flex items-center gap-1 px-1.5 py-0.5 rounded border border-white/[0.08] bg-white/[0.03] text-white/25 text-[11px] hover:text-white/50 hover:border-white/15 hover:bg-white/[0.06] transition-colors"
+                        className="flex items-center gap-1 px-1.5 py-0.5 rounded border border-foreground/[0.08] bg-foreground/[0.03] text-foreground/25 text-[11px] hover:text-foreground/50 hover:border-foreground/15 hover:bg-foreground/[0.06] transition-colors"
                         aria-label="Add task"
                       >
                         <Plus className="size-3" />
@@ -911,7 +911,7 @@ export function BacklogPanel({
                           setAddingFolderFor(client.id);
                           setNewFolderName("");
                         }}
-                        className="flex items-center gap-1 px-1.5 py-0.5 rounded border border-white/[0.08] bg-white/[0.03] text-white/25 text-[11px] hover:text-white/50 hover:border-white/15 hover:bg-white/[0.06] transition-colors"
+                        className="flex items-center gap-1 px-1.5 py-0.5 rounded border border-foreground/[0.08] bg-foreground/[0.03] text-foreground/25 text-[11px] hover:text-foreground/50 hover:border-foreground/15 hover:bg-foreground/[0.06] transition-colors"
                         aria-label="Add folder"
                       >
                         <Folder className="size-3" />
@@ -930,8 +930,8 @@ export function BacklogPanel({
       {mounted && createPortal(
         <DragOverlay>
           {activeTask ? (
-            <div className="rounded-md border border-white/10 bg-zinc-900 px-3 py-2 shadow-lg">
-              <span className="text-sm text-white/80">{activeTask.title}</span>
+            <div className="rounded-md border border-foreground/10 bg-zinc-900 px-3 py-2 shadow-lg">
+              <span className="text-sm text-foreground/80">{activeTask.title}</span>
             </div>
           ) : null}
         </DragOverlay>,

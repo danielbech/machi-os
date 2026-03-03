@@ -32,20 +32,20 @@ export function FeedbackCard({
   return (
     <KanbanItem asHandle value={ticket.id}>
       <div
-        className="group rounded-lg border border-white/5 bg-white/[0.02] hover:bg-white/[0.04] hover:border-white/10 p-3 transition-all cursor-grab data-[dragging]:cursor-grabbing"
+        className="group rounded-lg border border-foreground/5 bg-foreground/[0.02] hover:bg-foreground/[0.04] hover:border-foreground/10 p-3 transition-all cursor-grab data-[dragging]:cursor-grabbing"
         onClick={(e) => {
           if ((e.target as HTMLElement).closest("button")) return;
           onClick(ticket);
         }}
       >
         {/* Title */}
-        <div className="font-medium text-sm text-white line-clamp-2 pr-6 relative">
+        <div className="font-medium text-sm text-foreground line-clamp-2 pr-6 relative">
           {ticket.title}
           {canDelete && (
             <Button
               variant="ghost"
               size="icon-xs"
-              className="absolute -top-0.5 -right-1 opacity-0 group-hover:opacity-100 text-white/40 hover:text-red-400 hover:bg-red-500/10 transition-all"
+              className="absolute -top-0.5 -right-1 opacity-0 group-hover:opacity-100 text-foreground/40 hover:text-red-400 hover:bg-red-500/10 transition-all"
               onClick={() => onDelete(ticket.id)}
               aria-label={`Delete ${ticket.title}`}
             >
@@ -56,14 +56,14 @@ export function FeedbackCard({
 
         {/* Description preview */}
         {ticket.description && (
-          <p className="text-xs text-white/40 line-clamp-2 mt-1">
+          <p className="text-xs text-foreground/40 line-clamp-2 mt-1">
             {ticket.description}
           </p>
         )}
 
         {/* Author + date + reactions */}
         <div className="flex items-center justify-between gap-2 mt-2.5">
-          <div className="flex items-center gap-1.5 text-xs text-white/30 min-w-0">
+          <div className="flex items-center gap-1.5 text-xs text-foreground/30 min-w-0">
             {ticket.author && (
               <>
                 {ticket.author.avatar_url ? (
@@ -103,7 +103,7 @@ export function FeedbackCard({
                   className={`flex items-center gap-0.5 rounded-full px-1.5 py-0.5 text-xs font-medium transition-all ${
                     isActive
                       ? activeColor
-                      : `text-white/25 ${hoverColor}`
+                      : `text-foreground/25 ${hoverColor}`
                   }`}
                   aria-label={`${isActive ? "Remove" : "Add"} ${type} reaction`}
                 >

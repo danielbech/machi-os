@@ -59,7 +59,7 @@ export function PendingInvitesDialog({ open, onOpenChange }: PendingInvitesDialo
       <DialogContent className="sm:max-w-[420px]">
         <DialogHeader>
           <DialogTitle>Workspace invites</DialogTitle>
-          <DialogDescription className="text-white/50">
+          <DialogDescription className="text-foreground/50">
             You&apos;ve been invited to join {pendingInvites.length === 1 ? "a workspace" : `${pendingInvites.length} workspaces`}.
           </DialogDescription>
         </DialogHeader>
@@ -67,7 +67,7 @@ export function PendingInvitesDialog({ open, onOpenChange }: PendingInvitesDialo
           {pendingInvites.map((invite) => (
             <div
               key={invite.id}
-              className="flex items-center gap-3 rounded-lg border border-white/[0.08] bg-white/[0.03] p-3"
+              className="flex items-center gap-3 rounded-lg border border-foreground/[0.08] bg-foreground/[0.03] p-3"
             >
               <div
                 className="flex size-9 shrink-0 items-center justify-center rounded-lg"
@@ -77,7 +77,7 @@ export function PendingInvitesDialog({ open, onOpenChange }: PendingInvitesDialo
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium truncate">{invite.workspace_name}</p>
-                <p className="text-xs text-white/40 capitalize">{invite.role}</p>
+                <p className="text-xs text-foreground/40 capitalize">{invite.role}</p>
               </div>
               <div className="flex gap-2 shrink-0">
                 <Button

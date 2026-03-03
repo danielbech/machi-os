@@ -14,7 +14,7 @@ export const CLIENT_DOT_COLORS: Record<string, string> = {
   yellow: "bg-yellow-500",
   cyan: "bg-cyan-500",
   amber: "bg-amber-500",
-  gray: "bg-white/30",
+  gray: "bg-foreground/30",
 };
 
 // Text-only colors (client labels on cards, etc.)
@@ -29,7 +29,7 @@ export const CLIENT_TEXT_COLORS: Record<string, string> = {
   yellow: "text-yellow-400",
   cyan: "text-cyan-400",
   amber: "text-amber-400",
-  gray: "text-white/30",
+  gray: "text-foreground/30",
 };
 
 // Raw RGB values for dynamic CSS (glow effects, etc.)
@@ -64,7 +64,7 @@ export const CLIENT_HEX_COLORS: Record<string, string> = {
 
 // Badge styles (status badges, etc.) — bg + text + border
 export const BADGE_COLOR_STYLES: Record<string, string> = {
-  white: "bg-white/10 text-white border-white/20",
+  white: "bg-foreground/10 text-white border-foreground/20",
   blue: "bg-blue-500/10 text-blue-400 border-blue-500/20",
   green: "bg-green-500/10 text-green-400 border-green-500/20",
   purple: "bg-purple-500/10 text-purple-400 border-purple-500/20",
@@ -74,7 +74,7 @@ export const BADGE_COLOR_STYLES: Record<string, string> = {
   yellow: "bg-yellow-500/10 text-yellow-400 border-yellow-500/20",
   cyan: "bg-cyan-500/10 text-cyan-400 border-cyan-500/20",
   amber: "bg-amber-500/10 text-amber-400 border-amber-500/20",
-  gray: "bg-white/5 text-white/30 border-white/10",
+  gray: "bg-foreground/5 text-foreground/30 border-foreground/10",
 };
 
 // All color names (derived from the palette)

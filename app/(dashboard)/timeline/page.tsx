@@ -119,7 +119,7 @@ function ClientAvatar({
       <img
         src={client.logo_url}
         alt={client.name}
-        className={`${dim} rounded shrink-0 object-cover bg-white/5`}
+        className={`${dim} rounded shrink-0 object-cover bg-foreground/5`}
       />
     );
   }
@@ -648,10 +648,10 @@ export default function TimelinePage() {
     return (
       <main className="flex min-h-screen flex-col p-4 md:p-8 overflow-hidden">
         <div className="mb-6 flex items-center justify-between">
-          <div className="h-8 w-32 bg-white/5 rounded animate-pulse" />
-          <div className="h-9 w-48 bg-white/5 rounded animate-pulse" />
+          <div className="h-8 w-32 bg-foreground/5 rounded animate-pulse" />
+          <div className="h-9 w-48 bg-foreground/5 rounded animate-pulse" />
         </div>
-        <div className="flex-1 bg-white/[0.02] rounded-lg border border-white/5 animate-pulse" />
+        <div className="flex-1 bg-foreground/[0.02] rounded-lg border border-foreground/5 animate-pulse" />
       </main>
     );
   }
@@ -661,25 +661,25 @@ export default function TimelinePage() {
       <div className="mb-6 flex items-center justify-between">
         <div className="flex items-center gap-2.5">
           <h1 className="text-2xl font-bold">Timeline</h1>
-          <span className="rounded-full bg-white/[0.08] px-2 py-0.5 text-[10px] font-medium text-white/40 uppercase tracking-wider">Beta</span>
+          <span className="rounded-full bg-foreground/[0.08] px-2 py-0.5 text-[10px] font-medium text-foreground/40 uppercase tracking-wider">Beta</span>
         </div>
         <div className="flex items-center gap-2">
-          <div className="flex items-center gap-0.5 rounded-md bg-white/5 p-0.5">
+          <div className="flex items-center gap-0.5 rounded-md bg-foreground/5 p-0.5">
             <button
               onClick={() => handleZoom(-1)}
               disabled={zoomLevel <= 0}
-              className="px-1.5 py-0.5 rounded text-xs font-medium transition-all text-white/30 hover:text-white/50 disabled:opacity-25 disabled:cursor-not-allowed"
+              className="px-1.5 py-0.5 rounded text-xs font-medium transition-all text-foreground/30 hover:text-foreground/50 disabled:opacity-25 disabled:cursor-not-allowed"
               aria-label="Zoom out"
             >
               −
             </button>
-            <span className="px-2 text-xs font-medium text-white/40 min-w-[56px] text-center">
+            <span className="px-2 text-xs font-medium text-foreground/40 min-w-[56px] text-center">
               {RANGE_LABELS[range]}
             </span>
             <button
               onClick={() => handleZoom(1)}
               disabled={zoomLevel >= ZOOM_LEVELS.length - 1}
-              className="px-1.5 py-0.5 rounded text-xs font-medium transition-all text-white/30 hover:text-white/50 disabled:opacity-25 disabled:cursor-not-allowed"
+              className="px-1.5 py-0.5 rounded text-xs font-medium transition-all text-foreground/30 hover:text-foreground/50 disabled:opacity-25 disabled:cursor-not-allowed"
               aria-label="Zoom in"
             >
               +
@@ -689,8 +689,8 @@ export default function TimelinePage() {
             onClick={() => handleSetActiveOnly(!activeOnly)}
             className={`flex items-center gap-1.5 rounded-md px-2 py-1 text-xs font-medium transition-all ${
               activeOnly
-                ? "bg-white/10 text-white"
-                : "text-white/30 hover:text-white/50"
+                ? "bg-foreground/10 text-foreground"
+                : "text-foreground/30 hover:text-foreground/50"
             }`}
           >
             <Filter className="size-3" />
@@ -706,13 +706,13 @@ export default function TimelinePage() {
       {entries.length === 0 ? (
         <div className="flex-1 flex items-center justify-center">
           <div className="text-center space-y-3">
-            <div className="text-white/40 text-sm">
+            <div className="text-foreground/40 text-sm">
               No items on the timeline
             </div>
             <Button
               variant="link"
               onClick={() => setDialogOpen(true)}
-              className="text-white/60 hover:text-white"
+              className="text-foreground/60 hover:text-foreground"
             >
               Add to timeline
             </Button>
@@ -720,7 +720,7 @@ export default function TimelinePage() {
         </div>
       ) : (
         <div
-          className="flex-1 min-h-0 h-[calc(100vh-160px)] rounded-lg border border-white/[0.06] overflow-hidden"
+          className="flex-1 min-h-0 h-[calc(100vh-160px)] rounded-lg border border-foreground/[0.06] overflow-hidden"
           onClick={(e) => {
             const target = e.target as HTMLElement;
             if (
@@ -758,7 +758,7 @@ export default function TimelinePage() {
                 return (
                   <div
                     key={parent.id}
-                    className="mx-2 mb-3 rounded-lg border bg-white/[0.02] overflow-hidden transition-colors"
+                    className="mx-2 mb-3 rounded-lg border bg-foreground/[0.02] overflow-hidden transition-colors"
                     style={{
                       borderColor: selectedEntryId === parent.id || group.children.some((c) => c.id === selectedEntryId)
                         ? `${getAccentColor(parent)}50`
@@ -768,7 +768,7 @@ export default function TimelinePage() {
                     {/* Parent header row */}
                     <div
                       data-sidebar-entry
-                      className={`relative flex items-center gap-2.5 px-2.5 text-xs bg-white/[0.03] hover:bg-white/[0.05] cursor-pointer transition-colors ${selectedEntryId === parent.id ? "bg-white/[0.08]" : ""}`}
+                      className={`relative flex items-center gap-2.5 px-2.5 text-xs bg-foreground/[0.03] hover:bg-foreground/[0.05] cursor-pointer transition-colors ${selectedEntryId === parent.id ? "bg-foreground/[0.08]" : ""}`}
                       style={{ height: "var(--gantt-row-height)" }}
                       onClick={() => {
                         setSelectedEntryId(parent.id);
@@ -788,7 +788,7 @@ export default function TimelinePage() {
                       <p className="flex-1 truncate text-left font-medium">
                         {parentFeature.name}
                       </p>
-                      <p className="text-white/30 shrink-0">
+                      <p className="text-foreground/30 shrink-0">
                         {parentDuration}
                       </p>
                     </div>
@@ -810,19 +810,19 @@ export default function TimelinePage() {
                         <div
                           key={child.id}
                           data-sidebar-entry
-                          className={`relative flex items-center gap-2.5 pl-4 pr-2.5 text-xs border-t border-white/[0.04] cursor-pointer hover:bg-white/[0.05] transition-colors ${selectedEntryId === child.id ? "bg-white/[0.08]" : ""}`}
+                          className={`relative flex items-center gap-2.5 pl-4 pr-2.5 text-xs border-t border-foreground/[0.04] cursor-pointer hover:bg-foreground/[0.05] transition-colors ${selectedEntryId === child.id ? "bg-foreground/[0.08]" : ""}`}
                           style={{ height: "var(--gantt-row-height)" }}
                           onClick={() => setSelectedEntryId(child.id)}
                         >
                           {isMilestone ? (
-                            <Diamond className="size-3.5 shrink-0 text-white/40" />
+                            <Diamond className="size-3.5 shrink-0 text-foreground/40" />
                           ) : child.icon ? (
-                            <ClientIcon icon={child.icon} className="size-3.5 shrink-0 text-white/40" />
+                            <ClientIcon icon={child.icon} className="size-3.5 shrink-0 text-foreground/40" />
                           ) : null}
                           <p className="flex-1 truncate text-left font-medium">
                             {childFeature.name}
                           </p>
-                          <p className="text-white/30 shrink-0">
+                          <p className="text-foreground/30 shrink-0">
                             {isMilestone ? format(childFeature.startAt, "MMM d") : childDuration}
                           </p>
                         </div>
@@ -863,9 +863,9 @@ export default function TimelinePage() {
                             }}
                           >
                             {isChild && isMilestone ? (
-                              <Diamond className="size-2.5 shrink-0 text-white/60" />
+                              <Diamond className="size-2.5 shrink-0 text-foreground/60" />
                             ) : isChild && entry.icon ? (
-                              <ClientIcon icon={entry.icon} className="size-3 shrink-0 text-white/50" />
+                              <ClientIcon icon={entry.icon} className="size-3 shrink-0 text-foreground/50" />
                             ) : isChild ? null
                             : entry.type === "event" ? (
                               <EventDot color={entry.color} size="xs" />
@@ -885,7 +885,7 @@ export default function TimelinePage() {
                             <DropdownMenu>
                               <DropdownMenuTrigger asChild>
                                 <button
-                                  className="shrink-0 rounded p-0.5 text-white/30 hover:text-white/60 hover:bg-white/10 transition-colors"
+                                  className="shrink-0 rounded p-0.5 text-foreground/30 hover:text-foreground/60 hover:bg-foreground/10 transition-colors"
                                   onPointerDown={(e) => e.stopPropagation()}
                                   aria-label="Entry options"
                                 >
@@ -967,13 +967,13 @@ export default function TimelinePage() {
             <DialogTitle>Add to Timeline</DialogTitle>
           </DialogHeader>
 
-          <div className="flex gap-1 rounded-lg bg-white/5 p-1">
+          <div className="flex gap-1 rounded-lg bg-foreground/5 p-1">
             <button
               onClick={() => setDialogTab("project")}
               className={`flex-1 px-3 py-1 rounded-md text-sm font-medium transition-all ${
                 dialogTab === "project"
-                  ? "bg-white/10 text-white"
-                  : "text-white/40 hover:text-white/60"
+                  ? "bg-foreground/10 text-foreground"
+                  : "text-foreground/40 hover:text-foreground/60"
               }`}
             >
               Project
@@ -982,8 +982,8 @@ export default function TimelinePage() {
               onClick={() => setDialogTab("event")}
               className={`flex-1 px-3 py-1 rounded-md text-sm font-medium transition-all ${
                 dialogTab === "event"
-                  ? "bg-white/10 text-white"
-                  : "text-white/40 hover:text-white/60"
+                  ? "bg-foreground/10 text-foreground"
+                  : "text-foreground/40 hover:text-foreground/60"
               }`}
             >
               Event
@@ -993,7 +993,7 @@ export default function TimelinePage() {
           {dialogTab === "project" ? (
             <div className="space-y-1 pt-2">
               {availableClients.length === 0 ? (
-                <p className="text-sm text-white/40 py-4 text-center">
+                <p className="text-sm text-foreground/40 py-4 text-center">
                   All active projects are already on the timeline.
                 </p>
               ) : (
@@ -1001,7 +1001,7 @@ export default function TimelinePage() {
                   <button
                     key={client.id}
                     onClick={() => handleAddClient(client)}
-                    className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left hover:bg-white/5 transition-colors"
+                    className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left hover:bg-foreground/5 transition-colors"
                   >
                     <ClientAvatar client={client} size="sm" />
                     <span className="text-sm font-medium">{client.name}</span>
@@ -1013,14 +1013,14 @@ export default function TimelinePage() {
             <div className="space-y-4 pt-2">
               <Input
                 placeholder="Event name"
-                className="placeholder:text-white/25"
+                className="placeholder:text-foreground/25"
                 value={eventTitle}
                 onChange={(e) => setEventTitle(e.target.value)}
                 autoFocus
               />
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1.5">
-                  <label className="text-xs text-white/40">Start date</label>
+                  <label className="text-xs text-foreground/40">Start date</label>
                   <Input
                     type="date"
                     value={eventStartDate}
@@ -1029,7 +1029,7 @@ export default function TimelinePage() {
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <label className="text-xs text-white/40">End date</label>
+                  <label className="text-xs text-foreground/40">End date</label>
                   <Input
                     type="date"
                     value={eventEndDate}
@@ -1039,7 +1039,7 @@ export default function TimelinePage() {
                 </div>
               </div>
               <div className="space-y-1.5">
-                <label className="text-xs text-white/40">Color</label>
+                <label className="text-xs text-foreground/40">Color</label>
                 <div className="flex gap-2">
                   {COLOR_NAMES.map((name) => (
                     <button
@@ -1087,7 +1087,7 @@ export default function TimelinePage() {
           </DialogHeader>
           <form onSubmit={(e) => { e.preventDefault(); handleSaveEdit(); }} className="space-y-4 pt-2">
             <div className="space-y-1.5">
-              <label className="text-xs text-white/40">Title</label>
+              <label className="text-xs text-foreground/40">Title</label>
               <Input
                 value={editTitle}
                 onChange={(e) => setEditTitle(e.target.value)}
@@ -1096,7 +1096,7 @@ export default function TimelinePage() {
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
-                <label className="text-xs text-white/40">Start date</label>
+                <label className="text-xs text-foreground/40">Start date</label>
                 <Input
                   type="date"
                   value={editStartDate}
@@ -1105,7 +1105,7 @@ export default function TimelinePage() {
                 />
               </div>
               <div className="space-y-1.5">
-                <label className="text-xs text-white/40">End date</label>
+                <label className="text-xs text-foreground/40">End date</label>
                 <Input
                   type="date"
                   value={editEndDate}
@@ -1116,7 +1116,7 @@ export default function TimelinePage() {
             </div>
             {editingEntry?.parent_id && (
               <div className="space-y-1.5">
-                <label className="text-xs text-white/40">Icon (optional)</label>
+                <label className="text-xs text-foreground/40">Icon (optional)</label>
                 <div className="flex flex-wrap gap-1.5">
                   {SUB_ITEM_ICONS.map((opt) => (
                     <button
@@ -1125,8 +1125,8 @@ export default function TimelinePage() {
                       onClick={() => setEditIcon(editIcon === opt.name ? "" : opt.name)}
                       className={`size-7 rounded-md flex items-center justify-center transition-all ${
                         editIcon === opt.name
-                          ? "bg-white/15 text-white ring-1 ring-white/30"
-                          : "bg-white/5 text-white/30 hover:text-white/60 hover:bg-white/10"
+                          ? "bg-foreground/15 text-foreground ring-1 ring-foreground/30"
+                          : "bg-foreground/5 text-foreground/30 hover:text-foreground/60 hover:bg-foreground/10"
                       }`}
                       title={opt.label}
                       aria-label={opt.label}
@@ -1138,7 +1138,7 @@ export default function TimelinePage() {
               </div>
             )}
             <div className="space-y-1.5">
-              <label className="text-xs text-white/40">Color</label>
+              <label className="text-xs text-foreground/40">Color</label>
               <div className="flex gap-2">
                 {COLOR_NAMES.map((name) => (
                   <button
@@ -1178,7 +1178,7 @@ export default function TimelinePage() {
           </DialogHeader>
           <form onSubmit={(e) => { e.preventDefault(); handleAddSubItem(); }} className="space-y-4 pt-2">
             <div className="space-y-1.5">
-              <label className="text-xs text-white/40">Title</label>
+              <label className="text-xs text-foreground/40">Title</label>
               <Input
                 placeholder="Sub-item name"
                 value={subItemTitle}
@@ -1188,7 +1188,7 @@ export default function TimelinePage() {
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
-                <label className="text-xs text-white/40">Start date</label>
+                <label className="text-xs text-foreground/40">Start date</label>
                 <Input
                   type="date"
                   value={subItemStartDate}
@@ -1197,7 +1197,7 @@ export default function TimelinePage() {
                 />
               </div>
               <div className="space-y-1.5">
-                <label className="text-xs text-white/40">End date</label>
+                <label className="text-xs text-foreground/40">End date</label>
                 <Input
                   type="date"
                   value={subItemEndDate}
@@ -1206,11 +1206,11 @@ export default function TimelinePage() {
                 />
               </div>
             </div>
-            <p className="text-xs text-white/30">
+            <p className="text-xs text-foreground/30">
               Set start and end to the same date for a milestone.
             </p>
             <div className="space-y-1.5">
-              <label className="text-xs text-white/40">Icon (optional)</label>
+              <label className="text-xs text-foreground/40">Icon (optional)</label>
               <div className="flex flex-wrap gap-1.5">
                 {SUB_ITEM_ICONS.map((opt) => (
                   <button
@@ -1219,8 +1219,8 @@ export default function TimelinePage() {
                     onClick={() => setSubItemIcon(subItemIcon === opt.name ? "" : opt.name)}
                     className={`size-7 rounded-md flex items-center justify-center transition-all ${
                       subItemIcon === opt.name
-                        ? "bg-white/15 text-white ring-1 ring-white/30"
-                        : "bg-white/5 text-white/30 hover:text-white/60 hover:bg-white/10"
+                        ? "bg-foreground/15 text-foreground ring-1 ring-foreground/30"
+                        : "bg-foreground/5 text-foreground/30 hover:text-foreground/60 hover:bg-foreground/10"
                     }`}
                     title={opt.label}
                     aria-label={opt.label}
@@ -1231,7 +1231,7 @@ export default function TimelinePage() {
               </div>
             </div>
             <div className="space-y-1.5">
-              <label className="text-xs text-white/40">Color</label>
+              <label className="text-xs text-foreground/40">Color</label>
               <div className="flex gap-2">
                 {COLOR_NAMES.map((name) => (
                   <button

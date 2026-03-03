@@ -122,7 +122,7 @@
   * {
     @apply border-border;
     scrollbar-width: thin;
-    scrollbar-color: rgba(255 255 255 / 0.1) transparent;
+    scrollbar-color: oklch(from var(--foreground) l c h / 0.1) transparent;
   }
 
   button,
@@ -132,7 +132,7 @@
   }
 
   *:hover {
-    scrollbar-color: rgba(255 255 255 / 0.2) transparent;
+    scrollbar-color: oklch(from var(--foreground) l c h / 0.2) transparent;
   }
 
   body {

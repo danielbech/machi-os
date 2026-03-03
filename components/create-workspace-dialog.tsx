@@ -64,7 +64,7 @@ export function CreateWorkspaceDialog({ open, onOpenChange }: CreateWorkspaceDia
         </DialogHeader>
         <div className="space-y-4 pt-2">
           <div className="space-y-2">
-            <label className="text-xs text-white/40">Name</label>
+            <label className="text-xs text-foreground/40">Name</label>
             <Input
               value={name}
               onChange={(e) => setName(e.target.value)}
@@ -75,7 +75,7 @@ export function CreateWorkspaceDialog({ open, onOpenChange }: CreateWorkspaceDia
           </div>
 
           <div className="space-y-2">
-            <label className="text-xs text-white/40">Color</label>
+            <label className="text-xs text-foreground/40">Color</label>
             <div className="flex gap-2 flex-wrap">
               {WORKSPACE_COLORS.map((c) => (
                 <button

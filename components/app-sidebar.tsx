@@ -133,7 +133,7 @@ export function AppSidebar() {
                         {project.name}
                       </span>
                       {project.id === activeProjectId && (
-                        <Check className="size-4 ml-auto text-white/60" />
+                        <Check className="size-4 ml-auto text-foreground/60" />
                       )}
                     </DropdownMenuItem>
                   ))}

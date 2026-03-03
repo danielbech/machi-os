@@ -22,7 +22,7 @@ export function BoardAddCard({ value, onChange, cardType, onToggleType, onSubmit
   };
 
   return (
-    <div className={`rounded-lg border p-3 animate-card-appear ${cardType === "note" ? "border-amber-500/20 bg-amber-500/5" : "border-white/10 bg-white/[0.03]"}`}>
+    <div className={`rounded-lg border p-3 animate-card-appear ${cardType === "note" ? "border-amber-500/20 bg-amber-500/5" : "border-foreground/10 bg-foreground/[0.03]"}`}>
       <input
         type="text"
         value={value}
@@ -37,7 +37,7 @@ export function BoardAddCard({ value, onChange, cardType, onToggleType, onSubmit
         }}
         placeholder={cardType === "note" ? "Note..." : "Task title..."}
         autoFocus
-        className="w-full bg-transparent text-sm outline-none placeholder:text-white/30"
+        className="w-full bg-transparent text-sm outline-none placeholder:text-foreground/30"
       />
       <div className="mt-2 flex items-center gap-2 text-xs text-muted-foreground/60">
         <button
@@ -49,8 +49,8 @@ export function BoardAddCard({ value, onChange, cardType, onToggleType, onSubmit
           <StickyNote className="size-3" />
           {cardType === "note" ? "Note" : "Task"}
         </button>
-        <span className="ml-auto text-white/15">↵ Save</span>
-        <span className="text-white/15">⎋ Cancel</span>
+        <span className="ml-auto text-foreground/15">↵ Save</span>
+        <span className="text-foreground/15">⎋ Cancel</span>
       </div>
     </div>
   );

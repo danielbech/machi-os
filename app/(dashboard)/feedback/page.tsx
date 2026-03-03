@@ -343,15 +343,15 @@ export default function FeedbackPage() {
     return (
       <main className="flex min-h-screen flex-col p-4 md:p-8">
         <div className="mb-6 flex items-center justify-between">
-          <div className="h-8 w-32 bg-white/5 rounded animate-pulse" />
-          <div className="h-9 w-28 bg-white/5 rounded animate-pulse" />
+          <div className="h-8 w-32 bg-foreground/5 rounded animate-pulse" />
+          <div className="h-9 w-28 bg-foreground/5 rounded animate-pulse" />
         </div>
         <div className="flex gap-4">
           {[1, 2, 3, 4].map((i) => (
             <div key={i} className="w-[280px] shrink-0 space-y-2">
-              <div className="h-6 w-32 bg-white/5 rounded animate-pulse" />
-              <div className="h-24 bg-white/[0.02] rounded-lg border border-white/5 animate-pulse" />
-              <div className="h-24 bg-white/[0.02] rounded-lg border border-white/5 animate-pulse" />
+              <div className="h-6 w-32 bg-foreground/5 rounded animate-pulse" />
+              <div className="h-24 bg-foreground/[0.02] rounded-lg border border-foreground/5 animate-pulse" />
+              <div className="h-24 bg-foreground/[0.02] rounded-lg border border-foreground/5 animate-pulse" />
             </div>
           ))}
         </div>
@@ -404,7 +404,7 @@ export default function FeedbackPage() {
                       <input
                         value={renameValue}
                         onChange={(e) => setRenameValue(e.target.value)}
-                        className="font-semibold text-sm bg-transparent outline-none border-b border-white/20 focus:border-white/40 w-full min-w-0"
+                        className="font-semibold text-sm bg-transparent outline-none border-b border-foreground/20 focus:border-foreground/40 w-full min-w-0"
                         autoFocus
                         onFocus={(e) => e.target.select()}
                         onBlur={() => handleRenameColumn(col.id)}
@@ -415,7 +415,7 @@ export default function FeedbackPage() {
                       />
                     ) : (
                       <h2
-                        className={`font-semibold text-sm truncate ${isAdmin ? "cursor-text hover:text-white/80" : ""}`}
+                        className={`font-semibold text-sm truncate ${isAdmin ? "cursor-text hover:text-foreground/80" : ""}`}
                         onClick={() => {
                           if (!isAdmin) return;
                           setRenamingColumnId(col.id);
@@ -426,7 +426,7 @@ export default function FeedbackPage() {
                       </h2>
                     )}
                     {renamingColumnId !== col.id && (
-                      <span className="text-xs text-white/40 shrink-0">
+                      <span className="text-xs text-foreground/40 shrink-0">
                         {(tickets[col.id] || []).length}
                       </span>
                     )}
@@ -436,7 +436,7 @@ export default function FeedbackPage() {
                     <Button
                       variant="ghost"
                       size="icon-xs"
-                      className="opacity-0 group-hover/header:opacity-100 text-white/40 hover:text-red-400 hover:bg-red-500/10 transition-all shrink-0"
+                      className="opacity-0 group-hover/header:opacity-100 text-foreground/40 hover:text-red-400 hover:bg-red-500/10 transition-all shrink-0"
                       onClick={() => setDeleteColumnConfirm(col.id)}
                       aria-label={`Delete ${col.title}`}
                     >
@@ -462,7 +462,7 @@ export default function FeedbackPage() {
                 {/* Add ticket button at bottom of column */}
                 <button
                   onClick={() => openNewTicketDialog(col.id)}
-                  className="flex items-center gap-2 rounded-lg p-2 text-xs text-muted-foreground/40 bg-white/[0.02] hover:text-muted-foreground/60 hover:bg-white/[0.05] transition-colors"
+                  className="flex items-center gap-2 rounded-lg p-2 text-xs text-muted-foreground/40 bg-foreground/[0.02] hover:text-muted-foreground/60 hover:bg-foreground/[0.05] transition-colors"
                 >
                   <Plus className="size-3.5" />
                   Add ticket
@@ -522,17 +522,17 @@ export default function FeedbackPage() {
             if (!ticket) return null;
             const totalReactions = ticket.reactions.thumbsup + ticket.reactions.heart + ticket.reactions.fire;
             return (
-              <div className="w-[85vw] sm:w-[280px] rounded-lg border border-white/10 bg-card p-3 shadow-lg">
+              <div className="w-[85vw] sm:w-[280px] rounded-lg border border-foreground/10 bg-card p-3 shadow-lg">
                 <div className="text-sm font-medium line-clamp-2">{ticket.title}</div>
                 {ticket.description && (
-                  <p className="text-xs text-white/40 line-clamp-2 mt-1">{ticket.description}</p>
+                  <p className="text-xs text-foreground/40 line-clamp-2 mt-1">{ticket.description}</p>
                 )}
                 <div className="flex items-center justify-between mt-2">
-                  <div className="text-xs text-white/30">
+                  <div className="text-xs text-foreground/30">
                     {ticket.author?.display_name}
                   </div>
                   {totalReactions > 0 && (
-                    <div className="flex items-center gap-1 text-xs text-white/30">
+                    <div className="flex items-center gap-1 text-xs text-foreground/30">
                       <ThumbsUp className="size-3" />
                       <span>{totalReactions}</span>
                     </div>
@@ -562,7 +562,7 @@ export default function FeedbackPage() {
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               rows={2}
-              className="flex w-full rounded-md border border-white/10 bg-white/5 px-3 py-2 text-sm placeholder:text-white/30 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-white/20 resize-none overflow-hidden"
+              className="flex w-full rounded-md border border-foreground/10 bg-foreground/5 px-3 py-2 text-sm placeholder:text-foreground/30 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-foreground/20 resize-none overflow-hidden"
               onInput={(e) => {
                 const el = e.currentTarget;
                 el.style.height = "auto";
@@ -572,7 +572,7 @@ export default function FeedbackPage() {
 
             {/* Column picker */}
             <div>
-              <div className="text-xs text-white/40 mb-2">Column</div>
+              <div className="text-xs text-foreground/40 mb-2">Column</div>
               <div className="flex flex-wrap gap-2">
                 {columns.map((col) => (
                   <button
@@ -580,8 +580,8 @@ export default function FeedbackPage() {
                     onClick={() => setDialogColumnId(col.id)}
                     className={`px-3 py-1.5 rounded-full text-sm font-medium transition-all ${
                       dialogColumnId === col.id
-                        ? "bg-white/15 text-white ring-1 ring-white/30"
-                        : "text-white/40 hover:text-white/60 bg-white/5 hover:bg-white/10"
+                        ? "bg-foreground/15 text-foreground ring-1 ring-foreground/30"
+                        : "text-foreground/40 hover:text-foreground/60 bg-foreground/5 hover:bg-foreground/10"
                     }`}
                   >
                     {col.title}
@@ -629,7 +629,7 @@ export default function FeedbackPage() {
               value={editDescription}
               onChange={(e) => setEditDescription(e.target.value)}
               rows={2}
-              className="flex w-full rounded-md border border-white/10 bg-white/5 px-3 py-2 text-sm placeholder:text-white/30 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-white/20 resize-none overflow-hidden"
+              className="flex w-full rounded-md border border-foreground/10 bg-foreground/5 px-3 py-2 text-sm placeholder:text-foreground/30 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-foreground/20 resize-none overflow-hidden"
               onInput={(e) => {
                 const el = e.currentTarget;
                 el.style.height = "auto";
@@ -639,7 +639,7 @@ export default function FeedbackPage() {
 
             {/* Column picker */}
             <div>
-              <div className="text-xs text-white/40 mb-2">Column</div>
+              <div className="text-xs text-foreground/40 mb-2">Column</div>
               <div className="flex flex-wrap gap-2">
                 {columns.map((col) => (
                   <button
@@ -647,8 +647,8 @@ export default function FeedbackPage() {
                     onClick={() => setEditColumnId(col.id)}
                     className={`px-3 py-1.5 rounded-full text-sm font-medium transition-all ${
                       editColumnId === col.id
-                        ? "bg-white/15 text-white ring-1 ring-white/30"
-                        : "text-white/40 hover:text-white/60 bg-white/5 hover:bg-white/10"
+                        ? "bg-foreground/15 text-foreground ring-1 ring-foreground/30"
+                        : "text-foreground/40 hover:text-foreground/60 bg-foreground/5 hover:bg-foreground/10"
                     }`}
                   >
                     {col.title}
@@ -682,7 +682,7 @@ export default function FeedbackPage() {
             <DialogTitle>Delete Ticket</DialogTitle>
           </DialogHeader>
           <div className="py-4 space-y-4">
-            <p className="text-sm text-white/60">
+            <p className="text-sm text-foreground/60">
               Are you sure you want to delete this ticket? This action cannot be undone.
             </p>
             <div className="flex justify-end gap-2">
@@ -710,7 +710,7 @@ export default function FeedbackPage() {
             <DialogTitle>Delete Column</DialogTitle>
           </DialogHeader>
           <div className="py-4 space-y-4">
-            <p className="text-sm text-white/60">
+            <p className="text-sm text-foreground/60">
               Are you sure you want to delete this column? Tickets in this column will become unassigned.
             </p>
             <div className="flex justify-end gap-2">

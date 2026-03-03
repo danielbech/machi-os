@@ -74,9 +74,9 @@ export function RichTextEditor({ value, onChange, placeholder }: RichTextEditorP
   if (!editor) return null;
 
   return (
-    <div className="rounded-md border border-white/10 bg-white/[0.02] hover:border-white/20 transition-colors focus-within:border-white/20">
+    <div className="rounded-md border border-foreground/10 bg-foreground/[0.02] hover:border-foreground/20 transition-colors focus-within:border-foreground/20">
       {/* Toolbar */}
-      <div className="flex items-center gap-0.5 px-2 py-1 border-b border-white/5">
+      <div className="flex items-center gap-0.5 px-2 py-1 border-b border-foreground/5">
         <ToolbarButton
           active={editor.isActive("bold")}
           onClick={() => editor.chain().focus().toggleBold().run()}
@@ -91,7 +91,7 @@ export function RichTextEditor({ value, onChange, placeholder }: RichTextEditorP
         >
           <Italic className="size-3.5" />
         </ToolbarButton>
-        <div className="w-px h-4 bg-white/10 mx-1" />
+        <div className="w-px h-4 bg-foreground/10 mx-1" />
         <ToolbarButton
           active={editor.isActive("bulletList")}
           onClick={() => editor.chain().focus().toggleBulletList().run()}
@@ -106,7 +106,7 @@ export function RichTextEditor({ value, onChange, placeholder }: RichTextEditorP
         >
           <ListOrdered className="size-3.5" />
         </ToolbarButton>
-        <div className="w-px h-4 bg-white/10 mx-1" />
+        <div className="w-px h-4 bg-foreground/10 mx-1" />
         {editor.isActive("link") ? (
           <ToolbarButton
             active={false}
@@ -142,8 +142,8 @@ function ToolbarButton({
       type="button"
       className={`p-1 rounded transition-colors ${
         active
-          ? "bg-white/10 text-white"
-          : "text-white/30 hover:text-white/60 hover:bg-white/5"
+          ? "bg-foreground/10 text-foreground"
+          : "text-foreground/30 hover:text-foreground/60 hover:bg-foreground/5"
       }`}
       {...props}
     >

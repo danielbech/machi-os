@@ -104,13 +104,13 @@ function ResetPasswordForm() {
 
   return (
     <div className="flex min-h-screen items-center justify-center p-4 bg-black">
-      <Card className="w-full max-w-md border-white/[0.08] bg-white/[0.04] backdrop-blur-2xl shadow-2xl">
+      <Card className="w-full max-w-md border-foreground/[0.08] bg-foreground/[0.04] backdrop-blur-2xl shadow-2xl">
         <CardHeader>
           <div className="flex items-center gap-3 mb-2">
             <img src="/logo.svg" alt="Flowie" className="w-10 h-10 rounded-lg" />
             <div>
               <CardTitle className="text-2xl">Reset Password</CardTitle>
-              <CardDescription className="text-white/40">
+              <CardDescription className="text-foreground/40">
                 {success
                   ? "You're all set"
                   : error
@@ -125,7 +125,7 @@ function ResetPasswordForm() {
             <div className="space-y-4">
               <p className="text-sm text-green-400">{message}</p>
               <Button
-                className="w-full bg-white text-black hover:bg-white/90"
+                className="w-full bg-white text-black hover:bg-foreground/90"
                 onClick={() => (window.location.href = "/")}
               >
                 Go to Dashboard
@@ -135,7 +135,7 @@ function ResetPasswordForm() {
             <div className="space-y-4">
               <p className="text-sm text-red-400">{message}</p>
               <Button
-                className="w-full bg-white text-black hover:bg-white/90"
+                className="w-full bg-white text-black hover:bg-foreground/90"
                 onClick={() => (window.location.href = "/")}
               >
                 Back to Sign In
@@ -143,11 +143,11 @@ function ResetPasswordForm() {
             </div>
           ) : !ready ? (
             <div className="space-y-4">
-              <p className="text-sm text-white/40">
+              <p className="text-sm text-foreground/40">
                 Verifying your reset link...
               </p>
-              <div className="h-1 w-full bg-white/5 rounded overflow-hidden">
-                <div className="h-full w-1/3 bg-white/20 rounded animate-pulse" />
+              <div className="h-1 w-full bg-foreground/5 rounded overflow-hidden">
+                <div className="h-full w-1/3 bg-foreground/20 rounded animate-pulse" />
               </div>
             </div>
           ) : (
@@ -155,7 +155,7 @@ function ResetPasswordForm() {
               <div className="space-y-2">
                 <Label
                   htmlFor="password"
-                  className="text-sm font-medium text-white/80"
+                  className="text-sm font-medium text-foreground/80"
                 >
                   New password
                 </Label>
@@ -166,13 +166,13 @@ function ResetPasswordForm() {
                   onChange={(e) => setPassword(e.target.value)}
                   required
                   autoFocus
-                  className="border-white/10 bg-white/[0.02] focus:border-white/30 focus:ring-white/20"
+                  className="border-foreground/10 bg-foreground/[0.02] focus:border-foreground/30 focus:ring-foreground/20"
                 />
               </div>
               <div className="space-y-2">
                 <Label
                   htmlFor="confirmPassword"
-                  className="text-sm font-medium text-white/80"
+                  className="text-sm font-medium text-foreground/80"
                 >
                   Confirm password
                 </Label>
@@ -182,7 +182,7 @@ function ResetPasswordForm() {
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
                   required
-                  className="border-white/10 bg-white/[0.02] focus:border-white/30 focus:ring-white/20"
+                  className="border-foreground/10 bg-foreground/[0.02] focus:border-foreground/30 focus:ring-foreground/20"
                 />
               </div>
               {message && (
@@ -190,7 +190,7 @@ function ResetPasswordForm() {
               )}
               <Button
                 type="submit"
-                className="w-full bg-white text-black hover:bg-white/90"
+                className="w-full bg-white text-black hover:bg-foreground/90"
                 disabled={loading}
               >
                 {loading ? "Updating..." : "Update Password"}
@@ -208,21 +208,21 @@ export default function ResetPasswordPage() {
     <Suspense
       fallback={
         <div className="flex min-h-screen items-center justify-center p-4 bg-black">
-          <Card className="w-full max-w-md border-white/[0.08] bg-white/[0.04] backdrop-blur-2xl shadow-2xl">
+          <Card className="w-full max-w-md border-foreground/[0.08] bg-foreground/[0.04] backdrop-blur-2xl shadow-2xl">
             <CardHeader>
               <div className="flex items-center gap-3 mb-2">
                 <img src="/logo.svg" alt="Flowie" className="w-10 h-10 rounded-lg" />
                 <div>
                   <CardTitle className="text-2xl">Reset Password</CardTitle>
-                  <CardDescription className="text-white/40">
+                  <CardDescription className="text-foreground/40">
                     Loading...
                   </CardDescription>
                 </div>
               </div>
             </CardHeader>
             <CardContent>
-              <div className="h-1 w-full bg-white/5 rounded overflow-hidden">
-                <div className="h-full w-1/3 bg-white/20 rounded animate-pulse" />
+              <div className="h-1 w-full bg-foreground/5 rounded overflow-hidden">
+                <div className="h-full w-1/3 bg-foreground/20 rounded animate-pulse" />
               </div>
             </CardContent>
           </Card>

@@ -115,12 +115,12 @@ export function ClientGroupDialog({ open, onOpenChange, editingGroup = null, onC
                 <img
                   src={logoPreview}
                   alt="Logo preview"
-                  className="size-10 rounded-xl object-cover bg-white/5"
+                  className="size-10 rounded-xl object-cover bg-foreground/5"
                 />
                 <button
                   type="button"
                   onClick={clearLogo}
-                  className="absolute -top-1 -right-1 size-4 rounded-full bg-white/10 hover:bg-red-500/80 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                  className="absolute -top-1 -right-1 size-4 rounded-full bg-foreground/10 hover:bg-red-500/80 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
                   aria-label="Remove logo"
                 >
                   <X className="size-2.5" />
@@ -130,10 +130,10 @@ export function ClientGroupDialog({ open, onOpenChange, editingGroup = null, onC
               <button
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
-                className="size-10 rounded-xl border-2 border-dashed border-white/10 bg-white/[0.03] flex items-center justify-center cursor-pointer shrink-0 transition-colors hover:border-white/20 hover:bg-white/[0.06]"
+                className="size-10 rounded-xl border-2 border-dashed border-foreground/10 bg-foreground/[0.03] flex items-center justify-center cursor-pointer shrink-0 transition-colors hover:border-foreground/20 hover:bg-foreground/[0.06]"
                 aria-label="Upload logo"
               >
-                <Upload className="size-4 text-white/20" />
+                <Upload className="size-4 text-foreground/20" />
               </button>
             )}
             <input
@@ -141,19 +141,19 @@ export function ClientGroupDialog({ open, onOpenChange, editingGroup = null, onC
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className="flex-1 text-lg font-semibold bg-transparent outline-none placeholder:text-white/20"
+              className="flex-1 text-lg font-semibold bg-transparent outline-none placeholder:text-foreground/20"
               placeholder="Client name..."
             />
           </div>
 
-          <div className="flex justify-end gap-2 pt-2 border-t border-white/[0.06]">
+          <div className="flex justify-end gap-2 pt-2 border-t border-foreground/[0.06]">
             <Button variant="ghost" type="button" onClick={() => onOpenChange(false)}>
               Cancel
             </Button>
             <Button
               type="submit"
               disabled={saving || !name.trim()}
-              className="bg-white text-black hover:bg-white/90"
+              className="bg-white text-black hover:bg-foreground/90"
             >
               {saving ? "Saving..." : editingGroup ? "Save" : "Add Client"}
             </Button>

@@ -133,7 +133,7 @@ export function ProjectDialog({ open, onOpenChange, editingClient = null }: Proj
           <img
             src={selectedGroup.logo_url}
             alt={selectedGroup.name}
-            className="size-10 object-cover bg-white/5"
+            className="size-10 object-cover bg-foreground/5"
           />
         </div>
       );
@@ -144,7 +144,7 @@ export function ProjectDialog({ open, onOpenChange, editingClient = null }: Proj
         <button
           type="button"
           onClick={() => setShowIconPicker(!showIconPicker)}
-          className="size-10 rounded-xl bg-white/[0.06] flex items-center justify-center text-zinc-400 cursor-pointer shrink-0 transition-colors hover:bg-white/[0.10]"
+          className="size-10 rounded-xl bg-foreground/[0.06] flex items-center justify-center text-zinc-400 cursor-pointer shrink-0 transition-colors hover:bg-foreground/[0.10]"
           aria-label="Change icon"
         >
           <ClientIcon icon={formIcon} className="size-5" />
@@ -156,7 +156,7 @@ export function ProjectDialog({ open, onOpenChange, editingClient = null }: Proj
       <button
         type="button"
         onClick={() => setShowIconPicker(!showIconPicker)}
-        className="size-10 rounded-xl border-2 border-dashed border-white/10 bg-white/[0.03] flex items-center justify-center cursor-pointer shrink-0 transition-colors hover:border-white/20 hover:bg-white/[0.06]"
+        className="size-10 rounded-xl border-2 border-dashed border-foreground/10 bg-foreground/[0.03] flex items-center justify-center cursor-pointer shrink-0 transition-colors hover:border-foreground/20 hover:bg-foreground/[0.06]"
         aria-label="Pick icon"
       />
     );
@@ -181,7 +181,7 @@ export function ProjectDialog({ open, onOpenChange, editingClient = null }: Proj
               type="text"
               value={formName}
               onChange={(e) => handleNameChange(e.target.value)}
-              className="flex-1 text-lg font-semibold bg-transparent outline-none placeholder:text-white/20"
+              className="flex-1 text-lg font-semibold bg-transparent outline-none placeholder:text-foreground/20"
               placeholder="Project name..."
             />
           </div>
@@ -190,14 +190,14 @@ export function ProjectDialog({ open, onOpenChange, editingClient = null }: Proj
           {showIconPicker && !selectedGroup?.logo_url && (
             <div className="space-y-2">
               <div className="relative">
-                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3.5 text-white/20" />
+                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3.5 text-foreground/20" />
                 <input
                   ref={iconSearchRef}
                   type="text"
                   value={iconSearch}
                   onChange={(e) => setIconSearch(e.target.value)}
                   placeholder="Search icons..."
-                  className="w-full pl-8 pr-3 py-1.5 rounded-lg bg-white/[0.04] border border-white/[0.06] text-sm text-white/80 outline-none placeholder:text-white/20 focus:border-white/15"
+                  className="w-full pl-8 pr-3 py-1.5 rounded-lg bg-foreground/[0.04] border border-foreground/[0.06] text-sm text-foreground/80 outline-none placeholder:text-foreground/20 focus:border-foreground/15"
                 />
               </div>
 
@@ -213,8 +213,8 @@ export function ProjectDialog({ open, onOpenChange, editingClient = null }: Proj
                     }}
                     className={`flex items-center justify-center size-9 rounded-lg transition-all ${
                       formIcon === name
-                        ? "bg-white/15 text-white ring-1 ring-white/30"
-                        : "text-zinc-500 hover:text-zinc-300 hover:bg-white/[0.06]"
+                        ? "bg-foreground/15 text-foreground ring-1 ring-foreground/30"
+                        : "text-zinc-500 hover:text-zinc-300 hover:bg-foreground/[0.06]"
                     }`}
                     title={name}
                     aria-label={`Select ${name} icon`}
@@ -223,7 +223,7 @@ export function ProjectDialog({ open, onOpenChange, editingClient = null }: Proj
                   </button>
                 ))}
                 {filteredIcons.length === 0 && (
-                  <div className="col-span-8 py-4 text-center text-xs text-white/20">No icons found</div>
+                  <div className="col-span-8 py-4 text-center text-xs text-foreground/20">No icons found</div>
                 )}
               </div>
 
@@ -231,7 +231,7 @@ export function ProjectDialog({ open, onOpenChange, editingClient = null }: Proj
                 <button
                   type="button"
                   onClick={() => { setFormIcon(null); setShowIconPicker(false); setIconSearch(""); }}
-                  className="text-xs text-white/30 hover:text-white/50 transition-colors"
+                  className="text-xs text-foreground/30 hover:text-foreground/50 transition-colors"
                 >
                   Remove icon
                 </button>
@@ -241,22 +241,22 @@ export function ProjectDialog({ open, onOpenChange, editingClient = null }: Proj
 
           {/* Client group */}
           <div className="flex items-center gap-2">
-            <label className="text-xs text-white/40">Client</label>
+            <label className="text-xs text-foreground/40">Client</label>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <button
                   type="button"
-                  className="flex items-center gap-1.5 px-2 py-1 rounded-md text-xs hover:bg-white/[0.06] transition-colors"
+                  className="flex items-center gap-1.5 px-2 py-1 rounded-md text-xs hover:bg-foreground/[0.06] transition-colors"
                 >
-                  <Building2 className="size-3 text-white/30" />
+                  <Building2 className="size-3 text-foreground/30" />
                   {formClientGroupId
                     ? clientGroups.find((g) => g.id === formClientGroupId)?.name || "Unknown"
-                    : <span className="text-white/30">None</span>}
+                    : <span className="text-foreground/30">None</span>}
                 </button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="start" className="w-48">
                 <DropdownMenuItem onClick={() => setFormClientGroupId(null)}>
-                  <span className={!formClientGroupId ? "text-white" : "text-white/40"}>None</span>
+                  <span className={!formClientGroupId ? "text-white" : "text-foreground/40"}>None</span>
                   {!formClientGroupId && <Check className="size-3.5 ml-auto" />}
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
@@ -273,7 +273,7 @@ export function ProjectDialog({ open, onOpenChange, editingClient = null }: Proj
                   </DropdownMenuItem>
                 ))}
                 {clientGroups.length === 0 && (
-                  <div className="px-2 py-1.5 text-xs text-white/20">No clients yet</div>
+                  <div className="px-2 py-1.5 text-xs text-foreground/20">No clients yet</div>
                 )}
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={() => setClientGroupDialogOpen(true)}>
@@ -291,7 +291,7 @@ export function ProjectDialog({ open, onOpenChange, editingClient = null }: Proj
 
           {/* Text color */}
           <div className="flex items-center gap-2">
-            <label className="text-xs text-white/40">Text color</label>
+            <label className="text-xs text-foreground/40">Text color</label>
             <div className="flex gap-1">
               {COLOR_NAMES.map((color) => (
                 <button
@@ -300,7 +300,7 @@ export function ProjectDialog({ open, onOpenChange, editingClient = null }: Proj
                   onClick={() => setFormColor(color)}
                   className={`size-5 rounded-full ${CLIENT_DOT_COLORS[color]} transition-all ${
                     formColor === color
-                      ? "ring-2 ring-white/80 ring-offset-1 ring-offset-background"
+                      ? "ring-2 ring-foreground/80 ring-offset-1 ring-offset-background"
                       : "opacity-40 hover:opacity-80"
                   }`}
                   title={color}
@@ -311,14 +311,14 @@ export function ProjectDialog({ open, onOpenChange, editingClient = null }: Proj
           </div>
 
           {/* Actions */}
-          <div className="flex justify-end gap-2 pt-2 border-t border-white/[0.06]">
+          <div className="flex justify-end gap-2 pt-2 border-t border-foreground/[0.06]">
             <Button variant="ghost" type="button" onClick={() => onOpenChange(false)}>
               Cancel
             </Button>
             <Button
               type="submit"
               disabled={saving || !formName.trim()}
-              className="bg-white text-black hover:bg-white/90"
+              className="bg-white text-black hover:bg-foreground/90"
             >
               {saving ? "Saving..." : editingClient ? "Save" : "Add Project"}
             </Button>

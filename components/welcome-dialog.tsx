@@ -22,7 +22,7 @@ export function WelcomeDialog({ open, onClose }: WelcomeDialogProps) {
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
       <DialogContent
         showCloseButton={false}
-        className="sm:max-w-md text-center border-white/[0.08] bg-white/[0.04]"
+        className="sm:max-w-md text-center border-foreground/[0.08] bg-foreground/[0.04]"
       >
         <DialogHeader className="items-center">
           <Image
@@ -33,7 +33,7 @@ export function WelcomeDialog({ open, onClose }: WelcomeDialogProps) {
             className="rounded-xl mb-1"
           />
           <DialogTitle className="text-xl">Welcome to Flowie!</DialogTitle>
-          <DialogDescription className="text-white/50 text-sm leading-relaxed text-center space-y-3 pt-1">
+          <DialogDescription className="text-foreground/50 text-sm leading-relaxed text-center space-y-3 pt-1">
             <span className="block">
               Flowie is still in beta and actively being developed. We&apos;re
               shipping updates regularly, and your data is backed up — but
@@ -46,7 +46,7 @@ export function WelcomeDialog({ open, onClose }: WelcomeDialogProps) {
               <Link
                 href="/feedback"
                 onClick={onClose}
-                className="text-white/70 underline underline-offset-2 hover:text-white transition-colors"
+                className="text-foreground/70 underline underline-offset-2 hover:text-foreground transition-colors"
               >
                 Feedback
               </Link>{" "}

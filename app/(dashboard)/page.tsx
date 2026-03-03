@@ -596,11 +596,11 @@ export default function BoardPage() {
           {columnKeys.map((key, ki) => (
             <div key={key} className="w-[85vw] sm:w-[280px] shrink-0 p-2.5 space-y-2">
               <div className="flex items-baseline gap-2 px-1 mb-1.5">
-                <div className="h-5 w-20 bg-white/5 rounded animate-pulse" />
-                {!isCustom && <div className="h-4 w-12 bg-white/5 rounded animate-pulse" />}
+                <div className="h-5 w-20 bg-foreground/5 rounded animate-pulse" />
+                {!isCustom && <div className="h-4 w-12 bg-foreground/5 rounded animate-pulse" />}
               </div>
               {[...Array(ki === 0 ? 4 : ki === 1 ? 3 : 2)].map((_, i) => (
-                <div key={i} className="h-12 bg-white/[0.02] rounded-lg border border-white/5 animate-pulse" />
+                <div key={i} className="h-12 bg-foreground/[0.02] rounded-lg border border-foreground/5 animate-pulse" />
               ))}
             </div>
           ))}
@@ -674,9 +674,9 @@ export default function BoardPage() {
                 data-column-id={columnId}
                 className={`w-[85vw] sm:w-[280px] shrink-0 rounded-lg transition-all duration-150 ${
                   dragOverTarget === columnId || backlogDragOverColumn === columnId
-                    ? "bg-white/[0.04] ring-1 ring-white/15 ring-inset"
+                    ? "bg-foreground/[0.04] ring-1 ring-foreground/15 ring-inset"
                     : backlogDragActive
-                      ? "bg-white/[0.02] ring-1 ring-white/[0.08] ring-inset"
+                      ? "bg-foreground/[0.02] ring-1 ring-foreground/[0.08] ring-inset"
                       : ""
                 }`}
                 onMouseEnter={() => setHoveredColumn(columnId)}
@@ -687,7 +687,7 @@ export default function BoardPage() {
                       <input
                         value={renameValue}
                         onChange={(e) => setRenameValue(e.target.value)}
-                        className="font-semibold bg-transparent outline-none border-b border-white/20 w-full"
+                        className="font-semibold bg-transparent outline-none border-b border-foreground/20 w-full"
                         autoFocus
                         onBlur={async () => {
                           const trimmed = renameValue.trim();
@@ -709,14 +709,14 @@ export default function BoardPage() {
                       />
                     ) : (
                       <h2
-                        className={`font-semibold ${isCustom ? "cursor-text hover:text-white/80" : ""} ${!isCustom && columnId === todayName ? "text-white" : ""}`}
+                        className={`font-semibold ${isCustom ? "cursor-text hover:text-foreground/80" : ""} ${!isCustom && columnId === todayName ? "text-foreground" : ""}`}
                         onClick={isCustom ? () => { setRenamingColumn(columnId); setRenameValue(columnTitles[columnId] || ""); } : undefined}
                       >
                         {columnTitles[columnId] || columnId}
                       </h2>
                     )}
                     {!isCustom && (
-                      <span className={`text-xs ${columnId === todayName ? "text-blue-400 border border-blue-500/30 rounded px-1 py-0.5" : "text-white/40"}`}>{weekDates[columnId]}</span>
+                      <span className={`text-xs ${columnId === todayName ? "text-blue-400 border border-blue-500/30 rounded px-1 py-0.5" : "text-foreground/40"}`}>{weekDates[columnId]}</span>
                     )}
                     {isCustom && (
                       <button
@@ -725,7 +725,7 @@ export default function BoardPage() {
                             await removeBoardColumn(columnId);
                           }
                         }}
-                        className="text-white/20 hover:text-red-400 transition-colors ml-auto"
+                        className="text-foreground/20 hover:text-red-400 transition-colors ml-auto"
                         aria-label={`Delete column ${columnTitles[columnId]}`}
                       >
                         <X className="size-3.5" />
@@ -819,7 +819,7 @@ export default function BoardPage() {
                         setAddingAtIndex(null);
                         setNewCardTitle("");
                       }}
-                      className="flex items-center gap-2 rounded-lg mt-1 p-2 text-xs text-muted-foreground/40 bg-white/[0.02] hover:text-muted-foreground/60 hover:bg-white/[0.05] transition-colors"
+                      className="flex items-center gap-2 rounded-lg mt-1 p-2 text-xs text-muted-foreground/40 bg-foreground/[0.02] hover:text-muted-foreground/60 hover:bg-foreground/[0.05] transition-colors"
                     >
                       <Plus className="size-3.5" />
                       Add card
@@ -837,7 +837,7 @@ export default function BoardPage() {
                       await addBoardColumn(title.trim());
                     }
                   }}
-                  className="flex items-center justify-center gap-2 w-full rounded-lg p-3 text-xs text-white/30 border border-dashed border-white/10 hover:border-white/20 hover:text-white/50 transition-colors"
+                  className="flex items-center justify-center gap-2 w-full rounded-lg p-3 text-xs text-foreground/30 border border-dashed border-foreground/10 hover:border-foreground/20 hover:text-foreground/50 transition-colors"
                 >
                   <Plus className="size-3.5" />
                   Add column
@@ -855,7 +855,7 @@ export default function BoardPage() {
               if (task.type === "divider") {
                 return (
                   <div className="w-[85vw] sm:w-80 py-2 px-1">
-                    <div className="h-px bg-white/10" />
+                    <div className="h-px bg-foreground/10" />
                   </div>
                 );
               }
@@ -870,14 +870,14 @@ export default function BoardPage() {
                 );
               }
               return (
-                <div className="w-[85vw] sm:w-80 rounded-lg border border-white/10 bg-card p-3 shadow-lg">
+                <div className="w-[85vw] sm:w-80 rounded-lg border border-foreground/10 bg-card p-3 shadow-lg">
                   <div className="relative">
                     <div className={`${task.completed ? "opacity-50" : ""}`}>
                       <div className={`text-sm pr-6 ${task.completed ? "line-through" : ""}`}>{task.title}</div>
                     </div>
                     <div
                       className={`absolute top-0 right-0 flex size-4 items-center justify-center rounded-full border ${
-                        task.completed ? "border-green-500/80 bg-green-500/80" : "border-white/20"
+                        task.completed ? "border-green-500/80 bg-green-500/80" : "border-foreground/20"
                       }`}
                     >
                       {task.completed && <Check className="size-3 text-white" strokeWidth={3} />}
@@ -916,7 +916,7 @@ export default function BoardPage() {
       />
 
       <TooltipProvider>
-        <div className="fixed bottom-5 right-[4.25rem] z-50 flex items-center gap-px rounded-full border border-white/10 bg-zinc-900/90 shadow-lg overflow-hidden">
+        <div className="fixed bottom-5 right-[4.25rem] z-50 flex items-center gap-px rounded-full border border-foreground/10 bg-zinc-900/90 shadow-lg overflow-hidden">
           {teamMembers.length > 1 && (
             <Tooltip>
               <TooltipTrigger asChild>
@@ -925,8 +925,8 @@ export default function BoardPage() {
                   aria-label={filterMine ? "Show all tasks" : "Show my tasks"}
                   className={`flex items-center justify-center h-10 w-8 pr-0 pl-1.5 hover:w-10 hover:pl-0 transition-all ${
                     filterMine
-                      ? "bg-white/15 text-white !w-10 !pl-0"
-                      : "text-white/40 hover:text-white/70 hover:bg-white/[0.06]"
+                      ? "bg-foreground/15 text-foreground !w-10 !pl-0"
+                      : "text-foreground/40 hover:text-foreground/70 hover:bg-foreground/[0.06]"
                   }`}
                 >
                   <User className="size-4" />
@@ -944,8 +944,8 @@ export default function BoardPage() {
                 aria-label={hideCompleted ? "Show completed tasks" : "Hide completed tasks"}
                 className={`flex items-center justify-center h-10 w-8 pl-0 pr-1.5 hover:w-10 hover:pr-0 transition-all ${
                   hideCompleted
-                    ? "bg-white/15 text-white !w-10 !pr-0"
-                    : "text-white/40 hover:text-white/70 hover:bg-white/[0.06]"
+                    ? "bg-foreground/15 text-foreground !w-10 !pr-0"
+                    : "text-foreground/40 hover:text-foreground/70 hover:bg-foreground/[0.06]"
                 }`}
               >
                 <CheckCircle className="size-4" />

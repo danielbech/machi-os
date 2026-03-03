@@ -166,8 +166,8 @@ export function TaskEditDialog({ task, onClose, onSave, onTaskChange, folders }:
                 onClick={() => onTaskChange({ ...task, type: "task" })}
                 className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium transition-colors ${
                   task.type !== "note"
-                    ? "bg-white/10 text-white"
-                    : "text-white/30 hover:text-white/50"
+                    ? "bg-foreground/10 text-foreground"
+                    : "text-foreground/30 hover:text-foreground/50"
                 }`}
               >
                 <ListTodo className="size-3" />
@@ -179,7 +179,7 @@ export function TaskEditDialog({ task, onClose, onSave, onTaskChange, folders }:
                 className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium transition-colors ${
                   task.type === "note"
                     ? "bg-amber-500/20 text-amber-400"
-                    : "text-white/30 hover:text-white/50"
+                    : "text-foreground/30 hover:text-foreground/50"
                 }`}
               >
                 <StickyNote className="size-3" />
@@ -200,7 +200,7 @@ export function TaskEditDialog({ task, onClose, onSave, onTaskChange, folders }:
                     className={`flex size-5 items-center justify-center rounded-full border transition-all ${
                       task.completed
                         ? "border-green-500/80 bg-green-500/80"
-                        : "border-white/20 hover:border-white/40"
+                        : "border-foreground/20 hover:border-foreground/40"
                     }`}
                   >
                     {task.completed && <Check className="size-3.5 text-white" strokeWidth={3} />}
@@ -212,7 +212,7 @@ export function TaskEditDialog({ task, onClose, onSave, onTaskChange, folders }:
                 type="text"
                 value={task.title}
                 onChange={(e) => onTaskChange({ ...task, title: e.target.value })}
-                className={`flex-1 text-lg font-semibold bg-transparent outline-none placeholder:text-white/20 ${task.completed && task.type !== "note" ? "text-green-500" : ""}`}
+                className={`flex-1 text-lg font-semibold bg-transparent outline-none placeholder:text-foreground/20 ${task.completed && task.type !== "note" ? "text-green-500" : ""}`}
                 placeholder={task.type === "note" ? "Note title..." : "Task title..."}
               />
             </div>
@@ -225,7 +225,7 @@ export function TaskEditDialog({ task, onClose, onSave, onTaskChange, folders }:
                   <DropdownMenuTrigger asChild>
                     <button
                       type="button"
-                      className="flex items-center gap-1.5 px-2 py-1 rounded-md border border-white/10 bg-white/[0.02] text-xs hover:bg-white/[0.04] hover:border-white/20 transition-colors"
+                      className="flex items-center gap-1.5 px-2 py-1 rounded-md border border-foreground/10 bg-foreground/[0.02] text-xs hover:bg-foreground/[0.04] hover:border-foreground/20 transition-colors"
                     >
                       {selectedClient ? (
                         (() => {
@@ -239,20 +239,20 @@ export function TaskEditDialog({ task, onClose, onSave, onTaskChange, folders }:
                               ) : icon ? (
                                 <ClientIcon icon={icon} className="size-3.5" />
                               ) : null}
-                              <span className="text-white/70">{name}</span>
+                              <span className="text-foreground/70">{name}</span>
                             </>
                           );
                         })()
                       ) : (
-                        <span className="text-white/25">Client</span>
+                        <span className="text-foreground/25">Client</span>
                       )}
-                      <ChevronDown className="size-3 text-white/30" />
+                      <ChevronDown className="size-3 text-foreground/30" />
                     </button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="start" className="min-w-[200px]">
                     <DropdownMenuItem
                       onClick={() => onTaskChange({ ...task, client: undefined })}
-                      className="text-white/50"
+                      className="text-foreground/50"
                     >
                       No client
                     </DropdownMenuItem>
@@ -283,19 +283,19 @@ export function TaskEditDialog({ task, onClose, onSave, onTaskChange, folders }:
                     <DropdownMenuTrigger asChild>
                       <button
                         type="button"
-                        className="flex items-center gap-1.5 px-2 py-1 rounded-md border border-white/10 bg-white/[0.02] text-xs hover:bg-white/[0.04] hover:border-white/20 transition-colors"
+                        className="flex items-center gap-1.5 px-2 py-1 rounded-md border border-foreground/10 bg-foreground/[0.02] text-xs hover:bg-foreground/[0.04] hover:border-foreground/20 transition-colors"
                       >
-                        <Folder className="size-3 text-white/30" />
-                        <span className={selectedFolder ? "text-white/70" : "text-white/25"}>
+                        <Folder className="size-3 text-foreground/30" />
+                        <span className={selectedFolder ? "text-foreground/70" : "text-foreground/25"}>
                           {selectedFolder ? selectedFolder.name : "Folder"}
                         </span>
-                        <ChevronDown className="size-3 text-white/30" />
+                        <ChevronDown className="size-3 text-foreground/30" />
                       </button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="start" className="min-w-[200px]">
                       <DropdownMenuItem
                         onClick={() => onTaskChange({ ...task, folder_id: undefined })}
-                        className="text-white/50"
+                        className="text-foreground/50"
                       >
                         No folder
                       </DropdownMenuItem>
@@ -306,7 +306,7 @@ export function TaskEditDialog({ task, onClose, onSave, onTaskChange, folders }:
                           onClick={() => onTaskChange({ ...task, folder_id: folder.id })}
                           className="flex items-center gap-2"
                         >
-                          <Folder className="size-3.5 text-white/30" />
+                          <Folder className="size-3.5 text-foreground/30" />
                           <span>{folder.name}</span>
                           {task.folder_id === folder.id && (
                             <Circle className="size-2 fill-white ml-auto" />
@@ -322,14 +322,14 @@ export function TaskEditDialog({ task, onClose, onSave, onTaskChange, folders }:
                   <DropdownMenuTrigger asChild>
                     <button
                       type="button"
-                      className="flex items-center gap-1.5 px-2 py-1 rounded-md border border-white/10 bg-white/[0.02] text-xs hover:bg-white/[0.04] hover:border-white/20 transition-colors"
+                      className="flex items-center gap-1.5 px-2 py-1 rounded-md border border-foreground/10 bg-foreground/[0.02] text-xs hover:bg-foreground/[0.04] hover:border-foreground/20 transition-colors"
                     >
                       {assignedMembers.length > 0 ? (
                         <span className="flex -space-x-1">
                           {assignedMembers.map((m) => (
                             <div
                               key={m.id}
-                              className={`flex items-center justify-center w-4 h-4 rounded-full ${!m.avatar ? m.color : "bg-white/5"} text-[8px] font-semibold text-white overflow-hidden ring-1 ring-black/50`}
+                              className={`flex items-center justify-center w-4 h-4 rounded-full ${!m.avatar ? m.color : "bg-foreground/5"} text-[8px] font-semibold text-white overflow-hidden ring-1 ring-black/50`}
                             >
                               {m.avatar ? (
                                 <img src={m.avatar} alt={m.name} className="w-full h-full object-cover" />
@@ -340,15 +340,15 @@ export function TaskEditDialog({ task, onClose, onSave, onTaskChange, folders }:
                           ))}
                         </span>
                       ) : (
-                        <span className="text-white/25">Assignee</span>
+                        <span className="text-foreground/25">Assignee</span>
                       )}
-                      <ChevronDown className="size-3 text-white/30" />
+                      <ChevronDown className="size-3 text-foreground/30" />
                     </button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="start" className="min-w-[200px]">
                     <DropdownMenuItem
                       onClick={() => onTaskChange({ ...task, assignees: [] })}
-                      className="text-white/50"
+                      className="text-foreground/50"
                     >
                       No assignee
                     </DropdownMenuItem>
@@ -372,7 +372,7 @@ export function TaskEditDialog({ task, onClose, onSave, onTaskChange, folders }:
                         >
                           <div className="flex items-center gap-2">
                             <div
-                              className={`flex items-center justify-center w-5 h-5 rounded-full ${!member.avatar ? member.color : "bg-white/5"} text-[9px] font-semibold text-white overflow-hidden`}
+                              className={`flex items-center justify-center w-5 h-5 rounded-full ${!member.avatar ? member.color : "bg-foreground/5"} text-[9px] font-semibold text-white overflow-hidden`}
                             >
                               {member.avatar ? (
                                 <img src={member.avatar} alt={member.name} className="w-full h-full object-cover" />
@@ -394,7 +394,7 @@ export function TaskEditDialog({ task, onClose, onSave, onTaskChange, folders }:
             {/* Description */}
             <div className="flex flex-col gap-3">
               <label className="text-sm font-medium">Description</label>
-              <Suspense fallback={<div className="h-24 rounded-md border border-white/10 bg-white/5 animate-pulse" />}>
+              <Suspense fallback={<div className="h-24 rounded-md border border-foreground/10 bg-foreground/5 animate-pulse" />}>
                 <RichTextEditor
                   value={task.description || ""}
                   onChange={(html) => onTaskChange({ ...task, description: html })}
@@ -416,7 +416,7 @@ export function TaskEditDialog({ task, onClose, onSave, onTaskChange, folders }:
                       <button
                         type="button"
                         onClick={() => setLightboxUrl(url)}
-                        className="block rounded-lg overflow-hidden border border-white/10 hover:border-white/20 transition-colors"
+                        className="block rounded-lg overflow-hidden border border-foreground/10 hover:border-foreground/20 transition-colors"
                       >
                         <img
                           src={url}
@@ -427,16 +427,16 @@ export function TaskEditDialog({ task, onClose, onSave, onTaskChange, folders }:
                       <button
                         type="button"
                         onClick={() => handleRemoveImage(url)}
-                        className="absolute -top-1.5 -right-1.5 flex size-5 items-center justify-center rounded-full bg-black/80 border border-white/20 opacity-0 group-hover/img:opacity-100 transition-opacity"
+                        className="absolute -top-1.5 -right-1.5 flex size-5 items-center justify-center rounded-full bg-black/80 border border-foreground/20 opacity-0 group-hover/img:opacity-100 transition-opacity"
                         aria-label="Remove image"
                       >
-                        <X className="size-3 text-white/70" />
+                        <X className="size-3 text-foreground/70" />
                       </button>
                     </div>
                   ))}
                   {uploadingCount > 0 && Array.from({ length: uploadingCount }).map((_, i) => (
-                    <div key={`uploading-${i}`} className="w-20 h-20 rounded-lg border border-white/10 bg-white/[0.04] animate-pulse flex items-center justify-center">
-                      <ImageIcon className="size-5 text-white/20" />
+                    <div key={`uploading-${i}`} className="w-20 h-20 rounded-lg border border-foreground/10 bg-foreground/[0.04] animate-pulse flex items-center justify-center">
+                      <ImageIcon className="size-5 text-foreground/20" />
                     </div>
                   ))}
                 </div>
@@ -458,14 +458,14 @@ export function TaskEditDialog({ task, onClose, onSave, onTaskChange, folders }:
               <div className="flex items-center justify-between">
                 <label className="text-sm font-medium">Checklist</label>
                 {task.checklist && task.checklist.length > 0 && (
-                  <span className="text-xs text-white/30 tabular-nums">
+                  <span className="text-xs text-foreground/30 tabular-nums">
                     {task.checklist.filter((i) => i.checked).length}/{task.checklist.length}
                   </span>
                 )}
               </div>
               <div className="flex flex-col gap-1">
                 {(task.checklist || []).map((item, idx) => (
-                  <div key={item.id} className="group/item flex items-center gap-2 rounded-md bg-white/[0.04] px-2 py-1.5">
+                  <div key={item.id} className="group/item flex items-center gap-2 rounded-md bg-foreground/[0.04] px-2 py-1.5">
                     <button
                       type="button"
                       onClick={() => {
@@ -485,7 +485,7 @@ export function TaskEditDialog({ task, onClose, onSave, onTaskChange, folders }:
                         className={`flex size-4 items-center justify-center rounded-full border transition-all ${
                           item.checked
                             ? "border-green-500/80 bg-green-500/80"
-                            : "border-white/20 hover:border-white/40"
+                            : "border-foreground/20 hover:border-foreground/40"
                         }`}
                       >
                         {item.checked && <Check className="size-2.5 text-white" strokeWidth={3} />}
@@ -546,8 +546,8 @@ export function TaskEditDialog({ task, onClose, onSave, onTaskChange, folders }:
                           if (nextItem) checklistRefs.current.get(nextItem.id)?.focus();
                         }
                       }}
-                      className={`flex-1 text-sm bg-transparent outline-none placeholder:text-white/20 ${
-                        item.checked ? "line-through text-white/30" : ""
+                      className={`flex-1 text-sm bg-transparent outline-none placeholder:text-foreground/20 ${
+                        item.checked ? "line-through text-foreground/30" : ""
                       }`}
                       placeholder="Item..."
                     />
@@ -562,9 +562,9 @@ export function TaskEditDialog({ task, onClose, onSave, onTaskChange, folders }:
                           completed: task.type !== "note" && updated.length > 0 ? allChecked : task.completed,
                         });
                       }}
-                      className="shrink-0 opacity-0 group-hover/item:opacity-100 transition-opacity p-0.5 rounded hover:bg-white/10"
+                      className="shrink-0 opacity-0 group-hover/item:opacity-100 transition-opacity p-0.5 rounded hover:bg-foreground/10"
                     >
-                      <X className="size-3 text-white/30" />
+                      <X className="size-3 text-foreground/30" />
                     </button>
                   </div>
                 ))}
@@ -582,7 +582,7 @@ export function TaskEditDialog({ task, onClose, onSave, onTaskChange, folders }:
                     checklistRefs.current.get(newItem.id)?.focus();
                   });
                 }}
-                className="flex items-center gap-1.5 text-xs text-white/30 hover:text-white/50 transition-colors w-fit"
+                className="flex items-center gap-1.5 text-xs text-foreground/30 hover:text-foreground/50 transition-colors w-fit"
               >
                 <Plus className="size-3" />
                 Add item
@@ -594,7 +594,7 @@ export function TaskEditDialog({ task, onClose, onSave, onTaskChange, folders }:
               <Button type="button" variant="ghost" onClick={onClose}>
                 Cancel
               </Button>
-              <Button type="submit" className="bg-white text-black hover:bg-white/90">
+              <Button type="submit" className="bg-white text-black hover:bg-foreground/90">
                 Save
               </Button>
             </div>
@@ -634,7 +634,7 @@ function Lightbox({ url, onClose }: { url: string; onClose: () => void }) {
       <button
         type="button"
         onPointerUp={onClose}
-        className="absolute top-4 right-4 flex size-8 items-center justify-center rounded-full bg-white/10 hover:bg-white/20 transition-colors"
+        className="absolute top-4 right-4 flex size-8 items-center justify-center rounded-full bg-foreground/10 hover:bg-foreground/20 transition-colors"
         aria-label="Close lightbox"
       >
         <X className="size-5 text-white" />

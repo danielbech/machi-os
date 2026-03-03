@@ -346,11 +346,11 @@ export function SettingsDialog({
           <DialogTitle>Settings</DialogTitle>
         </DialogHeader>
         <Tabs value={settingsTab} onValueChange={setSettingsTab} className="flex-1 min-h-0 flex flex-col">
-          <TabsList variant="line" className="border-b border-white/5 px-0">
-            <TabsTrigger value="workspace" className="text-white/40 data-[state=active]:text-white">Workspace</TabsTrigger>
-            <TabsTrigger value="general" className="text-white/40 data-[state=active]:text-white">General</TabsTrigger>
-            <TabsTrigger value="calendar" className="text-white/40 data-[state=active]:text-white">Integrations</TabsTrigger>
-            <TabsTrigger value="about" className="text-white/40 data-[state=active]:text-white">About</TabsTrigger>
+          <TabsList variant="line" className="border-b border-foreground/5 px-0">
+            <TabsTrigger value="workspace" className="text-foreground/40 data-[state=active]:text-white">Workspace</TabsTrigger>
+            <TabsTrigger value="general" className="text-foreground/40 data-[state=active]:text-white">General</TabsTrigger>
+            <TabsTrigger value="calendar" className="text-foreground/40 data-[state=active]:text-white">Integrations</TabsTrigger>
+            <TabsTrigger value="about" className="text-foreground/40 data-[state=active]:text-white">About</TabsTrigger>
           </TabsList>
 
           {/* General Tab */}
@@ -359,7 +359,7 @@ export function SettingsDialog({
               {/* Profile */}
               <div className="space-y-3">
                 <h3 className="text-sm font-medium">Profile</h3>
-                <div className="p-3 rounded-lg border border-white/5 bg-white/[0.02] space-y-4">
+                <div className="p-3 rounded-lg border border-foreground/5 bg-foreground/[0.02] space-y-4">
                   {/* Avatar */}
                   <div className="flex items-center gap-4">
                     <button
@@ -398,7 +398,7 @@ export function SettingsDialog({
                     />
                     <div className="flex-1 space-y-2">
                       <div>
-                        <label className="text-xs text-white/40 block mb-1">Display name</label>
+                        <label className="text-xs text-foreground/40 block mb-1">Display name</label>
                         <Input
                           value={profileDisplayName}
                           onChange={(e) => setProfileDisplayName(e.target.value)}
@@ -411,7 +411,7 @@ export function SettingsDialog({
                   <Button
                     size="sm"
                     variant="ghost"
-                    className="w-full justify-center border border-white/10"
+                    className="w-full justify-center border border-foreground/10"
                     disabled={profileSaving}
                     onClick={handleProfileSave}
                   >
@@ -423,10 +423,10 @@ export function SettingsDialog({
               {/* Account */}
               <div className="space-y-3">
                 <h3 className="text-sm font-medium">Account</h3>
-                <div className="flex items-center justify-between p-3 rounded-lg border border-white/5 bg-white/[0.02]">
+                <div className="flex items-center justify-between p-3 rounded-lg border border-foreground/5 bg-foreground/[0.02]">
                   <div>
                     <div className="text-sm font-medium">Sign Out</div>
-                    <div className="text-xs text-white/40">
+                    <div className="text-xs text-foreground/40">
                       {user?.email || 'Not signed in'}
                     </div>
                   </div>
@@ -454,20 +454,20 @@ export function SettingsDialog({
                 </div>
 
                 {/* Delete Account */}
-                <div className="text-xs text-white/40 px-1 pt-2">Danger zone</div>
+                <div className="text-xs text-foreground/40 px-1 pt-2">Danger zone</div>
                 <div className="p-3 rounded-lg border border-red-500/20 bg-red-500/[0.03] space-y-3">
                   <div className="flex items-center gap-2">
                     <Trash2 className="size-4 text-red-400 shrink-0" />
                     <div>
                       <div className="text-sm font-medium text-red-400">Delete account</div>
-                      <div className="text-xs text-white/40">
+                      <div className="text-xs text-foreground/40">
                         Permanently delete your account and all associated data. This cannot be undone.
                       </div>
                     </div>
                   </div>
                   <div>
-                    <label className="text-xs text-white/40 block mb-1">
-                      Type <span className="font-mono text-white/60">{user?.email}</span> to confirm
+                    <label className="text-xs text-foreground/40 block mb-1">
+                      Type <span className="font-mono text-foreground/60">{user?.email}</span> to confirm
                     </label>
                     <Input
                       value={deleteAccountConfirm}
@@ -521,9 +521,9 @@ export function SettingsDialog({
               {/* Connected accounts header + sync */}
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <div className="text-xs text-white/40">Connected accounts</div>
+                  <div className="text-xs text-foreground/40">Connected accounts</div>
                   {lastSyncedAt && (
-                    <div className="text-[10px] text-white/20">
+                    <div className="text-[10px] text-foreground/20">
                       synced {Math.max(0, Math.floor((Date.now() - lastSyncedAt.getTime()) / 60000))} min ago
                     </div>
                   )}
@@ -548,7 +548,7 @@ export function SettingsDialog({
                 const totalCount = conn.availableCalendars.length;
 
                 return (
-                  <div key={conn.id} className="rounded-lg border border-white/5 bg-white/[0.02] overflow-hidden">
+                  <div key={conn.id} className="rounded-lg border border-foreground/5 bg-foreground/[0.02] overflow-hidden">
                     <div className="flex items-center justify-between p-3">
                       <button
                         type="button"
@@ -562,12 +562,12 @@ export function SettingsDialog({
                           });
                         }}
                       >
-                        <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-white/5 shrink-0">
+                        <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-foreground/5 shrink-0">
                           <img src="/google-calendar.svg" alt="Google Calendar" className="size-4" />
                         </div>
                         <div className="min-w-0">
                           <div className="text-sm font-medium truncate">{conn.google_email || 'Google Account'}</div>
-                          <div className="text-xs text-white/40">
+                          <div className="text-xs text-foreground/40">
                             {totalCount > 0
                               ? `${selectedCount} of ${totalCount} calendars`
                               : conn.selected_calendars.length > 0
@@ -576,13 +576,13 @@ export function SettingsDialog({
                           </div>
                         </div>
                         {totalCount > 0 && (
-                          <ChevronDown className={`size-3.5 text-white/30 shrink-0 transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
+                          <ChevronDown className={`size-3.5 text-foreground/30 shrink-0 transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
                         )}
                       </button>
                       <Button
                         size="icon-xs"
                         variant="ghost"
-                        className="text-white/30 hover:text-red-400 hover:bg-red-500/10 ml-2 shrink-0"
+                        className="text-foreground/30 hover:text-red-400 hover:bg-red-500/10 ml-2 shrink-0"
                         onClick={() => onDisconnectAccount(conn.id)}
                         aria-label={`Disconnect ${conn.google_email}`}
                       >
@@ -592,7 +592,7 @@ export function SettingsDialog({
 
                     {/* Collapsible calendar picker */}
                     {isExpanded && conn.availableCalendars.length > 0 && (
-                      <div className="border-t border-white/5 p-3 space-y-2">
+                      <div className="border-t border-foreground/5 p-3 space-y-2">
                         {conn.availableCalendars.map((cal) => (
                           <label
                             key={cal.id}
@@ -604,7 +604,7 @@ export function SettingsDialog({
                               onChange={() => handleToggleCalendar(conn.id, cal.id)}
                               className="sr-only peer"
                             />
-                            <div className="flex items-center justify-center w-4 h-4 rounded border border-white/20 peer-checked:bg-white/90 peer-checked:border-white/90 transition-colors">
+                            <div className="flex items-center justify-center w-4 h-4 rounded border border-foreground/20 peer-checked:bg-foreground/90 peer-checked:border-foreground/90 transition-colors">
                               {conn.selected_calendars.includes(cal.id) && (
                                 <svg className="w-3 h-3 text-black" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
                                   <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
@@ -615,9 +615,9 @@ export function SettingsDialog({
                               className="w-2.5 h-2.5 rounded-full shrink-0"
                               style={{ backgroundColor: cal.backgroundColor }}
                             />
-                            <span className="text-sm text-white/70 group-hover:text-white/90 truncate">
+                            <span className="text-sm text-foreground/70 group-hover:text-foreground/90 truncate">
                               {cal.summary}
-                              {cal.primary && <span className="text-white/30 ml-1">(primary)</span>}
+                              {cal.primary && <span className="text-foreground/30 ml-1">(primary)</span>}
                             </span>
                           </label>
                         ))}
@@ -631,7 +631,7 @@ export function SettingsDialog({
               <Button
                 size="sm"
                 variant="ghost"
-                className="w-full justify-center gap-2 border border-dashed border-white/10 text-white/50 hover:text-white/80 hover:border-white/20"
+                className="w-full justify-center gap-2 border border-dashed border-foreground/10 text-foreground/50 hover:text-foreground/80 hover:border-foreground/20"
                 onClick={onGoogleCalendarConnect}
               >
                 <Plus className="size-3.5" />
@@ -646,8 +646,8 @@ export function SettingsDialog({
               {/* Workspace settings */}
               {activeProject && (
                 <div className="space-y-3">
-                  <div className="text-xs text-white/40 px-1">Workspace settings</div>
-                  <div className="p-3 rounded-lg border border-white/5 bg-white/[0.02] space-y-3">
+                  <div className="text-xs text-foreground/40 px-1">Workspace settings</div>
+                  <div className="p-3 rounded-lg border border-foreground/5 bg-foreground/[0.02] space-y-3">
                     {/* Logo */}
                     <div className="flex items-center gap-3">
                       <button
@@ -684,10 +684,10 @@ export function SettingsDialog({
                         onChange={handleWsLogoSelect}
                       />
                       <div className="flex-1 min-w-0">
-                        <div className="text-xs text-white/40">Workspace logo</div>
+                        <div className="text-xs text-foreground/40">Workspace logo</div>
                         <button
                           type="button"
-                          className="text-xs text-white/50 hover:text-white/80 transition-colors cursor-pointer flex items-center gap-1"
+                          className="text-xs text-foreground/50 hover:text-foreground/80 transition-colors cursor-pointer flex items-center gap-1"
                           onClick={() => wsLogoInputRef.current?.click()}
                           disabled={wsLogoUploading}
                         >
@@ -708,7 +708,7 @@ export function SettingsDialog({
                       )}
                     </div>
                     <div>
-                      <label className="text-xs text-white/40 block mb-1">Name</label>
+                      <label className="text-xs text-foreground/40 block mb-1">Name</label>
                       <Input
                         value={wsName}
                         onChange={(e) => setWsName(e.target.value)}
@@ -717,7 +717,7 @@ export function SettingsDialog({
                       />
                     </div>
                     <div>
-                      <label className="text-xs text-white/40 block mb-1">Color</label>
+                      <label className="text-xs text-foreground/40 block mb-1">Color</label>
                       <div className="flex gap-2 flex-wrap">
                         {WORKSPACE_COLORS.map((c) => (
                           <button
@@ -749,7 +749,7 @@ export function SettingsDialog({
                     <Button
                       size="sm"
                       variant="ghost"
-                      className="w-full justify-center border border-white/10"
+                      className="w-full justify-center border border-foreground/10"
                       disabled={wsSaving || !wsName.trim() || wsName === activeProject.name}
                       onClick={async () => {
                         if (!activeProjectId) return;
@@ -773,11 +773,11 @@ export function SettingsDialog({
 
               {/* Members + pending invites in one list */}
               <div className="space-y-2">
-                <div className="text-xs text-white/40 px-1">Members</div>
+                <div className="text-xs text-foreground/40 px-1">Members</div>
                 {workspaceMembers.map((member) => (
                   <div
                     key={member.id}
-                    className="flex items-center gap-3 p-3 rounded-lg border border-white/5 bg-white/[0.02]"
+                    className="flex items-center gap-3 p-3 rounded-lg border border-foreground/5 bg-foreground/[0.02]"
                   >
                     {member.avatar_url ? (
                       <img
@@ -786,8 +786,8 @@ export function SettingsDialog({
                         className="size-8 rounded-full object-cover shrink-0"
                       />
                     ) : (
-                      <div className="size-8 rounded-full bg-white/[0.06] flex items-center justify-center shrink-0">
-                        <UserIcon className="size-4 text-white/30" />
+                      <div className="size-8 rounded-full bg-foreground/[0.06] flex items-center justify-center shrink-0">
+                        <UserIcon className="size-4 text-foreground/30" />
                       </div>
                     )}
                     <div className="flex-1 min-w-0">
@@ -805,7 +805,7 @@ export function SettingsDialog({
                         )}
                       </div>
                       {member.display_name && member.email && (
-                        <div className="text-xs text-white/40 truncate">{member.email}</div>
+                        <div className="text-xs text-foreground/40 truncate">{member.email}</div>
                       )}
                     </div>
                     {isAdmin && member.role !== 'owner' && (
@@ -833,26 +833,26 @@ export function SettingsDialog({
                 {isAdmin && pendingInvites.map((invite) => (
                   <div
                     key={invite.id}
-                    className="flex items-center gap-3 p-3 rounded-lg border border-dashed border-white/10 bg-white/[0.02]"
+                    className="flex items-center gap-3 p-3 rounded-lg border border-dashed border-foreground/10 bg-foreground/[0.02]"
                   >
-                    <div className="size-8 rounded-full bg-white/[0.06] flex items-center justify-center shrink-0 border border-dashed border-white/10">
-                      <UserIcon className="size-4 text-white/20" />
+                    <div className="size-8 rounded-full bg-foreground/[0.06] flex items-center justify-center shrink-0 border border-dashed border-foreground/10">
+                      <UserIcon className="size-4 text-foreground/20" />
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="text-sm font-medium flex items-center gap-2">
-                        <span className="truncate text-white/50">{invite.email}</span>
+                        <span className="truncate text-foreground/50">{invite.email}</span>
                         <span className="text-xs px-1.5 py-0.5 rounded bg-yellow-500/15 text-yellow-400/80 shrink-0">
                           Pending
                         </span>
                       </div>
-                      <div className="text-xs text-white/30">
+                      <div className="text-xs text-foreground/30">
                         {invite.role} &middot; invited {new Date(invite.created_at).toLocaleDateString()}
                       </div>
                     </div>
                     <Button
                       size="sm"
                       variant="ghost"
-                      className="text-white/40 hover:text-red-400 hover:bg-red-500/10 shrink-0"
+                      className="text-foreground/40 hover:text-red-400 hover:bg-red-500/10 shrink-0"
                       onClick={() => handleCancelInvite(invite.id)}
                     >
                       Cancel
@@ -863,8 +863,8 @@ export function SettingsDialog({
 
               {/* Invite form — only for owners/admins */}
               {isAdmin && (
-                <div className="p-3 rounded-lg border border-white/5 bg-white/[0.02] space-y-3">
-                  <div className="text-xs text-white/40">
+                <div className="p-3 rounded-lg border border-foreground/5 bg-foreground/[0.02] space-y-3">
+                  <div className="text-xs text-foreground/40">
                     Invite members to collaborate on this workspace
                   </div>
                   <div className="flex gap-2">
@@ -879,7 +879,7 @@ export function SettingsDialog({
                     <select
                       value={inviteRole}
                       onChange={(e) => setInviteRole(e.target.value as "admin" | "member")}
-                      className="px-3 py-1.5 rounded-md border border-white/10 bg-white/[0.02] text-sm outline-none focus:border-white/30 focus:ring-1 focus:ring-white/20"
+                      className="px-3 py-1.5 rounded-md border border-foreground/10 bg-foreground/[0.02] text-sm outline-none focus:border-foreground/30 focus:ring-1 focus:ring-foreground/20"
                     >
                       <option value="member">Member</option>
                       <option value="admin">Admin</option>
@@ -902,9 +902,9 @@ export function SettingsDialog({
 
               {/* Board View */}
               <div className="space-y-3">
-                <div className="text-xs text-white/40 px-1">Board view</div>
-                <div className="p-3 rounded-lg border border-white/5 bg-white/[0.02] space-y-3">
-                  <div className="flex gap-1 p-1 rounded-lg bg-white/[0.04]">
+                <div className="text-xs text-foreground/40 px-1">Board view</div>
+                <div className="p-3 rounded-lg border border-foreground/5 bg-foreground/[0.02] space-y-3">
+                  <div className="flex gap-1 p-1 rounded-lg bg-foreground/[0.04]">
                     {(["5-day", "7-day", "custom"] as WeekMode[]).map((mode) => (
                       <button
                         key={mode}
@@ -951,8 +951,8 @@ export function SettingsDialog({
                         }}
                         className={`flex-1 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
                           weekMode === mode
-                            ? "bg-white/10 text-white"
-                            : "text-white/40 hover:text-white/60"
+                            ? "bg-foreground/10 text-foreground"
+                            : "text-foreground/40 hover:text-foreground/60"
                         }`}
                       >
                         {mode === "5-day" ? "5-day week" : mode === "7-day" ? "7-day week" : "Custom"}
@@ -970,7 +970,7 @@ export function SettingsDialog({
                         <Button
                           size="sm"
                           variant="ghost"
-                          className="flex-1 border border-white/10"
+                          className="flex-1 border border-foreground/10"
                           disabled={modeSwitchLoading}
                           onClick={async () => {
                             setModeSwitchLoading(true);
@@ -986,7 +986,7 @@ export function SettingsDialog({
                         </Button>
                         <Button
                           size="sm"
-                          className="flex-1 bg-white text-black hover:bg-white/90"
+                          className="flex-1 bg-white text-black hover:bg-foreground/90"
                           disabled={modeSwitchLoading}
                           onClick={async () => {
                             setModeSwitchLoading(true);
@@ -1036,23 +1036,23 @@ export function SettingsDialog({
                       <button
                         type="button"
                         onClick={() => setModeSwitchPending(null)}
-                        className="text-xs text-white/30 hover:text-white/50 transition-colors"
+                        className="text-xs text-foreground/30 hover:text-foreground/50 transition-colors"
                         disabled={modeSwitchLoading}
                       >
                         Cancel
                       </button>
                     </div>
                   )}
-                  <div className="border-t border-white/5 pt-3 flex items-center justify-between">
+                  <div className="border-t border-foreground/5 pt-3 flex items-center justify-between">
                     <div>
                       <div className="text-sm">Show checkmarks</div>
-                      <div className="text-xs text-white/40">Display completion checkmarks on task cards</div>
+                      <div className="text-xs text-foreground/40">Display completion checkmarks on task cards</div>
                     </div>
                     <button
                       type="button"
                       onClick={() => onShowCheckmarksChange(!showCheckmarks)}
                       className={`relative inline-flex h-5 w-9 shrink-0 rounded-full transition-colors ${
-                        showCheckmarks ? "bg-white/20" : "bg-white/[0.06]"
+                        showCheckmarks ? "bg-foreground/20" : "bg-foreground/[0.06]"
                       }`}
                       aria-label="Toggle checkmarks"
                     >
@@ -1063,14 +1063,14 @@ export function SettingsDialog({
                   </div>
                   {weekMode !== "custom" && (
                     <>
-                      <div className="border-t border-white/5 pt-3">
-                        <div className="text-xs text-white/40 mb-2">Week transition</div>
+                      <div className="border-t border-foreground/5 pt-3">
+                        <div className="text-xs text-foreground/40 mb-2">Week transition</div>
                         <div className="flex items-center gap-2">
-                          <span className="text-xs text-white/50">Auto-transition:</span>
+                          <span className="text-xs text-foreground/50">Auto-transition:</span>
                           <select
                             value={transitionDay}
                             onChange={(e) => onSetTransitionSchedule(Number(e.target.value), transitionHour)}
-                            className="px-2 py-1 rounded-md border border-white/10 bg-white/[0.02] text-sm outline-none focus:border-white/30 focus:ring-1 focus:ring-white/20"
+                            className="px-2 py-1 rounded-md border border-foreground/10 bg-foreground/[0.02] text-sm outline-none focus:border-foreground/30 focus:ring-1 focus:ring-foreground/20"
                           >
                             <option value={1}>Monday</option>
                             <option value={2}>Tuesday</option>
@@ -1080,11 +1080,11 @@ export function SettingsDialog({
                             <option value={6}>Saturday</option>
                             <option value={0}>Sunday</option>
                           </select>
-                          <span className="text-xs text-white/50">at</span>
+                          <span className="text-xs text-foreground/50">at</span>
                           <select
                             value={transitionHour}
                             onChange={(e) => onSetTransitionSchedule(transitionDay, Number(e.target.value))}
-                            className="px-2 py-1 rounded-md border border-white/10 bg-white/[0.02] text-sm outline-none focus:border-white/30 focus:ring-1 focus:ring-white/20"
+                            className="px-2 py-1 rounded-md border border-foreground/10 bg-foreground/[0.02] text-sm outline-none focus:border-foreground/30 focus:ring-1 focus:ring-foreground/20"
                           >
                             {Array.from({ length: 24 }, (_, i) => (
                               <option key={i} value={i}>{String(i).padStart(2, '0')}:00</option>
@@ -1095,7 +1095,7 @@ export function SettingsDialog({
                       <Button
                         size="sm"
                         variant="ghost"
-                        className="w-full justify-center border border-white/10"
+                        className="w-full justify-center border border-foreground/10"
                         disabled={transitioning}
                         onClick={async () => {
                           setTransitioning(true);
@@ -1113,7 +1113,7 @@ export function SettingsDialog({
                         {transitioning ? "Transitioning..." : "Transition to next week"}
                       </Button>
                       {transitionResult && (
-                        <div className="text-xs text-white/60">{transitionResult}</div>
+                        <div className="text-xs text-foreground/60">{transitionResult}</div>
                       )}
                     </>
                   )}
@@ -1123,20 +1123,20 @@ export function SettingsDialog({
               {/* Delete workspace */}
               {activeProject && activeProject.role === "owner" && userProjectCount > 1 && (
                 <div className="space-y-3 pt-3">
-                  <div className="text-xs text-white/40 px-1">Danger zone</div>
+                  <div className="text-xs text-foreground/40 px-1">Danger zone</div>
                   <div className="p-3 rounded-lg border border-red-500/20 bg-red-500/[0.03] space-y-3">
                     <div className="flex items-center gap-2">
                       <Trash2 className="size-4 text-red-400 shrink-0" />
                       <div>
                         <div className="text-sm font-medium text-red-400">Delete workspace</div>
-                        <div className="text-xs text-white/40">
+                        <div className="text-xs text-foreground/40">
                           This will permanently delete all tasks, clients, calendar data, and members.
                         </div>
                       </div>
                     </div>
                     <div>
-                      <label className="text-xs text-white/40 block mb-1">
-                        Type <span className="font-mono text-white/60">{activeProject.name}</span> to confirm
+                      <label className="text-xs text-foreground/40 block mb-1">
+                        Type <span className="font-mono text-foreground/60">{activeProject.name}</span> to confirm
                       </label>
                       <Input
                         value={deleteConfirmName}
@@ -1185,13 +1185,13 @@ export function SettingsDialog({
           <TabsContent value="about" className="flex-1 min-h-0 overflow-y-auto">
             <div className="space-y-6 py-4">
               <div className="space-y-3">
-                <p className="text-sm text-white/60 leading-relaxed">
+                <p className="text-sm text-foreground/60 leading-relaxed">
                   Flowie is a product of{" "}
                   <a
                     href="https://oimachi.co"
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-white underline underline-offset-2 hover:text-white/80 transition-colors"
+                    className="text-white underline underline-offset-2 hover:text-foreground/80 transition-colors"
                   >
                     Oimachi
                   </a>
@@ -1201,31 +1201,31 @@ export function SettingsDialog({
 
               {/* Commit count & days since first commit */}
               <div className="grid grid-cols-2 gap-3">
-                <div className="p-3 rounded-lg border border-white/5 bg-white/[0.02]">
+                <div className="p-3 rounded-lg border border-foreground/5 bg-foreground/[0.02]">
                   <div className="flex items-center gap-3">
-                    <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-white/5">
-                      <GitCommitHorizontal className="size-5 text-white/50" />
+                    <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-foreground/5">
+                      <GitCommitHorizontal className="size-5 text-foreground/50" />
                     </div>
                     <div>
                       <div className="text-2xl font-bold tabular-nums">
                         {commitCount !== null ? commitCount.toLocaleString() : (
-                          <span className="inline-block w-12 h-7 bg-white/5 rounded animate-pulse" />
+                          <span className="inline-block w-12 h-7 bg-foreground/5 rounded animate-pulse" />
                         )}
                       </div>
-                      <div className="text-xs text-white/40">commits shipped</div>
+                      <div className="text-xs text-foreground/40">commits shipped</div>
                     </div>
                   </div>
                 </div>
-                <div className="p-3 rounded-lg border border-white/5 bg-white/[0.02]">
+                <div className="p-3 rounded-lg border border-foreground/5 bg-foreground/[0.02]">
                   <div className="flex items-center gap-3">
-                    <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-white/5">
+                    <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-foreground/5">
                       <span className="text-lg">🗓️</span>
                     </div>
                     <div>
                       <div className="text-2xl font-bold tabular-nums">
                         {Math.floor((Date.now() - new Date("2026-02-15").getTime()) / 86400000)}
                       </div>
-                      <div className="text-xs text-white/40">days since first commit</div>
+                      <div className="text-xs text-foreground/40">days since first commit</div>
                     </div>
                   </div>
                 </div>

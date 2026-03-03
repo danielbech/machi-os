@@ -134,7 +134,7 @@ export const BoardTaskCard = memo(function BoardTaskCard({
         }}
       >
         <div className="py-1 px-2">
-          <div className="h-px bg-white/[0.06]" />
+          <div className="h-px bg-foreground/[0.06]" />
         </div>
       </KanbanItem>
     );
@@ -152,7 +152,7 @@ export const BoardTaskCard = memo(function BoardTaskCard({
       className={`group relative rounded-lg border p-2 text-card-foreground shadow-[0_1px_3px_rgba(0,0,0,0.3)] transition-[background-color,border-color] duration-150 ease-out focus:outline-none cursor-pointer ${
         item.type === "note"
           ? "border-amber-500/20 bg-amber-500/5 hover:bg-amber-500/10 hover:border-amber-500/30"
-          : "border-white/5 bg-white/[0.02] hover:bg-white/[0.05] hover:border-white/10"
+          : "border-foreground/5 bg-foreground/[0.02] hover:bg-foreground/[0.05] hover:border-foreground/10"
       } ${isGlowing ? "animate-complete-glow" : ""} ${isNewlyCreated ? "animate-card-appear" : ""}`}
       style={{
         ...(isGlowing ? {
@@ -361,7 +361,7 @@ export const BoardTaskCard = memo(function BoardTaskCard({
                 : <div />}
                 <div className="flex items-center gap-1.5">
                   {item.images && item.images.length > 0 && (
-                    <ImageIcon className={`size-3.5 ${dimCompleted ? "text-white/15" : "text-white/30"}`} />
+                    <ImageIcon className={`size-3.5 ${dimCompleted ? "text-foreground/15" : "text-foreground/30"}`} />
                   )}
                   {item.assignees.length > 0 && (
                     <div className="flex gap-1.5">
@@ -370,7 +370,7 @@ export const BoardTaskCard = memo(function BoardTaskCard({
                         return member ? (
                           <div
                             key={member.id}
-                            className={`flex items-center justify-center w-5 h-5 rounded-full ${!member.avatar ? member.color : "bg-white/5"} text-[10px] font-semibold text-white overflow-hidden`}
+                            className={`flex items-center justify-center w-5 h-5 rounded-full ${!member.avatar ? member.color : "bg-foreground/5"} text-[10px] font-semibold text-white overflow-hidden`}
                             title={member.name}
                           >
                             {member.avatar ? (
@@ -407,16 +407,16 @@ export const BoardTaskCard = memo(function BoardTaskCard({
                 className={`flex size-4 items-center justify-center rounded-full border transition-all ${
                   item.completed
                     ? dimCompleted
-                      ? "border-white/8 bg-white/8"
+                      ? "border-foreground/8 bg-foreground/8"
                       : "border-green-500/80 bg-green-500/80"
-                    : "border-white/20 hover:border-white/40"
+                    : "border-foreground/20 hover:border-foreground/40"
                 }`}
               >
-                {item.completed && <Check className={`size-3 ${dimCompleted ? "text-white/20" : "text-white"}`} strokeWidth={3} />}
+                {item.completed && <Check className={`size-3 ${dimCompleted ? "text-foreground/20" : "text-white"}`} strokeWidth={3} />}
               </div>
             </button>
             {item.checklist.length > 0 && (
-              <span className={`text-[10px] tabular-nums leading-none ${dimCompleted ? "text-white/15" : "text-white/30"}`}>
+              <span className={`text-[10px] tabular-nums leading-none ${dimCompleted ? "text-foreground/15" : "text-foreground/30"}`}>
                 {item.checklist.filter((i) => i.checked).length}/{item.checklist.length}
               </span>
             )}

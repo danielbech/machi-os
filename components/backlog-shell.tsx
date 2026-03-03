@@ -28,7 +28,7 @@ export function BacklogShell() {
   useEffect(() => {
     if (!kanbanDragOverBacklog || !panelRef.current) return;
     let currentEl: Element | null = null;
-    const highlightClass = "ring-1 ring-white/15 ring-inset bg-white/[0.04] rounded-lg";
+    const highlightClass = "ring-1 ring-foreground/15 ring-inset bg-foreground/[0.04] rounded-lg";
     const classes = highlightClass.split(" ");
 
     const onPointerMove = (e: PointerEvent) => {
@@ -98,7 +98,7 @@ export function BacklogShell() {
         data-backlog-panel
         className={`fixed top-0 bottom-0 left-0 md:left-[3rem] z-[5] border-r bg-black/80 backdrop-blur-md overflow-y-auto transition-[transform,visibility,box-shadow,border-color] duration-200 ease-in-out ${
           backlogOpen ? "translate-x-0 visible" : "-translate-x-full invisible"
-        } ${kanbanDragOverBacklog ? "border-white/20 shadow-[inset_0_0_30px_rgba(255,255,255,0.03)]" : "border-white/[0.06]"} w-full md:w-auto`}
+        } ${kanbanDragOverBacklog ? "border-foreground/20 shadow-[inset_0_0_30px_rgba(255,255,255,0.03)]" : "border-foreground/[0.06]"} w-full md:w-auto`}
         style={!isMobile ? { width: backlogWidth } : undefined}
       >
         <div className="p-4">
@@ -106,7 +106,7 @@ export function BacklogShell() {
           <div className="flex justify-end mb-2 md:hidden">
             <button
               onClick={toggleBacklog}
-              className="p-1.5 rounded-md text-white/40 hover:text-white hover:bg-white/10 transition-colors"
+              className="p-1.5 rounded-md text-foreground/40 hover:text-foreground hover:bg-foreground/10 transition-colors"
               aria-label="Close backlog"
             >
               <X className="size-5" />
@@ -135,14 +135,14 @@ export function BacklogShell() {
         {/* Resize handle — desktop only */}
         {!isMobile && (
           <div
-            className="absolute top-0 bottom-0 right-0 w-1.5 cursor-col-resize hover:bg-white/10 active:bg-white/20 transition-colors group/resize"
+            className="absolute top-0 bottom-0 right-0 w-1.5 cursor-col-resize hover:bg-foreground/10 active:bg-foreground/20 transition-colors group/resize"
             onPointerDown={handleResizeStart}
           >
             {/* Grip indicator */}
             <div className="absolute top-1/2 -translate-y-1/2 right-0 flex flex-col gap-[3px] items-center w-full opacity-30 group-hover/resize:opacity-60 transition-opacity">
-              <div className="w-[3px] h-[3px] rounded-full bg-white/80" />
-              <div className="w-[3px] h-[3px] rounded-full bg-white/80" />
-              <div className="w-[3px] h-[3px] rounded-full bg-white/80" />
+              <div className="w-[3px] h-[3px] rounded-full bg-foreground/80" />
+              <div className="w-[3px] h-[3px] rounded-full bg-foreground/80" />
+              <div className="w-[3px] h-[3px] rounded-full bg-foreground/80" />
             </div>
           </div>
         )}

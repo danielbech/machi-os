@@ -78,13 +78,13 @@ function StatusFilter({
   statuses: ClientStatusDef[];
 }) {
   return (
-    <div className="flex items-center gap-0.5 rounded-md bg-white/5 p-0.5">
+    <div className="flex items-center gap-0.5 rounded-md bg-foreground/5 p-0.5">
       <button
         onClick={() => onChange("all")}
         className={`px-2.5 py-1 rounded text-xs font-medium transition-all ${
           value === "all"
-            ? "bg-white/10 text-white"
-            : "text-white/30 hover:text-white/50"
+            ? "bg-foreground/10 text-foreground"
+            : "text-foreground/30 hover:text-foreground/50"
         }`}
       >
         All
@@ -95,8 +95,8 @@ function StatusFilter({
           onClick={() => onChange(s.id)}
           className={`px-2.5 py-1 rounded text-xs font-medium transition-all ${
             value === s.id
-              ? "bg-white/10 text-white"
-              : "text-white/30 hover:text-white/50"
+              ? "bg-foreground/10 text-foreground"
+              : "text-foreground/30 hover:text-foreground/50"
           }`}
         >
           {s.name}
@@ -125,7 +125,7 @@ function StatusPicker({
               {current.name}
             </Badge>
           ) : (
-            <span className="text-xs text-white/20 cursor-pointer">None</span>
+            <span className="text-xs text-foreground/20 cursor-pointer">None</span>
           )}
         </button>
       </DropdownMenuTrigger>
@@ -167,28 +167,28 @@ function ClientGroupPicker({
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
-        <button className="flex items-center gap-1.5 text-xs hover:text-white/60 transition-colors text-left">
+        <button className="flex items-center gap-1.5 text-xs hover:text-foreground/60 transition-colors text-left">
           {currentGroupName ? (
-            <span className="text-white/50">{currentGroupName}</span>
+            <span className="text-foreground/50">{currentGroupName}</span>
           ) : (
-            <span className="text-white/20">None</span>
+            <span className="text-foreground/20">None</span>
           )}
         </button>
       </PopoverTrigger>
-      <PopoverContent align="start" className="w-48 p-1 bg-zinc-900/95 backdrop-blur-md border-white/10">
+      <PopoverContent align="start" className="w-48 p-1 bg-zinc-900/95 backdrop-blur-md border-foreground/10">
         <button
           onClick={() => { onSelect(null); setOpen(false); }}
-          className={`w-full flex items-center gap-2 px-2 py-1.5 rounded-sm text-sm hover:bg-white/[0.08] transition-colors ${!currentGroupId ? "text-white" : "text-white/40"}`}
+          className={`w-full flex items-center gap-2 px-2 py-1.5 rounded-sm text-sm hover:bg-foreground/[0.08] transition-colors ${!currentGroupId ? "text-white" : "text-foreground/40"}`}
         >
           None
           {!currentGroupId && <Check className="size-3.5 ml-auto" />}
         </button>
-        <div className="h-px bg-white/[0.06] my-1" />
+        <div className="h-px bg-foreground/[0.06] my-1" />
         {clientGroups.map((g) => (
           <button
             key={g.id}
             onClick={() => { onSelect(g.id); setOpen(false); }}
-            className={`w-full flex items-center gap-2 px-2 py-1.5 rounded-sm text-sm hover:bg-white/[0.08] transition-colors ${currentGroupId === g.id ? "text-white" : ""}`}
+            className={`w-full flex items-center gap-2 px-2 py-1.5 rounded-sm text-sm hover:bg-foreground/[0.08] transition-colors ${currentGroupId === g.id ? "text-foreground" : ""}`}
           >
             {g.logo_url && (
               <img src={g.logo_url} alt="" className="size-4 rounded object-cover shrink-0" />
@@ -198,12 +198,12 @@ function ClientGroupPicker({
           </button>
         ))}
         {clientGroups.length === 0 && (
-          <div className="px-2 py-1.5 text-xs text-white/20">No clients yet</div>
+          <div className="px-2 py-1.5 text-xs text-foreground/20">No clients yet</div>
         )}
-        <div className="h-px bg-white/[0.06] my-1" />
+        <div className="h-px bg-foreground/[0.06] my-1" />
         <button
           onClick={() => { setOpen(false); onRequestCreate(); }}
-          className="w-full flex items-center gap-2 px-2 py-1.5 rounded-sm text-sm text-white/40 hover:text-white/60 hover:bg-white/[0.08] transition-colors"
+          className="w-full flex items-center gap-2 px-2 py-1.5 rounded-sm text-sm text-foreground/40 hover:text-foreground/60 hover:bg-foreground/[0.08] transition-colors"
         >
           <Plus className="size-3.5" />
           New client
@@ -219,8 +219,8 @@ function TabButton({ active, onClick, children }: { active: boolean; onClick: ()
       onClick={onClick}
       className={`px-3 py-1.5 rounded-md text-sm font-medium transition-all ${
         active
-          ? "bg-white/10 text-white"
-          : "text-white/30 hover:text-white/50"
+          ? "bg-foreground/10 text-foreground"
+          : "text-foreground/30 hover:text-foreground/50"
       }`}
     >
       {children}
@@ -271,11 +271,11 @@ function ClientsTab() {
     return (
       <div className="flex-1 flex items-center justify-center">
         <div className="text-center space-y-3">
-          <div className="text-white/40 text-sm">No clients yet</div>
+          <div className="text-foreground/40 text-sm">No clients yet</div>
           <Button
             variant="link"
             onClick={openAdd}
-            className="text-white/60 hover:text-white"
+            className="text-foreground/60 hover:text-foreground"
           >
             Add your first client
           </Button>
@@ -291,7 +291,7 @@ function ClientsTab() {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <div className="text-xs text-white/30">
+        <div className="text-xs text-foreground/30">
           {clientGroups.length} client{clientGroups.length !== 1 ? "s" : ""}
         </div>
         <Button size="sm" onClick={openAdd}>
@@ -300,10 +300,10 @@ function ClientsTab() {
         </Button>
       </div>
 
-      <div className="rounded-lg border border-white/[0.06] overflow-hidden">
+      <div className="rounded-lg border border-foreground/[0.06] overflow-hidden">
         <Table>
           <TableHeader>
-            <TableRow className="border-white/[0.06] bg-white/[0.02] hover:bg-white/[0.02]">
+            <TableRow className="border-foreground/[0.06] bg-foreground/[0.02] hover:bg-foreground/[0.02]">
               <TableHead>Client</TableHead>
               <TableHead>Projects</TableHead>
               <TableHead className="w-[50px]" />
@@ -318,18 +318,18 @@ function ClientsTab() {
                       <img
                         src={group.logo_url}
                         alt={group.name}
-                        className="size-7 rounded-lg object-cover bg-white/5 shrink-0"
+                        className="size-7 rounded-lg object-cover bg-foreground/5 shrink-0"
                       />
                     ) : (
-                      <div className="size-7 rounded-lg bg-white/[0.06] flex items-center justify-center shrink-0">
-                        <Building2 className="size-3.5 text-white/30" />
+                      <div className="size-7 rounded-lg bg-foreground/[0.06] flex items-center justify-center shrink-0">
+                        <Building2 className="size-3.5 text-foreground/30" />
                       </div>
                     )}
                     <span className="font-medium">{group.name}</span>
                   </div>
                 </TableCell>
                 <TableCell>
-                  <span className="text-xs text-white/30">
+                  <span className="text-xs text-foreground/30">
                     {projectCountByGroup[group.id] || 0}
                   </span>
                 </TableCell>
@@ -340,7 +340,7 @@ function ClientsTab() {
                         <Button
                           variant="ghost"
                           size="icon-xs"
-                          className="text-white/30 hover:text-white/60"
+                          className="text-foreground/30 hover:text-foreground/60"
                           aria-label={`Actions for ${group.name}`}
                         >
                           <MoreHorizontal className="size-4" />
@@ -384,7 +384,7 @@ function ClientsTab() {
             <DialogTitle>Delete Client</DialogTitle>
           </DialogHeader>
           <div className="py-4 space-y-4">
-            <p className="text-sm text-white/60">
+            <p className="text-sm text-foreground/60">
               Are you sure you want to delete this client? Projects assigned to
               this client will be unlinked.
             </p>
@@ -451,7 +451,7 @@ function StatusesTab() {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <div className="text-xs text-white/30">
+        <div className="text-xs text-foreground/30">
           {clientStatuses.length} status{clientStatuses.length !== 1 ? "es" : ""}
         </div>
         <Button size="sm" onClick={openAdd}>
@@ -460,10 +460,10 @@ function StatusesTab() {
         </Button>
       </div>
 
-      <div className="rounded-lg border border-white/[0.06] overflow-hidden">
+      <div className="rounded-lg border border-foreground/[0.06] overflow-hidden">
         <Table>
           <TableHeader>
-            <TableRow className="border-white/[0.06] bg-white/[0.02] hover:bg-white/[0.02]">
+            <TableRow className="border-foreground/[0.06] bg-foreground/[0.02] hover:bg-foreground/[0.02]">
               <TableHead>Status</TableHead>
               <TableHead>Projects</TableHead>
               <TableHead>Visibility</TableHead>
@@ -479,12 +479,12 @@ function StatusesTab() {
                   </Badge>
                 </TableCell>
                 <TableCell>
-                  <span className="text-xs text-white/30">
+                  <span className="text-xs text-foreground/30">
                     {projectCountByStatus[status.id] || 0}
                   </span>
                 </TableCell>
                 <TableCell>
-                  <span className={`text-xs ${status.treat_as_active ? "text-white/50" : "text-white/20"}`}>
+                  <span className={`text-xs ${status.treat_as_active ? "text-foreground/50" : "text-foreground/20"}`}>
                     {status.treat_as_active ? "Shown in backlog" : "Hidden from backlog"}
                   </span>
                 </TableCell>
@@ -495,7 +495,7 @@ function StatusesTab() {
                         <Button
                           variant="ghost"
                           size="icon-xs"
-                          className="text-white/30 hover:text-white/60"
+                          className="text-foreground/30 hover:text-foreground/60"
                           aria-label={`Actions for ${status.name}`}
                         >
                           <MoreHorizontal className="size-4" />
@@ -522,7 +522,7 @@ function StatusesTab() {
             ))}
             {clientStatuses.length === 0 && (
               <TableRow className="hover:bg-transparent">
-                <TableCell colSpan={4} className="h-24 text-center text-white/30">
+                <TableCell colSpan={4} className="h-24 text-center text-foreground/30">
                   No statuses yet.
                 </TableCell>
               </TableRow>
@@ -546,7 +546,7 @@ function StatusesTab() {
             <DialogTitle>Delete Status</DialogTitle>
           </DialogHeader>
           <div className="py-4 space-y-4">
-            <p className="text-sm text-white/60">
+            <p className="text-sm text-foreground/60">
               Are you sure you want to delete this status? Projects with this
               status will become unset.
             </p>
@@ -649,13 +649,13 @@ function StatusDialog({
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className="flex-1 text-lg font-semibold bg-transparent outline-none placeholder:text-white/20"
+              className="flex-1 text-lg font-semibold bg-transparent outline-none placeholder:text-foreground/20"
               placeholder="Status name..."
             />
           </div>
 
           <div className="flex items-center gap-2">
-            <label className="text-xs text-white/40">Color</label>
+            <label className="text-xs text-foreground/40">Color</label>
             <div className="flex gap-1">
               {COLOR_NAMES.map((c) => (
                 <button
@@ -664,7 +664,7 @@ function StatusDialog({
                   onClick={() => setColor(c)}
                   className={`size-5 rounded-full ${CLIENT_DOT_COLORS[c]} transition-all ${
                     color === c
-                      ? "ring-2 ring-white/80 ring-offset-1 ring-offset-background"
+                      ? "ring-2 ring-foreground/80 ring-offset-1 ring-offset-background"
                       : "opacity-40 hover:opacity-80"
                   }`}
                   title={c}
@@ -675,28 +675,28 @@ function StatusDialog({
           </div>
 
           <div className="flex items-center gap-2">
-            <label className="text-xs text-white/40">Board visibility</label>
+            <label className="text-xs text-foreground/40">Board visibility</label>
             <button
               type="button"
               onClick={() => setTreatAsActive(!treatAsActive)}
               className={`px-2.5 py-1 rounded text-xs font-medium transition-all ${
                 treatAsActive
                   ? "bg-green-500/10 text-green-400"
-                  : "bg-white/5 text-white/30"
+                  : "bg-foreground/5 text-foreground/30"
               }`}
             >
               {treatAsActive ? "Shown in backlog" : "Hidden from backlog"}
             </button>
           </div>
 
-          <div className="flex justify-end gap-2 pt-2 border-t border-white/[0.06]">
+          <div className="flex justify-end gap-2 pt-2 border-t border-foreground/[0.06]">
             <Button variant="ghost" type="button" onClick={() => onOpenChange(false)}>
               Cancel
             </Button>
             <Button
               type="submit"
               disabled={saving || !name.trim()}
-              className="bg-white text-black hover:bg-white/90"
+              className="bg-white text-black hover:bg-foreground/90"
             >
               {saving ? "Saving..." : editingStatus ? "Save" : "Add Status"}
             </Button>
@@ -802,7 +802,7 @@ function ProjectsTab() {
                 <img
                   src={logoUrl}
                   alt={client.name}
-                  className="size-7 rounded-lg object-cover bg-white/5 shrink-0"
+                  className="size-7 rounded-lg object-cover bg-foreground/5 shrink-0"
                 />
               ) : (
                 <div
@@ -818,7 +818,7 @@ function ProjectsTab() {
                 </div>
               )}
               <span className="font-medium">
-                {group && <><span className="text-white/40">{group.name}</span><span className="text-white/15 mx-1">/</span></>}
+                {group && <><span className="text-foreground/40">{group.name}</span><span className="text-foreground/15 mx-1">/</span></>}
                 {client.name}
               </span>
             </div>
@@ -858,7 +858,7 @@ function ProjectsTab() {
               <div
                 className={`size-3 rounded-full ${CLIENT_DOT_COLORS[color] || "bg-blue-500"}`}
               />
-              <span className="text-xs text-white/50 capitalize">{color}</span>
+              <span className="text-xs text-foreground/50 capitalize">{color}</span>
             </div>
           );
         },
@@ -894,7 +894,7 @@ function ProjectsTab() {
                   <Button
                     variant="ghost"
                     size="icon-xs"
-                    className="text-white/30 hover:text-white/60"
+                    className="text-foreground/30 hover:text-foreground/60"
                     aria-label={`Actions for ${client.name}`}
                   >
                     <MoreHorizontal className="size-4" />
@@ -947,11 +947,11 @@ function ProjectsTab() {
       <>
         <div className="flex-1 flex items-center justify-center">
           <div className="text-center space-y-3">
-            <div className="text-white/40 text-sm">No projects yet</div>
+            <div className="text-foreground/40 text-sm">No projects yet</div>
             <Button
               variant="link"
               onClick={openAdd}
-              className="text-white/60 hover:text-white"
+              className="text-foreground/60 hover:text-foreground"
             >
               Add your first project
             </Button>
@@ -972,7 +972,7 @@ function ProjectsTab() {
         {/* Toolbar */}
         <div className="flex items-center gap-3">
           <div className="relative flex-1 max-w-xs">
-            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3.5 text-white/30" />
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3.5 text-foreground/30" />
             <Input
               placeholder="Search projects..."
               value={globalFilter}
@@ -982,7 +982,7 @@ function ProjectsTab() {
             {globalFilter && (
               <button
                 onClick={() => setGlobalFilter("")}
-                className="absolute right-2 top-1/2 -translate-y-1/2 text-white/30 hover:text-white/60"
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-foreground/30 hover:text-foreground/60"
               >
                 <X className="size-3" />
               </button>
@@ -990,7 +990,7 @@ function ProjectsTab() {
           </div>
           <StatusFilter value={statusFilter} onChange={setStatusFilter} statuses={clientStatuses} />
           <div className="ml-auto flex items-center gap-3">
-            <span className="text-xs text-white/30">
+            <span className="text-xs text-foreground/30">
               {table.getFilteredRowModel().rows.length} project
               {table.getFilteredRowModel().rows.length !== 1 ? "s" : ""}
             </span>
@@ -1002,20 +1002,20 @@ function ProjectsTab() {
         </div>
 
         {/* Table */}
-        <div className="rounded-lg border border-white/[0.06] overflow-hidden">
+        <div className="rounded-lg border border-foreground/[0.06] overflow-hidden">
           <Table>
             <TableHeader>
               {table.getHeaderGroups().map((headerGroup) => (
                 <TableRow
                   key={headerGroup.id}
-                  className="border-white/[0.06] bg-white/[0.02] hover:bg-white/[0.02]"
+                  className="border-foreground/[0.06] bg-foreground/[0.02] hover:bg-foreground/[0.02]"
                 >
                   {headerGroup.headers.map((header) => (
                     <TableHead
                       key={header.id}
                       className={
                         header.column.getCanSort()
-                          ? "cursor-pointer select-none hover:text-white/60 transition-colors"
+                          ? "cursor-pointer select-none hover:text-foreground/60 transition-colors"
                           : ""
                       }
                       onClick={header.column.getToggleSortingHandler()}
@@ -1056,7 +1056,7 @@ function ProjectsTab() {
                 <TableRow className="hover:bg-transparent">
                   <TableCell
                     colSpan={columns.length}
-                    className="h-24 text-center text-white/30"
+                    className="h-24 text-center text-foreground/30"
                   >
                     {globalFilter || statusFilter !== "all"
                       ? "No matching projects."
@@ -1090,7 +1090,7 @@ function ProjectsTab() {
             <DialogTitle>Delete Project</DialogTitle>
           </DialogHeader>
           <div className="py-4 space-y-4">
-            <p className="text-sm text-white/60">
+            <p className="text-sm text-foreground/60">
               Are you sure you want to delete this project? Tasks assigned to
               this project will keep their assignment but it won&apos;t be
               visible.
@@ -1131,14 +1131,14 @@ export default function ProjectsPage() {
     return (
       <main className="flex min-h-screen flex-col p-4 md:p-8">
         <div className="mb-6 flex items-center justify-between">
-          <div className="h-8 w-32 bg-white/5 rounded animate-pulse" />
-          <div className="h-9 w-28 bg-white/5 rounded animate-pulse" />
+          <div className="h-8 w-32 bg-foreground/5 rounded animate-pulse" />
+          <div className="h-9 w-28 bg-foreground/5 rounded animate-pulse" />
         </div>
         <div className="space-y-2">
           {[1, 2, 3].map((i) => (
             <div
               key={i}
-              className="h-14 bg-white/[0.02] rounded-lg border border-white/5 animate-pulse"
+              className="h-14 bg-foreground/[0.02] rounded-lg border border-foreground/5 animate-pulse"
             />
           ))}
         </div>
@@ -1149,7 +1149,7 @@ export default function ProjectsPage() {
   return (
     <main className="flex min-h-screen flex-col p-4 md:p-8">
       <div className="mb-6 flex items-center gap-4">
-        <div className="flex items-center gap-0.5 rounded-md bg-white/5 p-0.5">
+        <div className="flex items-center gap-0.5 rounded-md bg-foreground/5 p-0.5">
           <TabButton active={activeTab === "projects"} onClick={() => setActiveTab("projects")}>
             Projects
           </TabButton>

@@ -365,7 +365,7 @@ export const GanttContentHeader: FC<GanttContentHeaderProps> = ({
       >
         {Array.from({ length: columns }).map((_, index) => (
           <div
-            className="shrink-0 border-white/[0.06] border-b py-1 text-center text-xs"
+            className="shrink-0 border-foreground/[0.06] border-b py-1 text-center text-xs"
             key={`${id}-${index}`}
           >
             {renderHeaderItem(index)}
@@ -503,7 +503,7 @@ export const GanttHeader: FC<GanttHeaderProps> = ({ className }) => {
   return (
     <div
       className={cn(
-        "-space-x-px flex h-full w-max divide-x divide-white/[0.06]",
+        "-space-x-px flex h-full w-max divide-x divide-foreground/[0.06]",
         className
       )}
     >
@@ -577,7 +577,7 @@ export const GanttSidebarItem: FC<GanttSidebarItemProps> = ({
 
 export const GanttSidebarHeader: FC = () => (
   <div
-    className="sticky top-0 z-10 flex shrink-0 items-end justify-between gap-2.5 border-white/[0.06] border-b bg-background/90 p-2.5 font-medium text-muted-foreground text-xs backdrop-blur-sm"
+    className="sticky top-0 z-10 flex shrink-0 items-end justify-between gap-2.5 border-foreground/[0.06] border-b bg-background/90 p-2.5 font-medium text-muted-foreground text-xs backdrop-blur-sm"
     style={{ height: "var(--gantt-header-height)" }}
   >
     <p className="flex-1 truncate text-left">Issues</p>
@@ -603,7 +603,7 @@ export const GanttSidebarGroup: FC<GanttSidebarGroupProps> = ({
     >
       {name}
     </p>
-    <div className="divide-y divide-white/[0.06]">{children}</div>
+    <div className="divide-y divide-foreground/[0.06]">{children}</div>
   </div>
 );
 
@@ -618,7 +618,7 @@ export const GanttSidebar: FC<GanttSidebarProps> = ({
 }) => (
   <div
     className={cn(
-      "sticky left-0 z-30 h-max min-h-full overflow-clip border-white/[0.06] border-r bg-background/90 backdrop-blur-md",
+      "sticky left-0 z-30 h-max min-h-full overflow-clip border-foreground/[0.06] border-r bg-background/90 backdrop-blur-md",
       className
     )}
     data-roadmap-ui="gantt-sidebar"
@@ -728,7 +728,7 @@ export const GanttColumns: FC<GanttColumnsProps> = ({
 
   return (
     <div
-      className="divide grid h-full w-full divide-x divide-white/[0.06]"
+      className="divide grid h-full w-full divide-x divide-foreground/[0.06]"
       style={{
         gridTemplateColumns: `repeat(${columns}, var(--gantt-column-width))`,
       }}
@@ -811,7 +811,7 @@ export const GanttCreateMarkerTrigger: FC<GanttCreateMarkerTriggerProps> = ({
         >
           <PlusIcon style={{ color: rowColor || undefined }} className={rowColor ? "" : "text-muted-foreground"} size={12} />
         </button>
-        <div className="whitespace-nowrap rounded-full border border-white/[0.06] bg-background/90 px-2 py-1 text-foreground text-xs backdrop-blur-lg">
+        <div className="whitespace-nowrap rounded-full border border-foreground/[0.06] bg-background/90 px-2 py-1 text-foreground text-xs backdrop-blur-lg">
           {formatDate(date, "MMM dd, yyyy")}
         </div>
       </div>
@@ -1023,9 +1023,9 @@ export const GanttDragCreate: FC<GanttDragCreateProps> = ({ className }) => {
             height: gantt.rowHeight,
           }}
         >
-          <div className="h-full w-px border-l border-dashed border-white/20" />
-          <div className="absolute top-1/2 -translate-y-1/2 flex h-5 w-5 items-center justify-center rounded-full bg-white/10 backdrop-blur-sm">
-            <PlusIcon className="text-white/50" size={12} />
+          <div className="h-full w-px border-l border-dashed border-foreground/20" />
+          <div className="absolute top-1/2 -translate-y-1/2 flex h-5 w-5 items-center justify-center rounded-full bg-foreground/10 backdrop-blur-sm">
+            <PlusIcon className="text-foreground/50" size={12} />
           </div>
         </div>
       )}
@@ -1033,7 +1033,7 @@ export const GanttDragCreate: FC<GanttDragCreateProps> = ({ className }) => {
       {/* Selection rectangle — contained within the row */}
       {dragging && startX !== null && (
         <div
-          className="pointer-events-none absolute rounded border border-dashed border-white/30 bg-white/[0.04]"
+          className="pointer-events-none absolute rounded border border-dashed border-foreground/30 bg-foreground/[0.04]"
           style={{
             left: selLeft,
             width: selWidth,
@@ -1043,10 +1043,10 @@ export const GanttDragCreate: FC<GanttDragCreateProps> = ({ className }) => {
         >
           {selWidth > 60 && (
             <>
-              <div className="absolute -bottom-5 left-0 whitespace-nowrap rounded-md bg-background/90 px-1.5 py-0.5 text-[10px] text-white/60 backdrop-blur-sm border border-white/10">
+              <div className="absolute -bottom-5 left-0 whitespace-nowrap rounded-md bg-background/90 px-1.5 py-0.5 text-[10px] text-foreground/60 backdrop-blur-sm border border-foreground/10">
                 {format(getDateByMousePosition(gantt, selLeft), "MMM dd")}
               </div>
-              <div className="absolute -bottom-5 right-0 whitespace-nowrap rounded-md bg-background/90 px-1.5 py-0.5 text-[10px] text-white/60 backdrop-blur-sm border border-white/10">
+              <div className="absolute -bottom-5 right-0 whitespace-nowrap rounded-md bg-background/90 px-1.5 py-0.5 text-[10px] text-foreground/60 backdrop-blur-sm border border-foreground/10">
                 {format(
                   getDateByMousePosition(gantt, selLeft + selWidth),
                   "MMM dd"
@@ -1103,7 +1103,7 @@ export const GanttFeatureDragHelper: FC<GanttFeatureDragHelperProps> = ({
       {date && (
         <div
           className={cn(
-            "-translate-x-1/2 absolute top-10 hidden whitespace-nowrap rounded-lg border border-white/[0.06] bg-background/90 px-2 py-1 text-foreground text-xs backdrop-blur-lg group-hover:block",
+            "-translate-x-1/2 absolute top-10 hidden whitespace-nowrap rounded-lg border border-foreground/[0.06] bg-background/90 px-2 py-1 text-foreground text-xs backdrop-blur-lg group-hover:block",
             isPressed && "block"
           )}
         >
@@ -1138,8 +1138,8 @@ export const GanttFeatureItemCard: FC<GanttFeatureItemCardProps> = ({
     <Card
       className={cn(
         "relative h-full w-full rounded-md bg-background p-2 text-xs shadow-sm transition-colors cursor-pointer overflow-hidden",
-        !accentColor && "border-white/10 hover:border-white/20",
-        selected && !accentColor && "ring-1 ring-white/20 border-white/20",
+        !accentColor && "border-foreground/10 hover:border-foreground/20",
+        selected && !accentColor && "ring-1 ring-foreground/20 border-foreground/20",
         selected && accentColor && "ring-1"
       )}
       style={{
@@ -1561,8 +1561,8 @@ export const GanttMarker: FC<
         className={cn(
           "group pointer-events-auto sticky top-[28px] flex select-auto flex-row flex-nowrap items-center gap-1 whitespace-nowrap rounded-md border px-1.5 py-0.5 text-foreground text-[10px] leading-tight backdrop-blur-sm transition-colors z-10",
           dragging ? "cursor-grabbing" : onMove ? "cursor-grab" : "cursor-default",
-          color ? "hover:brightness-125" : "hover:bg-white/15",
-          !color && "border-white/[0.06] bg-white/10",
+          color ? "hover:brightness-125" : "hover:bg-foreground/15",
+          !color && "border-foreground/[0.06] bg-foreground/10",
           className
         )}
         style={
@@ -1598,13 +1598,13 @@ export const GanttMarker: FC<
         )}
         {!editing && onRemove && (
           <button
-            className="hidden group-hover:flex items-center justify-center rounded-full hover:bg-white/10 -mr-0.5 shrink-0"
+            className="hidden group-hover:flex items-center justify-center rounded-full hover:bg-foreground/10 -mr-0.5 shrink-0"
             onClick={(e) => { e.stopPropagation(); handleRemove(); }}
             onPointerDown={(e) => e.stopPropagation()}
             type="button"
             aria-label="Remove marker"
           >
-            <XIcon size={10} className="text-white/40 hover:text-white/70" />
+            <XIcon size={10} className="text-foreground/40 hover:text-foreground/70" />
           </button>
         )}
       </div>
@@ -1983,7 +1983,7 @@ export const GanttToday: FC<GanttTodayProps> = ({ className }) => {
     >
       <div
         className={cn(
-          "pointer-events-auto sticky top-0 z-30 flex select-auto items-center justify-center whitespace-nowrap rounded-b-md border border-white/80 bg-white px-1.5 py-0.5 text-black font-semibold text-[10px] leading-tight",
+          "pointer-events-auto sticky top-0 z-30 flex select-auto items-center justify-center whitespace-nowrap rounded-b-md border border-foreground/80 bg-white px-1.5 py-0.5 text-black font-semibold text-[10px] leading-tight",
           className
         )}
       >
