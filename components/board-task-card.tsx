@@ -152,7 +152,7 @@ export const BoardTaskCard = memo(function BoardTaskCard({
       className={`group relative rounded-lg border p-2 text-card-foreground shadow-[0_1px_3px_rgba(0,0,0,0.3)] transition-[background-color,border-color] duration-150 ease-out focus:outline-none cursor-pointer ${
         item.type === "note"
           ? "border-amber-500/20 bg-amber-500/5 hover:bg-amber-500/10 hover:border-amber-500/30"
-          : "border-foreground/5 bg-card hover:bg-foreground/[0.05] hover:border-foreground/10"
+          : "border-foreground/5 bg-card hover:border-ring/15"
       } ${isGlowing ? "animate-complete-glow" : ""} ${isNewlyCreated ? "animate-card-appear" : ""}`}
       style={{
         ...(isGlowing ? {
