@@ -119,8 +119,9 @@ export const BoardTaskCard = memo(function BoardTaskCard({
           if (hoverTimer.current) clearTimeout(hoverTimer.current);
           hoverTimer.current = setTimeout(() => el.focus(), 30);
         }}
-        onMouseLeave={() => {
+        onMouseLeave={(e: any) => {
           if (hoverTimer.current) { clearTimeout(hoverTimer.current); hoverTimer.current = null; }
+          (e.currentTarget as HTMLElement).blur();
         }}
         onKeyDownCapture={(e: any) => {
           const key = e.key;
@@ -182,8 +183,9 @@ export const BoardTaskCard = memo(function BoardTaskCard({
         if (hoverTimer.current) clearTimeout(hoverTimer.current);
         hoverTimer.current = setTimeout(() => el.focus(), 30);
       }}
-      onMouseLeave={() => {
+      onMouseLeave={(e: any) => {
         if (hoverTimer.current) { clearTimeout(hoverTimer.current); hoverTimer.current = null; }
+        (e.currentTarget as HTMLElement).blur();
       }}
       onKeyDownCapture={(e: any) => {
         if (isEditingTitle) return;
