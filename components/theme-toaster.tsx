@@ -19,5 +19,21 @@ export function ThemeToaster() {
     return () => observer.disconnect();
   }, []);
 
-  return <Toaster theme={mode} position="bottom-right" />;
+  return (
+    <Toaster
+      theme={mode}
+      position="bottom-right"
+      toastOptions={{
+        style: {
+          background: "var(--popover)",
+          color: "var(--popover-foreground)",
+          border: "1px solid var(--border)",
+        },
+        actionButtonStyle: {
+          background: "var(--primary)",
+          color: "var(--primary-foreground)",
+        },
+      }}
+    />
+  );
 }
