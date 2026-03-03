@@ -207,15 +207,22 @@ export const BoardTaskCard = memo(function BoardTaskCard({
             onToggleAssignee(item.id, teamMembers[memberIndex].id);
           }
         } else {
-          // Match by client group name (the actual client), falling back to client name for ungrouped
-          const matches = clients.filter((c) => {
-            if (!c.active) return false;
+          // Match by client group name (one per group), falling back to client name for ungrouped
+          const matches: Client[] = [];
+          const usedGroupIds = new Set<string>();
+          for (const c of clients) {
+            if (!c.active) continue;
             if (c.client_group_id) {
+              if (usedGroupIds.has(c.client_group_id)) continue;
               const group = clientGroups.find(g => g.id === c.client_group_id);
-              if (group) return group.name.charAt(0).toLowerCase() === key.toLowerCase();
+              if (group && group.name.charAt(0).toLowerCase() === key.toLowerCase()) {
+                usedGroupIds.add(c.client_group_id);
+                matches.push(c);
+              }
+            } else if (c.name.charAt(0).toLowerCase() === key.toLowerCase()) {
+              matches.push(c);
             }
-            return c.name.charAt(0).toLowerCase() === key.toLowerCase();
-          });
+          }
           if (matches.length > 0) {
             e.preventDefault();
             const currentIdx = matches.findIndex((c) => c.id === item.client);
