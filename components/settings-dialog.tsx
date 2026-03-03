@@ -426,7 +426,10 @@ export function SettingsDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[550px] overflow-hidden flex flex-col max-h-[85vh]">
+      <DialogContent
+        className="sm:max-w-[550px] overflow-hidden flex flex-col max-h-[85vh]"
+        overlayClassName={settingsTab === "theme" ? "opacity-0" : ""}
+      >
         <DialogHeader>
           <DialogTitle>Settings</DialogTitle>
         </DialogHeader>
