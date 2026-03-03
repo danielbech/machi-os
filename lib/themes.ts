@@ -1,17 +1,50 @@
+export type ThemeMode = "light" | "dark";
+
 export interface Theme {
   id: string;
   name: string;
-  /** CSS variables to override (applied on .dark) */
-  variables: Record<string, string>;
-  /** Preview colors for the theme card [bg, accent, fg] */
-  preview: [string, string, string];
+  lightVariables: Record<string, string>;
+  darkVariables: Record<string, string>;
+  preview: {
+    light: [string, string, string]; // [bg, accent, fg]
+    dark: [string, string, string];
+  };
 }
 
 export const THEMES: Theme[] = [
   {
     id: "default",
     name: "Default",
-    variables: {
+    lightVariables: {
+      "--background": "hsl(0 0% 100%)",
+      "--foreground": "hsl(0 0% 3.9%)",
+      "--card": "hsl(0 0% 100%)",
+      "--card-foreground": "hsl(0 0% 3.9%)",
+      "--popover": "hsl(0 0% 100%)",
+      "--popover-foreground": "hsl(0 0% 3.9%)",
+      "--primary": "hsl(0 0% 9%)",
+      "--primary-foreground": "hsl(0 0% 98%)",
+      "--secondary": "hsl(0 0% 96.1%)",
+      "--secondary-foreground": "hsl(0 0% 9%)",
+      "--muted": "hsl(0 0% 96.1%)",
+      "--muted-foreground": "hsl(0 0% 45.1%)",
+      "--accent": "hsl(0 0% 96.1%)",
+      "--accent-foreground": "hsl(0 0% 9%)",
+      "--destructive": "hsl(0 84.2% 60.2%)",
+      "--destructive-foreground": "hsl(0 0% 98%)",
+      "--border": "hsl(0 0% 89.8%)",
+      "--input": "hsl(0 0% 89.8%)",
+      "--ring": "hsl(0 0% 3.9%)",
+      "--sidebar": "hsl(0 0% 98%)",
+      "--sidebar-foreground": "hsl(240 5.3% 26.1%)",
+      "--sidebar-primary": "hsl(240 5.9% 10%)",
+      "--sidebar-primary-foreground": "hsl(0 0% 98%)",
+      "--sidebar-accent": "hsl(240 4.8% 95.9%)",
+      "--sidebar-accent-foreground": "hsl(240 5.9% 10%)",
+      "--sidebar-border": "hsl(220 13% 91%)",
+      "--sidebar-ring": "hsl(217.2 91.2% 59.8%)",
+    },
+    darkVariables: {
       "--background": "hsl(0 0% 3.9%)",
       "--foreground": "hsl(0 0% 98%)",
       "--card": "hsl(0 0% 3.9%)",
@@ -40,12 +73,44 @@ export const THEMES: Theme[] = [
       "--sidebar-border": "hsl(0 0% 12%)",
       "--sidebar-ring": "hsl(0 0% 30%)",
     },
-    preview: ["#0a0a0a", "#262626", "#fafafa"],
+    preview: {
+      light: ["#ffffff", "#171717", "#0a0a0a"],
+      dark: ["#0a0a0a", "#262626", "#fafafa"],
+    },
   },
   {
     id: "ember",
     name: "Ember",
-    variables: {
+    lightVariables: {
+      "--background": "hsl(0 0% 99.2157%)",
+      "--foreground": "hsl(0 0% 0%)",
+      "--card": "hsl(0 0% 99.2157%)",
+      "--card-foreground": "hsl(0 0% 0%)",
+      "--popover": "hsl(0 0% 98.8235%)",
+      "--popover-foreground": "hsl(0 0% 0%)",
+      "--primary": "hsl(15.3913 90.5512% 49.8039%)",
+      "--primary-foreground": "hsl(0 0% 100%)",
+      "--secondary": "hsl(214.2857 24.1379% 94.3137%)",
+      "--secondary-foreground": "hsl(0 0% 3.1373%)",
+      "--muted": "hsl(0 0% 96.0784%)",
+      "--muted-foreground": "hsl(0 0% 32.1569%)",
+      "--accent": "hsl(15.0000 100.0000% 96.0784%)",
+      "--accent-foreground": "hsl(14.9239 94.2584% 40.9804%)",
+      "--destructive": "hsl(358.4416 74.7573% 59.6078%)",
+      "--destructive-foreground": "hsl(0 0% 100%)",
+      "--border": "hsl(240 17.0732% 91.9608%)",
+      "--input": "hsl(0 0% 92.1569%)",
+      "--ring": "hsl(15.3913 90.5512% 49.8039%)",
+      "--sidebar": "hsl(210 42.8571% 97.2549%)",
+      "--sidebar-foreground": "hsl(0 0% 0%)",
+      "--sidebar-primary": "hsl(0 0% 0%)",
+      "--sidebar-primary-foreground": "hsl(0 0% 100%)",
+      "--sidebar-accent": "hsl(16.1538 100.0000% 94.9020%)",
+      "--sidebar-accent-foreground": "hsl(0 0% 0%)",
+      "--sidebar-border": "hsl(0 0% 92.1569%)",
+      "--sidebar-ring": "hsl(0 0% 0%)",
+    },
+    darkVariables: {
       "--background": "hsl(0 0% 3.9216%)",
       "--foreground": "hsl(0 0% 94.1176%)",
       "--card": "hsl(0 0% 7.0588%)",
@@ -74,7 +139,76 @@ export const THEMES: Theme[] = [
       "--sidebar-border": "hsl(222.8571 6.4220% 21.3725%)",
       "--sidebar-ring": "hsl(15.3913 90.5512% 49.8039%)",
     },
-    preview: ["#0a0a0a", "#f06820", "#f0f0f0"],
+    preview: {
+      light: ["#fdfdfd", "#f06820", "#000000"],
+      dark: ["#0a0a0a", "#f06820", "#f0f0f0"],
+    },
+  },
+  {
+    id: "verdant",
+    name: "Verdant",
+    lightVariables: {
+      "--background": "hsl(75 40% 98.0392%)",
+      "--foreground": "hsl(222.2222 47.3684% 11.1765%)",
+      "--card": "hsl(0 0% 100%)",
+      "--card-foreground": "hsl(222.2222 47.3684% 11.1765%)",
+      "--popover": "hsl(0 0% 100%)",
+      "--popover-foreground": "hsl(222.2222 47.3684% 11.1765%)",
+      "--primary": "hsl(82.5414 88.2927% 59.8039%)",
+      "--primary-foreground": "hsl(0 0% 0%)",
+      "--secondary": "hsl(215.2941 25% 26.6667%)",
+      "--secondary-foreground": "hsl(210 40% 98.0392%)",
+      "--muted": "hsl(210 40% 96.0784%)",
+      "--muted-foreground": "hsl(215.3846 16.318% 46.8627%)",
+      "--accent": "hsl(138.4615 76.4706% 96.6667%)",
+      "--accent-foreground": "hsl(142.7848 64.2276% 24.1176%)",
+      "--destructive": "hsl(0 84.2365% 60.1961%)",
+      "--destructive-foreground": "hsl(0 0% 100%)",
+      "--border": "hsl(214.2857 31.8182% 91.3725%)",
+      "--input": "hsl(214.2857 31.8182% 91.3725%)",
+      "--ring": "hsl(82.5414 88.2927% 59.8039%)",
+      "--sidebar": "hsl(0 0% 100%)",
+      "--sidebar-foreground": "hsl(222.2222 47.3684% 11.1765%)",
+      "--sidebar-primary": "hsl(82.5414 88.2927% 59.8039%)",
+      "--sidebar-primary-foreground": "hsl(0 0% 0%)",
+      "--sidebar-accent": "hsl(210 40% 98.0392%)",
+      "--sidebar-accent-foreground": "hsl(222.2222 47.3684% 11.1765%)",
+      "--sidebar-border": "hsl(210 40% 96.0784%)",
+      "--sidebar-ring": "hsl(82.5414 88.2927% 59.8039%)",
+    },
+    darkVariables: {
+      "--background": "hsl(228.5714 84% 4.902%)",
+      "--foreground": "hsl(210 40% 98.0392%)",
+      "--card": "hsl(222.2222 47.3684% 11.1765%)",
+      "--card-foreground": "hsl(210 40% 98.0392%)",
+      "--popover": "hsl(222.2222 47.3684% 11.1765%)",
+      "--popover-foreground": "hsl(210 40% 98.0392%)",
+      "--primary": "hsl(82.5414 88.2927% 59.8039%)",
+      "--primary-foreground": "hsl(0 0% 0%)",
+      "--secondary": "hsl(217.2414 32.5843% 17.451%)",
+      "--secondary-foreground": "hsl(210 40% 98.0392%)",
+      "--muted": "hsl(217.2414 32.5843% 17.451%)",
+      "--muted-foreground": "hsl(215 20.2247% 65.098%)",
+      "--accent": "hsl(143.8095 61.165% 20.1961%)",
+      "--accent-foreground": "hsl(82.5414 88.2927% 59.8039%)",
+      "--destructive": "hsl(0 70% 35.2941%)",
+      "--destructive-foreground": "hsl(0 0% 100%)",
+      "--border": "hsl(217.2414 32.5843% 17.451%)",
+      "--input": "hsl(217.2414 32.5843% 17.451%)",
+      "--ring": "hsl(82.5414 88.2927% 59.8039%)",
+      "--sidebar": "hsl(228.5714 84% 4.902%)",
+      "--sidebar-foreground": "hsl(210 40% 98.0392%)",
+      "--sidebar-primary": "hsl(82.5414 88.2927% 59.8039%)",
+      "--sidebar-primary-foreground": "hsl(0 0% 0%)",
+      "--sidebar-accent": "hsl(217.2414 32.5843% 17.451%)",
+      "--sidebar-accent-foreground": "hsl(210 40% 98.0392%)",
+      "--sidebar-border": "hsl(217.2414 32.5843% 17.451%)",
+      "--sidebar-ring": "hsl(82.5414 88.2927% 59.8039%)",
+    },
+    preview: {
+      light: ["#f9faf5", "#a3e635", "#1e293b"],
+      dark: ["#0a0f1f", "#a3e635", "#f5f7fa"],
+    },
   },
 ];
 

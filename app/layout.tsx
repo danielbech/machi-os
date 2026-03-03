@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
-import { Toaster } from "sonner";
+import { ThemeToaster } from "@/components/theme-toaster";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -28,7 +28,7 @@ export default function RootLayout({
       <head>
         <script
           dangerouslySetInnerHTML={{
-            __html: `try{var c=localStorage.getItem("flowie-theme-cache");if(c){var v=JSON.parse(c),s=document.documentElement.style;for(var k in v)s.setProperty(k,v[k])}}catch(e){}`,
+            __html: `try{var m=localStorage.getItem("flowie-theme-mode");if(m==="light"){document.documentElement.classList.remove("dark")}var c=localStorage.getItem("flowie-theme-cache");if(c){var v=JSON.parse(c),s=document.documentElement.style;for(var k in v)s.setProperty(k,v[k])}}catch(e){}`,
           }}
         />
       </head>
@@ -36,7 +36,7 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
         {children}
-        <Toaster theme="dark" position="bottom-right" />
+        <ThemeToaster />
       </body>
     </html>
   );

@@ -22,7 +22,7 @@ import {
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { RefreshCw, Plus, X, ChevronDown, Camera, User as UserIcon, Trash2, GitCommitHorizontal, Check } from "lucide-react";
+import { RefreshCw, Plus, X, ChevronDown, Camera, User as UserIcon, Trash2, GitCommitHorizontal, Check, Sun, Moon } from "lucide-react";
 
 interface SettingsDialogProps {
   open: boolean;
@@ -63,13 +63,44 @@ interface SettingsDialogProps {
 }
 
 function ThemeTabContent({ activeProject }: { activeProject?: Project }) {
-  const { globalThemeId, workspaceThemeId, setGlobalTheme, setWorkspaceTheme } = useTheme();
+  const { globalThemeId, workspaceThemeId, setGlobalTheme, setWorkspaceTheme, mode, setMode } = useTheme();
   const hasOverride = workspaceThemeId !== null;
   const activeId = workspaceThemeId || globalThemeId;
 
   return (
     <TabsContent value="theme" className="flex-1 min-h-0 overflow-y-auto">
       <div className="space-y-6 py-4">
+        {/* Mode toggle */}
+        <div className="space-y-3">
+          <h3 className="text-sm font-medium">Appearance</h3>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={() => setMode("light")}
+              className={`flex items-center gap-2 px-3 py-2 rounded-lg border text-sm transition-colors ${
+                mode === "light"
+                  ? "border-ring/30 bg-muted text-foreground"
+                  : "border-border text-muted-foreground hover:border-ring/20 hover:text-foreground"
+              }`}
+            >
+              <Sun className="size-4" />
+              Light
+            </button>
+            <button
+              type="button"
+              onClick={() => setMode("dark")}
+              className={`flex items-center gap-2 px-3 py-2 rounded-lg border text-sm transition-colors ${
+                mode === "dark"
+                  ? "border-ring/30 bg-muted text-foreground"
+                  : "border-border text-muted-foreground hover:border-ring/20 hover:text-foreground"
+              }`}
+            >
+              <Moon className="size-4" />
+              Dark
+            </button>
+          </div>
+        </div>
+
         {/* Scope toggle */}
         <div className="space-y-3">
           <div className="flex items-center justify-between">
@@ -105,6 +136,7 @@ function ThemeTabContent({ activeProject }: { activeProject?: Project }) {
         <div className="grid grid-cols-3 gap-3">
           {THEMES.map((theme) => {
             const isActive = theme.id === activeId;
+            const preview = mode === "dark" ? theme.preview.dark : theme.preview.light;
             return (
               <button
                 key={theme.id}
@@ -125,12 +157,12 @@ function ThemeTabContent({ activeProject }: { activeProject?: Project }) {
                 {/* Preview */}
                 <div
                   className="rounded-md h-16 w-full flex items-end p-2 gap-1.5"
-                  style={{ backgroundColor: theme.preview[0] }}
+                  style={{ backgroundColor: preview[0] }}
                 >
-                  <div className="h-3 w-8 rounded-sm" style={{ backgroundColor: theme.preview[1] }} />
-                  <div className="h-3 w-5 rounded-sm" style={{ backgroundColor: theme.preview[1] }} />
+                  <div className="h-3 w-8 rounded-sm" style={{ backgroundColor: preview[1] }} />
+                  <div className="h-3 w-5 rounded-sm" style={{ backgroundColor: preview[1] }} />
                   <div className="flex-1" />
-                  <div className="h-2 w-2 rounded-full" style={{ backgroundColor: theme.preview[2] }} />
+                  <div className="h-2 w-2 rounded-full" style={{ backgroundColor: preview[2] }} />
                 </div>
                 <div className="flex items-center justify-between px-1 py-1.5">
                   <span className="text-xs text-foreground/70">{theme.name}</span>

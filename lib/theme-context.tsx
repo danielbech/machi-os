@@ -1,11 +1,13 @@
 "use client";
 
 import { createContext, useContext, useCallback, useEffect, useRef, useState } from "react";
-import { THEMES, getThemeById, type Theme } from "@/lib/themes";
+import { THEMES, getThemeById, type Theme, type ThemeMode } from "@/lib/themes";
 
 interface ThemeContextValue {
   /** Resolved theme for the current workspace */
   activeTheme: Theme;
+  /** Current colour mode */
+  mode: ThemeMode;
   /** Global theme id (fallback for all workspaces) */
   globalThemeId: string;
   /** Per-workspace theme id override (or null = use global) */
@@ -14,6 +16,8 @@ interface ThemeContextValue {
   setGlobalTheme: (themeId: string) => void;
   /** Set per-workspace theme (null = inherit global) */
   setWorkspaceTheme: (themeId: string | null) => void;
+  /** Toggle or set mode */
+  setMode: (mode: ThemeMode) => void;
 }
 
 const ThemeContext = createContext<ThemeContextValue | null>(null);
@@ -25,16 +29,29 @@ export function useTheme() {
 }
 
 const GLOBAL_KEY = "flowie-global-theme";
+const MODE_KEY = "flowie-theme-mode";
 const wsKey = (id: string) => `flowie-workspace-theme-${id}`;
 
 const CACHE_KEY = "flowie-theme-cache";
 
-function applyTheme(theme: Theme) {
+function applyTheme(theme: Theme, mode: ThemeMode) {
   const root = document.documentElement;
-  for (const [prop, value] of Object.entries(theme.variables)) {
+  const vars = mode === "dark" ? theme.darkVariables : theme.lightVariables;
+
+  for (const [prop, value] of Object.entries(vars)) {
     root.style.setProperty(prop, value);
   }
-  localStorage.setItem(CACHE_KEY, JSON.stringify(theme.variables));
+  localStorage.setItem(CACHE_KEY, JSON.stringify(vars));
+}
+
+function applyMode(mode: ThemeMode) {
+  const root = document.documentElement;
+  if (mode === "dark") {
+    root.classList.add("dark");
+  } else {
+    root.classList.remove("dark");
+  }
+  localStorage.setItem(MODE_KEY, mode);
 }
 
 function clearInlineTheme() {
@@ -71,6 +88,11 @@ export function ThemeProvider({
     return localStorage.getItem(wsKey(activeProjectId)) || null;
   });
 
+  const [mode, setModeState] = useState<ThemeMode>(() => {
+    if (typeof window === "undefined") return "dark";
+    return (localStorage.getItem(MODE_KEY) as ThemeMode) || "dark";
+  });
+
   // When workspace changes, load its theme override
   useEffect(() => {
     if (!activeProjectId) {
@@ -85,7 +107,7 @@ export function ThemeProvider({
   const activeTheme = getThemeById(resolvedId) || THEMES[0];
 
   // On initial mount, the blocking script in <head> already applied the
-  // cached theme. Skip the first effect to avoid clearing those styles
+  // cached theme + mode. Skip the first effect to avoid clearing those styles
   // while activeProjectId is still loading (which would cause a flash).
   const initialMount = useRef(true);
 
@@ -95,12 +117,17 @@ export function ThemeProvider({
       const cached = localStorage.getItem(CACHE_KEY);
       if (cached) return;
     }
+
+    // Always apply mode (dark class)
+    applyMode(mode);
+
     if (resolvedId === "default") {
+      // Default theme = CSS stylesheet defaults, clear inline overrides
       clearInlineTheme();
     } else {
-      applyTheme(activeTheme);
+      applyTheme(activeTheme, mode);
     }
-  }, [resolvedId, activeTheme]);
+  }, [resolvedId, activeTheme, mode]);
 
   const setGlobalTheme = useCallback((themeId: string) => {
     setGlobalThemeIdState(themeId);
@@ -117,8 +144,22 @@ export function ThemeProvider({
     }
   }, [activeProjectId]);
 
+  const setMode = useCallback((newMode: ThemeMode) => {
+    setModeState(newMode);
+    applyMode(newMode);
+
+    // Re-apply the theme variables for the new mode
+    const id = workspaceThemeId || globalThemeId;
+    const theme = getThemeById(id) || THEMES[0];
+    if (id === "default") {
+      clearInlineTheme();
+    } else {
+      applyTheme(theme, newMode);
+    }
+  }, [workspaceThemeId, globalThemeId]);
+
   return (
-    <ThemeContext.Provider value={{ activeTheme, globalThemeId, workspaceThemeId, setGlobalTheme, setWorkspaceTheme }}>
+    <ThemeContext.Provider value={{ activeTheme, mode, globalThemeId, workspaceThemeId, setGlobalTheme, setWorkspaceTheme, setMode }}>
       {children}
     </ThemeContext.Provider>
   );
