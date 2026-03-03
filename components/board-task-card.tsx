@@ -57,6 +57,11 @@ export const BoardTaskCard = memo(function BoardTaskCard({
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [editValue, setEditValue] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
+  const hoverTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => { if (hoverTimer.current) clearTimeout(hoverTimer.current); };
+  }, []);
 
   const dayIdx = ["monday", "tuesday", "wednesday", "thursday", "friday"].indexOf(columnId);
   const todayIdx = ["monday", "tuesday", "wednesday", "thursday", "friday"].indexOf(todayName);
@@ -105,6 +110,15 @@ export const BoardTaskCard = memo(function BoardTaskCard({
               onNewlyCreatedSeen();
             }, 100);
           }
+        }}
+        onMouseEnter={(e: any) => {
+          if (addingToColumn) return;
+          const el = e.currentTarget as HTMLElement;
+          if (hoverTimer.current) clearTimeout(hoverTimer.current);
+          hoverTimer.current = setTimeout(() => el.focus(), 30);
+        }}
+        onMouseLeave={() => {
+          if (hoverTimer.current) { clearTimeout(hoverTimer.current); hoverTimer.current = null; }
         }}
         onKeyDownCapture={(e: any) => {
           const key = e.key;
@@ -160,11 +174,14 @@ export const BoardTaskCard = memo(function BoardTaskCard({
           }, 100);
         }
       }}
-      onPointerDown={(e: any) => {
-        // Focus on click so keyboard shortcuts work, but not on hover (avoids focus storm)
-        if (!e.target.closest("button") && !e.target.closest("[data-title-area]") && !e.target.closest("input")) {
-          e.currentTarget.focus();
-        }
+      onMouseEnter={(e: any) => {
+        if (addingToColumn) return;
+        const el = e.currentTarget as HTMLElement;
+        if (hoverTimer.current) clearTimeout(hoverTimer.current);
+        hoverTimer.current = setTimeout(() => el.focus(), 30);
+      }}
+      onMouseLeave={() => {
+        if (hoverTimer.current) { clearTimeout(hoverTimer.current); hoverTimer.current = null; }
       }}
       onKeyDownCapture={(e: any) => {
         if (isEditingTitle) return;
