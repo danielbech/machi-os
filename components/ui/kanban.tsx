@@ -982,7 +982,7 @@ function KanbanItem(props: KanbanItemProps) {
         ref={composedRef}
         style={composedStyle}
         className={cn(
-          "focus-visible:outline-hidden focus-visible:border-ring/30",
+          "focus-visible:outline-hidden focus-visible:border-foreground/15",
           {
             "touch-none select-none": asHandle,
             "cursor-default": context.flatCursor,
