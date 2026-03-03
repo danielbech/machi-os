@@ -96,9 +96,9 @@ export function BacklogShell() {
       <div
         ref={panelRef}
         data-backlog-panel
-        className={`fixed top-0 bottom-0 left-0 md:left-[3rem] z-[5] border-r bg-black/80 backdrop-blur-md overflow-y-auto transition-[transform,visibility,box-shadow,border-color] duration-200 ease-in-out ${
+        className={`fixed top-0 bottom-0 left-0 md:left-[3rem] z-[5] border-r bg-background/80 backdrop-blur-md overflow-y-auto transition-[transform,visibility,box-shadow,border-color] duration-200 ease-in-out ${
           backlogOpen ? "translate-x-0 visible" : "-translate-x-full invisible"
-        } ${kanbanDragOverBacklog ? "border-foreground/20 shadow-[inset_0_0_30px_rgba(255,255,255,0.03)]" : "border-foreground/[0.06]"} w-full md:w-auto`}
+        } ${kanbanDragOverBacklog ? "border-foreground/20 shadow-[inset_0_0_30px_oklch(from_var(--foreground)_l_c_h/0.03)]" : "border-border"} w-full md:w-auto`}
         style={!isMobile ? { width: backlogWidth } : undefined}
       >
         <div className="p-4">
