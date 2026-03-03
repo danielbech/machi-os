@@ -132,6 +132,7 @@ export const BoardTaskCard = memo(function BoardTaskCard({
     <KanbanItem
       asHandle
       value={item.id}
+      data-task-id={item.id}
       className={`group relative rounded-lg border p-2 text-card-foreground shadow-[0_1px_3px_rgba(0,0,0,0.3)] transition-[background-color,border-color] duration-150 ease-out focus:outline-none cursor-pointer ${
         item.type === "note"
           ? "border-amber-500/20 bg-amber-500/5 hover:bg-amber-500/10 hover:border-amber-500/30"

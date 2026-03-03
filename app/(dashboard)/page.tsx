@@ -884,8 +884,16 @@ export default function BoardPage() {
       <TaskEditDialog
         task={editingTask}
         onClose={() => {
+          const taskId = editingTask?.id;
           setEditingTask(null);
           setEditingColumn(null);
+          // Return focus to the card so keyboard shortcuts work immediately
+          if (taskId) {
+            requestAnimationFrame(() => {
+              const card = document.querySelector(`[data-task-id="${taskId}"]`) as HTMLElement;
+              card?.focus();
+            });
+          }
         }}
         onSave={saveEditedTask}
         onTaskChange={setEditingTask}
