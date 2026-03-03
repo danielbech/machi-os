@@ -52,7 +52,7 @@ function DashboardGate({ children }: { children: React.ReactNode }) {
         <div className="flex w-full animate-in fade-in duration-300 bg-background">
           <AppSidebar />
           <BacklogShell />
-          <SidebarInset className="overflow-hidden min-w-0 transition-[margin] duration-200 ease-in-out bg-transparent" style={!isMobile && backlogOpen ? { marginLeft: backlogWidth } : undefined}>
+          <SidebarInset className="overflow-clip min-w-0 transition-[margin] duration-200 ease-in-out bg-transparent" style={!isMobile && backlogOpen ? { marginLeft: backlogWidth } : undefined}>
             {/* Mobile header with hamburger trigger */}
             <header className="flex items-center gap-2 px-4 py-3 md:hidden">
               <SidebarTrigger className="-ml-1" />

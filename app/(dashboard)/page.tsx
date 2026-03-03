@@ -666,7 +666,7 @@ export default function BoardPage() {
             }
           }}
         >
-          <KanbanBoard className="overflow-x-auto p-1 pb-3 pl-4 md:pl-8">
+          <KanbanBoard className="overflow-x-auto pt-1 px-4 pb-3 md:px-8">
             {Object.entries(filteredColumns).map(([columnId, items]) => (
               <KanbanColumn
                 key={columnId}
@@ -716,7 +716,7 @@ export default function BoardPage() {
                       </h2>
                     )}
                     {!isCustom && (
-                      <span className={`text-xs ${columnId === todayName ? "text-blue-400 border border-blue-500/30 rounded px-1 py-0.5" : "text-foreground/40"}`}>{weekDates[columnId]}</span>
+                      <span className={`text-xs ${columnId === todayName ? "text-primary border border-primary/30 rounded px-1 py-0.5" : "text-foreground/40"}`}>{weekDates[columnId]}</span>
                     )}
                     {isCustom && (
                       <button
@@ -734,7 +734,7 @@ export default function BoardPage() {
                   </div>
                 </div>
 
-                <div className="flex flex-col overflow-y-auto pr-1">
+                <div className="flex flex-col overflow-y-auto px-0.5">
                   {/* Calendar Events — only in week modes */}
                   {!isCustom && calendarEvents[columnId]?.map((event) => {
                     const dayIndex = weekDays.indexOf(columnId as DayName);
