@@ -27,16 +27,18 @@ export function useTheme() {
 const GLOBAL_KEY = "flowie-global-theme";
 const wsKey = (id: string) => `flowie-workspace-theme-${id}`;
 
+const CACHE_KEY = "flowie-theme-cache";
+
 function applyTheme(theme: Theme) {
   const root = document.documentElement;
   for (const [prop, value] of Object.entries(theme.variables)) {
     root.style.setProperty(prop, value);
   }
+  localStorage.setItem(CACHE_KEY, JSON.stringify(theme.variables));
 }
 
 function clearInlineTheme() {
   const root = document.documentElement;
-  // Remove any inline style properties we may have set
   const props = [
     "--background", "--foreground", "--card", "--card-foreground",
     "--popover", "--popover-foreground", "--primary", "--primary-foreground",
@@ -49,6 +51,7 @@ function clearInlineTheme() {
   for (const prop of props) {
     root.style.removeProperty(prop);
   }
+  localStorage.removeItem(CACHE_KEY);
 }
 
 export function ThemeProvider({
