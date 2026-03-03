@@ -491,11 +491,11 @@ export function BacklogPanel({
                 <div
                   className={`flex size-4 items-center justify-center rounded-full border transition-all ${
                     task.completed
-                      ? "border-green-500/80 bg-green-500/80"
+                      ? "border-primary bg-primary"
                       : "border-foreground/20 hover:border-foreground/40"
                   }`}
                 >
-                  {task.completed && <Check className="size-3 text-white" strokeWidth={3} />}
+                  {task.completed && <Check className="size-3 text-primary-foreground" strokeWidth={3} />}
                 </div>
               </button>
 
@@ -557,7 +557,7 @@ export function BacklogPanel({
               )}
 
               {/* Hover actions — overlaid so they don't squeeze the title */}
-              <div className="absolute right-0 top-0 bottom-0 flex items-center gap-1 pr-2 pl-6 bg-gradient-to-r from-transparent via-black/80 to-black/90 backdrop-blur-sm opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto transition-opacity">
+              <div className="absolute right-0 top-0 bottom-0 flex items-center gap-1 pr-2 pl-6 bg-gradient-to-r from-transparent via-card/80 to-card/90 backdrop-blur-sm opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto transition-opacity">
                 {/* Send to day */}
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
@@ -791,9 +791,9 @@ export function BacklogPanel({
           const unsortedContainerId = `unsorted:${client.id}`;
 
           return (
-            <div key={client.id} data-backlog-client={client.id} className="mb-3 rounded-lg border border-foreground/[0.06] bg-foreground/[0.02] overflow-hidden">
+            <div key={client.id} data-backlog-client={client.id} className="mb-3 rounded-lg border border-border bg-card overflow-hidden">
               {/* Client header */}
-              <div className="group/client flex items-center gap-2 px-3 py-2 bg-foreground/[0.03] hover:bg-foreground/[0.05] transition-colors">
+              <div className="group/client flex items-center gap-2 px-3 py-2 bg-muted/30 hover:bg-muted/50 transition-colors">
                 <button
                   type="button"
                   onClick={() => toggleClient(client.id)}
@@ -805,7 +805,7 @@ export function BacklogPanel({
                   {client.logo_url ? (
                     <img src={client.logo_url} alt="" className="size-5 rounded-sm object-cover shrink-0" />
                   ) : client.icon ? (
-                    <ClientIcon icon={client.icon} className="size-4 text-zinc-400 shrink-0" />
+                    <ClientIcon icon={client.icon} className="size-4 text-muted-foreground shrink-0" />
                   ) : null}
                   <span className="text-base font-medium text-foreground/80 truncate">{client.name}</span>
                   {clientTasks.length > 0 && (
