@@ -408,11 +408,11 @@ export const BoardTaskCard = memo(function BoardTaskCard({
                   item.completed
                     ? dimCompleted
                       ? "border-foreground/8 bg-foreground/8"
-                      : "border-green-500/80 bg-green-500/80"
+                      : "border-primary bg-primary"
                     : "border-foreground/20 hover:border-foreground/40"
                 }`}
               >
-                {item.completed && <Check className={`size-3 ${dimCompleted ? "text-foreground/20" : "text-white"}`} strokeWidth={3} />}
+                {item.completed && <Check className={`size-3 ${dimCompleted ? "text-foreground/20" : "text-primary-foreground"}`} strokeWidth={3} />}
               </div>
             </button>
             {item.checklist.length > 0 && (
