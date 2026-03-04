@@ -161,14 +161,18 @@ export function BacklogPanel({
     localStorage.setItem("flowie-backlog-folders", JSON.stringify([...collapsedFolders]));
   }, [collapsedFolders]);
   // Auto-expand client/folder when a new task arrives (e.g. dropped from board)
-  // Skip initial load so we don't overwrite persisted collapse state
+  // Skip until we have a stable baseline (initial load populates tasks from [])
   const prevTaskIdsRef = useRef<Set<string> | null>(null);
+  const hasInitializedRef = useRef(false);
   useEffect(() => {
-    if (prevTaskIdsRef.current === null) {
-      prevTaskIdsRef.current = new Set(tasks.map((t) => t.id));
+    const currentIds = new Set(tasks.map((t) => t.id));
+    if (!hasInitializedRef.current) {
+      // Wait until tasks are actually loaded (non-empty) before considering baseline set
+      if (tasks.length > 0) hasInitializedRef.current = true;
+      prevTaskIdsRef.current = currentIds;
       return;
     }
-    const prevIds = prevTaskIdsRef.current;
+    const prevIds = prevTaskIdsRef.current!;
     const newTasks = tasks.filter((t) => !prevIds.has(t.id));
     for (const task of newTasks) {
       if (task.client) {
@@ -182,7 +186,7 @@ export function BacklogPanel({
         });
       }
     }
-    prevTaskIdsRef.current = new Set(tasks.map((t) => t.id));
+    prevTaskIdsRef.current = currentIds;
   }, [tasks]);
 
   const [addingTaskIn, setAddingTaskIn] = useState<string | null>(null);
