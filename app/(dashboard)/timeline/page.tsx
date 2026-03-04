@@ -177,7 +177,7 @@ function EventDot({
   const iconSize = size === "sm" ? "size-3" : "size-2";
   return (
     <div
-      className={`${dim} rounded ${CLIENT_DOT_COLORS[color] || "bg-blue-500"} flex items-center justify-center text-white shrink-0 opacity-60`}
+      className={`${dim} rounded ${CLIENT_DOT_COLORS[color] || "bg-blue-500"} flex items-center justify-center text-white shrink-0`}
     >
       {icon ? (
         <ClientIcon icon={icon} className={iconSize} />
