@@ -39,7 +39,31 @@ function DashboardGate({ children }: { children: React.ReactNode }) {
   }, [pendingInvites.length, showWelcome]);
 
   if (loading) {
-    return <div className="min-h-screen bg-background" />;
+    return (
+      <div className="min-h-screen bg-background flex">
+        <div className="flex-1 pt-4 pr-4 md:pr-8">
+          <div className="flex gap-2 pt-1 px-4 md:px-8">
+            {[0, 1, 2, 3, 4].map((ki) => (
+              <div key={ki} className="w-[280px] shrink-0 p-2.5 space-y-2.5">
+                <div className="flex items-baseline gap-2 px-1 mb-1.5">
+                  <div className="h-4 w-16 bg-foreground/[0.06] rounded-md animate-pulse" />
+                  <div className="h-3.5 w-8 bg-foreground/[0.04] rounded-md animate-pulse" />
+                </div>
+                {[...Array(ki === 0 ? 3 : ki === 1 ? 2 : 1)].map((_, i) => (
+                  <div
+                    key={i}
+                    className="rounded-lg border border-foreground/5 bg-card p-2 space-y-2 animate-pulse"
+                    style={{ animationDelay: `${(ki * 120) + (i * 80)}ms` }}
+                  >
+                    <div className="h-3.5 bg-foreground/[0.06] rounded w-[85%]" />
+                  </div>
+                ))}
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
   }
 
   if (!user) {

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useRef, useEffect, useMemo } from "react";
+import { useState, useCallback, useRef, useEffect, useMemo, lazy, Suspense } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { loadTasksByDay, saveTask, updateDayTasks, deleteTask } from "@/lib/supabase/tasks-simple";
 import { toast } from "sonner";
@@ -8,7 +8,7 @@ import { seedDemoTasks } from "@/lib/supabase/initialize";
 import { useWorkspace } from "@/lib/workspace-context";
 import { useBacklog } from "@/lib/backlog-context";
 import { useCalendar } from "@/lib/calendar-context";
-import { TaskEditDialog } from "@/components/task-edit-dialog";
+const TaskEditDialog = lazy(() => import("@/components/task-edit-dialog").then(m => ({ default: m.TaskEditDialog })));
 import { BoardTaskCard } from "@/components/board-task-card";
 import { BoardCalendarEvent } from "@/components/board-calendar-event";
 import { BoardShortcuts } from "@/components/board-shortcuts";
@@ -624,17 +624,25 @@ export default function BoardPage() {
   };
 
   if (initialLoading) {
+    const skeletonCounts = [4, 3, 3, 2, 2];
     return (
       <main className="flex min-h-screen flex-col pt-4 pr-4 md:pr-8">
-        <div className="flex gap-2 overflow-hidden p-1 pl-4 md:pl-8">
+        <div className="flex gap-2 overflow-x-auto pt-1 px-4 pb-3 md:px-8">
           {columnKeys.map((key, ki) => (
-            <div key={key} className="w-[85vw] sm:w-[280px] shrink-0 p-2.5 space-y-2">
+            <div key={key} className="w-[85vw] sm:w-[280px] shrink-0 p-2.5 space-y-2.5">
               <div className="flex items-baseline gap-2 px-1 mb-1.5">
-                <div className="h-5 w-20 bg-foreground/5 rounded animate-pulse" />
-                {!isCustom && <div className="h-4 w-12 bg-foreground/5 rounded animate-pulse" />}
+                <div className="h-4 w-16 bg-foreground/[0.06] rounded-md" />
+                {!isCustom && <div className="h-3.5 w-8 bg-foreground/[0.04] rounded-md" />}
               </div>
-              {[...Array(ki === 0 ? 4 : ki === 1 ? 3 : 2)].map((_, i) => (
-                <div key={i} className="h-12 bg-foreground/[0.02] rounded-lg border border-foreground/5 animate-pulse" />
+              {[...Array(skeletonCounts[ki] ?? 2)].map((_, i) => (
+                <div
+                  key={i}
+                  className="rounded-lg border border-foreground/5 bg-card p-2 space-y-2 animate-pulse"
+                  style={{ animationDelay: `${(ki * 120) + (i * 80)}ms` }}
+                >
+                  <div className="h-3.5 bg-foreground/[0.06] rounded w-[85%]" />
+                  {i % 2 === 0 && <div className="h-3 bg-foreground/[0.04] rounded w-[50%]" />}
+                </div>
               ))}
             </div>
           ))}
@@ -926,24 +934,28 @@ export default function BoardPage() {
         </Kanban>
       </div>
 
-      <TaskEditDialog
-        task={editingTask}
-        onClose={() => {
-          const taskId = editingTask?.id;
-          setEditingTask(null);
-          setEditingColumn(null);
-          // Return focus to the card so keyboard shortcuts work immediately
-          if (taskId) {
-            requestAnimationFrame(() => {
-              const card = document.querySelector(`[data-task-id="${taskId}"]`) as HTMLElement;
-              card?.focus();
-            });
-          }
-        }}
-        onSave={saveEditedTask}
-        onTaskChange={setEditingTask}
-        folders={backlogFolders}
-      />
+      {editingTask && (
+        <Suspense fallback={null}>
+          <TaskEditDialog
+            task={editingTask}
+            onClose={() => {
+              const taskId = editingTask?.id;
+              setEditingTask(null);
+              setEditingColumn(null);
+              // Return focus to the card so keyboard shortcuts work immediately
+              if (taskId) {
+                requestAnimationFrame(() => {
+                  const card = document.querySelector(`[data-task-id="${taskId}"]`) as HTMLElement;
+                  card?.focus();
+                });
+              }
+            }}
+            onSave={saveEditedTask}
+            onTaskChange={setEditingTask}
+            folders={backlogFolders}
+          />
+        </Suspense>
+      )}
 
       <BoardShortcuts
         open={showShortcuts}
