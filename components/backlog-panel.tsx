@@ -608,7 +608,7 @@ export function BacklogPanel({
             setAddingTaskIn(key);
             setNewTaskTitle("");
           }}
-          className="flex items-center gap-1.5 px-2 py-0.5 rounded-md text-xs text-foreground/30 bg-foreground/[0.03] hover:text-foreground/50 hover:bg-foreground/[0.06] transition-all opacity-0 group-hover/client:opacity-100 h-0 group-hover/client:h-auto group-hover/client:py-1"
+          className="flex items-center gap-1.5 px-2 py-1 rounded-md text-xs text-foreground/30 bg-foreground/[0.03] hover:text-foreground/50 hover:bg-foreground/[0.06] transition-colors"
         >
           <Plus className="size-3" />
           Add task
@@ -730,7 +730,11 @@ export function BacklogPanel({
                 {folderTasks.map(renderTaskRow)}
               </SortableContext>
             </DroppableArea>
-            {renderAddTaskInput(folder.client_id, folder.id)}
+            <div className="grid grid-rows-[0fr] group-hover/client:grid-rows-[1fr] transition-[grid-template-rows] duration-200">
+              <div className="overflow-hidden">
+                {renderAddTaskInput(folder.client_id, folder.id)}
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -909,32 +913,36 @@ export function BacklogPanel({
                       </div>
                     </div>
                   ) : (
-                    <div className="flex items-center gap-1.5 px-2 py-1 opacity-0 group-hover/client:opacity-100 transition-opacity h-0 group-hover/client:h-auto group-hover/client:py-1.5">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          const key = `${client.id}:unsorted`;
-                          setAddingTaskIn(key);
-                          setNewTaskTitle("");
-                        }}
-                        className="flex items-center gap-1 px-1.5 py-0.5 rounded border border-foreground/[0.08] bg-foreground/[0.03] text-foreground/25 text-[11px] hover:text-foreground/50 hover:border-foreground/15 hover:bg-foreground/[0.06] transition-colors"
-                        aria-label="Add task"
-                      >
-                        <Plus className="size-3" />
-                        Task
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setAddingFolderFor(client.id);
-                          setNewFolderName("");
-                        }}
-                        className="flex items-center gap-1 px-1.5 py-0.5 rounded border border-foreground/[0.08] bg-foreground/[0.03] text-foreground/25 text-[11px] hover:text-foreground/50 hover:border-foreground/15 hover:bg-foreground/[0.06] transition-colors"
-                        aria-label="Add folder"
-                      >
-                        <Folder className="size-3" />
-                        Folder
-                      </button>
+                    <div className="grid grid-rows-[0fr] group-hover/client:grid-rows-[1fr] transition-[grid-template-rows] duration-200">
+                      <div className="overflow-hidden">
+                        <div className="flex items-center gap-1.5 px-2 py-1.5">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const key = `${client.id}:unsorted`;
+                              setAddingTaskIn(key);
+                              setNewTaskTitle("");
+                            }}
+                            className="flex items-center gap-1 px-1.5 py-0.5 rounded border border-foreground/[0.08] bg-foreground/[0.03] text-foreground/25 text-[11px] hover:text-foreground/50 hover:border-foreground/15 hover:bg-foreground/[0.06] transition-colors"
+                            aria-label="Add task"
+                          >
+                            <Plus className="size-3" />
+                            Task
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setAddingFolderFor(client.id);
+                              setNewFolderName("");
+                            }}
+                            className="flex items-center gap-1 px-1.5 py-0.5 rounded border border-foreground/[0.08] bg-foreground/[0.03] text-foreground/25 text-[11px] hover:text-foreground/50 hover:border-foreground/15 hover:bg-foreground/[0.06] transition-colors"
+                            aria-label="Add folder"
+                          >
+                            <Folder className="size-3" />
+                            Folder
+                          </button>
+                        </div>
+                      </div>
                     </div>
                   )}
                 </div>
