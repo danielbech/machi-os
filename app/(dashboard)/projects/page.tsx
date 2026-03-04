@@ -977,7 +977,7 @@ function ProjectsTab() {
               placeholder="Search projects..."
               value={globalFilter}
               onChange={(e) => setGlobalFilter(e.target.value)}
-              className="pl-8 h-8 text-xs"
+              className="pl-8 h-8 text-xs bg-foreground/[0.04] border-foreground/[0.06]"
             />
             {globalFilter && (
               <button
