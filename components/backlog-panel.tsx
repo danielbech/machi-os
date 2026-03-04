@@ -43,7 +43,6 @@ import {
   Trash2,
   ListChecks,
   Check,
-  Minus,
 } from "lucide-react";
 import { ProjectDialog } from "@/components/project-dialog";
 import { ClientIcon } from "@/components/client-icon";
@@ -110,7 +109,6 @@ interface BacklogPanelProps {
   onSaveTask: (task: Task) => Promise<void>;
   onReorderTasks: (tasks: Task[]) => Promise<void>;
   onDragActiveChange?: (active: boolean) => void;
-  onToggleBacklogVisibility: (clientId: string, show: boolean) => Promise<void>;
   teamMembers: Member[];
   weekMode?: WeekMode;
 }
@@ -134,7 +132,6 @@ export function BacklogPanel({
   onSaveTask,
   onReorderTasks,
   onDragActiveChange,
-  onToggleBacklogVisibility,
   teamMembers,
   weekMode = "5-day",
 }: BacklogPanelProps) {
@@ -153,6 +150,8 @@ export function BacklogPanel({
       return stored ? new Set(JSON.parse(stored)) : new Set();
     } catch { return new Set(); }
   });
+  // Clients temporarily pinned via the "+ Project" picker (so you can add tasks to them)
+  const [pinnedClients, setPinnedClients] = useState<Set<string>>(new Set());
 
   // Persist collapse state
   useEffect(() => {
@@ -372,9 +371,9 @@ export function BacklogPanel({
     onReorderTasks(finalTasks);
   };
 
-  // Only show clients explicitly added to the backlog, plus any with existing tasks
+  // Only show clients that have backlog tasks or are temporarily pinned
   const relevantClients = clients
-    .filter((c) => c.show_in_backlog || activeTasks.some((t) => t.client === c.id))
+    .filter((c) => pinnedClients.has(c.id) || activeTasks.some((t) => t.client === c.id))
     .sort((a, b) => {
       const aHas = activeTasks.some((t) => t.client === a.id);
       const bHas = activeTasks.some((t) => t.client === b.id);
@@ -383,9 +382,9 @@ export function BacklogPanel({
       return 0;
     });
 
-  // Clients available to add to backlog (active, not already shown)
+  // Active clients not already shown — available to add via picker
   const availableClients = clients.filter(
-    (c) => c.active && !c.show_in_backlog && !activeTasks.some((t) => t.client === c.id)
+    (c) => c.active && !pinnedClients.has(c.id) && !activeTasks.some((t) => t.client === c.id)
   );
 
   const isClientCollapsed = (clientId: string) => {
@@ -768,7 +767,10 @@ export function BacklogPanel({
                   return (
                     <DropdownMenuItem
                       key={c.id}
-                      onClick={() => onToggleBacklogVisibility(c.id, true)}
+                      onClick={() => {
+                        setPinnedClients((prev) => new Set(prev).add(c.id));
+                        setClientToggleOverrides((prev) => ({ ...prev, [c.id]: true }));
+                      }}
                     >
                       {c.logo_url ? (
                         <img src={c.logo_url} alt="" className="size-4 rounded-sm object-cover shrink-0" />
@@ -799,7 +801,6 @@ export function BacklogPanel({
             if (!open) setEditingProject(null);
           }}
           editingClient={editingProject}
-          showInBacklog
         />
 
         {relevantClients.length === 0 && (
@@ -815,45 +816,32 @@ export function BacklogPanel({
           const unsortedContainerId = `unsorted:${client.id}`;
 
           return (
-            <div key={client.id} data-backlog-client={client.id} className="mb-2 rounded-lg border border-border bg-card overflow-hidden group/client">
+            <div key={client.id} data-backlog-client={client.id} className="mb-2 rounded-lg border border-border bg-card overflow-hidden">
               {/* Client header */}
-              <div className="flex items-center bg-muted/30 hover:bg-muted/50 transition-colors">
-                <button
-                  type="button"
-                  onClick={() => toggleClient(client.id)}
-                  className="flex items-center gap-1.5 flex-1 min-w-0 px-2.5 py-1.5"
-                >
-                  <ChevronRight
-                    className={`size-3 text-foreground/30 transition-transform ${isCollapsed ? "" : "rotate-90"}`}
-                  />
-                  {client.logo_url ? (
-                    <img src={client.logo_url} alt="" className="size-4 rounded-sm object-cover shrink-0" />
-                  ) : client.icon ? (
-                    <ClientIcon icon={client.icon} className="size-3.5 text-muted-foreground shrink-0" />
-                  ) : null}
-                  <span className="text-sm font-medium text-foreground/80 truncate">
-                    {(() => {
-                      const group = clientGroups.find(g => g.id === client.client_group_id);
-                      return group ? <><span className="text-foreground/40">{group.name}</span><span className="text-foreground/15 mx-1">/</span></> : null;
-                    })()}
-                    {client.name}
-                  </span>
-                  {clientTasks.length > 0 && (
-                    <span className="text-[10px] text-foreground/30 tabular-nums shrink-0">{clientTasks.length}</span>
-                  )}
-                </button>
-                {clientTasks.length === 0 && (
-                  <button
-                    type="button"
-                    onClick={() => onToggleBacklogVisibility(client.id, false)}
-                    className="opacity-0 group-hover/client:opacity-100 p-1 mr-1.5 rounded text-foreground/20 hover:text-foreground/50 hover:bg-foreground/[0.06] transition-all"
-                    aria-label="Remove from backlog"
-                    title="Remove from backlog"
-                  >
-                    <Minus className="size-3" />
-                  </button>
+              <button
+                type="button"
+                onClick={() => toggleClient(client.id)}
+                className="flex items-center gap-1.5 w-full px-2.5 py-1.5 bg-muted/30 hover:bg-muted/50 transition-colors"
+              >
+                <ChevronRight
+                  className={`size-3 text-foreground/30 transition-transform ${isCollapsed ? "" : "rotate-90"}`}
+                />
+                {client.logo_url ? (
+                  <img src={client.logo_url} alt="" className="size-4 rounded-sm object-cover shrink-0" />
+                ) : client.icon ? (
+                  <ClientIcon icon={client.icon} className="size-3.5 text-muted-foreground shrink-0" />
+                ) : null}
+                <span className="text-sm font-medium text-foreground/80 truncate">
+                  {(() => {
+                    const group = clientGroups.find(g => g.id === client.client_group_id);
+                    return group ? <><span className="text-foreground/40">{group.name}</span><span className="text-foreground/15 mx-1">/</span></> : null;
+                  })()}
+                  {client.name}
+                </span>
+                {clientTasks.length > 0 && (
+                  <span className="text-[10px] text-foreground/30 tabular-nums shrink-0">{clientTasks.length}</span>
                 )}
-              </div>
+              </button>
 
               <div className={`collapsible ${isCollapsed ? "" : "expanded"}`}>
                 <div className="collapsible-content">

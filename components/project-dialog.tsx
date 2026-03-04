@@ -31,11 +31,9 @@ interface ProjectDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   editingClient?: Client | null;
-  /** When true, newly created projects will have show_in_backlog set */
-  showInBacklog?: boolean;
 }
 
-export function ProjectDialog({ open, onOpenChange, editingClient = null, showInBacklog = false }: ProjectDialogProps) {
+export function ProjectDialog({ open, onOpenChange, editingClient = null }: ProjectDialogProps) {
   const { activeProjectId, clients, refreshClients, clientGroups } = useWorkspace();
 
   const [formName, setFormName] = useState("");
@@ -115,7 +113,6 @@ export function ProjectDialog({ open, onOpenChange, editingClient = null, showIn
           sort_order: clients.length,
           active: true,
           client_group_id: formClientGroupId || undefined,
-          show_in_backlog: showInBacklog || undefined,
         });
       }
       await refreshClients();

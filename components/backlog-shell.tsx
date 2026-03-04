@@ -3,7 +3,6 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useWorkspace } from "@/lib/workspace-context";
 import { useBacklog } from "@/lib/backlog-context";
-import { updateClientRecord } from "@/lib/supabase/clients";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { BacklogPanel } from "@/components/backlog-panel";
 import { TaskEditDialog } from "@/components/task-edit-dialog";
@@ -11,7 +10,7 @@ import { X } from "lucide-react";
 import type { Task } from "@/lib/types";
 
 export function BacklogShell() {
-  const { clients, clientGroups, teamMembers, weekMode, refreshClients } = useWorkspace();
+  const { clients, clientGroups, teamMembers, weekMode } = useWorkspace();
   const {
     backlogOpen, toggleBacklog, backlogTasks, backlogFolders,
     backlogWidth, setBacklogWidth,
@@ -23,11 +22,6 @@ export function BacklogShell() {
 
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const isMobile = useIsMobile();
-
-  const handleToggleBacklogVisibility = useCallback(async (clientId: string, show: boolean) => {
-    await updateClientRecord(clientId, { show_in_backlog: show });
-    await refreshClients();
-  }, [refreshClients]);
   const panelRef = useRef<HTMLDivElement>(null);
 
   // Highlight the specific folder/client section when a kanban card is dragged over the backlog
@@ -136,7 +130,6 @@ export function BacklogShell() {
             teamMembers={teamMembers}
             weekMode={weekMode}
             onDragActiveChange={setBacklogDragActive}
-            onToggleBacklogVisibility={handleToggleBacklogVisibility}
           />
         </div>
 

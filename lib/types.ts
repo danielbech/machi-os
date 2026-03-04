@@ -37,7 +37,6 @@ export interface Client {
   active: boolean;
   status_id?: string;
   client_group_id?: string;
-  show_in_backlog?: boolean;
 }
 
 export interface ChecklistItem {
