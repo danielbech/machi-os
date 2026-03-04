@@ -81,8 +81,9 @@ function ModeButton({ active, onClick, icon: Icon, label }: { active: boolean; o
 
 function ThemePreview({ theme, mode }: { theme: typeof THEMES[number]; mode: "light" | "dark" }) {
   const v = mode === "dark" ? theme.darkVariables : theme.lightVariables;
+  const fontFamily = theme.sharedVariables?.["--font-sans"];
   return (
-    <div className="rounded-md h-20 w-full overflow-hidden flex" style={{ backgroundColor: v["--background"] }}>
+    <div className="rounded-md h-20 w-full overflow-hidden flex" style={{ backgroundColor: v["--background"], ...(fontFamily ? { fontFamily } : {}) }}>
       {/* Sidebar strip */}
       <div className="w-5 shrink-0 flex flex-col items-center gap-1 pt-2" style={{ backgroundColor: v["--sidebar"], borderRight: `1px solid ${v["--border"]}` }}>
         <div className="size-2 rounded-sm" style={{ backgroundColor: v["--sidebar-primary"] }} />

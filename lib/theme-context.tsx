@@ -44,10 +44,11 @@ function resolveMode(mode: ThemeMode): EffectiveMode {
 function applyTheme(theme: Theme, effective: EffectiveMode) {
   const root = document.documentElement;
   const vars = effective === "dark" ? theme.darkVariables : theme.lightVariables;
-  for (const [prop, value] of Object.entries(vars)) {
+  const all = { ...vars, ...(theme.sharedVariables || {}) };
+  for (const [prop, value] of Object.entries(all)) {
     root.style.setProperty(prop, value);
   }
-  localStorage.setItem(CACHE_KEY, JSON.stringify(vars));
+  localStorage.setItem(CACHE_KEY, JSON.stringify(all));
 }
 
 function applyDarkClass(effective: EffectiveMode) {
@@ -69,6 +70,8 @@ function clearInlineTheme() {
     "--border", "--input", "--ring",
     "--sidebar", "--sidebar-foreground", "--sidebar-primary", "--sidebar-primary-foreground",
     "--sidebar-accent", "--sidebar-accent-foreground", "--sidebar-border", "--sidebar-ring",
+    // Shared (mode-independent) variables
+    "--font-sans", "--font-mono", "--font-serif", "--radius",
   ];
   for (const prop of props) {
     root.style.removeProperty(prop);
