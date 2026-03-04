@@ -55,7 +55,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className="dark" suppressHydrationWarning>
+    <html lang="en" className={`dark ${geistSans.variable} ${geistMono.variable} ${outfit.variable} ${firaCode.variable} ${inter.variable} ${plusJakartaSans.variable} ${lora.variable} ${ibmPlexMono.variable}`} suppressHydrationWarning>
       <head>
         <script
           dangerouslySetInnerHTML={{
@@ -64,7 +64,7 @@ export default function RootLayout({
         />
       </head>
       <body
-        className={`${geistSans.variable} ${geistMono.variable} ${outfit.variable} ${firaCode.variable} ${inter.variable} ${plusJakartaSans.variable} ${lora.variable} ${ibmPlexMono.variable} font-sans antialiased`}
+        className="font-sans antialiased"
       >
         {children}
         <ThemeToaster />
