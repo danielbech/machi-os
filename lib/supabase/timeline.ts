@@ -106,6 +106,26 @@ export async function deleteTimelineEntry(entryId: string): Promise<void> {
   }
 }
 
+export async function reorderTimelineEntries(
+  updates: { id: string; sort_order: number }[]
+): Promise<void> {
+  const supabase = createClient()
+
+  const promises = updates.map((u) =>
+    supabase
+      .from('timeline_entries')
+      .update({ sort_order: u.sort_order })
+      .eq('id', u.id)
+  )
+
+  const results = await Promise.all(promises)
+  const failed = results.find((r) => r.error)
+  if (failed?.error) {
+    console.error('Error reordering timeline entries:', failed.error)
+    throw failed.error
+  }
+}
+
 // --- Markers ---
 
 export async function loadTimelineMarkers(projectId: string): Promise<TimelineMarker[]> {

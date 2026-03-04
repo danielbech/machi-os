@@ -1,13 +1,31 @@
 "use client";
 
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, forwardRef } from "react";
 import { parseISO, format, addDays, isSameDay, formatDistance } from "date-fns";
+import {
+  DndContext as VerticalDndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor as useVerticalSensor,
+  useSensors as useVerticalSensors,
+  type DragEndEvent as VerticalDragEndEvent,
+} from "@dnd-kit/core";
+import {
+  SortableContext,
+  verticalListSortingStrategy,
+  useSortable,
+  arrayMove,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
+import { restrictToVerticalAxis } from "@dnd-kit/modifiers";
 import { useWorkspace } from "@/lib/workspace-context";
 import {
   loadTimelineEntries,
   createTimelineEntry,
   updateTimelineEntry,
   deleteTimelineEntry,
+  reorderTimelineEntries,
   loadTimelineMarkers,
   createTimelineMarker,
   updateTimelineMarker,
@@ -45,7 +63,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Plus, Trash2, CalendarPlus, Pencil, MoreHorizontal, Diamond, Filter, Palette, Code, MessageSquare, Headphones, Rocket, Bug, FileText, Settings, Megaphone, Star, Target, Lightbulb, Zap } from "lucide-react";
+import { Plus, Trash2, CalendarPlus, Pencil, MoreHorizontal, Diamond, Filter, Palette, Code, MessageSquare, Headphones, Rocket, Bug, FileText, Settings, Megaphone, Star, Target, Lightbulb, Zap, GripVertical } from "lucide-react";
 
 const SUB_ITEM_ICONS = [
   { name: "palette", icon: Palette, label: "Design" },
@@ -154,6 +172,50 @@ function EventDot({
       className={`${dim} rounded ${CLIENT_DOT_COLORS[color] || "bg-blue-500"} flex items-center justify-center text-white shrink-0 opacity-60`}
     >
       <CalendarPlus className={iconSize} />
+    </div>
+  );
+}
+
+// Sortable wrapper for sidebar + timeline groups
+function SortableTimelineGroup({
+  id,
+  children,
+  renderDragHandle,
+}: {
+  id: string;
+  children: React.ReactNode;
+  renderDragHandle?: boolean;
+}) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id });
+
+  const style: React.CSSProperties = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+    position: "relative" as const,
+    zIndex: isDragging ? 10 : undefined,
+  };
+
+  return (
+    <div ref={setNodeRef} style={style} {...attributes}>
+      {renderDragHandle && (
+        <button
+          {...listeners}
+          className="absolute left-0 top-0 bottom-0 w-6 flex items-center justify-center cursor-grab active:cursor-grabbing opacity-0 hover:opacity-100 group-hover/sidebar-group:opacity-40 transition-opacity z-10"
+          aria-label="Drag to reorder"
+          tabIndex={-1}
+        >
+          <GripVertical className="size-3 text-foreground/40" />
+        </button>
+      )}
+      {children}
     </div>
   );
 }
@@ -515,6 +577,52 @@ export default function TimelinePage() {
     }
   };
 
+  // Vertical reorder sensors — require 5px distance to avoid conflict with clicks
+  const reorderSensors = useVerticalSensors(
+    useVerticalSensor(PointerSensor, { activationConstraint: { distance: 5 } })
+  );
+
+  const handleReorderDragEnd = useCallback(
+    async (event: VerticalDragEndEvent) => {
+      const { active, over } = event;
+      if (!over || active.id === over.id) return;
+
+      const oldIndex = parentEntries.findIndex((e) => e.id === active.id);
+      const newIndex = parentEntries.findIndex((e) => e.id === over.id);
+      if (oldIndex === -1 || newIndex === -1) return;
+
+      // Reorder parent entries
+      const reordered = arrayMove(parentEntries, oldIndex, newIndex);
+
+      // Build new entries array preserving children after their parents
+      const newEntries: TimelineEntry[] = [];
+      for (const parent of reordered) {
+        newEntries.push({ ...parent, sort_order: newEntries.length });
+        const children = entries.filter((e) => e.parent_id === parent.id);
+        for (const child of children) {
+          newEntries.push({ ...child, sort_order: newEntries.length });
+        }
+      }
+      // Add any orphan entries (shouldn't happen, but safe)
+      for (const e of entries) {
+        if (!newEntries.some((n) => n.id === e.id)) {
+          newEntries.push({ ...e, sort_order: newEntries.length });
+        }
+      }
+
+      setEntries(newEntries);
+
+      // Persist — only update parent sort_orders
+      const updates = reordered.map((e, i) => ({ id: e.id, sort_order: i }));
+      try {
+        await reorderTimelineEntries(updates);
+      } catch {
+        await loadEntries();
+      }
+    },
+    [parentEntries, entries, loadEntries]
+  );
+
   const openEditDialog = (entry: TimelineEntry) => {
     const client = entry.client_id ? clientMap.get(entry.client_id) : undefined;
     setEditingEntry(entry);
@@ -736,102 +844,115 @@ export default function TimelinePage() {
         >
           <GanttProvider range={range} zoom={zoom} onZoom={handleZoom} onAddItemRange={handleAddItemRange}>
             <GanttSidebar>
-              {visibleGroups.map((group) => {
-                const parent = group.parent;
-                const parentClient = parent.client_id
-                  ? clientMap.get(parent.client_id)
-                  : undefined;
-                const parentFeature = visibleFeatures.find((f) => f.id === parent.id);
-                if (!parentFeature) return null;
+              <VerticalDndContext
+                sensors={reorderSensors}
+                collisionDetection={closestCenter}
+                modifiers={[restrictToVerticalAxis]}
+                onDragEnd={handleReorderDragEnd}
+              >
+                <SortableContext
+                  items={parentEntries.map((e) => e.id)}
+                  strategy={verticalListSortingStrategy}
+                >
+                  {visibleGroups.map((group) => {
+                    const parent = group.parent;
+                    const parentClient = parent.client_id
+                      ? clientMap.get(parent.client_id)
+                      : undefined;
+                    const parentFeature = visibleFeatures.find((f) => f.id === parent.id);
+                    if (!parentFeature) return null;
 
-                const hasChildren = childrenMap.has(parent.id);
-                const isExpanded = expandedEntries.has(parent.id);
-                const childCount = (childrenMap.get(parent.id) || []).length;
+                    const hasChildren = childrenMap.has(parent.id);
+                    const isExpanded = expandedEntries.has(parent.id);
+                    const childCount = (childrenMap.get(parent.id) || []).length;
 
-                const tempEndAt =
-                  parentFeature.endAt && isSameDay(parentFeature.startAt, parentFeature.endAt)
-                    ? addDays(parentFeature.endAt, 1)
-                    : parentFeature.endAt;
-                const parentDuration = tempEndAt
-                  ? formatDistance(parentFeature.startAt, tempEndAt)
-                  : `${formatDistance(parentFeature.startAt, new Date())} so far`;
+                    const tempEndAt =
+                      parentFeature.endAt && isSameDay(parentFeature.startAt, parentFeature.endAt)
+                        ? addDays(parentFeature.endAt, 1)
+                        : parentFeature.endAt;
+                    const parentDuration = tempEndAt
+                      ? formatDistance(parentFeature.startAt, tempEndAt)
+                      : `${formatDistance(parentFeature.startAt, new Date())} so far`;
 
-                return (
-                  <div
-                    key={parent.id}
-                    className="mx-2 mb-3 rounded-lg border bg-foreground/[0.02] overflow-hidden transition-colors"
-                    style={{
-                      borderColor: selectedEntryId === parent.id || group.children.some((c) => c.id === selectedEntryId)
-                        ? `${getAccentColor(parent)}50`
-                        : "rgb(255 255 255 / 0.06)",
-                    }}
-                  >
-                    {/* Parent header row */}
-                    <div
-                      data-sidebar-entry
-                      className={`relative flex items-center gap-2.5 px-2.5 text-xs bg-foreground/[0.03] hover:bg-foreground/[0.05] cursor-pointer transition-colors ${selectedEntryId === parent.id ? "bg-foreground/[0.08]" : ""}`}
-                      style={{ height: "var(--gantt-row-height)" }}
-                      onClick={() => {
-                        setSelectedEntryId(parent.id);
-                        if (hasChildren) toggleExpanded(parent.id);
-                      }}
-                    >
-                      {parent.type === "event" ? (
-                        <EventDot color={parent.color} size="sm" />
-                      ) : parentClient ? (
-                        <ClientAvatar client={parentClient} size="sm" />
-                      ) : (
+                    return (
+                      <SortableTimelineGroup key={parent.id} id={parent.id} renderDragHandle>
                         <div
-                          className="h-2 w-2 shrink-0 rounded-full"
-                          style={{ backgroundColor: parentFeature.status.color }}
-                        />
-                      )}
-                      <p className="flex-1 truncate text-left font-medium">
-                        {parentFeature.name}
-                      </p>
-                      <p className="text-foreground/30 shrink-0">
-                        {parentDuration}
-                      </p>
-                    </div>
-                    {/* Child rows */}
-                    {group.children.map((child) => {
-                      const childFeature = visibleFeatures.find((f) => f.id === child.id);
-                      if (!childFeature) return null;
-                      const isMilestone = child.start_date === child.end_date;
-
-                      const childTempEndAt =
-                        childFeature.endAt && isSameDay(childFeature.startAt, childFeature.endAt)
-                          ? addDays(childFeature.endAt, 1)
-                          : childFeature.endAt;
-                      const childDuration = childTempEndAt
-                        ? formatDistance(childFeature.startAt, childTempEndAt)
-                        : `${formatDistance(childFeature.startAt, new Date())} so far`;
-
-                      return (
-                        <div
-                          key={child.id}
-                          data-sidebar-entry
-                          className={`relative flex items-center gap-2.5 pl-4 pr-2.5 text-xs border-t border-foreground/[0.04] cursor-pointer hover:bg-foreground/[0.05] transition-colors ${selectedEntryId === child.id ? "bg-foreground/[0.08]" : ""}`}
-                          style={{ height: "var(--gantt-row-height)" }}
-                          onClick={() => setSelectedEntryId(child.id)}
+                          className="group/sidebar-group mx-2 mb-3 rounded-lg border bg-foreground/[0.02] overflow-hidden transition-colors"
+                          style={{
+                            borderColor: selectedEntryId === parent.id || group.children.some((c) => c.id === selectedEntryId)
+                              ? `${getAccentColor(parent)}50`
+                              : "rgb(255 255 255 / 0.06)",
+                          }}
                         >
-                          {isMilestone ? (
-                            <Diamond className="size-3.5 shrink-0 text-foreground/40" />
-                          ) : child.icon ? (
-                            <ClientIcon icon={child.icon} className="size-3.5 shrink-0 text-foreground/40" />
-                          ) : null}
-                          <p className="flex-1 truncate text-left font-medium">
-                            {childFeature.name}
-                          </p>
-                          <p className="text-foreground/30 shrink-0">
-                            {isMilestone ? format(childFeature.startAt, "MMM d") : childDuration}
-                          </p>
+                          {/* Parent header row */}
+                          <div
+                            data-sidebar-entry
+                            className={`relative flex items-center gap-2.5 px-2.5 text-xs bg-foreground/[0.03] hover:bg-foreground/[0.05] cursor-pointer transition-colors ${selectedEntryId === parent.id ? "bg-foreground/[0.08]" : ""}`}
+                            style={{ height: "var(--gantt-row-height)" }}
+                            onClick={() => {
+                              setSelectedEntryId(parent.id);
+                              if (hasChildren) toggleExpanded(parent.id);
+                            }}
+                          >
+                            {parent.type === "event" ? (
+                              <EventDot color={parent.color} size="sm" />
+                            ) : parentClient ? (
+                              <ClientAvatar client={parentClient} size="sm" />
+                            ) : (
+                              <div
+                                className="h-2 w-2 shrink-0 rounded-full"
+                                style={{ backgroundColor: parentFeature.status.color }}
+                              />
+                            )}
+                            <p className="flex-1 truncate text-left font-medium">
+                              {parentFeature.name}
+                            </p>
+                            <p className="text-foreground/30 shrink-0">
+                              {parentDuration}
+                            </p>
+                          </div>
+                          {/* Child rows */}
+                          {group.children.map((child) => {
+                            const childFeature = visibleFeatures.find((f) => f.id === child.id);
+                            if (!childFeature) return null;
+                            const isMilestone = child.start_date === child.end_date;
+
+                            const childTempEndAt =
+                              childFeature.endAt && isSameDay(childFeature.startAt, childFeature.endAt)
+                                ? addDays(childFeature.endAt, 1)
+                                : childFeature.endAt;
+                            const childDuration = childTempEndAt
+                              ? formatDistance(childFeature.startAt, childTempEndAt)
+                              : `${formatDistance(childFeature.startAt, new Date())} so far`;
+
+                            return (
+                              <div
+                                key={child.id}
+                                data-sidebar-entry
+                                className={`relative flex items-center gap-2.5 pl-4 pr-2.5 text-xs border-t border-foreground/[0.04] cursor-pointer hover:bg-foreground/[0.05] transition-colors ${selectedEntryId === child.id ? "bg-foreground/[0.08]" : ""}`}
+                                style={{ height: "var(--gantt-row-height)" }}
+                                onClick={() => setSelectedEntryId(child.id)}
+                              >
+                                {isMilestone ? (
+                                  <Diamond className="size-3.5 shrink-0 text-foreground/40" />
+                                ) : child.icon ? (
+                                  <ClientIcon icon={child.icon} className="size-3.5 shrink-0 text-foreground/40" />
+                                ) : null}
+                                <p className="flex-1 truncate text-left font-medium">
+                                  {childFeature.name}
+                                </p>
+                                <p className="text-foreground/30 shrink-0">
+                                  {isMilestone ? format(childFeature.startAt, "MMM d") : childDuration}
+                                </p>
+                              </div>
+                            );
+                          })}
                         </div>
-                      );
-                    })}
-                  </div>
-                );
-              })}
+                      </SortableTimelineGroup>
+                    );
+                  })}
+                </SortableContext>
+              </VerticalDndContext>
             </GanttSidebar>
             <GanttTimeline>
               <GanttHeader />
