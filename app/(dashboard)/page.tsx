@@ -176,19 +176,20 @@ export default function BoardPage() {
         if (!suppressTaskReload.current && !isInlineEditing.current) {
           refreshTasks();
         }
-      }, 500);
+      }, 200);
     };
 
+    const filter = areaId ? `area_id=eq.${areaId}` : undefined;
     const tasksChannel = supabase
-      .channel(`kanban-tasks-${activeProjectId}`)
-      .on("postgres_changes", { event: "*", schema: "public", table: "tasks" }, reloadTasks)
+      .channel(`kanban-tasks-${activeProjectId}-${areaId}`)
+      .on("postgres_changes", { event: "*", schema: "public", table: "tasks", ...(filter ? { filter } : {}) }, reloadTasks)
       .subscribe();
 
     return () => {
       if (realtimeTimer.current) clearTimeout(realtimeTimer.current);
       supabase.removeChannel(tasksChannel);
     };
-  }, [activeProjectId, refreshTasks]);
+  }, [activeProjectId, areaId, refreshTasks]);
 
   // Dev helper: reset and re-seed demo tasks from browser console
   useEffect(() => {
@@ -574,7 +575,7 @@ export default function BoardPage() {
     }
     setTimeout(() => {
       suppressTaskReload.current = false;
-    }, 2000);
+    }, 1000);
   };
 
   const handleInlineTitleChange = async (taskId: string, newTitle: string) => {
@@ -596,7 +597,7 @@ export default function BoardPage() {
     if (updatedTask) await saveTask(activeProjectId, updatedTask, areaId);
     setTimeout(() => {
       suppressTaskReload.current = false;
-    }, 2000);
+    }, 1000);
   };
 
   // Send kanban task to backlog (via drag or action)
@@ -619,7 +620,7 @@ export default function BoardPage() {
         [sourceColumn]: [...(prev[sourceColumn] || []), task],
       }));
     }
-    setTimeout(() => { suppressTaskReload.current = false; }, 2000);
+    setTimeout(() => { suppressTaskReload.current = false; }, 1000);
   };
 
   if (initialLoading) {
@@ -666,6 +667,7 @@ export default function BoardPage() {
             }
             setColumns(merged);
             if (activeProjectId) {
+              suppressTaskReload.current = true;
               // Only persist columns that actually changed
               const updates = Object.entries(merged).filter(([day, tasks]) => {
                 const prevTasks = prev[day];
@@ -675,6 +677,7 @@ export default function BoardPage() {
               await Promise.all(
                 updates.map(([day, tasks]) => updateDayTasks(activeProjectId, day, tasks, areaId))
               );
+              setTimeout(() => { suppressTaskReload.current = false; }, 1000);
             }
           }}
           getItemValue={(item) => item.id}

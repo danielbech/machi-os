@@ -112,12 +112,13 @@ export function BacklogProvider({ children }: { children: React.ReactNode }) {
       if (timer) clearTimeout(timer);
       timer = setTimeout(() => {
         if (!suppressBacklogReload.current) refreshBacklog();
-      }, 500);
+      }, 200);
     };
 
+    const taskFilter = areaId ? `area_id=eq.${areaId}` : undefined;
     const tasksChannel = supabase
-      .channel(`backlog-tasks-${activeProjectId}`)
-      .on("postgres_changes", { event: "*", schema: "public", table: "tasks" }, reload)
+      .channel(`backlog-tasks-${activeProjectId}-${areaId}`)
+      .on("postgres_changes", { event: "*", schema: "public", table: "tasks", ...(taskFilter ? { filter: taskFilter } : {}) }, reload)
       .subscribe();
 
     const foldersChannel = supabase
@@ -130,7 +131,7 @@ export function BacklogProvider({ children }: { children: React.ReactNode }) {
       supabase.removeChannel(tasksChannel);
       supabase.removeChannel(foldersChannel);
     };
-  }, [activeProjectId, refreshBacklog]);
+  }, [activeProjectId, areaId, refreshBacklog]);
 
   // Backlog handlers
   const sendBacklogToDay = useCallback(async (taskId: string, day: DayName) => {
@@ -142,7 +143,7 @@ export function BacklogProvider({ children }: { children: React.ReactNode }) {
     onTaskSentToDayRef.current?.(updatedTask, day);
     suppressBacklogReload.current = true;
     await saveTask(activeProjectId, updatedTask, areaId);
-    setTimeout(() => { suppressBacklogReload.current = false; }, 2000);
+    setTimeout(() => { suppressBacklogReload.current = false; }, 1000);
   }, [activeProjectId, backlogTasks, areaId]);
 
   const sendFolderToDay = useCallback(async (folderId: string, day: DayName) => {
@@ -153,7 +154,7 @@ export function BacklogProvider({ children }: { children: React.ReactNode }) {
     setBacklogTasks((prev) => prev.filter((t) => t.folder_id !== folderId));
     suppressBacklogReload.current = true;
     await Promise.all(updatedTasks.map((task) => saveTask(activeProjectId, task, areaId)));
-    setTimeout(() => { suppressBacklogReload.current = false; }, 2000);
+    setTimeout(() => { suppressBacklogReload.current = false; }, 1000);
   }, [activeProjectId, backlogTasks, areaId]);
 
   const addToBacklog = useCallback(async (task: Task, placement?: { clientId?: string; folderId?: string }) => {
@@ -169,7 +170,7 @@ export function BacklogProvider({ children }: { children: React.ReactNode }) {
     setBacklogTasks((prev) => [...prev, backlogTask]);
     suppressBacklogReload.current = true;
     await saveTask(activeProjectId, backlogTask, areaId);
-    setTimeout(() => { suppressBacklogReload.current = false; }, 2000);
+    setTimeout(() => { suppressBacklogReload.current = false; }, 1000);
   }, [activeProjectId, areaId]);
 
   const createBacklogTask = useCallback(async (title: string, clientId: string, folderId?: string) => {
@@ -180,7 +181,7 @@ export function BacklogProvider({ children }: { children: React.ReactNode }) {
     suppressBacklogReload.current = true;
     const realId = await saveTask(activeProjectId, newTask, areaId);
     setBacklogTasks((prev) => prev.map((t) => (t.id === tempId ? { ...t, id: realId } : t)));
-    setTimeout(() => { suppressBacklogReload.current = false; }, 2000);
+    setTimeout(() => { suppressBacklogReload.current = false; }, 1000);
   }, [activeProjectId, areaId]);
 
   const saveBacklogTask = useCallback(async (updatedTask: Task) => {
@@ -188,7 +189,7 @@ export function BacklogProvider({ children }: { children: React.ReactNode }) {
     setBacklogTasks((prev) => prev.map((t) => (t.id === updatedTask.id ? updatedTask : t)));
     suppressBacklogReload.current = true;
     await saveTask(activeProjectId, updatedTask, areaId);
-    setTimeout(() => { suppressBacklogReload.current = false; }, 2000);
+    setTimeout(() => { suppressBacklogReload.current = false; }, 1000);
   }, [activeProjectId, areaId]);
 
   const deleteBacklogTask = useCallback((taskId: string) => {
@@ -206,7 +207,7 @@ export function BacklogProvider({ children }: { children: React.ReactNode }) {
     const timeout = setTimeout(() => {
       if (!undone) {
         deleteTask(taskId);
-        setTimeout(() => { suppressBacklogReload.current = false; }, 2000);
+        setTimeout(() => { suppressBacklogReload.current = false; }, 1000);
       } else {
         suppressBacklogReload.current = false;
       }
@@ -237,7 +238,7 @@ export function BacklogProvider({ children }: { children: React.ReactNode }) {
     setBacklogTasks(updatedTasks);
     suppressBacklogReload.current = true;
     await updateBacklogTaskOrder(activeProjectId, updatedTasks, areaId);
-    setTimeout(() => { suppressBacklogReload.current = false; }, 2000);
+    setTimeout(() => { suppressBacklogReload.current = false; }, 1000);
   }, [activeProjectId, areaId]);
 
   const createFolder = useCallback(async (clientId: string, name: string) => {
