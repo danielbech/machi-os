@@ -829,7 +829,7 @@ export function BacklogPanel({
           const unsortedContainerId = `unsorted:${client.id}`;
 
           return (
-            <div key={client.id} data-backlog-client={client.id} className="group/client mb-2 rounded-lg border border-border overflow-hidden">
+            <div key={client.id} data-backlog-client={client.id} className="group/client mb-3 rounded-lg border border-border overflow-hidden">
               {/* Client header */}
               <button
                 type="button"

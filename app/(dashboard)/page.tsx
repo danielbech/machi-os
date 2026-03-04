@@ -627,7 +627,7 @@ export default function BoardPage() {
     const skeletonCounts = [4, 3, 3, 2, 2];
     return (
       <main className="flex min-h-screen flex-col pt-4 pr-4 md:pr-8">
-        <div className="flex gap-2 overflow-x-auto pt-1 px-4 pb-3 md:px-8">
+        <div className="flex gap-1 overflow-x-auto pt-1 px-4 pb-3 md:px-8">
           {columnKeys.map((key, ki) => (
             <div key={key} className="w-[85vw] sm:w-[280px] shrink-0 p-2.5 space-y-2.5">
               <div className="flex items-baseline gap-2 px-1 mb-1.5">
