@@ -64,7 +64,7 @@ export default function RootLayout({
         />
       </head>
       <body
-        className={`${geistSans.variable} ${geistMono.variable} ${outfit.variable} ${firaCode.variable} ${inter.variable} ${plusJakartaSans.variable} ${lora.variable} ${ibmPlexMono.variable} antialiased`}
+        className={`${geistSans.variable} ${geistMono.variable} ${outfit.variable} ${firaCode.variable} ${inter.variable} ${plusJakartaSans.variable} ${lora.variable} ${ibmPlexMono.variable} font-sans antialiased`}
       >
         {children}
         <ThemeToaster />
