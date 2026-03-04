@@ -760,7 +760,7 @@ export default function BoardPage() {
                       </h2>
                     )}
                     {!isCustom && (
-                      <span className={`text-xs ${columnId === todayName ? "text-primary border border-primary/30 rounded px-1 py-0.5" : "text-foreground/40"}`}>{weekDates[columnId]}</span>
+                      <span className={`text-xs ${columnId === todayName ? "text-primary-foreground bg-primary rounded px-1.5 py-0.5 font-medium" : "text-foreground/40"}`}>{weekDates[columnId]}</span>
                     )}
                     {isCustom && (
                       <button
