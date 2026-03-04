@@ -791,7 +791,7 @@ export default function BoardPage() {
                   {items.map((item, index) => (
                     <div key={item.id}>
                       {addingToColumn === columnId && addingAtIndex === index ? (
-                        <div className="mb-2.5">
+                        <div className="my-1.5">
                           <BoardAddCard
                             value={newCardTitle}
                             onChange={setNewCardTitle}
@@ -865,7 +865,7 @@ export default function BoardPage() {
                         setAddingAtIndex(null);
                         setNewCardTitle("");
                       }}
-                      className="flex items-center gap-2 rounded-lg p-2 text-xs text-muted-foreground/40 bg-foreground/[0.02] hover:text-muted-foreground/60 hover:bg-foreground/[0.05] transition-colors"
+                      className="flex items-center gap-2 rounded-lg mt-1 p-2 text-xs text-muted-foreground/40 bg-foreground/[0.02] hover:text-muted-foreground/60 hover:bg-foreground/[0.05] transition-colors"
                     >
                       <Plus className="size-3.5" />
                       Add card
