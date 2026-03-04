@@ -791,7 +791,7 @@ export default function BoardPage() {
                   {items.map((item, index) => (
                     <div key={item.id}>
                       {addingToColumn === columnId && addingAtIndex === index ? (
-                        <div className="mt-2.5 mb-1.5">
+                        <div className="my-1.5">
                           <BoardAddCard
                             value={newCardTitle}
                             onChange={setNewCardTitle}
@@ -844,7 +844,7 @@ export default function BoardPage() {
                   ))}
 
                   {addingToColumn === columnId && addingAtIndex === null ? (
-                    <div>
+                    <div className="mt-1">
                       <BoardAddCard
                         value={newCardTitle}
                         onChange={setNewCardTitle}
