@@ -27,12 +27,13 @@ export async function loadClients(projectId: string): Promise<Client[]> {
     active: c.active ?? true,
     status_id: c.status_id || undefined,
     client_group_id: c.client_group_id || undefined,
+    show_in_backlog: c.show_in_backlog ?? false,
   }))
 }
 
 export async function createClientRecord(
   projectId: string,
-  client: { name: string; slug: string; color: string; logo_url?: string; icon?: string; sort_order: number; active?: boolean; status_id?: string; client_group_id?: string }
+  client: { name: string; slug: string; color: string; logo_url?: string; icon?: string; sort_order: number; active?: boolean; status_id?: string; client_group_id?: string; show_in_backlog?: boolean }
 ): Promise<Client> {
   const supabase = createClient()
 
@@ -46,6 +47,7 @@ export async function createClientRecord(
     sort_order: client.sort_order,
     active: client.active ?? true,
     client_group_id: client.client_group_id || null,
+    show_in_backlog: client.show_in_backlog ?? false,
   }
   if (client.status_id) row.status_id = client.status_id
 
@@ -72,12 +74,13 @@ export async function createClientRecord(
     active: data.active ?? true,
     status_id: (data as any).status_id || undefined,
     client_group_id: data.client_group_id || undefined,
+    show_in_backlog: data.show_in_backlog ?? false,
   }
 }
 
 export async function updateClientRecord(
   clientId: string,
-  updates: { name?: string; slug?: string; color?: string; logo_url?: string | null; icon?: string | null; sort_order?: number; active?: boolean; status_id?: string | null; client_group_id?: string | null }
+  updates: { name?: string; slug?: string; color?: string; logo_url?: string | null; icon?: string | null; sort_order?: number; active?: boolean; status_id?: string | null; client_group_id?: string | null; show_in_backlog?: boolean }
 ): Promise<void> {
   const supabase = createClient()
 

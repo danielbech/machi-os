@@ -31,6 +31,7 @@ import {
   DropdownMenuTrigger,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import {
   ChevronRight,
@@ -42,6 +43,7 @@ import {
   Trash2,
   ListChecks,
   Check,
+  Minus,
 } from "lucide-react";
 import { ProjectDialog } from "@/components/project-dialog";
 import { ClientIcon } from "@/components/client-icon";
@@ -108,6 +110,7 @@ interface BacklogPanelProps {
   onSaveTask: (task: Task) => Promise<void>;
   onReorderTasks: (tasks: Task[]) => Promise<void>;
   onDragActiveChange?: (active: boolean) => void;
+  onToggleBacklogVisibility: (clientId: string, show: boolean) => Promise<void>;
   teamMembers: Member[];
   weekMode?: WeekMode;
 }
@@ -131,6 +134,7 @@ export function BacklogPanel({
   onSaveTask,
   onReorderTasks,
   onDragActiveChange,
+  onToggleBacklogVisibility,
   teamMembers,
   weekMode = "5-day",
 }: BacklogPanelProps) {
@@ -368,20 +372,21 @@ export function BacklogPanel({
     onReorderTasks(finalTasks);
   };
 
-  // All active clients + any inactive clients that have backlog tasks
-  // Clients with no backlog tasks are sorted to the bottom
-  const activeClients = clients.filter((c) => c.active);
-  const inactiveWithTasks = clients.filter(
-    (c) => !c.active && activeTasks.some((t) => t.client === c.id)
+  // Only show clients explicitly added to the backlog, plus any with existing tasks
+  const relevantClients = clients
+    .filter((c) => c.show_in_backlog || activeTasks.some((t) => t.client === c.id))
+    .sort((a, b) => {
+      const aHas = activeTasks.some((t) => t.client === a.id);
+      const bHas = activeTasks.some((t) => t.client === b.id);
+      if (aHas && !bHas) return -1;
+      if (!aHas && bHas) return 1;
+      return 0;
+    });
+
+  // Clients available to add to backlog (active, not already shown)
+  const availableClients = clients.filter(
+    (c) => c.active && !c.show_in_backlog && !activeTasks.some((t) => t.client === c.id)
   );
-  const allRelevant = [...activeClients, ...inactiveWithTasks];
-  const relevantClients = allRelevant.sort((a, b) => {
-    const aHas = activeTasks.some((t) => t.client === a.id);
-    const bHas = activeTasks.some((t) => t.client === b.id);
-    if (aHas && !bHas) return -1;
-    if (!aHas && bHas) return 1;
-    return 0;
-  });
 
   const isClientCollapsed = (clientId: string) => {
     if (clientId in clientToggleOverrides) return !clientToggleOverrides[clientId];
@@ -746,15 +751,44 @@ export function BacklogPanel({
           <h2 className="text-sm font-semibold text-foreground/60 uppercase tracking-wider">Backlog</h2>
           <div className="flex items-center gap-2">
             <span className="text-xs text-foreground/40 tabular-nums">{tasks.length} tasks</span>
-            <button
-              type="button"
-              onClick={() => { setEditingProject(null); setProjectDialogOpen(true); }}
-              className="flex items-center gap-1 px-2 py-1 rounded-md text-xs text-foreground/40 bg-foreground/[0.04] hover:text-foreground/70 border border-foreground/10 hover:border-foreground/20 hover:bg-foreground/[0.08] transition-colors"
-              aria-label="Add project"
-            >
-              <Plus className="size-3" />
-              Project
-            </button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button
+                  type="button"
+                  className="flex items-center gap-1 px-2 py-1 rounded-md text-xs text-foreground/40 bg-foreground/[0.04] hover:text-foreground/70 border border-foreground/10 hover:border-foreground/20 hover:bg-foreground/[0.08] transition-colors"
+                  aria-label="Add project to backlog"
+                >
+                  <Plus className="size-3" />
+                  Project
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-52">
+                {availableClients.map((c) => {
+                  const group = clientGroups.find(g => g.id === c.client_group_id);
+                  return (
+                    <DropdownMenuItem
+                      key={c.id}
+                      onClick={() => onToggleBacklogVisibility(c.id, true)}
+                    >
+                      {c.logo_url ? (
+                        <img src={c.logo_url} alt="" className="size-4 rounded-sm object-cover shrink-0" />
+                      ) : c.icon ? (
+                        <ClientIcon icon={c.icon} className="size-3.5 text-muted-foreground shrink-0" />
+                      ) : null}
+                      <span className="truncate">
+                        {group && <span className="text-foreground/40">{group.name} / </span>}
+                        {c.name}
+                      </span>
+                    </DropdownMenuItem>
+                  );
+                })}
+                {availableClients.length > 0 && <DropdownMenuSeparator />}
+                <DropdownMenuItem onClick={() => { setEditingProject(null); setProjectDialogOpen(true); }}>
+                  <Plus className="size-4" />
+                  Create new project
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </div>
 
@@ -765,10 +799,11 @@ export function BacklogPanel({
             if (!open) setEditingProject(null);
           }}
           editingClient={editingProject}
+          showInBacklog
         />
 
         {relevantClients.length === 0 && (
-          <p className="text-sm text-foreground/20 px-1">No projects yet. Add projects to get started.</p>
+          <p className="text-sm text-foreground/20 px-1">No projects in backlog. Click &quot;+ Project&quot; to add one.</p>
         )}
 
         {relevantClients.map((client) => {
@@ -780,32 +815,45 @@ export function BacklogPanel({
           const unsortedContainerId = `unsorted:${client.id}`;
 
           return (
-            <div key={client.id} data-backlog-client={client.id} className="mb-2 rounded-lg border border-border bg-card overflow-hidden">
+            <div key={client.id} data-backlog-client={client.id} className="mb-2 rounded-lg border border-border bg-card overflow-hidden group/client">
               {/* Client header */}
-              <button
-                type="button"
-                onClick={() => toggleClient(client.id)}
-                className="flex items-center gap-1.5 w-full px-2.5 py-1.5 bg-muted/30 hover:bg-muted/50 transition-colors"
-              >
-                <ChevronRight
-                  className={`size-3 text-foreground/30 transition-transform ${isCollapsed ? "" : "rotate-90"}`}
-                />
-                {client.logo_url ? (
-                  <img src={client.logo_url} alt="" className="size-4 rounded-sm object-cover shrink-0" />
-                ) : client.icon ? (
-                  <ClientIcon icon={client.icon} className="size-3.5 text-muted-foreground shrink-0" />
-                ) : null}
-                <span className="text-sm font-medium text-foreground/80 truncate">
-                  {(() => {
-                    const group = clientGroups.find(g => g.id === client.client_group_id);
-                    return group ? <><span className="text-foreground/40">{group.name}</span><span className="text-foreground/15 mx-1">/</span></> : null;
-                  })()}
-                  {client.name}
-                </span>
-                {clientTasks.length > 0 && (
-                  <span className="text-[10px] text-foreground/30 tabular-nums shrink-0">{clientTasks.length}</span>
+              <div className="flex items-center bg-muted/30 hover:bg-muted/50 transition-colors">
+                <button
+                  type="button"
+                  onClick={() => toggleClient(client.id)}
+                  className="flex items-center gap-1.5 flex-1 min-w-0 px-2.5 py-1.5"
+                >
+                  <ChevronRight
+                    className={`size-3 text-foreground/30 transition-transform ${isCollapsed ? "" : "rotate-90"}`}
+                  />
+                  {client.logo_url ? (
+                    <img src={client.logo_url} alt="" className="size-4 rounded-sm object-cover shrink-0" />
+                  ) : client.icon ? (
+                    <ClientIcon icon={client.icon} className="size-3.5 text-muted-foreground shrink-0" />
+                  ) : null}
+                  <span className="text-sm font-medium text-foreground/80 truncate">
+                    {(() => {
+                      const group = clientGroups.find(g => g.id === client.client_group_id);
+                      return group ? <><span className="text-foreground/40">{group.name}</span><span className="text-foreground/15 mx-1">/</span></> : null;
+                    })()}
+                    {client.name}
+                  </span>
+                  {clientTasks.length > 0 && (
+                    <span className="text-[10px] text-foreground/30 tabular-nums shrink-0">{clientTasks.length}</span>
+                  )}
+                </button>
+                {clientTasks.length === 0 && (
+                  <button
+                    type="button"
+                    onClick={() => onToggleBacklogVisibility(client.id, false)}
+                    className="opacity-0 group-hover/client:opacity-100 p-1 mr-1.5 rounded text-foreground/20 hover:text-foreground/50 hover:bg-foreground/[0.06] transition-all"
+                    aria-label="Remove from backlog"
+                    title="Remove from backlog"
+                  >
+                    <Minus className="size-3" />
+                  </button>
                 )}
-              </button>
+              </div>
 
               <div className={`collapsible ${isCollapsed ? "" : "expanded"}`}>
                 <div className="collapsible-content">
