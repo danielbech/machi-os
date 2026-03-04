@@ -31,6 +31,7 @@ import {
 } from "@/components/ui/gantt";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { DatePicker } from "@/components/ui/date-picker";
 import {
   Dialog,
   DialogContent,
@@ -1021,20 +1022,18 @@ export default function TimelinePage() {
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1.5">
                   <label className="text-xs text-foreground/40">Start date</label>
-                  <Input
-                    type="date"
-                    value={eventStartDate}
-                    onChange={(e) => setEventStartDate(e.target.value)}
-                    className="[color-scheme:dark]"
+                  <DatePicker
+                    value={eventStartDate ? parseISO(eventStartDate) : undefined}
+                    onChange={(date) => setEventStartDate(date ? format(date, "yyyy-MM-dd") : "")}
+                    placeholder="Start date"
                   />
                 </div>
                 <div className="space-y-1.5">
                   <label className="text-xs text-foreground/40">End date</label>
-                  <Input
-                    type="date"
-                    value={eventEndDate}
-                    onChange={(e) => setEventEndDate(e.target.value)}
-                    className="[color-scheme:dark]"
+                  <DatePicker
+                    value={eventEndDate ? parseISO(eventEndDate) : undefined}
+                    onChange={(date) => setEventEndDate(date ? format(date, "yyyy-MM-dd") : "")}
+                    placeholder="End date"
                   />
                 </div>
               </div>
@@ -1047,7 +1046,7 @@ export default function TimelinePage() {
                       onClick={() => setEventColor(name)}
                       className={`size-6 rounded-full ${CLIENT_DOT_COLORS[name]} transition-all ${
                         eventColor === name
-                          ? "ring-2 ring-white ring-offset-2 ring-offset-black scale-110"
+                          ? "ring-2 ring-foreground ring-offset-2 ring-offset-background scale-110"
                           : "opacity-50 hover:opacity-80"
                       }`}
                       aria-label={name}
@@ -1097,20 +1096,18 @@ export default function TimelinePage() {
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
                 <label className="text-xs text-foreground/40">Start date</label>
-                <Input
-                  type="date"
-                  value={editStartDate}
-                  onChange={(e) => setEditStartDate(e.target.value)}
-                  className="[color-scheme:dark]"
+                <DatePicker
+                  value={editStartDate ? parseISO(editStartDate) : undefined}
+                  onChange={(date) => setEditStartDate(date ? format(date, "yyyy-MM-dd") : "")}
+                  placeholder="Start date"
                 />
               </div>
               <div className="space-y-1.5">
                 <label className="text-xs text-foreground/40">End date</label>
-                <Input
-                  type="date"
-                  value={editEndDate}
-                  onChange={(e) => setEditEndDate(e.target.value)}
-                  className="[color-scheme:dark]"
+                <DatePicker
+                  value={editEndDate ? parseISO(editEndDate) : undefined}
+                  onChange={(date) => setEditEndDate(date ? format(date, "yyyy-MM-dd") : "")}
+                  placeholder="End date"
                 />
               </div>
             </div>
@@ -1147,7 +1144,7 @@ export default function TimelinePage() {
                     onClick={() => setEditColor(name)}
                     className={`size-6 rounded-full ${CLIENT_DOT_COLORS[name]} transition-all ${
                       editColor === name
-                        ? "ring-2 ring-white ring-offset-2 ring-offset-black scale-110"
+                        ? "ring-2 ring-foreground ring-offset-2 ring-offset-background scale-110"
                         : "opacity-50 hover:opacity-80"
                     }`}
                     aria-label={name}
