@@ -608,7 +608,7 @@ export function BacklogPanel({
             setAddingTaskIn(key);
             setNewTaskTitle("");
           }}
-          className="flex items-center gap-1.5 px-2 py-1 rounded-md text-xs text-foreground/30 bg-foreground/[0.03] hover:text-foreground/50 hover:bg-foreground/[0.06] transition-colors"
+          className="flex items-center gap-1.5 px-2 py-0.5 rounded-md text-xs text-foreground/30 bg-foreground/[0.03] hover:text-foreground/50 hover:bg-foreground/[0.06] transition-all opacity-0 group-hover/client:opacity-100 h-0 group-hover/client:h-auto group-hover/client:py-1"
         >
           <Plus className="size-3" />
           Add task
@@ -816,7 +816,7 @@ export function BacklogPanel({
           const unsortedContainerId = `unsorted:${client.id}`;
 
           return (
-            <div key={client.id} data-backlog-client={client.id} className="mb-2 rounded-lg border border-border bg-card overflow-hidden">
+            <div key={client.id} data-backlog-client={client.id} className="group/client mb-2 rounded-lg border border-border bg-card overflow-hidden">
               {/* Client header */}
               <button
                 type="button"
@@ -909,7 +909,7 @@ export function BacklogPanel({
                       </div>
                     </div>
                   ) : (
-                    <div className="flex items-center gap-1.5 px-2 py-1.5">
+                    <div className="flex items-center gap-1.5 px-2 py-1 opacity-0 group-hover/client:opacity-100 transition-opacity h-0 group-hover/client:h-auto group-hover/client:py-1.5">
                       <button
                         type="button"
                         onClick={() => {
