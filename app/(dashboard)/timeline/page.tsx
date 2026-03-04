@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useMemo, forwardRef } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef, forwardRef } from "react";
 import { parseISO, format, addDays, isSameDay, formatDistance } from "date-fns";
 import {
   DndContext as VerticalDndContext,
@@ -63,7 +63,8 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Plus, Trash2, CalendarPlus, Pencil, MoreHorizontal, Diamond, Filter, Palette, Code, MessageSquare, Headphones, Rocket, Bug, FileText, Settings, Megaphone, Star, Target, Lightbulb, Zap, GripVertical } from "lucide-react";
+import { Plus, Trash2, CalendarPlus, Pencil, MoreHorizontal, Diamond, Filter, Palette, Code, MessageSquare, Headphones, Rocket, Bug, FileText, Settings, Megaphone, Star, Target, Lightbulb, Zap, GripVertical, Search } from "lucide-react";
+import { iconNames } from "lucide-react/dynamic";
 
 const SUB_ITEM_ICONS = [
   { name: "palette", icon: Palette, label: "Design" },
@@ -106,9 +107,10 @@ function toFeature(entry: TimelineEntry, clients: Client[]): GanttFeature {
   const client = entry.client_id
     ? clients.find((c) => c.id === entry.client_id)
     : undefined;
-  // For project entries linked to a client, always use the live client name
+  // For project entries linked to a client, always use the live client name and color
   const name = (client?.name) || entry.title || "Untitled";
-  const color = CLIENT_HEX_COLORS[entry.color] || CLIENT_HEX_COLORS.blue;
+  const colorKey = (entry.type === "project" && client) ? client.color : entry.color;
+  const color = CLIENT_HEX_COLORS[colorKey] || CLIENT_HEX_COLORS.blue;
 
   return {
     id: entry.id,
@@ -116,8 +118,8 @@ function toFeature(entry: TimelineEntry, clients: Client[]): GanttFeature {
     startAt: parseISO(entry.start_date),
     endAt: parseISO(entry.end_date),
     status: {
-      id: entry.color,
-      name: entry.color,
+      id: colorKey,
+      name: colorKey,
       color,
     },
   };
@@ -164,9 +166,11 @@ function ClientAvatar({
 
 function EventDot({
   color,
+  icon,
   size = "sm",
 }: {
   color: string;
+  icon?: string;
   size?: "sm" | "xs";
 }) {
   const dim = size === "sm" ? "size-6" : "size-4";
@@ -175,7 +179,11 @@ function EventDot({
     <div
       className={`${dim} rounded ${CLIENT_DOT_COLORS[color] || "bg-blue-500"} flex items-center justify-center text-white shrink-0 opacity-60`}
     >
-      <CalendarPlus className={iconSize} />
+      {icon ? (
+        <ClientIcon icon={icon} className={iconSize} />
+      ) : (
+        <CalendarPlus className={iconSize} />
+      )}
     </div>
   );
 }
@@ -296,7 +304,17 @@ export default function TimelinePage() {
     format(addDays(new Date(), 7), "yyyy-MM-dd")
   );
   const [eventColor, setEventColor] = useState("blue");
+  const [eventIcon, setEventIcon] = useState("");
+  const [eventIconSearch, setEventIconSearch] = useState("");
+  const [showEventIconPicker, setShowEventIconPicker] = useState(false);
   const [eventSubmitting, setEventSubmitting] = useState(false);
+  const eventIconSearchRef = useRef<HTMLInputElement>(null);
+
+  const filteredEventIcons = useMemo(() => {
+    const query = eventIconSearch.toLowerCase().trim();
+    if (!query) return iconNames.slice(0, 80);
+    return iconNames.filter((name) => name.includes(query)).slice(0, 80);
+  }, [eventIconSearch]);
 
   // Edit form state
   const [editingEntry, setEditingEntry] = useState<TimelineEntry | null>(null);
@@ -382,9 +400,16 @@ export default function TimelinePage() {
   );
 
   const getAccentColor = (entry: TimelineEntry) => {
+    const resolveColor = (e: TimelineEntry) => {
+      if (e.type === "project" && e.client_id) {
+        const c = clientMap.get(e.client_id);
+        if (c) return c.color;
+      }
+      return e.color;
+    };
     const colorKey = entry.parent_id
-      ? parentMap.get(entry.parent_id)?.color || entry.color
-      : entry.color;
+      ? resolveColor(parentMap.get(entry.parent_id) || entry)
+      : resolveColor(entry);
     return CLIENT_HEX_COLORS[colorKey] || CLIENT_HEX_COLORS.blue;
   };
 
@@ -466,6 +491,7 @@ export default function TimelinePage() {
       start_date: eventStartDate,
       end_date: eventEndDate,
       color: eventColor,
+      icon: eventIcon || undefined,
       sort_order: entries.length,
       type: "event",
       created_at: new Date().toISOString(),
@@ -477,6 +503,9 @@ export default function TimelinePage() {
     setEventStartDate(format(new Date(), "yyyy-MM-dd"));
     setEventEndDate(format(addDays(new Date(), 7), "yyyy-MM-dd"));
     setEventColor("blue");
+    setEventIcon("");
+    setEventIconSearch("");
+    setShowEventIconPicker(false);
     setEventSubmitting(false);
 
     try {
@@ -485,6 +514,7 @@ export default function TimelinePage() {
         start_date: eventStartDate,
         end_date: eventEndDate,
         color: eventColor,
+        icon: eventIcon || undefined,
         sort_order: entries.length,
         type: "event",
       });
@@ -904,7 +934,7 @@ export default function TimelinePage() {
                             }}
                           >
                             {parent.type === "event" ? (
-                              <EventDot color={parent.color} size="sm" />
+                              <EventDot color={parent.color} icon={parent.icon} size="sm" />
                             ) : parentClient ? (
                               <ClientAvatar client={parentClient} size="sm" groupLogoUrl={getGroupLogoUrl(parentClient)} />
                             ) : (
@@ -1003,7 +1033,7 @@ export default function TimelinePage() {
                               <ClientIcon icon={entry.icon} className="size-3 shrink-0 text-foreground/50" />
                             ) : isChild ? null
                             : entry.type === "event" ? (
-                              <EventDot color={entry.color} size="xs" />
+                              <EventDot color={entry.color} icon={entry.icon} size="xs" />
                             ) : client ? (
                               <ClientAvatar client={client} size="xs" groupLogoUrl={getGroupLogoUrl(client)} />
                             ) : (
@@ -1094,6 +1124,9 @@ export default function TimelinePage() {
             setEventStartDate(format(new Date(), "yyyy-MM-dd"));
             setEventEndDate(format(addDays(new Date(), 7), "yyyy-MM-dd"));
             setEventColor("blue");
+            setEventIcon("");
+            setEventIconSearch("");
+            setShowEventIconPicker(false);
           }
         }}
       >
@@ -1152,13 +1185,85 @@ export default function TimelinePage() {
             </div>
           ) : (
             <div className="space-y-4 pt-2">
-              <Input
-                placeholder="Event name"
-                className="placeholder:text-foreground/25"
-                value={eventTitle}
-                onChange={(e) => setEventTitle(e.target.value)}
-                autoFocus
-              />
+              {/* Name + icon */}
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowEventIconPicker(!showEventIconPicker);
+                    setTimeout(() => eventIconSearchRef.current?.focus(), 50);
+                  }}
+                  className={`size-10 shrink-0 rounded-xl flex items-center justify-center transition-colors ${
+                    eventIcon
+                      ? `${CLIENT_DOT_COLORS[eventColor] || "bg-blue-500"} text-white`
+                      : "border-2 border-dashed border-foreground/10 bg-foreground/[0.03] hover:border-foreground/20 hover:bg-foreground/[0.06]"
+                  }`}
+                  aria-label="Pick icon"
+                >
+                  {eventIcon ? (
+                    <ClientIcon icon={eventIcon} className="size-5" />
+                  ) : null}
+                </button>
+                <Input
+                  placeholder="Event name"
+                  className="flex-1 placeholder:text-foreground/25"
+                  value={eventTitle}
+                  onChange={(e) => setEventTitle(e.target.value)}
+                  autoFocus
+                />
+              </div>
+
+              {/* Icon picker */}
+              {showEventIconPicker && (
+                <div className="space-y-2">
+                  <div className="relative">
+                    <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3.5 text-foreground/20" />
+                    <input
+                      ref={eventIconSearchRef}
+                      type="text"
+                      value={eventIconSearch}
+                      onChange={(e) => setEventIconSearch(e.target.value)}
+                      placeholder="Search icons..."
+                      className="w-full pl-8 pr-3 py-1.5 rounded-lg bg-foreground/[0.04] border border-foreground/[0.06] text-sm text-foreground/80 outline-none placeholder:text-foreground/20 focus:border-foreground/15"
+                    />
+                  </div>
+                  <div className="grid grid-cols-8 gap-1 max-h-[200px] overflow-y-auto">
+                    {filteredEventIcons.map((name) => (
+                      <button
+                        key={name}
+                        type="button"
+                        onClick={() => {
+                          setEventIcon(eventIcon === name ? "" : name);
+                          setShowEventIconPicker(false);
+                          setEventIconSearch("");
+                        }}
+                        className={`flex items-center justify-center size-9 rounded-lg transition-all ${
+                          eventIcon === name
+                            ? "bg-foreground/15 text-foreground ring-1 ring-foreground/30"
+                            : "text-foreground/40 hover:text-foreground/70 hover:bg-foreground/[0.06]"
+                        }`}
+                        title={name}
+                        aria-label={`Select ${name} icon`}
+                      >
+                        <ClientIcon icon={name} className="size-4" />
+                      </button>
+                    ))}
+                    {filteredEventIcons.length === 0 && (
+                      <div className="col-span-8 py-4 text-center text-xs text-foreground/20">No icons found</div>
+                    )}
+                  </div>
+                  {eventIcon && (
+                    <button
+                      type="button"
+                      onClick={() => { setEventIcon(""); setShowEventIconPicker(false); setEventIconSearch(""); }}
+                      className="text-xs text-foreground/30 hover:text-foreground/50 transition-colors"
+                    >
+                      Remove icon
+                    </button>
+                  )}
+                </div>
+              )}
+
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1.5">
                   <label className="text-xs text-foreground/40">Start date</label>
@@ -1326,20 +1431,18 @@ export default function TimelinePage() {
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
                 <label className="text-xs text-foreground/40">Start date</label>
-                <Input
-                  type="date"
-                  value={subItemStartDate}
-                  onChange={(e) => setSubItemStartDate(e.target.value)}
-                  className="[color-scheme:dark]"
+                <DatePicker
+                  value={subItemStartDate ? parseISO(subItemStartDate) : undefined}
+                  onChange={(date) => setSubItemStartDate(date ? format(date, "yyyy-MM-dd") : "")}
+                  placeholder="Start date"
                 />
               </div>
               <div className="space-y-1.5">
                 <label className="text-xs text-foreground/40">End date</label>
-                <Input
-                  type="date"
-                  value={subItemEndDate}
-                  onChange={(e) => setSubItemEndDate(e.target.value)}
-                  className="[color-scheme:dark]"
+                <DatePicker
+                  value={subItemEndDate ? parseISO(subItemEndDate) : undefined}
+                  onChange={(date) => setSubItemEndDate(date ? format(date, "yyyy-MM-dd") : "")}
+                  placeholder="End date"
                 />
               </div>
             </div>
@@ -1377,7 +1480,7 @@ export default function TimelinePage() {
                     onClick={() => setSubItemColor(name)}
                     className={`size-6 rounded-full ${CLIENT_DOT_COLORS[name]} transition-all ${
                       subItemColor === name
-                        ? "ring-2 ring-white ring-offset-2 ring-offset-black scale-110"
+                        ? "ring-2 ring-foreground ring-offset-2 ring-offset-background scale-110"
                         : "opacity-50 hover:opacity-80"
                     }`}
                     aria-label={name}
