@@ -791,18 +791,20 @@ export default function BoardPage() {
                   {items.map((item, index) => (
                     <div key={item.id}>
                       {addingToColumn === columnId && addingAtIndex === index ? (
-                        <BoardAddCard
-                          value={newCardTitle}
-                          onChange={setNewCardTitle}
-                          cardType={newCardType}
-                          onToggleType={() => setNewCardType(newCardType === "task" ? "note" : "task")}
-                          onSubmit={() => handleAddCard(columnId, index)}
-                          onCancel={() => {
-                            setAddingToColumn(null);
-                            setAddingAtIndex(null);
-                            setNewCardType("task");
-                          }}
-                        />
+                        <div className="mb-2.5">
+                          <BoardAddCard
+                            value={newCardTitle}
+                            onChange={setNewCardTitle}
+                            cardType={newCardType}
+                            onToggleType={() => setNewCardType(newCardType === "task" ? "note" : "task")}
+                            onSubmit={() => handleAddCard(columnId, index)}
+                            onCancel={() => {
+                              setAddingToColumn(null);
+                              setAddingAtIndex(null);
+                              setNewCardType("task");
+                            }}
+                          />
+                        </div>
                       ) : (
                         <button
                           onClick={(e) => {
@@ -842,7 +844,7 @@ export default function BoardPage() {
                   ))}
 
                   {addingToColumn === columnId && addingAtIndex === null ? (
-                    <div className="mt-1">
+                    <div>
                       <BoardAddCard
                         value={newCardTitle}
                         onChange={setNewCardTitle}
@@ -863,7 +865,7 @@ export default function BoardPage() {
                         setAddingAtIndex(null);
                         setNewCardTitle("");
                       }}
-                      className="flex items-center gap-2 rounded-lg mt-1 p-2 text-xs text-muted-foreground/40 bg-foreground/[0.02] hover:text-muted-foreground/60 hover:bg-foreground/[0.05] transition-colors"
+                      className="flex items-center gap-2 rounded-lg p-2 text-xs text-muted-foreground/40 bg-foreground/[0.02] hover:text-muted-foreground/60 hover:bg-foreground/[0.05] transition-colors"
                     >
                       <Plus className="size-3.5" />
                       Add card
