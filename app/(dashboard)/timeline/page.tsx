@@ -125,27 +125,30 @@ function toFeature(entry: TimelineEntry, clients: Client[]): GanttFeature {
 function ClientAvatar({
   client,
   size = "sm",
+  groupLogoUrl,
 }: {
   client: Client;
   size?: "sm" | "xs";
+  groupLogoUrl?: string;
 }) {
   const dim = size === "sm" ? "size-6" : "size-4";
   const textSize = size === "sm" ? "text-[9px]" : "text-[7px]";
   const iconSize = size === "sm" ? "size-3.5" : "size-2.5";
+  const logoUrl = groupLogoUrl || client.logo_url;
 
-  if (client.logo_url) {
+  if (logoUrl) {
     return (
       <img
-        src={client.logo_url}
+        src={logoUrl}
         alt={client.name}
-        className={`${dim} rounded shrink-0 object-cover bg-foreground/5`}
+        className={`${dim} rounded-md shrink-0 object-cover bg-foreground/5`}
       />
     );
   }
 
   return (
     <div
-      className={`${dim} rounded ${CLIENT_DOT_COLORS[client.color] || "bg-blue-500"} flex items-center justify-center text-white shrink-0`}
+      className={`${dim} rounded-md ${CLIENT_DOT_COLORS[client.color] || "bg-blue-500"} flex items-center justify-center text-white shrink-0`}
     >
       {client.icon ? (
         <ClientIcon icon={client.icon} className={iconSize} />
@@ -221,7 +224,7 @@ function SortableTimelineGroup({
 }
 
 export default function TimelinePage() {
-  const { activeProjectId, clients } = useWorkspace();
+  const { activeProjectId, clients, clientGroups } = useWorkspace();
   const [entries, setEntries] = useState<TimelineEntry[]>([]);
   const [initialLoading, setInitialLoading] = useState(true);
   const [zoomLevel, setZoomLevel] = useState(() => {
@@ -312,6 +315,11 @@ export default function TimelinePage() {
   );
 
   const clientMap = new Map(clients.map((c) => [c.id, c]));
+  const groupMap = new Map(clientGroups.map((g) => [g.id, g]));
+  const getGroupLogoUrl = (client: Client) => {
+    const group = client.client_group_id ? groupMap.get(client.client_group_id) : undefined;
+    return group?.logo_url;
+  };
 
   // Split entries into parents and children, optionally filtering by active clients
   const { parentEntries, childrenMap } = useMemo(() => {
@@ -897,7 +905,7 @@ export default function TimelinePage() {
                             {parent.type === "event" ? (
                               <EventDot color={parent.color} size="sm" />
                             ) : parentClient ? (
-                              <ClientAvatar client={parentClient} size="sm" />
+                              <ClientAvatar client={parentClient} size="sm" groupLogoUrl={getGroupLogoUrl(parentClient)} />
                             ) : (
                               <div
                                 className="h-2 w-2 shrink-0 rounded-full"
@@ -905,6 +913,10 @@ export default function TimelinePage() {
                               />
                             )}
                             <p className="flex-1 truncate text-left font-medium">
+                              {(() => {
+                                const group = parentClient?.client_group_id ? groupMap.get(parentClient.client_group_id) : undefined;
+                                return group ? <><span className="text-foreground/40 font-normal">{group.name}</span><span className="text-foreground/15 mx-0.5">/</span></> : null;
+                              })()}
                               {parentFeature.name}
                             </p>
                             <p className="text-foreground/30 shrink-0">
@@ -992,7 +1004,7 @@ export default function TimelinePage() {
                             : entry.type === "event" ? (
                               <EventDot color={entry.color} size="xs" />
                             ) : client ? (
-                              <ClientAvatar client={client} size="xs" />
+                              <ClientAvatar client={client} size="xs" groupLogoUrl={getGroupLogoUrl(client)} />
                             ) : (
                               <div
                                 className="h-2 w-2 shrink-0 rounded-full"
@@ -1119,16 +1131,22 @@ export default function TimelinePage() {
                   All active projects are already on the timeline.
                 </p>
               ) : (
-                availableClients.map((client) => (
-                  <button
-                    key={client.id}
-                    onClick={() => handleAddClient(client)}
-                    className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left hover:bg-foreground/5 transition-colors"
-                  >
-                    <ClientAvatar client={client} size="sm" />
-                    <span className="text-sm font-medium">{client.name}</span>
-                  </button>
-                ))
+                availableClients.map((client) => {
+                  const group = client.client_group_id ? groupMap.get(client.client_group_id) : undefined;
+                  return (
+                    <button
+                      key={client.id}
+                      onClick={() => handleAddClient(client)}
+                      className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left hover:bg-foreground/5 transition-colors"
+                    >
+                      <ClientAvatar client={client} size="sm" groupLogoUrl={group?.logo_url} />
+                      <span className="text-sm font-medium">
+                        {group && <><span className="text-foreground/40">{group.name}</span><span className="text-foreground/15 mx-1">/</span></>}
+                        {client.name}
+                      </span>
+                    </button>
+                  );
+                })
               )}
             </div>
           ) : (
