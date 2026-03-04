@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef, KeyboardEvent } from "react";
 import { createPortal } from "react-dom";
 import DOMPurify from "dompurify";
-import type { Task, BacklogFolder, Client, DayName, Member } from "@/lib/types";
+import type { Task, BacklogFolder, Client, ClientGroup, DayName, Member } from "@/lib/types";
 import { getColumnTitles } from "@/lib/constants";
 import type { WeekMode } from "@/lib/types";
 import {
@@ -96,6 +96,7 @@ interface BacklogPanelProps {
   tasks: Task[];
   folders: BacklogFolder[];
   clients: Client[];
+  clientGroups: ClientGroup[];
   onSendToDay: (taskId: string, day: DayName) => Promise<void>;
   onSendFolderToDay: (folderId: string, day: DayName) => Promise<void>;
   onCreateTask: (title: string, clientId: string, folderId?: string) => Promise<void>;
@@ -118,6 +119,7 @@ export function BacklogPanel({
   tasks,
   folders,
   clients,
+  clientGroups,
   onSendToDay,
   onSendFolderToDay,
   onCreateTask,
@@ -793,7 +795,13 @@ export function BacklogPanel({
                 ) : client.icon ? (
                   <ClientIcon icon={client.icon} className="size-3.5 text-muted-foreground shrink-0" />
                 ) : null}
-                <span className="text-sm font-medium text-foreground/80 truncate">{client.name}</span>
+                <span className="text-sm font-medium text-foreground/80 truncate">
+                  {(() => {
+                    const group = clientGroups.find(g => g.id === client.client_group_id);
+                    return group ? <><span className="text-foreground/40">{group.name}</span><span className="text-foreground/15 mx-1">/</span></> : null;
+                  })()}
+                  {client.name}
+                </span>
                 {clientTasks.length > 0 && (
                   <span className="text-[10px] text-foreground/30 tabular-nums shrink-0">{clientTasks.length}</span>
                 )}

@@ -10,7 +10,7 @@ import { X } from "lucide-react";
 import type { Task } from "@/lib/types";
 
 export function BacklogShell() {
-  const { clients, teamMembers, weekMode } = useWorkspace();
+  const { clients, clientGroups, teamMembers, weekMode } = useWorkspace();
   const {
     backlogOpen, toggleBacklog, backlogTasks, backlogFolders,
     backlogWidth, setBacklogWidth,
@@ -116,6 +116,7 @@ export function BacklogShell() {
             tasks={backlogTasks}
             folders={backlogFolders}
             clients={clients}
+            clientGroups={clientGroups}
             onSendToDay={sendBacklogToDay}
             onSendFolderToDay={sendFolderToDay}
             onCreateTask={createBacklogTask}
