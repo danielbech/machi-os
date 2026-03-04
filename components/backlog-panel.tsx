@@ -367,11 +367,19 @@ export function BacklogPanel({
   };
 
   // All active clients + any inactive clients that have backlog tasks
+  // Clients with no backlog tasks are sorted to the bottom
   const activeClients = clients.filter((c) => c.active);
   const inactiveWithTasks = clients.filter(
     (c) => !c.active && activeTasks.some((t) => t.client === c.id)
   );
-  const relevantClients = [...activeClients, ...inactiveWithTasks];
+  const allRelevant = [...activeClients, ...inactiveWithTasks];
+  const relevantClients = allRelevant.sort((a, b) => {
+    const aHas = activeTasks.some((t) => t.client === a.id);
+    const bHas = activeTasks.some((t) => t.client === b.id);
+    if (aHas && !bHas) return -1;
+    if (!aHas && bHas) return 1;
+    return 0;
+  });
 
   const isClientCollapsed = (clientId: string) => {
     if (clientId in clientToggleOverrides) return !clientToggleOverrides[clientId];
