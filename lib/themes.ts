@@ -75,6 +75,11 @@ export const THEMES: Theme[] = [
   {
     id: "ember",
     name: "Ember",
+    sharedVariables: {
+      "--font-sans": "var(--font-plus-jakarta)",
+      "--font-serif": "var(--font-lora)",
+      "--font-mono": "var(--font-ibm-plex-mono)",
+    },
     lightVariables: {
       "--background": "hsl(0 0% 99.2157%)",
       "--foreground": "hsl(0 0% 0%)",
