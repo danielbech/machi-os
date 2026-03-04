@@ -816,12 +816,12 @@ export function BacklogPanel({
           const unsortedContainerId = `unsorted:${client.id}`;
 
           return (
-            <div key={client.id} data-backlog-client={client.id} className="group/client mb-2 rounded-lg border border-border bg-card overflow-hidden">
+            <div key={client.id} data-backlog-client={client.id} className="group/client mb-2 rounded-lg border border-border overflow-hidden">
               {/* Client header */}
               <button
                 type="button"
                 onClick={() => toggleClient(client.id)}
-                className="flex items-center gap-1.5 w-full px-2.5 py-1.5 bg-muted/30 hover:bg-muted/50 transition-colors"
+                className="flex items-center gap-1.5 w-full px-2.5 py-1.5 bg-muted/50 hover:bg-muted/70 transition-colors"
               >
                 <ChevronRight
                   className={`size-3 text-foreground/30 transition-transform ${isCollapsed ? "" : "rotate-90"}`}
