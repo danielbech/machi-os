@@ -28,7 +28,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { CreateWorkspaceDialog } from "@/components/create-workspace-dialog";
-import { LayoutDashboard, FolderKanban, Inbox, Settings, Check, ChevronDown, MessageSquarePlus, CalendarRange, Plus, Pencil, Mail } from "lucide-react";
+import { LayoutDashboard, FolderKanban, Inbox, Settings, Check, ChevronDown, MessageSquarePlus, GanttChart, Plus, Pencil, Mail } from "lucide-react";
 import { PendingInvitesDialog } from "@/components/pending-invites-dialog";
 
 export function AppSidebar() {
@@ -179,7 +179,7 @@ export function AppSidebar() {
                 <SidebarMenuItem>
                   <SidebarMenuButton asChild isActive={pathname === "/timeline"} tooltip="Timeline">
                     <Link href="/timeline" onClick={() => { if (backlogOpen) toggleBacklog(); setOpenMobile(false); }}>
-                      <CalendarRange />
+                      <GanttChart />
                       <span>Timeline</span>
                     </Link>
                   </SidebarMenuButton>
