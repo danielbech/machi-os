@@ -106,7 +106,8 @@ function toFeature(entry: TimelineEntry, clients: Client[]): GanttFeature {
   const client = entry.client_id
     ? clients.find((c) => c.id === entry.client_id)
     : undefined;
-  const name = entry.title || client?.name || "Untitled";
+  // For project entries linked to a client, always use the live client name
+  const name = (client?.name) || entry.title || "Untitled";
   const color = CLIENT_HEX_COLORS[entry.color] || CLIENT_HEX_COLORS.blue;
 
   return {
