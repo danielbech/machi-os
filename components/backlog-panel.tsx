@@ -487,7 +487,7 @@ export function BacklogPanel({
               }
             }}
           >
-            <div className="relative flex items-center gap-2 px-3 py-2">
+            <div className="relative flex items-center gap-2 px-2.5 py-1.5">
               {/* Check circle */}
               <button
                 type="button"
@@ -566,27 +566,6 @@ export function BacklogPanel({
 
               {/* Hover actions — overlaid so they don't squeeze the title */}
               <div className="absolute right-0 top-0 bottom-0 flex items-center gap-1 pr-2 pl-6 bg-gradient-to-r from-transparent via-card/80 to-card/90 backdrop-blur-sm opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto transition-opacity">
-                {/* Send to day */}
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <button
-                      type="button"
-                      className="flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded bg-foreground/5 text-foreground/40 hover:bg-foreground/10 hover:text-foreground/60 shrink-0"
-                      aria-label="Send to day"
-                    >
-                      <Send className="size-2.5" />
-                      Send
-                    </button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="min-w-[120px]">
-                    {DAYS.map((day) => (
-                      <DropdownMenuItem key={day} onClick={() => onSendToDay(task.id, day)}>
-                        {COLUMN_TITLES[day]}
-                      </DropdownMenuItem>
-                    ))}
-                  </DropdownMenuContent>
-                </DropdownMenu>
-
                 {/* Delete */}
                 <button
                   type="button"
@@ -799,39 +778,26 @@ export function BacklogPanel({
           const unsortedContainerId = `unsorted:${client.id}`;
 
           return (
-            <div key={client.id} data-backlog-client={client.id} className="mb-3 rounded-lg border border-border bg-card overflow-hidden">
+            <div key={client.id} data-backlog-client={client.id} className="mb-2 rounded-lg border border-border bg-card overflow-hidden">
               {/* Client header */}
-              <div className="group/client flex items-center gap-2 px-3 py-2 bg-muted/30 hover:bg-muted/50 transition-colors">
-                <button
-                  type="button"
-                  onClick={() => toggleClient(client.id)}
-                  className="flex items-center gap-2 flex-1 min-w-0"
-                >
-                  <ChevronRight
-                    className={`size-3.5 text-foreground/30 transition-transform ${isCollapsed ? "" : "rotate-90"}`}
-                  />
-                  {client.logo_url ? (
-                    <img src={client.logo_url} alt="" className="size-5 rounded-sm object-cover shrink-0" />
-                  ) : client.icon ? (
-                    <ClientIcon icon={client.icon} className="size-4 text-muted-foreground shrink-0" />
-                  ) : null}
-                  <span className="text-base font-medium text-foreground/80 truncate">{client.name}</span>
-                  {clientTasks.length > 0 && (
-                    <span className="size-5 rounded-full bg-foreground/[0.06] flex items-center justify-center text-[10px] text-foreground/30 shrink-0">{clientTasks.length}</span>
-                  )}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setEditingProject(client);
-                    setProjectDialogOpen(true);
-                  }}
-                  className="opacity-0 group-hover/client:opacity-100 transition-opacity p-1 rounded bg-foreground/[0.06] hover:bg-foreground/[0.10] shrink-0"
-                  aria-label={`Edit ${client.name}`}
-                >
-                  <Pencil className="size-3 text-foreground/20 hover:text-foreground/50" />
-                </button>
-              </div>
+              <button
+                type="button"
+                onClick={() => toggleClient(client.id)}
+                className="flex items-center gap-1.5 w-full px-2.5 py-1.5 bg-muted/30 hover:bg-muted/50 transition-colors"
+              >
+                <ChevronRight
+                  className={`size-3 text-foreground/30 transition-transform ${isCollapsed ? "" : "rotate-90"}`}
+                />
+                {client.logo_url ? (
+                  <img src={client.logo_url} alt="" className="size-4 rounded-sm object-cover shrink-0" />
+                ) : client.icon ? (
+                  <ClientIcon icon={client.icon} className="size-3.5 text-muted-foreground shrink-0" />
+                ) : null}
+                <span className="text-sm font-medium text-foreground/80 truncate">{client.name}</span>
+                {clientTasks.length > 0 && (
+                  <span className="text-[10px] text-foreground/30 tabular-nums shrink-0">{clientTasks.length}</span>
+                )}
+              </button>
 
               <div className={`collapsible ${isCollapsed ? "" : "expanded"}`}>
                 <div className="collapsible-content">
