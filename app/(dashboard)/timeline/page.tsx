@@ -323,7 +323,16 @@ export default function TimelinePage() {
   const [editEndDate, setEditEndDate] = useState("");
   const [editColor, setEditColor] = useState("blue");
   const [editIcon, setEditIcon] = useState("");
+  const [editIconSearch, setEditIconSearch] = useState("");
+  const [showEditIconPicker, setShowEditIconPicker] = useState(false);
   const [editSaving, setEditSaving] = useState(false);
+  const editIconSearchRef = useRef<HTMLInputElement>(null);
+
+  const filteredEditIcons = useMemo(() => {
+    const query = editIconSearch.toLowerCase().trim();
+    if (!query) return iconNames.slice(0, 80);
+    return iconNames.filter((name) => name.includes(query)).slice(0, 80);
+  }, [editIconSearch]);
 
   const activeClients = clients.filter((c) => c.active);
   const clientsOnTimeline = new Set(
@@ -670,6 +679,8 @@ export default function TimelinePage() {
     setEditEndDate(entry.end_date);
     setEditColor(entry.color);
     setEditIcon(entry.icon || "");
+    setEditIconSearch("");
+    setShowEditIconPicker(false);
   };
 
   const handleSaveEdit = async () => {
@@ -1330,32 +1341,96 @@ export default function TimelinePage() {
             <DialogTitle>Edit {editingEntry?.type === "event" ? "Event" : "Project"}</DialogTitle>
           </DialogHeader>
           <form onSubmit={(e) => { e.preventDefault(); handleSaveEdit(); }} className="space-y-4 pt-2">
-            <div className="space-y-1.5">
-              <label className="text-xs text-foreground/40">Title</label>
-              <Input
-                value={editTitle}
-                onChange={(e) => setEditTitle(e.target.value)}
-                autoFocus
-              />
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1.5">
-                <label className="text-xs text-foreground/40">Start date</label>
-                <DatePicker
-                  value={editStartDate ? parseISO(editStartDate) : undefined}
-                  onChange={(date) => setEditStartDate(date ? format(date, "yyyy-MM-dd") : "")}
-                  placeholder="Start date"
+            {/* Title with icon button for events */}
+            {editingEntry?.type === "event" && !editingEntry?.parent_id ? (
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowEditIconPicker(!showEditIconPicker);
+                    setTimeout(() => editIconSearchRef.current?.focus(), 50);
+                  }}
+                  className={`size-10 shrink-0 rounded-xl flex items-center justify-center transition-colors ${
+                    editIcon
+                      ? `${CLIENT_DOT_COLORS[editColor] || "bg-blue-500"} text-white`
+                      : "border-2 border-dashed border-foreground/10 bg-foreground/[0.03] hover:border-foreground/20 hover:bg-foreground/[0.06]"
+                  }`}
+                  aria-label="Pick icon"
+                >
+                  {editIcon ? (
+                    <ClientIcon icon={editIcon} className="size-5" />
+                  ) : null}
+                </button>
+                <Input
+                  value={editTitle}
+                  onChange={(e) => setEditTitle(e.target.value)}
+                  autoFocus
+                  className="flex-1"
                 />
               </div>
+            ) : (
               <div className="space-y-1.5">
-                <label className="text-xs text-foreground/40">End date</label>
-                <DatePicker
-                  value={editEndDate ? parseISO(editEndDate) : undefined}
-                  onChange={(date) => setEditEndDate(date ? format(date, "yyyy-MM-dd") : "")}
-                  placeholder="End date"
+                <label className="text-xs text-foreground/40">Title</label>
+                <Input
+                  value={editTitle}
+                  onChange={(e) => setEditTitle(e.target.value)}
+                  autoFocus
                 />
               </div>
-            </div>
+            )}
+
+            {/* Icon picker for events */}
+            {editingEntry?.type === "event" && !editingEntry?.parent_id && showEditIconPicker && (
+              <div className="space-y-2">
+                <div className="relative">
+                  <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3.5 text-foreground/20" />
+                  <input
+                    ref={editIconSearchRef}
+                    type="text"
+                    value={editIconSearch}
+                    onChange={(e) => setEditIconSearch(e.target.value)}
+                    placeholder="Search icons..."
+                    className="w-full pl-8 pr-3 py-1.5 rounded-lg bg-foreground/[0.04] border border-foreground/[0.06] text-sm text-foreground/80 outline-none placeholder:text-foreground/20 focus:border-foreground/15"
+                  />
+                </div>
+                <div className="grid grid-cols-8 gap-1 max-h-[200px] overflow-y-auto">
+                  {filteredEditIcons.map((name) => (
+                    <button
+                      key={name}
+                      type="button"
+                      onClick={() => {
+                        setEditIcon(editIcon === name ? "" : name);
+                        setShowEditIconPicker(false);
+                        setEditIconSearch("");
+                      }}
+                      className={`flex items-center justify-center size-9 rounded-lg transition-all ${
+                        editIcon === name
+                          ? "bg-foreground/15 text-foreground ring-1 ring-foreground/30"
+                          : "text-foreground/40 hover:text-foreground/70 hover:bg-foreground/[0.06]"
+                      }`}
+                      title={name}
+                      aria-label={`Select ${name} icon`}
+                    >
+                      <ClientIcon icon={name} className="size-4" />
+                    </button>
+                  ))}
+                  {filteredEditIcons.length === 0 && (
+                    <div className="col-span-8 py-4 text-center text-xs text-foreground/20">No icons found</div>
+                  )}
+                </div>
+                {editIcon && (
+                  <button
+                    type="button"
+                    onClick={() => { setEditIcon(""); setShowEditIconPicker(false); setEditIconSearch(""); }}
+                    className="text-xs text-foreground/30 hover:text-foreground/50 transition-colors"
+                  >
+                    Remove icon
+                  </button>
+                )}
+              </div>
+            )}
+
+            {/* Icon picker for sub-items (compact) */}
             {editingEntry?.parent_id && (
               <div className="space-y-1.5">
                 <label className="text-xs text-foreground/40">Icon (optional)</label>
@@ -1379,6 +1454,25 @@ export default function TimelinePage() {
                 </div>
               </div>
             )}
+
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <label className="text-xs text-foreground/40">Start date</label>
+                <DatePicker
+                  value={editStartDate ? parseISO(editStartDate) : undefined}
+                  onChange={(date) => setEditStartDate(date ? format(date, "yyyy-MM-dd") : "")}
+                  placeholder="Start date"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-xs text-foreground/40">End date</label>
+                <DatePicker
+                  value={editEndDate ? parseISO(editEndDate) : undefined}
+                  onChange={(date) => setEditEndDate(date ? format(date, "yyyy-MM-dd") : "")}
+                  placeholder="End date"
+                />
+              </div>
+            </div>
             <div className="space-y-1.5">
               <label className="text-xs text-foreground/40">Color</label>
               <div className="flex gap-2">
