@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { authenticateRoute } from "@/lib/supabase/route-auth";
 
 const GOOGLE_CLIENT_ID = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || "";
 const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET || "";
@@ -7,6 +8,7 @@ const TOKEN_URL = "https://oauth2.googleapis.com/token";
 // POST /api/google-calendar — exchange auth code or refresh token
 export async function POST(request: NextRequest) {
   try {
+    await authenticateRoute(request);
     const body = await request.json();
     const { grant_type } = body;
 
@@ -82,6 +84,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ error: "Invalid grant_type" }, { status: 400 });
   } catch (error) {
+    if (error instanceof NextResponse) return error;
     console.error("Google Calendar API error:", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }

@@ -14,6 +14,7 @@ import { loadClientGroups } from "@/lib/supabase/client-groups";
 import { loadClientStatuses, seedDefaultStatuses } from "@/lib/supabase/client-statuses";
 import { transitionWeek } from "@/lib/supabase/tasks-simple";
 import { loadBoardColumns, createBoardColumn, updateBoardColumn, deleteBoardColumn } from "@/lib/supabase/board-columns";
+import { getCurrentMonday, isTransitionedToNextWeek, getDisplayMonday } from "@/lib/date-utils";
 
 interface WorkspaceContextValue {
   user: User | null;
@@ -65,38 +66,6 @@ export function useWorkspace() {
   const ctx = useContext(WorkspaceContext);
   if (!ctx) throw new Error("useWorkspace must be used within WorkspaceProvider");
   return ctx;
-}
-
-// Helper: get the raw current week's Monday (no transition offset)
-function getCurrentMonday() {
-  const today = new Date();
-  const currentDay = today.getDay();
-  const monday = new Date(today);
-  const offset = currentDay === 0 ? -6 : 1 - currentDay;
-  monday.setDate(today.getDate() + offset);
-  monday.setHours(0, 0, 0, 0);
-  return monday;
-}
-
-// Helper: check if we should show next week (transition ran + still on/after transition day)
-function isTransitionedToNextWeek(transitionDay: number) {
-  if (typeof window === "undefined") return false;
-  const monday = getCurrentMonday();
-  const marker = localStorage.getItem("flowie-last-transition");
-  const currentDay = new Date().getDay();
-  const inPostTransitionWindow = transitionDay === 0
-    ? currentDay === 0
-    : currentDay >= transitionDay || currentDay === 0;
-  return marker === monday.toISOString() && inPostTransitionWindow;
-}
-
-// Helper: get the display week's Monday, accounting for transition offset
-function getDisplayMonday(transitionDay: number) {
-  const monday = getCurrentMonday();
-  if (isTransitionedToNextWeek(transitionDay)) {
-    monday.setDate(monday.getDate() + 7);
-  }
-  return monday;
 }
 
 const ALL_FIVE_DAYS: DayName[] = ["monday", "tuesday", "wednesday", "thursday", "friday"];
@@ -378,20 +347,25 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
   }, [activeProjectId]);
 
   useEffect(() => {
-    refreshClients();
-    refreshClientGroups();
-    refreshClientStatuses();
-    if (activeProjectId) {
-      loadWorkspaceProfiles(activeProjectId).then(setTeamMembers).catch(() => setTeamMembers([]));
-      getAreaIdForProject(activeProjectId).then(setAreaId);
-      if (weekMode === "custom") {
-        refreshBoardColumns();
-      }
-    } else {
+    if (!activeProjectId) {
+      setClients([]);
+      setClientGroups([]);
+      setClientStatuses([]);
       setTeamMembers([]);
       setAreaId(null);
       setBoardColumns([]);
+      return;
     }
+
+    // Load all independent data in parallel
+    Promise.all([
+      refreshClients(),
+      refreshClientGroups(),
+      refreshClientStatuses(),
+      loadWorkspaceProfiles(activeProjectId).then(setTeamMembers).catch(() => setTeamMembers([])),
+      getAreaIdForProject(activeProjectId).then(setAreaId),
+      ...(weekMode === "custom" ? [refreshBoardColumns()] : []),
+    ]);
   }, [refreshClients, refreshClientGroups, refreshClientStatuses, activeProjectId, weekMode, refreshBoardColumns]);
 
   // --- Weekly Transition ---

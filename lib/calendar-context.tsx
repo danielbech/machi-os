@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useState, useEffect, useCallback, useMemo } from "react";
+import { createContext, useContext, useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { toast } from "sonner";
 import type { WeekMode } from "@/lib/types";
 import {
@@ -24,6 +24,7 @@ import {
   type CalendarConnection,
 } from "@/lib/supabase/calendar";
 import { useWorkspace } from "./workspace-context";
+import { getWeekRange } from "@/lib/date-utils";
 
 export interface ConnectionWithCalendars extends CalendarConnection {
   availableCalendars: GoogleCalendarInfo[];
@@ -46,44 +47,6 @@ export function useCalendar() {
   const ctx = useContext(CalendarContext);
   if (!ctx) throw new Error("useCalendar must be used within CalendarProvider");
   return ctx;
-}
-
-// Helper: get the raw current week's Monday
-function getCurrentMonday() {
-  const today = new Date();
-  const currentDay = today.getDay();
-  const monday = new Date(today);
-  const offset = currentDay === 0 ? -6 : 1 - currentDay;
-  monday.setDate(today.getDate() + offset);
-  monday.setHours(0, 0, 0, 0);
-  return monday;
-}
-
-function isTransitionedToNextWeek(transitionDay: number) {
-  if (typeof window === "undefined") return false;
-  const monday = getCurrentMonday();
-  const marker = localStorage.getItem("flowie-last-transition");
-  const currentDay = new Date().getDay();
-  const inPostTransitionWindow = transitionDay === 0
-    ? currentDay === 0
-    : currentDay >= transitionDay || currentDay === 0;
-  return marker === monday.toISOString() && inPostTransitionWindow;
-}
-
-function getDisplayMonday(transitionDay: number) {
-  const monday = getCurrentMonday();
-  if (isTransitionedToNextWeek(transitionDay)) {
-    monday.setDate(monday.getDate() + 7);
-  }
-  return monday;
-}
-
-function getWeekRange(weekMode: WeekMode = "5-day", transitionDay: number = 5) {
-  const monday = getDisplayMonday(transitionDay);
-  const endDay = new Date(monday);
-  endDay.setDate(monday.getDate() + (weekMode === "7-day" ? 6 : 4));
-  endDay.setHours(23, 59, 59, 999);
-  return { monday, friday: endDay };
 }
 
 // Get a valid access token for a connection, refreshing if expired
@@ -342,30 +305,34 @@ export function CalendarProvider({ children }: { children: React.ReactNode }) {
     return () => window.removeEventListener("message", handleMessage);
   }, [activeProjectId, user, weekMode, transitionDay, loadSharedEvents]);
 
+  // Stable ref to latest sync function — prevents interval effects from resetting
+  const syncRef = useRef(syncCalendarEvents);
+  useEffect(() => { syncRef.current = syncCalendarEvents; }, [syncCalendarEvents]);
+
   // Auto-sync every 30 minutes
   useEffect(() => {
     if (!googleCalendarConnected) return;
-    const interval = setInterval(syncCalendarEvents, 30 * 60 * 1000);
+    const interval = setInterval(() => syncRef.current(), 30 * 60 * 1000);
     return () => clearInterval(interval);
-  }, [googleCalendarConnected, syncCalendarEvents]);
+  }, [googleCalendarConnected]);
 
   // Week change detection
   useEffect(() => {
     if (!googleCalendarConnected) return;
     const { monday } = getWeekRange(weekMode, transitionDay);
     const weekStart = monday.toISOString();
-    if (currentWeekStart && currentWeekStart !== weekStart) syncCalendarEvents();
+    if (currentWeekStart && currentWeekStart !== weekStart) syncRef.current();
     setCurrentWeekStart(weekStart);
     const interval = setInterval(() => {
       const { monday: nowMonday } = getWeekRange(weekMode, transitionDay);
       const newWeekStart = nowMonday.toISOString();
       if (newWeekStart !== weekStart) {
         setCurrentWeekStart(newWeekStart);
-        syncCalendarEvents();
+        syncRef.current();
       }
     }, 60 * 60 * 1000);
     return () => clearInterval(interval);
-  }, [googleCalendarConnected, currentWeekStart, syncCalendarEvents]);
+  }, [googleCalendarConnected, currentWeekStart, weekMode, transitionDay]);
 
   const connectGoogleCalendar = useCallback(() => {
     initiateGoogleAuth();
