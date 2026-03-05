@@ -777,6 +777,7 @@ export function BacklogPanel({
               <DropdownMenuContent align="end" className="w-52">
                 {availableClients.map((c) => {
                   const group = clientGroups.find(g => g.id === c.client_group_id);
+                  const logoUrl = group?.logo_url || c.logo_url;
                   return (
                     <DropdownMenuItem
                       key={c.id}
@@ -785,8 +786,8 @@ export function BacklogPanel({
                         setClientToggleOverrides((prev) => ({ ...prev, [c.id]: true }));
                       }}
                     >
-                      {c.logo_url ? (
-                        <img src={c.logo_url} alt="" className="size-4 rounded-sm object-cover shrink-0" />
+                      {logoUrl ? (
+                        <img src={logoUrl} alt="" className="size-4 rounded-sm object-cover shrink-0" />
                       ) : c.icon ? (
                         <ClientIcon icon={c.icon} className="size-3.5 text-muted-foreground shrink-0" />
                       ) : null}
@@ -839,18 +840,23 @@ export function BacklogPanel({
                 <ChevronRight
                   className={`size-3 text-foreground/30 transition-transform ${isCollapsed ? "" : "rotate-90"}`}
                 />
-                {client.logo_url ? (
-                  <img src={client.logo_url} alt="" className="size-4 rounded-sm object-cover shrink-0" />
-                ) : client.icon ? (
-                  <ClientIcon icon={client.icon} className="size-3.5 text-muted-foreground shrink-0" />
-                ) : null}
-                <span className="text-sm font-medium text-foreground/80 truncate">
-                  {(() => {
-                    const group = clientGroups.find(g => g.id === client.client_group_id);
-                    return group ? <><span className="text-foreground/40">{group.name}</span><span className="text-foreground/15 mx-1">/</span></> : null;
-                  })()}
-                  {client.name}
-                </span>
+                {(() => {
+                  const group = clientGroups.find(g => g.id === client.client_group_id);
+                  const logoUrl = group?.logo_url || client.logo_url;
+                  return (
+                    <>
+                      {logoUrl ? (
+                        <img src={logoUrl} alt="" className="size-4 rounded-sm object-cover shrink-0" />
+                      ) : client.icon ? (
+                        <ClientIcon icon={client.icon} className="size-3.5 text-muted-foreground shrink-0" />
+                      ) : null}
+                      <span className="text-sm font-medium text-foreground/80 truncate">
+                        {group ? <><span className="text-foreground/40">{group.name}</span><span className="text-foreground/15 mx-1">/</span></> : null}
+                        {client.name}
+                      </span>
+                    </>
+                  );
+                })()}
                 {clientTasks.length > 0 && (
                   <span className="text-[10px] text-foreground/30 tabular-nums shrink-0">{clientTasks.length}</span>
                 )}
