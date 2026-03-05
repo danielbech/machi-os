@@ -5,6 +5,7 @@ export interface CalendarConnection {
   project_id: string
   user_id: string
   access_token: string
+  refresh_token: string | null
   expires_at: string
   selected_calendars: string[]
   google_email: string | null
@@ -30,6 +31,7 @@ export interface DbCalendarEvent {
 export async function saveCalendarConnection(
   projectId: string,
   accessToken: string,
+  refreshToken: string | null,
   expiresAt: Date,
   googleEmail: string,
   selectedCalendars: string[] = ['primary']
@@ -38,17 +40,24 @@ export async function saveCalendarConnection(
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) throw new Error('Not authenticated')
 
+  const upsertData: Record<string, unknown> = {
+    project_id: projectId,
+    user_id: user.id,
+    access_token: accessToken,
+    expires_at: expiresAt.toISOString(),
+    selected_calendars: selectedCalendars,
+    google_email: googleEmail,
+    updated_at: new Date().toISOString(),
+  }
+
+  // Only update refresh_token if we got a new one (Google only sends it on first auth)
+  if (refreshToken) {
+    upsertData.refresh_token = refreshToken
+  }
+
   const { data, error } = await supabase
     .from('calendar_connections')
-    .upsert({
-      project_id: projectId,
-      user_id: user.id,
-      access_token: accessToken,
-      expires_at: expiresAt.toISOString(),
-      selected_calendars: selectedCalendars,
-      google_email: googleEmail,
-      updated_at: new Date().toISOString(),
-    }, { onConflict: 'project_id,user_id,google_email' })
+    .upsert(upsertData, { onConflict: 'project_id,user_id,google_email' })
     .select('id')
     .single()
 
@@ -58,6 +67,29 @@ export async function saveCalendarConnection(
   }
 
   return data.id
+}
+
+// Update access token and expiry after a refresh
+export async function updateConnectionToken(
+  connectionId: string,
+  accessToken: string,
+  expiresAt: Date
+): Promise<void> {
+  const supabase = createClient()
+
+  const { error } = await supabase
+    .from('calendar_connections')
+    .update({
+      access_token: accessToken,
+      expires_at: expiresAt.toISOString(),
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', connectionId)
+
+  if (error) {
+    console.error('Error updating connection token:', error)
+    throw error
+  }
 }
 
 // Get all of the current user's calendar connections for a workspace
@@ -70,7 +102,7 @@ export async function getCalendarConnections(
 
   const { data, error } = await supabase
     .from('calendar_connections')
-    .select('id, project_id, user_id, access_token, expires_at, selected_calendars, google_email')
+    .select('id, project_id, user_id, access_token, refresh_token, expires_at, selected_calendars, google_email')
     .eq('project_id', projectId)
     .eq('user_id', user.id)
     .order('created_at')

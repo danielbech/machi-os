@@ -4,29 +4,27 @@ import { useEffect } from 'react';
 
 export default function AuthCallback() {
   useEffect(() => {
-    // Parse the hash fragment from OAuth redirect
-    const hash = window.location.hash.substring(1);
-    const params = new URLSearchParams(hash);
-    
-    const accessToken = params.get('access_token');
-    const expiresIn = params.get('expires_in');
-    
-    if (accessToken && expiresIn && window.opener) {
-      // Send token back to parent window
+    // Authorization code flow: code comes as a query parameter
+    const params = new URLSearchParams(window.location.search);
+    const code = params.get('code');
+    const error = params.get('error');
+
+    if (code && window.opener) {
+      // Send auth code back to parent window for token exchange
       window.opener.postMessage({
-        type: 'GOOGLE_AUTH_SUCCESS',
-        accessToken,
-        expiresIn: parseInt(expiresIn),
+        type: 'GOOGLE_AUTH_CODE',
+        code,
       }, window.location.origin);
-      
-      // Close popup
+
       window.close();
-    } else if (window.opener) {
-      // Auth failed
-      window.opener.postMessage({
-        type: 'GOOGLE_AUTH_FAILED',
-      }, window.location.origin);
-      
+    } else if (error || !code) {
+      // Auth failed or was cancelled
+      if (window.opener) {
+        window.opener.postMessage({
+          type: 'GOOGLE_AUTH_FAILED',
+        }, window.location.origin);
+      }
+
       window.close();
     }
   }, []);

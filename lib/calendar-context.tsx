@@ -5,6 +5,8 @@ import { toast } from "sonner";
 import type { WeekMode } from "@/lib/types";
 import {
   initiateGoogleAuth,
+  exchangeAuthCode,
+  refreshAccessToken,
   fetchGoogleEmail,
   fetchCalendarList,
   getEventsGroupedByDay,
@@ -13,6 +15,7 @@ import {
 } from "@/lib/google-calendar";
 import {
   saveCalendarConnection,
+  updateConnectionToken,
   getCalendarConnections,
   updateSelectedCalendars as updateSelectedCalendarsDb,
   removeCalendarConnection,
@@ -83,6 +86,30 @@ function getWeekRange(weekMode: WeekMode = "5-day", transitionDay: number = 5) {
   return { monday, friday: endDay };
 }
 
+// Get a valid access token for a connection, refreshing if expired
+async function getValidToken(conn: CalendarConnection): Promise<{ token: string; updated: boolean; newExpiry?: Date }> {
+  const expiresAt = new Date(conn.expires_at);
+  const now = new Date();
+  // Refresh if token expires within 5 minutes
+  const needsRefresh = expiresAt.getTime() - now.getTime() < 5 * 60 * 1000;
+
+  if (!needsRefresh) {
+    return { token: conn.access_token, updated: false };
+  }
+
+  if (!conn.refresh_token) {
+    throw new Error("Token expired and no refresh token available");
+  }
+
+  const result = await refreshAccessToken(conn.refresh_token);
+  const newExpiry = new Date(Date.now() + result.expires_in * 1000);
+
+  // Persist the new access token to DB
+  await updateConnectionToken(conn.id, result.access_token, newExpiry);
+
+  return { token: result.access_token, updated: true, newExpiry };
+}
+
 export function CalendarProvider({ children }: { children: React.ReactNode }) {
   const { activeProjectId, user, weekMode, transitionDay, transitionCount } = useWorkspace();
 
@@ -143,12 +170,20 @@ export function CalendarProvider({ children }: { children: React.ReactNode }) {
 
       for (const conn of connections) {
         try {
+          // Get a valid token (auto-refreshes if expired)
+          const { token, updated, newExpiry } = await getValidToken(conn);
+
+          // Update local connection state if token was refreshed
+          const updatedConn = updated
+            ? { ...conn, access_token: token, expires_at: newExpiry!.toISOString() }
+            : conn;
+
           const { flat: allEvents } = await getEventsGroupedByDay(
-            conn.access_token, monday, friday, conn.selected_calendars
+            token, monday, friday, updatedConn.selected_calendars
           );
 
           await syncCalendarEventsToDb(
-            activeProjectId, user.id, conn.id,
+            activeProjectId, user.id, updatedConn.id,
             allEvents.map(e => ({
               google_event_id: e.id,
               calendar_id: e.calendarId || 'primary',
@@ -161,11 +196,17 @@ export function CalendarProvider({ children }: { children: React.ReactNode }) {
             }))
           );
 
-          const calendars = await fetchCalendarList(conn.access_token).catch(() => []);
-          updatedConnections.push({ ...conn, availableCalendars: calendars });
+          const calendars = await fetchCalendarList(token).catch(() => []);
+          updatedConnections.push({ ...updatedConn, availableCalendars: calendars });
         } catch (error) {
-          console.error(`Failed to sync connection ${conn.google_email}:`, error);
-          toast.error(`Failed to sync ${conn.google_email}`);
+          const message = error instanceof Error ? error.message : "Unknown error";
+          console.error(`Failed to sync connection ${conn.google_email}:`, message);
+
+          if (message.includes("no refresh token") || message.includes("Token expired")) {
+            toast.error(`${conn.google_email}: session expired — please reconnect`);
+          } else {
+            toast.error(`Failed to sync ${conn.google_email}`);
+          }
           updatedConnections.push({ ...conn, availableCalendars: [] });
         }
       }
@@ -200,7 +241,8 @@ export function CalendarProvider({ children }: { children: React.ReactNode }) {
           const withCalendars: ConnectionWithCalendars[] = await Promise.all(
             connections.map(async (conn) => {
               try {
-                const calendars = await fetchCalendarList(conn.access_token);
+                const { token } = await getValidToken(conn);
+                const calendars = await fetchCalendarList(token);
                 return { ...conn, availableCalendars: calendars };
               } catch {
                 return { ...conn, availableCalendars: [] };
@@ -223,27 +265,32 @@ export function CalendarProvider({ children }: { children: React.ReactNode }) {
     return () => { cancelled = true; };
   }, [activeProjectId, user, weekMode, loadSharedEvents, transitionCount]);
 
-  // Listen for OAuth callback messages
+  // Listen for OAuth callback messages (authorization code flow)
   useEffect(() => {
     const handleMessage = async (event: MessageEvent) => {
       if (event.origin !== window.location.origin) return;
-      if (event.data.type === "GOOGLE_AUTH_SUCCESS" && activeProjectId) {
-        const { accessToken, expiresIn } = event.data;
-        const expiresAt = new Date(Date.now() + expiresIn * 1000);
+
+      if (event.data.type === "GOOGLE_AUTH_CODE" && activeProjectId) {
+        const { code } = event.data;
 
         try {
-          const googleEmail = await fetchGoogleEmail(accessToken);
-          const calendars = await fetchCalendarList(accessToken);
+          // Exchange auth code for tokens via server route
+          const tokens = await exchangeAuthCode(code);
+          const { access_token, refresh_token, expires_in } = tokens;
+          const expiresAt = new Date(Date.now() + expires_in * 1000);
+
+          const googleEmail = await fetchGoogleEmail(access_token);
+          const calendars = await fetchCalendarList(access_token);
           const allCalendarIds = calendars.map(c => c.id);
 
           const connectionId = await saveCalendarConnection(
-            activeProjectId, accessToken, expiresAt, googleEmail, allCalendarIds
+            activeProjectId, access_token, refresh_token, expiresAt, googleEmail, allCalendarIds
           );
 
           if (user) {
             const { monday, friday } = getWeekRange(weekMode, transitionDay);
             const { flat: allEvents } = await getEventsGroupedByDay(
-              accessToken, monday, friday, allCalendarIds
+              access_token, monday, friday, allCalendarIds
             );
             await syncCalendarEventsToDb(
               activeProjectId, user.id, connectionId,
@@ -267,7 +314,8 @@ export function CalendarProvider({ children }: { children: React.ReactNode }) {
               id: connectionId,
               project_id: activeProjectId,
               user_id: user?.id || '',
-              access_token: accessToken,
+              access_token,
+              refresh_token,
               expires_at: expiresAt.toISOString(),
               selected_calendars: allCalendarIds,
               google_email: googleEmail,
@@ -280,9 +328,11 @@ export function CalendarProvider({ children }: { children: React.ReactNode }) {
             }
             return [...prev, newConn];
           });
+
+          toast.success(`Connected ${googleEmail}`);
         } catch (error) {
           console.error("Error handling OAuth callback:", error);
-        toast.error("Failed to connect Google Calendar");
+          toast.error("Failed to connect Google Calendar");
         }
       } else if (event.data.type === "GOOGLE_AUTH_FAILED") {
         toast.error("Failed to connect Google Calendar");
@@ -295,7 +345,7 @@ export function CalendarProvider({ children }: { children: React.ReactNode }) {
   // Auto-sync every 30 minutes
   useEffect(() => {
     if (!googleCalendarConnected) return;
-    const interval = setInterval(syncCalendarEvents, 10 * 60 * 1000);
+    const interval = setInterval(syncCalendarEvents, 30 * 60 * 1000);
     return () => clearInterval(interval);
   }, [googleCalendarConnected, syncCalendarEvents]);
 
