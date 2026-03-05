@@ -393,21 +393,26 @@ export const BoardTaskCard = memo(function BoardTaskCard({
                       {item.assignees.map((assigneeId) => {
                         const member = teamMembers.find((m) => m.id === assigneeId);
                         return member ? (
-                          <div
-                            key={member.id}
-                            className="rounded-full ring-2 ring-card"
-                            title={member.name}
-                          >
-                            <div
-                              className={`flex items-center justify-center w-5 h-5 rounded-full ${!member.avatar ? member.color : "bg-foreground/5"} text-[10px] font-semibold text-white overflow-hidden`}
-                            >
-                              {member.avatar ? (
-                                <img src={member.avatar} alt={member.name} className="w-full h-full object-cover" />
-                              ) : (
-                                member.initials
-                              )}
-                            </div>
-                          </div>
+                          <Tooltip key={member.id} delayDuration={300}>
+                            <TooltipTrigger asChild>
+                              <div
+                                className="rounded-full ring-2 ring-card"
+                              >
+                                <div
+                                  className={`flex items-center justify-center w-5 h-5 rounded-full ${!member.avatar ? member.color : "bg-foreground/5"} text-[10px] font-semibold text-white overflow-hidden`}
+                                >
+                                  {member.avatar ? (
+                                    <img src={member.avatar} alt={member.name} className="w-full h-full object-cover" />
+                                  ) : (
+                                    member.initials
+                                  )}
+                                </div>
+                              </div>
+                            </TooltipTrigger>
+                            <TooltipContent side="bottom">
+                              {member.name}
+                            </TooltipContent>
+                          </Tooltip>
                         ) : null;
                       })}
                     </div>
