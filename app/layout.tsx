@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono, Outfit, Fira_Code, Inter, Plus_Jakarta_Sans, Lora, IBM_Plex_Mono } from "next/font/google";
+import { Geist, Geist_Mono, Outfit, Fira_Code, Inter, Plus_Jakarta_Sans, Lora, IBM_Plex_Mono, Playfair_Display, JetBrains_Mono } from "next/font/google";
 import { ThemeToaster } from "@/components/theme-toaster";
 import "./globals.css";
 
@@ -44,6 +44,16 @@ const ibmPlexMono = IBM_Plex_Mono({
   weight: ["400", "500", "600"],
 });
 
+const playfairDisplay = Playfair_Display({
+  variable: "--font-playfair",
+  subsets: ["latin"],
+});
+
+const jetbrainsMono = JetBrains_Mono({
+  variable: "--font-jetbrains",
+  subsets: ["latin"],
+});
+
 export const metadata: Metadata = {
   title: "Flowie",
   description: "Custom Kanban-based project management system",
@@ -55,7 +65,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={`dark ${geistSans.variable} ${geistMono.variable} ${outfit.variable} ${firaCode.variable} ${inter.variable} ${plusJakartaSans.variable} ${lora.variable} ${ibmPlexMono.variable}`} suppressHydrationWarning>
+    <html lang="en" className={`dark ${geistSans.variable} ${geistMono.variable} ${outfit.variable} ${firaCode.variable} ${inter.variable} ${plusJakartaSans.variable} ${lora.variable} ${ibmPlexMono.variable} ${playfairDisplay.variable} ${jetbrainsMono.variable}`} suppressHydrationWarning>
       <head>
         <script
           dangerouslySetInnerHTML={{
