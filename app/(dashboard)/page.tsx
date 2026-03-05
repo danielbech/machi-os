@@ -5,7 +5,9 @@ import { createClient } from "@/lib/supabase/client";
 import { loadTasksByDay, saveTask, updateDayTasks, deleteTask } from "@/lib/supabase/tasks-simple";
 import { toast } from "sonner";
 import { seedDemoTasks } from "@/lib/supabase/initialize";
+import { useAuth } from "@/lib/auth-context";
 import { useWorkspace } from "@/lib/workspace-context";
+import { useProjectData } from "@/lib/project-data-context";
 import { useBacklog } from "@/lib/backlog-context";
 import { useCalendar } from "@/lib/calendar-context";
 const TaskEditDialog = lazy(() => import("@/components/task-edit-dialog").then(m => ({ default: m.TaskEditDialog })));
@@ -27,7 +29,9 @@ import { Check, CheckCircle, Plus, StickyNote, User, X } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 export default function BoardPage() {
-  const { activeProjectId, clients, clientGroups, teamMembers, weekMode, weekDays, displayMonday, areaId, user, boardColumns, addBoardColumn, renameBoardColumn, removeBoardColumn, showCheckmarks, taskRefreshKey } = useWorkspace();
+  const { user } = useAuth();
+  const { activeProjectId, weekMode, weekDays, displayMonday, boardColumns, addBoardColumn, renameBoardColumn, removeBoardColumn, showCheckmarks, taskRefreshKey } = useWorkspace();
+  const { clients, clientGroups, teamMembers, areaId } = useProjectData();
   const { calendarEvents } = useCalendar();
   const { backlogOpen, addToBacklog, backlogFolders, backlogDragActive, setKanbanDragOverBacklog, onTaskSentToDayRef } = useBacklog();
 

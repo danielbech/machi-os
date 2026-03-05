@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useWorkspace } from "@/lib/workspace-context";
+import { useProjectData } from "@/lib/project-data-context";
 import { useBacklog } from "@/lib/backlog-context";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { BacklogPanel } from "@/components/backlog-panel";
@@ -10,7 +11,8 @@ import { X } from "lucide-react";
 import type { Task } from "@/lib/types";
 
 export function BacklogShell() {
-  const { clients, clientGroups, teamMembers, weekMode } = useWorkspace();
+  const { weekMode } = useWorkspace();
+  const { clients, clientGroups, teamMembers } = useProjectData();
   const {
     backlogOpen, toggleBacklog, backlogTasks, backlogFolders,
     backlogWidth, setBacklogWidth,

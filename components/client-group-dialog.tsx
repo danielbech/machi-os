@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from "react";
 import { toast } from "sonner";
 import { useWorkspace } from "@/lib/workspace-context";
+import { useProjectData } from "@/lib/project-data-context";
 import { createClientGroup, updateClientGroup } from "@/lib/supabase/client-groups";
 import { uploadClientLogo, deleteClientLogo } from "@/lib/supabase/storage";
 import type { ClientGroup } from "@/lib/types";
@@ -21,7 +22,8 @@ interface ClientGroupDialogProps {
 }
 
 export function ClientGroupDialog({ open, onOpenChange, editingGroup = null, onCreated }: ClientGroupDialogProps) {
-  const { activeProjectId, clientGroups, refreshClientGroups } = useWorkspace();
+  const { activeProjectId } = useWorkspace();
+  const { clientGroups, refreshClientGroups } = useProjectData();
   const [name, setName] = useState("");
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [logoPreview, setLogoPreview] = useState<string | null>(null);

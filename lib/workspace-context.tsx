@@ -1,60 +1,46 @@
 "use client";
 
 import { createContext, useContext, useState, useEffect, useCallback, useMemo } from "react";
-import type { User } from "@supabase/supabase-js";
-import type { Project, Client, ClientGroup, ClientStatusDef, Member, WeekMode, DayName, BoardColumn } from "@/lib/types";
+import type { Project, WeekMode, DayName, BoardColumn } from "@/lib/types";
 import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
-import { initializeUserData, getAreaIdForProject } from "@/lib/supabase/initialize";
+import { initializeUserData } from "@/lib/supabase/initialize";
 import { getUserWorkspaces, getMyPendingInvites, acceptInvite as acceptInviteApi, declineInvite as declineInviteApi } from "@/lib/supabase/workspace";
 import type { MyPendingInvite } from "@/lib/supabase/workspace";
-import { loadWorkspaceProfiles } from "@/lib/supabase/profiles";
-import { loadClients } from "@/lib/supabase/clients";
-import { loadClientGroups } from "@/lib/supabase/client-groups";
-import { loadClientStatuses, seedDefaultStatuses } from "@/lib/supabase/client-statuses";
 import { transitionWeek } from "@/lib/supabase/tasks-simple";
 import { loadBoardColumns, createBoardColumn, updateBoardColumn, deleteBoardColumn } from "@/lib/supabase/board-columns";
-import { getCurrentMonday, isTransitionedToNextWeek, getDisplayMonday } from "@/lib/date-utils";
+import { getCurrentMonday, getDisplayMonday } from "@/lib/date-utils";
+import { useAuth } from "./auth-context";
 
-interface WorkspaceContextValue {
-  user: User | null;
-  loading: boolean;
+export interface WorkspaceContextValue {
+  // Project selection
   userProjects: Project[];
   activeProjectId: string | null;
   setActiveProjectId: (id: string) => void;
   activeProject: Project | undefined;
-  clients: Client[];
-  refreshClients: () => Promise<void>;
-  clientGroups: ClientGroup[];
-  refreshClientGroups: () => Promise<void>;
-  clientStatuses: ClientStatusDef[];
-  refreshClientStatuses: () => Promise<void>;
-  teamMembers: Member[];
-  refreshTeamMembers: () => Promise<void>;
-  // Weekly transition
-  transitionToNextWeek: () => Promise<{ deleted: number; carriedOver: number }>;
-  transitionDay: number;
-  transitionHour: number;
-  transitionCount: number;
-  setTransitionSchedule: (day: number, hour: number) => Promise<void>;
-  displayMonday: Date;
-  // Week mode
+  refreshWorkspaces: () => Promise<void>;
+  // Week mode & schedule
   weekMode: WeekMode;
   setWeekMode: (mode: WeekMode) => Promise<void>;
   weekDays: DayName[];
-  // UI preferences
-  showCheckmarks: boolean;
-  setShowCheckmarks: (v: boolean) => void;
+  displayMonday: Date;
+  transitionDay: number;
+  transitionHour: number;
+  transitionCount: number;
+  transitionToNextWeek: () => Promise<{ deleted: number; carriedOver: number }>;
+  setTransitionSchedule: (day: number, hour: number) => Promise<void>;
   // Board columns (custom mode)
   boardColumns: BoardColumn[];
   addBoardColumn: (title: string) => Promise<BoardColumn>;
   renameBoardColumn: (id: string, title: string) => Promise<void>;
   removeBoardColumn: (id: string) => Promise<void>;
   refreshBoardColumns: () => Promise<void>;
-  refreshWorkspaces: () => Promise<void>;
-  areaId: string | null;
+  // UI preferences
+  showCheckmarks: boolean;
+  setShowCheckmarks: (v: boolean) => void;
   taskRefreshKey: number;
   triggerTaskRefresh: () => void;
+  // Invites
   pendingInvites: MyPendingInvite[];
   acceptInvite: (invite: MyPendingInvite) => Promise<void>;
   declineInvite: (invite: MyPendingInvite) => Promise<void>;
@@ -72,15 +58,10 @@ const ALL_FIVE_DAYS: DayName[] = ["monday", "tuesday", "wednesday", "thursday", 
 const ALL_SEVEN_DAYS: DayName[] = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"];
 
 export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
+  const { user } = useAuth();
+
   const [userProjects, setUserProjects] = useState<Project[]>([]);
   const [activeProjectId, setActiveProjectIdState] = useState<string | null>(null);
-  const [clients, setClients] = useState<Client[]>([]);
-  const [clientGroups, setClientGroups] = useState<ClientGroup[]>([]);
-  const [clientStatuses, setClientStatuses] = useState<ClientStatusDef[]>([]);
-  const [teamMembers, setTeamMembers] = useState<Member[]>([]);
-  const [areaId, setAreaId] = useState<string | null>(null);
   const [pendingInvites, setPendingInvites] = useState<MyPendingInvite[]>([]);
 
   // UI preferences
@@ -123,36 +104,11 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     }
   }, [activeProjectId]);
 
-  // Auth check
-  useEffect(() => {
-    const supabase = createClient();
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (_event, session) => {
-        setUser(session?.user ?? null);
-        setLoading(false);
-      }
-    );
-
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setUser(session?.user ?? null);
-      setLoading(false);
-    }).catch((err) => {
-      console.error("Session check error:", err);
-      setLoading(false);
-    });
-
-    return () => { subscription.unsubscribe(); };
-  }, []);
-
   // Initialize user data and load workspaces
   useEffect(() => {
     if (!user) {
       setUserProjects([]);
       setActiveProjectIdState(null);
-      setClients([]);
-      setClientGroups([]);
-      setClientStatuses([]);
       setPendingInvites([]);
       return;
     }
@@ -161,10 +117,6 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
 
     async function loadWorkspaces() {
       try {
-        // Run init and workspace load in parallel — for returning users
-        // initializeUserData returns early (just a membership check), so
-        // getUserWorkspaces can safely run alongside it. For brand-new users
-        // we retry if the first load returns empty.
         const [, projects, invites] = await Promise.all([
           initializeUserData(user!.id),
           getUserWorkspaces(),
@@ -173,7 +125,6 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
 
         let finalProjects = projects;
         if (finalProjects.length === 0) {
-          // New user — init just created their workspace, fetch again
           finalProjects = await getUserWorkspaces();
         }
 
@@ -213,7 +164,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     setWeekModeState(mode);
     if (!activeProjectId) return;
     const supabase = createClient();
-    const updates: Record<string, any> = { week_mode: mode };
+    const updates: Record<string, unknown> = { week_mode: mode };
 
     let newTransitionDay = transitionDay;
     if (transitionDay === 5 && mode === "7-day") {
@@ -287,87 +238,6 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     );
   }, [activeProjectId]);
 
-  // Refresh team members (workspace profiles)
-  const refreshTeamMembers = useCallback(async () => {
-    if (!activeProjectId) {
-      setTeamMembers([]);
-      return;
-    }
-    try {
-      const members = await loadWorkspaceProfiles(activeProjectId);
-      setTeamMembers(members);
-    } catch {
-      setTeamMembers([]);
-    }
-  }, [activeProjectId]);
-
-  // Load clients when active project changes
-  const refreshClients = useCallback(async () => {
-    if (!activeProjectId) {
-      setClients([]);
-      return;
-    }
-    try {
-      const data = await loadClients(activeProjectId);
-      setClients(data);
-    } catch (error) {
-      console.error("Error loading clients:", error);
-    }
-  }, [activeProjectId]);
-
-  // Load client groups when active project changes
-  const refreshClientGroups = useCallback(async () => {
-    if (!activeProjectId) {
-      setClientGroups([]);
-      return;
-    }
-    try {
-      const data = await loadClientGroups(activeProjectId);
-      setClientGroups(data);
-    } catch (error) {
-      console.error("Error loading client groups:", error);
-    }
-  }, [activeProjectId]);
-
-  // Load client statuses when active project changes
-  const refreshClientStatuses = useCallback(async () => {
-    if (!activeProjectId) {
-      setClientStatuses([]);
-      return;
-    }
-    try {
-      let data = await loadClientStatuses(activeProjectId);
-      if (data.length === 0) {
-        data = await seedDefaultStatuses(activeProjectId);
-      }
-      setClientStatuses(data);
-    } catch (error) {
-      console.error("Error loading client statuses:", error);
-    }
-  }, [activeProjectId]);
-
-  useEffect(() => {
-    if (!activeProjectId) {
-      setClients([]);
-      setClientGroups([]);
-      setClientStatuses([]);
-      setTeamMembers([]);
-      setAreaId(null);
-      setBoardColumns([]);
-      return;
-    }
-
-    // Load all independent data in parallel
-    Promise.all([
-      refreshClients(),
-      refreshClientGroups(),
-      refreshClientStatuses(),
-      loadWorkspaceProfiles(activeProjectId).then(setTeamMembers).catch(() => setTeamMembers([])),
-      getAreaIdForProject(activeProjectId).then(setAreaId),
-      ...(weekMode === "custom" ? [refreshBoardColumns()] : []),
-    ]);
-  }, [refreshClients, refreshClientGroups, refreshClientStatuses, activeProjectId, weekMode, refreshBoardColumns]);
-
   // --- Weekly Transition ---
 
   const transitionToNextWeek = useCallback(async () => {
@@ -378,10 +248,10 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     if (marker === monday.toISOString()) return { deleted: 0, carriedOver: 0 };
     // Set marker immediately to prevent other tabs from also firing
     localStorage.setItem("flowie-last-transition", monday.toISOString());
-    const result = await transitionWeek(activeProjectId, areaId);
+    const result = await transitionWeek(activeProjectId, null);
     setTransitionCount((c) => c + 1);
     return result;
-  }, [activeProjectId, areaId]);
+  }, [activeProjectId]);
 
   // Auto-trigger: every 60s check if it's transition day >= transition hour and hasn't run this week
   useEffect(() => {
@@ -418,24 +288,22 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
   const displayMonday = getDisplayMonday(transitionDay);
 
   const value = useMemo(() => ({
-    user, loading, userProjects, activeProjectId, setActiveProjectId,
-    activeProject, clients, refreshClients, clientGroups, refreshClientGroups,
-    clientStatuses, refreshClientStatuses, teamMembers, refreshTeamMembers,
-    transitionToNextWeek, transitionDay, transitionHour, transitionCount,
-    setTransitionSchedule, displayMonday, weekMode, setWeekMode, weekDays,
-    showCheckmarks, setShowCheckmarks,
+    userProjects, activeProjectId, setActiveProjectId, activeProject,
+    refreshWorkspaces,
+    weekMode, setWeekMode, weekDays, displayMonday,
+    transitionDay, transitionHour, transitionCount, transitionToNextWeek, setTransitionSchedule,
     boardColumns, addBoardColumn, renameBoardColumn, removeBoardColumn, refreshBoardColumns,
-    refreshWorkspaces, areaId, taskRefreshKey, triggerTaskRefresh,
+    showCheckmarks, setShowCheckmarks,
+    taskRefreshKey, triggerTaskRefresh,
     pendingInvites, acceptInvite: handleAcceptInvite, declineInvite: handleDeclineInvite,
   }), [
-    user, loading, userProjects, activeProjectId, setActiveProjectId,
-    activeProject, clients, refreshClients, clientGroups, refreshClientGroups,
-    clientStatuses, refreshClientStatuses, teamMembers, refreshTeamMembers,
-    transitionToNextWeek, transitionDay, transitionHour, transitionCount,
-    setTransitionSchedule, displayMonday, weekMode, setWeekMode, weekDays,
-    showCheckmarks, setShowCheckmarks,
+    userProjects, activeProjectId, setActiveProjectId, activeProject,
+    refreshWorkspaces,
+    weekMode, setWeekMode, weekDays, displayMonday,
+    transitionDay, transitionHour, transitionCount, transitionToNextWeek, setTransitionSchedule,
     boardColumns, addBoardColumn, renameBoardColumn, removeBoardColumn, refreshBoardColumns,
-    refreshWorkspaces, areaId, taskRefreshKey, triggerTaskRefresh,
+    showCheckmarks, setShowCheckmarks,
+    taskRefreshKey, triggerTaskRefresh,
     pendingInvites, handleAcceptInvite, handleDeclineInvite,
   ]);
 

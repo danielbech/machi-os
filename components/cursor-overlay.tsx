@@ -2,7 +2,9 @@
 
 import { useEffect, useRef } from "react";
 import { usePathname } from "next/navigation";
+import { useAuth } from "@/lib/auth-context";
 import { useWorkspace } from "@/lib/workspace-context";
+import { useProjectData } from "@/lib/project-data-context";
 import {
   usePresenceCursors,
   getHexFromTailwind,
@@ -45,7 +47,9 @@ function Cursor({ cursor }: { cursor: CursorState }) {
 }
 
 export function CursorOverlay() {
-  const { user, teamMembers, activeProjectId } = useWorkspace();
+  const { user } = useAuth();
+  const { activeProjectId } = useWorkspace();
+  const { teamMembers } = useProjectData();
   const pathname = usePathname();
 
   const currentMember = teamMembers.find((m) => m.id === user?.id);

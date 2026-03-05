@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect, useMemo } from "react";
 import { toast } from "sonner";
 import { useWorkspace } from "@/lib/workspace-context";
+import { useProjectData } from "@/lib/project-data-context";
 import { createClientRecord, updateClientRecord } from "@/lib/supabase/clients";
 import { CLIENT_DOT_COLORS, COLOR_NAMES } from "@/lib/colors";
 import { ClientIcon } from "@/components/client-icon";
@@ -34,7 +35,8 @@ interface ProjectDialogProps {
 }
 
 export function ProjectDialog({ open, onOpenChange, editingClient = null }: ProjectDialogProps) {
-  const { activeProjectId, clients, refreshClients, clientGroups } = useWorkspace();
+  const { activeProjectId } = useWorkspace();
+  const { clients, refreshClients, clientGroups } = useProjectData();
 
   const [formName, setFormName] = useState("");
   const [formSlug, setFormSlug] = useState("");

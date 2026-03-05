@@ -20,6 +20,7 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 import { restrictToVerticalAxis } from "@dnd-kit/modifiers";
 import { useWorkspace } from "@/lib/workspace-context";
+import { useProjectData } from "@/lib/project-data-context";
 import {
   loadTimelineEntries,
   createTimelineEntry,
@@ -233,7 +234,8 @@ function SortableTimelineGroup({
 }
 
 export default function TimelinePage() {
-  const { activeProjectId, clients, clientGroups } = useWorkspace();
+  const { activeProjectId } = useWorkspace();
+  const { clients, clientGroups } = useProjectData();
   const [entries, setEntries] = useState<TimelineEntry[]>([]);
   const [initialLoading, setInitialLoading] = useState(true);
   const [zoomLevel, setZoomLevel] = useState(() => {

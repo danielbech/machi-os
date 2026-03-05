@@ -3,7 +3,7 @@
 import { useRef, useState, useCallback, useEffect, lazy, Suspense } from "react";
 import { createPortal } from "react-dom";
 import type { Task, BacklogFolder, ChecklistItem } from "@/lib/types";
-import { useWorkspace } from "@/lib/workspace-context";
+import { useProjectData } from "@/lib/project-data-context";
 import { uploadTaskImage, deleteTaskImage } from "@/lib/supabase/storage";
 import { validateImageFile } from "@/lib/validate-file";
 import {
@@ -53,7 +53,7 @@ interface TaskEditDialogProps {
 }
 
 export function TaskEditDialog({ task, onClose, onSave, onTaskChange, folders }: TaskEditDialogProps) {
-  const { clients, clientGroups, teamMembers } = useWorkspace();
+  const { clients, clientGroups, teamMembers } = useProjectData();
   const titleRef = useRef<HTMLInputElement>(null);
   const checklistRefs = useRef<Map<string, HTMLInputElement>>(new Map());
   const [isDragOver, setIsDragOver] = useState(false);

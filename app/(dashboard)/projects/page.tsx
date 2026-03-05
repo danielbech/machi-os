@@ -13,6 +13,7 @@ import {
   flexRender,
 } from "@tanstack/react-table";
 import { useWorkspace } from "@/lib/workspace-context";
+import { useProjectData } from "@/lib/project-data-context";
 import { updateClientRecord, deleteClientRecord } from "@/lib/supabase/clients";
 import { deleteClientGroup } from "@/lib/supabase/client-groups";
 import { ClientGroupDialog } from "@/components/client-group-dialog";
@@ -231,7 +232,8 @@ function TabButton({ active, onClick, children }: { active: boolean; onClick: ()
 // ─── Clients Tab ─────────────────────────────────────────────────────────────
 
 function ClientsTab() {
-  const { activeProjectId, clients, clientGroups, refreshClientGroups, refreshClients } = useWorkspace();
+  const { activeProjectId } = useWorkspace();
+  const { clients, clientGroups, refreshClientGroups, refreshClients } = useProjectData();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingGroup, setEditingGroup] = useState<ClientGroup | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
@@ -412,7 +414,8 @@ function ClientsTab() {
 // ─── Statuses Tab ───────────────────────────────────────────────────────────
 
 function StatusesTab() {
-  const { activeProjectId, clientStatuses, refreshClientStatuses, clients } = useWorkspace();
+  const { activeProjectId } = useWorkspace();
+  const { clientStatuses, refreshClientStatuses, clients } = useProjectData();
   const [editingStatus, setEditingStatus] = useState<ClientStatusDef | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
@@ -580,7 +583,8 @@ function StatusDialog({
   onOpenChange: (open: boolean) => void;
   editingStatus?: ClientStatusDef | null;
 }) {
-  const { activeProjectId, clientStatuses, refreshClientStatuses } = useWorkspace();
+  const { activeProjectId } = useWorkspace();
+  const { clientStatuses, refreshClientStatuses } = useProjectData();
   const [name, setName] = useState("");
   const [color, setColor] = useState("green");
   const [treatAsActive, setTreatAsActive] = useState(true);
@@ -710,7 +714,8 @@ function StatusDialog({
 // ─── Projects Tab ────────────────────────────────────────────────────────────
 
 function ProjectsTab() {
-  const { activeProjectId, clients, refreshClients, clientGroups, refreshClientGroups, clientStatuses, refreshClientStatuses } = useWorkspace();
+  const { activeProjectId } = useWorkspace();
+  const { clients, refreshClients, clientGroups, refreshClientGroups, clientStatuses, refreshClientStatuses } = useProjectData();
 
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingClient, setEditingClient] = useState<Client | null>(null);

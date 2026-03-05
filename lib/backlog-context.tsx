@@ -7,6 +7,7 @@ import { createClient } from "@/lib/supabase/client";
 import { loadBacklogTasks, saveTask, deleteTask, updateBacklogTaskOrder } from "@/lib/supabase/tasks-simple";
 import { loadBacklogFolders, createBacklogFolder as createBacklogFolderDb, updateBacklogFolder, deleteBacklogFolder as deleteBacklogFolderDb } from "@/lib/supabase/backlog-folders";
 import { useWorkspace } from "./workspace-context";
+import { useProjectData } from "./project-data-context";
 
 interface BacklogContextValue {
   backlogOpen: boolean;
@@ -42,7 +43,8 @@ export function useBacklog() {
 }
 
 export function BacklogProvider({ children }: { children: React.ReactNode }) {
-  const { activeProjectId, areaId } = useWorkspace();
+  const { activeProjectId } = useWorkspace();
+  const { areaId } = useProjectData();
 
   const [backlogOpen, setBacklogOpen] = useState(() => {
     try { return localStorage.getItem("flowie-backlog-open") === "true"; }

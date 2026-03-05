@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { useAuth } from "@/lib/auth-context";
 import { useWorkspace } from "@/lib/workspace-context";
 import {
   ensureDefaultColumns,
@@ -37,7 +38,8 @@ import { toast } from "sonner";
 import { Plus, Trash2, ThumbsUp } from "lucide-react";
 
 export default function FeedbackPage() {
-  const { user, activeProject } = useWorkspace();
+  const { user } = useAuth();
+  const { activeProject } = useWorkspace();
   const isAdmin = activeProject?.role === "owner" || activeProject?.role === "admin";
 
   const [columns, setColumns] = useState<FeedbackColumn[]>([]);

@@ -1,7 +1,9 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { AuthProvider, useAuth } from "@/lib/auth-context";
 import { WorkspaceProvider, useWorkspace } from "@/lib/workspace-context";
+import { ProjectDataProvider } from "@/lib/project-data-context";
 import { BacklogProvider, useBacklog } from "@/lib/backlog-context";
 import { CalendarProvider } from "@/lib/calendar-context";
 import { ThemeProvider } from "@/lib/theme-context";
@@ -22,7 +24,8 @@ function ThemeBridge({ children }: { children: React.ReactNode }) {
 }
 
 function DashboardGate({ children }: { children: React.ReactNode }) {
-  const { user, loading, pendingInvites } = useWorkspace();
+  const { user, loading } = useAuth();
+  const { pendingInvites } = useWorkspace();
   const { backlogOpen, backlogWidth } = useBacklog();
   const isMobile = useIsMobile();
   const [showWelcome, setShowWelcome] = useState(() => {
@@ -105,15 +108,19 @@ function DashboardGate({ children }: { children: React.ReactNode }) {
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   return (
     <ErrorBoundary>
-      <WorkspaceProvider>
-        <ThemeBridge>
-          <CalendarProvider>
-            <BacklogProvider>
-              <DashboardGate>{children}</DashboardGate>
-            </BacklogProvider>
-          </CalendarProvider>
-        </ThemeBridge>
-      </WorkspaceProvider>
+      <AuthProvider>
+        <WorkspaceProvider>
+          <ProjectDataProvider>
+            <ThemeBridge>
+              <CalendarProvider>
+                <BacklogProvider>
+                  <DashboardGate>{children}</DashboardGate>
+                </BacklogProvider>
+              </CalendarProvider>
+            </ThemeBridge>
+          </ProjectDataProvider>
+        </WorkspaceProvider>
+      </AuthProvider>
     </ErrorBoundary>
   );
 }

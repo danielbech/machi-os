@@ -24,6 +24,7 @@ import {
   type CalendarConnection,
 } from "@/lib/supabase/calendar";
 import { useWorkspace } from "./workspace-context";
+import { useAuth } from "./auth-context";
 import { getWeekRange } from "@/lib/date-utils";
 
 export interface ConnectionWithCalendars extends CalendarConnection {
@@ -74,7 +75,8 @@ async function getValidToken(conn: CalendarConnection): Promise<{ token: string;
 }
 
 export function CalendarProvider({ children }: { children: React.ReactNode }) {
-  const { activeProjectId, user, weekMode, transitionDay, transitionCount } = useWorkspace();
+  const { user } = useAuth();
+  const { activeProjectId, weekMode, transitionDay, transitionCount } = useWorkspace();
 
   const [calendarConnections, setCalendarConnections] = useState<ConnectionWithCalendars[]>([]);
   const [calendarEvents, setCalendarEvents] = useState<Record<string, CalendarEvent[]>>({});

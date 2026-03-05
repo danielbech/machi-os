@@ -3,7 +3,9 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState, useCallback } from "react";
+import { useAuth } from "@/lib/auth-context";
 import { useWorkspace } from "@/lib/workspace-context";
+import { useProjectData } from "@/lib/project-data-context";
 import { useBacklog } from "@/lib/backlog-context";
 import { useCalendar } from "@/lib/calendar-context";
 import { SettingsDialog } from "@/components/settings-dialog";
@@ -33,14 +35,16 @@ import { PendingInvitesDialog } from "@/components/pending-invites-dialog";
 
 export function AppSidebar() {
   const pathname = usePathname();
+  const { user } = useAuth();
   const {
-    userProjects, activeProjectId, setActiveProjectId, activeProject, user,
-    transitionToNextWeek, refreshTeamMembers,
+    userProjects, activeProjectId, setActiveProjectId, activeProject,
+    transitionToNextWeek,
     weekMode, setWeekMode, transitionDay, transitionHour, setTransitionSchedule,
     showCheckmarks, setShowCheckmarks,
-    boardColumns, areaId, triggerTaskRefresh,
+    boardColumns, triggerTaskRefresh,
     refreshWorkspaces, pendingInvites,
   } = useWorkspace();
+  const { refreshTeamMembers, areaId } = useProjectData();
   const { backlogOpen, toggleBacklog } = useBacklog();
   const {
     googleCalendarConnected, connectGoogleCalendar, disconnectGoogleAccount,
