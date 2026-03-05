@@ -304,14 +304,16 @@ export const BoardTaskCard = memo(function BoardTaskCard({
                       {item.checklist.filter((i) => i.checked).length}/{item.checklist.length}
                     </span>
                   </TooltipTrigger>
-                  <TooltipContent side="bottom" align="start" className="max-w-[220px] p-2">
-                    <ul className="space-y-1">
+                  <TooltipContent side="bottom" align="start" className="max-w-[250px] px-3 py-2.5">
+                    <ul className="space-y-1.5">
                       {item.checklist.map((ci) => (
-                        <li key={ci.id} className="flex items-start gap-1.5 text-[11px] leading-tight">
-                          <span className={`shrink-0 ${ci.checked ? "text-primary" : "text-muted-foreground/50"}`}>
-                            {ci.checked ? "✓" : "○"}
-                          </span>
-                          <span className={ci.checked ? "line-through text-muted-foreground/60" : "text-popover-foreground"}>
+                        <li key={ci.id} className="flex items-start gap-2 text-xs leading-snug">
+                          <div className={`flex size-3.5 shrink-0 items-center justify-center rounded-full border mt-[1px] ${
+                            ci.checked ? "border-primary bg-primary" : "border-muted-foreground/30"
+                          }`}>
+                            {ci.checked && <Check className="size-2.5 text-primary-foreground" strokeWidth={3} />}
+                          </div>
+                          <span className={ci.checked ? "line-through text-muted-foreground/50" : "text-popover-foreground"}>
                             {ci.text}
                           </span>
                         </li>
@@ -411,57 +413,61 @@ export const BoardTaskCard = memo(function BoardTaskCard({
             )}
           </div>
 
-          <div className={`absolute top-0.5 right-0 flex flex-col items-center gap-1 transition-opacity ${
-            showCheckmarks
-              ? (item.completed || item.checklist.length > 0 ? "" : "opacity-0 group-hover:opacity-100")
-              : (item.checklist.length > 0 ? "" : "opacity-0 group-hover:opacity-100")
-          }`}>
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                onToggleComplete(item.id);
-              }}
-              onMouseDown={(e) => e.stopPropagation()}
-              aria-label={item.completed ? "Mark as incomplete" : "Mark as complete"}
-              className={showCheckmarks ? "" : "hidden"}
-            >
-              <div
-                className={`flex size-4 items-center justify-center rounded-full border transition-all ${
-                  item.completed
-                    ? dimCompleted
-                      ? "border-foreground/8 bg-foreground/8"
-                      : "border-primary bg-primary"
-                    : "border-foreground/20 hover:border-foreground/40"
-                }`}
-              >
-                {item.completed && <Check className={`size-3 ${dimCompleted ? "text-foreground/20" : "text-primary-foreground"}`} strokeWidth={3} />}
-              </div>
-            </button>
-            {item.checklist.length > 0 && (
-              <Tooltip delayDuration={400}>
-                <TooltipTrigger asChild>
-                  <span className={`text-[10px] tabular-nums leading-none cursor-default ${dimCompleted ? "text-foreground/15" : "text-foreground/30"}`} onMouseDown={(e) => e.stopPropagation()}>
+          <Tooltip delayDuration={item.checklist.length > 0 ? 400 : 999999}>
+            <TooltipTrigger asChild>
+              <div className={`absolute top-0.5 right-0 flex flex-col items-center gap-1 transition-opacity ${
+                showCheckmarks
+                  ? (item.completed || item.checklist.length > 0 ? "" : "opacity-0 group-hover:opacity-100")
+                  : (item.checklist.length > 0 ? "" : "opacity-0 group-hover:opacity-100")
+              }`}>
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onToggleComplete(item.id);
+                  }}
+                  onMouseDown={(e) => e.stopPropagation()}
+                  aria-label={item.completed ? "Mark as incomplete" : "Mark as complete"}
+                  className={showCheckmarks ? "" : "hidden"}
+                >
+                  <div
+                    className={`flex size-4 items-center justify-center rounded-full border transition-all ${
+                      item.completed
+                        ? dimCompleted
+                          ? "border-foreground/8 bg-foreground/8"
+                          : "border-primary bg-primary"
+                        : "border-foreground/20 hover:border-foreground/40"
+                    }`}
+                  >
+                    {item.completed && <Check className={`size-3 ${dimCompleted ? "text-foreground/20" : "text-primary-foreground"}`} strokeWidth={3} />}
+                  </div>
+                </button>
+                {item.checklist.length > 0 && (
+                  <span className={`text-[10px] tabular-nums leading-none ${dimCompleted ? "text-foreground/15" : "text-foreground/30"}`}>
                     {item.checklist.filter((i) => i.checked).length}/{item.checklist.length}
                   </span>
-                </TooltipTrigger>
-                <TooltipContent side="left" align="start" className="max-w-[220px] p-2">
-                  <ul className="space-y-1">
-                    {item.checklist.map((ci) => (
-                      <li key={ci.id} className="flex items-start gap-1.5 text-[11px] leading-tight">
-                        <span className={`shrink-0 ${ci.checked ? "text-primary" : "text-muted-foreground/50"}`}>
-                          {ci.checked ? "✓" : "○"}
-                        </span>
-                        <span className={ci.checked ? "line-through text-muted-foreground/60" : "text-popover-foreground"}>
-                          {ci.text}
-                        </span>
-                      </li>
-                    ))}
-                  </ul>
-                </TooltipContent>
-              </Tooltip>
+                )}
+              </div>
+            </TooltipTrigger>
+            {item.checklist.length > 0 && (
+              <TooltipContent side="left" align="start" className="max-w-[250px] px-3 py-2.5">
+                <ul className="space-y-1.5">
+                  {item.checklist.map((ci) => (
+                    <li key={ci.id} className="flex items-start gap-2 text-xs leading-snug">
+                      <div className={`flex size-3.5 shrink-0 items-center justify-center rounded-full border mt-[1px] ${
+                        ci.checked ? "border-primary bg-primary" : "border-muted-foreground/30"
+                      }`}>
+                        {ci.checked && <Check className="size-2.5 text-primary-foreground" strokeWidth={3} />}
+                      </div>
+                      <span className={ci.checked ? "line-through text-muted-foreground/50" : "text-popover-foreground"}>
+                        {ci.text}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </TooltipContent>
             )}
-          </div>
+          </Tooltip>
         </div>
       )}
     </KanbanItem>
