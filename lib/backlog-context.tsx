@@ -58,6 +58,21 @@ export function BacklogProvider({ children }: { children: React.ReactNode }) {
   const [backlogTasks, setBacklogTasks] = useState<Task[]>([]);
   const [backlogFolders, setBacklogFolders] = useState<BacklogFolder[]>([]);
   const suppressBacklogReload = useRef(false);
+  const suppressCountRef = useRef(0);
+  const suppressDuring = useCallback(async (fn: () => Promise<void>) => {
+    suppressCountRef.current++;
+    suppressBacklogReload.current = true;
+    try {
+      await fn();
+    } finally {
+      suppressCountRef.current--;
+      if (suppressCountRef.current === 0) {
+        setTimeout(() => {
+          if (suppressCountRef.current === 0) suppressBacklogReload.current = false;
+        }, 300);
+      }
+    }
+  }, []);
 
   // Callback ref: board page sets this to optimistically add tasks to columns
   const onTaskSentToDayRef = useRef<((task: Task, day: DayName) => void) | null>(null);
@@ -141,10 +156,10 @@ export function BacklogProvider({ children }: { children: React.ReactNode }) {
     const updatedTask = { ...task, day };
     setBacklogTasks((prev) => prev.filter((t) => t.id !== taskId));
     onTaskSentToDayRef.current?.(updatedTask, day);
-    suppressBacklogReload.current = true;
-    await saveTask(activeProjectId, updatedTask, areaId);
-    setTimeout(() => { suppressBacklogReload.current = false; }, 1000);
-  }, [activeProjectId, backlogTasks, areaId]);
+    await suppressDuring(async () => {
+      await saveTask(activeProjectId, updatedTask, areaId);
+    });
+  }, [activeProjectId, backlogTasks, areaId, suppressDuring]);
 
   const sendFolderToDay = useCallback(async (folderId: string, day: DayName) => {
     if (!activeProjectId) return;
@@ -152,10 +167,10 @@ export function BacklogProvider({ children }: { children: React.ReactNode }) {
     if (folderTasks.length === 0) return;
     const updatedTasks = folderTasks.map((t) => ({ ...t, day }));
     setBacklogTasks((prev) => prev.filter((t) => t.folder_id !== folderId));
-    suppressBacklogReload.current = true;
-    await Promise.all(updatedTasks.map((task) => saveTask(activeProjectId, task, areaId)));
-    setTimeout(() => { suppressBacklogReload.current = false; }, 1000);
-  }, [activeProjectId, backlogTasks, areaId]);
+    await suppressDuring(async () => {
+      await Promise.all(updatedTasks.map((task) => saveTask(activeProjectId, task, areaId)));
+    });
+  }, [activeProjectId, backlogTasks, areaId, suppressDuring]);
 
   const addToBacklog = useCallback(async (task: Task, placement?: { clientId?: string; folderId?: string }) => {
     if (!activeProjectId) return;
@@ -168,29 +183,29 @@ export function BacklogProvider({ children }: { children: React.ReactNode }) {
       } : {}),
     };
     setBacklogTasks((prev) => [...prev, backlogTask]);
-    suppressBacklogReload.current = true;
-    await saveTask(activeProjectId, backlogTask, areaId);
-    setTimeout(() => { suppressBacklogReload.current = false; }, 1000);
-  }, [activeProjectId, areaId]);
+    await suppressDuring(async () => {
+      await saveTask(activeProjectId, backlogTask, areaId);
+    });
+  }, [activeProjectId, areaId, suppressDuring]);
 
   const createBacklogTask = useCallback(async (title: string, clientId: string, folderId?: string) => {
     if (!activeProjectId) return;
     const tempId = `task-${Date.now()}`;
     const newTask: Task = { id: tempId, title, client: clientId, folder_id: folderId, priority: "medium", assignees: [], checklist: [] };
     setBacklogTasks((prev) => [...prev, newTask]);
-    suppressBacklogReload.current = true;
-    const realId = await saveTask(activeProjectId, newTask, areaId);
-    setBacklogTasks((prev) => prev.map((t) => (t.id === tempId ? { ...t, id: realId } : t)));
-    setTimeout(() => { suppressBacklogReload.current = false; }, 1000);
-  }, [activeProjectId, areaId]);
+    await suppressDuring(async () => {
+      const realId = await saveTask(activeProjectId, newTask, areaId);
+      setBacklogTasks((prev) => prev.map((t) => (t.id === tempId ? { ...t, id: realId } : t)));
+    });
+  }, [activeProjectId, areaId, suppressDuring]);
 
   const saveBacklogTask = useCallback(async (updatedTask: Task) => {
     if (!activeProjectId) return;
     setBacklogTasks((prev) => prev.map((t) => (t.id === updatedTask.id ? updatedTask : t)));
-    suppressBacklogReload.current = true;
-    await saveTask(activeProjectId, updatedTask, areaId);
-    setTimeout(() => { suppressBacklogReload.current = false; }, 1000);
-  }, [activeProjectId, areaId]);
+    await suppressDuring(async () => {
+      await saveTask(activeProjectId, updatedTask, areaId);
+    });
+  }, [activeProjectId, areaId, suppressDuring]);
 
   const deleteBacklogTask = useCallback((taskId: string) => {
     // Capture task + position before removing
@@ -236,10 +251,10 @@ export function BacklogProvider({ children }: { children: React.ReactNode }) {
   const reorderBacklogTasks = useCallback(async (updatedTasks: Task[]) => {
     if (!activeProjectId) return;
     setBacklogTasks(updatedTasks);
-    suppressBacklogReload.current = true;
-    await updateBacklogTaskOrder(activeProjectId, updatedTasks, areaId);
-    setTimeout(() => { suppressBacklogReload.current = false; }, 1000);
-  }, [activeProjectId, areaId]);
+    await suppressDuring(async () => {
+      await updateBacklogTaskOrder(activeProjectId, updatedTasks, areaId);
+    });
+  }, [activeProjectId, areaId, suppressDuring]);
 
   const createFolder = useCallback(async (clientId: string, name: string) => {
     if (!activeProjectId) return;

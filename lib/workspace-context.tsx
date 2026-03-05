@@ -372,9 +372,13 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
 
   const transitionToNextWeek = useCallback(async () => {
     if (!activeProjectId) return { deleted: 0, carriedOver: 0 };
-    const result = await transitionWeek(activeProjectId, areaId);
+    // Guard against multi-tab race: re-check marker before running
     const monday = getCurrentMonday();
+    const marker = localStorage.getItem("flowie-last-transition");
+    if (marker === monday.toISOString()) return { deleted: 0, carriedOver: 0 };
+    // Set marker immediately to prevent other tabs from also firing
     localStorage.setItem("flowie-last-transition", monday.toISOString());
+    const result = await transitionWeek(activeProjectId, areaId);
     setTransitionCount((c) => c + 1);
     return result;
   }, [activeProjectId, areaId]);

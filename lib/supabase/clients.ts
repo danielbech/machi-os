@@ -15,7 +15,7 @@ export async function loadClients(projectId: string): Promise<Client[]> {
     return []
   }
 
-  return (data || []).map((c: any) => ({
+  return (data || []).map((c) => ({
     id: c.id,
     project_id: c.project_id,
     name: c.name,
@@ -27,7 +27,7 @@ export async function loadClients(projectId: string): Promise<Client[]> {
     active: c.active ?? true,
     status_id: c.status_id || undefined,
     client_group_id: c.client_group_id || undefined,
-      }))
+  }))
 }
 
 export async function createClientRecord(
@@ -36,7 +36,7 @@ export async function createClientRecord(
 ): Promise<Client> {
   const supabase = createClient()
 
-  const row: Record<string, any> = {
+  const row: Record<string, unknown> = {
     project_id: projectId,
     name: client.name,
     slug: client.slug,
@@ -70,9 +70,9 @@ export async function createClientRecord(
     icon: data.icon || undefined,
     sort_order: data.sort_order,
     active: data.active ?? true,
-    status_id: (data as any).status_id || undefined,
+    status_id: data.status_id || undefined,
     client_group_id: data.client_group_id || undefined,
-      }
+  }
 }
 
 export async function updateClientRecord(

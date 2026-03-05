@@ -161,8 +161,24 @@ export default function BoardPage() {
   const prevColumnsRef = useRef(columns);
   useEffect(() => { prevColumnsRef.current = columns; }, [columns]);
 
-  // Suppress realtime reloads briefly after local saves
+  // Suppress realtime reloads while local saves are in flight
   const suppressTaskReload = useRef(false);
+  const suppressCount = useRef(0);
+  const suppressDuring = useCallback(async (fn: () => Promise<void>) => {
+    suppressCount.current++;
+    suppressTaskReload.current = true;
+    try {
+      await fn();
+    } finally {
+      suppressCount.current--;
+      if (suppressCount.current === 0) {
+        // Small grace period for realtime events that arrive right after DB write
+        setTimeout(() => {
+          if (suppressCount.current === 0) suppressTaskReload.current = false;
+        }, 300);
+      }
+    }
+  }, []);
 
   // Realtime: reload when another user changes tasks (debounced)
   const realtimeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -267,14 +283,23 @@ export default function BoardPage() {
       columnItems.push(newCard);
     }
     setColumns({ ...columns, [columnId]: columnItems });
-    const realId = await saveTask(activeProjectId, newCard, areaId);
-    const updatedItems = columnItems.map((item) =>
-      item.id === tempId ? { ...item, id: realId } : item
-    );
-    setColumns({ ...columns, [columnId]: updatedItems });
-    setNewlyCreatedCardId(realId);
-    // Persist correct sort order for the whole column
-    await updateDayTasks(activeProjectId, columnId, updatedItems, areaId);
+    try {
+      const realId = await saveTask(activeProjectId, newCard, areaId);
+      const updatedItems = columnItems.map((item) =>
+        item.id === tempId ? { ...item, id: realId } : item
+      );
+      setColumns({ ...columns, [columnId]: updatedItems });
+      setNewlyCreatedCardId(realId);
+      // Persist correct sort order for the whole column
+      await updateDayTasks(activeProjectId, columnId, updatedItems, areaId);
+    } catch {
+      // Rollback: remove the optimistic card
+      setColumns((prev) => ({
+        ...prev,
+        [columnId]: (prev[columnId] || []).filter((t) => t.id !== tempId),
+      }));
+      toast.error("Failed to save card");
+    }
   };
 
   const toggleComplete = async (taskId: string) => {
@@ -540,7 +565,6 @@ export default function BoardPage() {
 
   const saveEditedTask = async (updatedTask: Task) => {
     if (!activeProjectId || !editingColumn) return;
-    suppressTaskReload.current = true;
 
     // Capture column before clearing dialog state
     const column = editingColumn;
@@ -562,7 +586,9 @@ export default function BoardPage() {
       return updated;
     });
 
-    await saveTask(activeProjectId, { ...updatedTask, day: column as DayName }, areaId);
+    await suppressDuring(async () => {
+      await saveTask(activeProjectId, { ...updatedTask, day: column as DayName }, areaId);
+    });
     if (justCompleted) {
       setGlowingCards((prev) => new Set(prev).add(updatedTask.id));
       setTimeout(() => {
@@ -573,14 +599,10 @@ export default function BoardPage() {
         });
       }, 800);
     }
-    setTimeout(() => {
-      suppressTaskReload.current = false;
-    }, 1000);
   };
 
   const handleInlineTitleChange = async (taskId: string, newTitle: string) => {
     if (!activeProjectId) return;
-    suppressTaskReload.current = true;
     // Optimistic local state update
     const updated = { ...columns };
     let updatedTask: Task | null = null;
@@ -594,16 +616,16 @@ export default function BoardPage() {
       }
     }
     setColumns(updated);
-    if (updatedTask) await saveTask(activeProjectId, updatedTask, areaId);
-    setTimeout(() => {
-      suppressTaskReload.current = false;
-    }, 1000);
+    if (updatedTask) {
+      await suppressDuring(async () => {
+        await saveTask(activeProjectId, updatedTask!, areaId);
+      });
+    }
   };
 
   // Send kanban task to backlog (via drag or action)
   const handleSendToBacklog = async (task: Task, sourceColumn: string, placement?: { clientId?: string; folderId?: string }) => {
     if (!activeProjectId) return;
-    suppressTaskReload.current = true;
     // Remove card from column
     let updatedColumnItems: Task[] = [];
     setColumns((prev) => {
@@ -611,8 +633,10 @@ export default function BoardPage() {
       return { ...prev, [sourceColumn]: updatedColumnItems };
     });
     try {
-      await addToBacklog(task, placement);
-      await updateDayTasks(activeProjectId, sourceColumn, updatedColumnItems, areaId);
+      await suppressDuring(async () => {
+        await addToBacklog(task, placement);
+        await updateDayTasks(activeProjectId, sourceColumn, updatedColumnItems, areaId);
+      });
     } catch {
       // Restore card to its column on failure
       setColumns((prev) => ({
@@ -620,7 +644,6 @@ export default function BoardPage() {
         [sourceColumn]: [...(prev[sourceColumn] || []), task],
       }));
     }
-    setTimeout(() => { suppressTaskReload.current = false; }, 1000);
   };
 
   if (initialLoading) {
@@ -675,17 +698,17 @@ export default function BoardPage() {
             }
             setColumns(merged);
             if (activeProjectId) {
-              suppressTaskReload.current = true;
               // Only persist columns that actually changed
               const updates = Object.entries(merged).filter(([day, tasks]) => {
                 const prevTasks = prev[day];
                 if (!prevTasks || prevTasks.length !== tasks.length) return true;
                 return tasks.some((t, i) => t.id !== prevTasks[i].id);
               });
-              await Promise.all(
-                updates.map(([day, tasks]) => updateDayTasks(activeProjectId, day, tasks, areaId))
-              );
-              setTimeout(() => { suppressTaskReload.current = false; }, 1000);
+              await suppressDuring(async () => {
+                await Promise.all(
+                  updates.map(([day, tasks]) => updateDayTasks(activeProjectId, day, tasks, areaId))
+                );
+              });
             }
           }}
           getItemValue={(item) => item.id}
