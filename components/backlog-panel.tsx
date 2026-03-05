@@ -391,9 +391,9 @@ export function BacklogPanel({
       return 0;
     });
 
-  // Active clients not already shown — available to add via picker
+  // Clients not already shown — available to add via picker
   const availableClients = clients.filter(
-    (c) => c.active && !pinnedClients.has(c.id) && !activeTasks.some((t) => t.client === c.id)
+    (c) => !pinnedClients.has(c.id) && !activeTasks.some((t) => t.client === c.id)
   );
 
   const isClientCollapsed = (clientId: string) => {
