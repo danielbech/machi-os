@@ -193,7 +193,7 @@ export function TaskEditDialog({ task, onClose, onSave, onTaskChange, folders }:
                 onClick={() => onTaskChange({ ...task, type: "note" })}
                 className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium transition-colors ${
                   task.type === "note"
-                    ? "bg-amber-500/20 text-amber-400"
+                    ? "bg-accent/40 text-accent-foreground"
                     : "text-foreground/30 hover:text-foreground/50"
                 }`}
               >

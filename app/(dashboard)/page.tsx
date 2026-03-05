@@ -907,10 +907,10 @@ export default function BoardPage() {
               }
               if (task.type === "note") {
                 return (
-                  <div className="w-[85vw] sm:w-80 rounded-lg border border-amber-500/20 bg-amber-500/10 p-3 shadow-lg">
+                  <div className="w-[85vw] sm:w-80 rounded-lg border border-accent-foreground/20 bg-accent/30 p-3 shadow-lg">
                     <div className="flex items-start gap-2">
-                      <StickyNote className="size-3.5 text-amber-400 mt-0.5 shrink-0" />
-                      <div className="text-sm text-amber-100/90">{task.title}</div>
+                      <StickyNote className="size-3.5 text-accent-foreground mt-0.5 shrink-0" />
+                      <div className="text-sm text-accent-foreground/90">{task.title}</div>
                     </div>
                   </div>
                 );

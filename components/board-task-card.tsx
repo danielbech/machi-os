@@ -152,7 +152,7 @@ export const BoardTaskCard = memo(function BoardTaskCard({
       data-task-id={item.id}
       className={`group relative rounded-lg border p-2 text-card-foreground transition-[background-color,border-color,opacity,box-shadow] duration-150 ease-out focus:outline-none cursor-pointer ${
         item.type === "note"
-          ? "border-amber-500/20 bg-amber-500/5 hover:bg-amber-500/10 hover:border-amber-500/30 shadow-[0_1px_3px_rgba(0,0,0,0.3)]"
+          ? "border-accent-foreground/15 bg-accent/20 hover:bg-accent/30 hover:border-accent-foreground/25 shadow-[0_1px_3px_rgba(0,0,0,0.3)]"
           : item.completed
             ? "border-foreground/[0.03] bg-card/50 shadow-none hover:border-foreground/10 hover:bg-card/60"
             : "border-foreground/5 bg-card shadow-[0_1px_3px_rgba(0,0,0,0.3)] hover:border-foreground/15 hover:bg-card/80"
@@ -258,7 +258,7 @@ export const BoardTaskCard = memo(function BoardTaskCard({
 
       {item.type === "note" ? (
         <div className={`flex items-start gap-2 transition-opacity ${isPastDay ? "opacity-30" : item.completed ? "opacity-50" : ""}`}>
-          <StickyNote className="size-3.5 text-amber-400 mt-0.5 shrink-0" />
+          <StickyNote className="size-3.5 text-accent-foreground mt-0.5 shrink-0" />
           {isEditingTitle ? (
             <input
               ref={inputRef}
@@ -276,12 +276,12 @@ export const BoardTaskCard = memo(function BoardTaskCard({
                   cancelEdit();
                 }
               }}
-              className="flex-1 bg-transparent text-sm text-amber-100/90 outline-none min-w-0"
+              className="flex-1 bg-transparent text-sm text-accent-foreground/90 outline-none min-w-0"
             />
           ) : (
             <span
               data-title-area
-              className="flex-1 text-sm text-amber-100/90 cursor-text"
+              className="flex-1 text-sm text-accent-foreground/90 cursor-text"
               onMouseDown={(e) => e.stopPropagation()}
               onClick={(e) => {
                 e.stopPropagation();
@@ -294,10 +294,10 @@ export const BoardTaskCard = memo(function BoardTaskCard({
           {(item.checklist.length > 0 || (item.images && item.images.length > 0)) && (
             <div className="flex items-center gap-1.5 shrink-0 mt-0.5">
               {item.images && item.images.length > 0 && (
-                <ImageIcon className="size-3 text-amber-400/40" />
+                <ImageIcon className="size-3 text-accent-foreground/40" />
               )}
               {item.checklist.length > 0 && (
-                <span className="text-[10px] text-amber-400/40 tabular-nums">
+                <span className="text-[10px] text-accent-foreground/40 tabular-nums">
                   {item.checklist.filter((i) => i.checked).length}/{item.checklist.length}
                 </span>
               )}
