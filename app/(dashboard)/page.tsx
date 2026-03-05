@@ -2,12 +2,13 @@
 
 import { useState, useCallback, useRef, useEffect, useMemo, lazy, Suspense } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { loadTasksByDay, saveTask, updateDayTasks, deleteTask } from "@/lib/supabase/tasks-simple";
+import { saveTask, updateDayTasks, deleteTask } from "@/lib/supabase/tasks-simple";
 import { toast } from "sonner";
 import { seedDemoTasks } from "@/lib/supabase/initialize";
 import { useAuth } from "@/lib/auth-context";
 import { useWorkspace } from "@/lib/workspace-context";
 import { useProjectData } from "@/lib/project-data-context";
+import { useBoardData } from "@/lib/board-data-context";
 import { useBacklog } from "@/lib/backlog-context";
 import { useCalendar } from "@/lib/calendar-context";
 const TaskEditDialog = lazy(() => import("@/components/task-edit-dialog").then(m => ({ default: m.TaskEditDialog })));
@@ -17,7 +18,7 @@ import { BoardShortcuts } from "@/components/board-shortcuts";
 import { BoardAddCard } from "@/components/board-add-card";
 import { useCardPresence } from "@/hooks/use-card-presence";
 import type { Task, DayName } from "@/lib/types";
-import { getColumnTitles, getEmptyColumns } from "@/lib/constants";
+import { getColumnTitles } from "@/lib/constants";
 import { Input } from "@/components/ui/input";
 import {
   Kanban,
@@ -30,8 +31,9 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 
 export default function BoardPage() {
   const { user } = useAuth();
-  const { activeProjectId, weekMode, weekDays, displayMonday, boardColumns, addBoardColumn, renameBoardColumn, removeBoardColumn, showCheckmarks, taskRefreshKey } = useWorkspace();
+  const { activeProjectId, weekMode, weekDays, displayMonday, boardColumns, addBoardColumn, renameBoardColumn, removeBoardColumn, showCheckmarks } = useWorkspace();
   const { clients, clientGroups, teamMembers, areaId } = useProjectData();
+  const { columns, setColumns, initialLoading, refreshTasks } = useBoardData();
   const { calendarEvents } = useCalendar();
   const { backlogOpen, addToBacklog, backlogFolders, backlogDragActive, setKanbanDragOverBacklog, onTaskSentToDayRef } = useBacklog();
 
@@ -39,10 +41,8 @@ export default function BoardPage() {
   const columnTitles = getColumnTitles(weekMode, boardColumns);
   const boardColumnIds = useMemo(() => boardColumns.map((c) => c.id), [boardColumns]);
   const columnKeys = isCustom ? boardColumnIds : weekDays;
-  const [columns, setColumns] = useState<Record<string, Task[]>>(() => getEmptyColumns(weekMode, boardColumns));
   const [renamingColumn, setRenamingColumn] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState("");
-  const [initialLoading, setInitialLoading] = useState(true);
   const [addingToColumn, setAddingToColumn] = useState<string | null>(null);
   const [addingAtIndex, setAddingAtIndex] = useState<number | null>(null);
   const [newCardTitle, setNewCardTitle] = useState("");
@@ -114,52 +114,13 @@ export default function BoardPage() {
     return result;
   }, [columns, filterMine, hideCompleted, user]);
 
-  // Load tasks
-  const refreshTasks = useCallback(async () => {
-    if (!activeProjectId || !areaId) return;
-    if (isCustom && boardColumnIds.length === 0) {
-      setColumns({});
-      setInitialLoading(false);
-      return;
-    }
-    try {
-      const customIds = isCustom ? boardColumnIds : undefined;
-      const tasks = await loadTasksByDay(activeProjectId, areaId, customIds);
-      // Filter to only show active columns based on weekMode
-      const keys = isCustom ? boardColumnIds : weekDays;
-      const filtered: Record<string, Task[]> = {};
-      for (const key of keys) {
-        filtered[key] = tasks[key] || [];
-      }
-      setColumns(filtered);
-      setInitialLoading(false);
-    } catch (error) {
-      console.error("Error loading tasks:", error);
-      setInitialLoading(false);
-    }
-  }, [activeProjectId, weekDays, areaId, isCustom, boardColumnIds]);
-
-  // Load tasks when active project changes
+  // Reset filters when project changes
   useEffect(() => {
     setFilterMine(false);
     setHideCompleted(false);
     localStorage.removeItem("flowie-filter-mine");
     localStorage.removeItem("flowie-hide-completed");
-    if (!activeProjectId) {
-      setColumns(getEmptyColumns(weekMode, boardColumns));
-      setInitialLoading(false);
-      return;
-    }
-    refreshTasks();
-    // refreshTasks already captures weekDays/boardColumnIds/isCustom
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeProjectId, refreshTasks]);
-
-  // Reload tasks when triggered externally (e.g. after task migration)
-  useEffect(() => {
-    if (taskRefreshKey > 0) refreshTasks();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [taskRefreshKey]);
+  }, [activeProjectId]);
 
   // Track previous columns for diffing on drag
   const prevColumnsRef = useRef(columns);

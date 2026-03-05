@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { AuthProvider, useAuth } from "@/lib/auth-context";
 import { WorkspaceProvider, useWorkspace } from "@/lib/workspace-context";
 import { ProjectDataProvider } from "@/lib/project-data-context";
+import { BoardDataProvider } from "@/lib/board-data-context";
 import { BacklogProvider, useBacklog } from "@/lib/backlog-context";
 import { CalendarProvider } from "@/lib/calendar-context";
 import { ThemeProvider } from "@/lib/theme-context";
@@ -111,13 +112,15 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       <AuthProvider>
         <WorkspaceProvider>
           <ProjectDataProvider>
-            <ThemeBridge>
-              <CalendarProvider>
-                <BacklogProvider>
-                  <DashboardGate>{children}</DashboardGate>
-                </BacklogProvider>
-              </CalendarProvider>
-            </ThemeBridge>
+            <BoardDataProvider>
+              <ThemeBridge>
+                <CalendarProvider>
+                  <BacklogProvider>
+                    <DashboardGate>{children}</DashboardGate>
+                  </BacklogProvider>
+                </CalendarProvider>
+              </ThemeBridge>
+            </BoardDataProvider>
           </ProjectDataProvider>
         </WorkspaceProvider>
       </AuthProvider>
