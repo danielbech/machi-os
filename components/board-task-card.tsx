@@ -8,6 +8,7 @@ import { getHexFromTailwind } from "@/hooks/use-presence-cursors";
 import { ClientIcon } from "@/components/client-icon";
 import { KanbanItem } from "@/components/ui/kanban";
 import { Check, ImageIcon, StickyNote } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface BoardTaskCardProps {
   item: Task;
@@ -297,9 +298,27 @@ export const BoardTaskCard = memo(function BoardTaskCard({
                 <ImageIcon className="size-3 text-accent-foreground/40" />
               )}
               {item.checklist.length > 0 && (
-                <span className="text-[10px] text-accent-foreground/40 tabular-nums">
-                  {item.checklist.filter((i) => i.checked).length}/{item.checklist.length}
-                </span>
+                <Tooltip delayDuration={400}>
+                  <TooltipTrigger asChild>
+                    <span className="text-[10px] text-accent-foreground/40 tabular-nums cursor-default" onMouseDown={(e) => e.stopPropagation()}>
+                      {item.checklist.filter((i) => i.checked).length}/{item.checklist.length}
+                    </span>
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom" align="start" className="max-w-[220px] p-2">
+                    <ul className="space-y-1">
+                      {item.checklist.map((ci) => (
+                        <li key={ci.id} className="flex items-start gap-1.5 text-[11px] leading-tight">
+                          <span className={`shrink-0 ${ci.checked ? "text-primary" : "text-muted-foreground/50"}`}>
+                            {ci.checked ? "✓" : "○"}
+                          </span>
+                          <span className={ci.checked ? "line-through text-muted-foreground/60" : "text-popover-foreground"}>
+                            {ci.text}
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  </TooltipContent>
+                </Tooltip>
               )}
             </div>
           )}
@@ -420,9 +439,27 @@ export const BoardTaskCard = memo(function BoardTaskCard({
               </div>
             </button>
             {item.checklist.length > 0 && (
-              <span className={`text-[10px] tabular-nums leading-none ${dimCompleted ? "text-foreground/15" : "text-foreground/30"}`}>
-                {item.checklist.filter((i) => i.checked).length}/{item.checklist.length}
-              </span>
+              <Tooltip delayDuration={400}>
+                <TooltipTrigger asChild>
+                  <span className={`text-[10px] tabular-nums leading-none cursor-default ${dimCompleted ? "text-foreground/15" : "text-foreground/30"}`} onMouseDown={(e) => e.stopPropagation()}>
+                    {item.checklist.filter((i) => i.checked).length}/{item.checklist.length}
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent side="left" align="start" className="max-w-[220px] p-2">
+                  <ul className="space-y-1">
+                    {item.checklist.map((ci) => (
+                      <li key={ci.id} className="flex items-start gap-1.5 text-[11px] leading-tight">
+                        <span className={`shrink-0 ${ci.checked ? "text-primary" : "text-muted-foreground/50"}`}>
+                          {ci.checked ? "✓" : "○"}
+                        </span>
+                        <span className={ci.checked ? "line-through text-muted-foreground/60" : "text-popover-foreground"}>
+                          {ci.text}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                </TooltipContent>
+              </Tooltip>
             )}
           </div>
         </div>
