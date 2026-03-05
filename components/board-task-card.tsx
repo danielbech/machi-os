@@ -389,20 +389,24 @@ export const BoardTaskCard = memo(function BoardTaskCard({
                     <ImageIcon className={`size-3.5 ${dimCompleted ? "text-foreground/15" : "text-foreground/30"}`} />
                   )}
                   {item.assignees.length > 0 && (
-                    <div className="flex gap-1.5">
+                    <div className="flex -space-x-1.5">
                       {item.assignees.map((assigneeId) => {
                         const member = teamMembers.find((m) => m.id === assigneeId);
                         return member ? (
                           <div
                             key={member.id}
-                            className={`flex items-center justify-center w-5 h-5 rounded-full ${!member.avatar ? member.color : "bg-foreground/5"} text-[10px] font-semibold text-white overflow-hidden`}
+                            className="rounded-full ring-2 ring-card"
                             title={member.name}
                           >
-                            {member.avatar ? (
-                              <img src={member.avatar} alt={member.name} className="w-full h-full object-cover" />
-                            ) : (
-                              member.initials
-                            )}
+                            <div
+                              className={`flex items-center justify-center w-5 h-5 rounded-full ${!member.avatar ? member.color : "bg-foreground/5"} text-[10px] font-semibold text-white overflow-hidden`}
+                            >
+                              {member.avatar ? (
+                                <img src={member.avatar} alt={member.name} className="w-full h-full object-cover" />
+                              ) : (
+                                member.initials
+                              )}
+                            </div>
                           </div>
                         ) : null;
                       })}
