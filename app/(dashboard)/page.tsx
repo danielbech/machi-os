@@ -643,9 +643,13 @@ export default function BoardPage() {
             // Weekend separator skeleton
             if (isRolling && isWeekendISO(key)) {
               return (
-                <div key={key} className="w-10 shrink-0 flex flex-col items-center pt-1 gap-1">
-                  <div className="h-3 w-3 bg-foreground/[0.04] rounded" />
-                  <div className="flex-1 w-px bg-foreground/[0.04] rounded-full" />
+                <div key={key} className="w-10 shrink-0 relative">
+                  <div className="absolute inset-x-0 top-0 bottom-0 flex justify-center">
+                    <div className="w-px bg-foreground/[0.04]" />
+                  </div>
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <div className="h-16 w-5 bg-foreground/[0.04] rounded-full" />
+                  </div>
                 </div>
               );
             }
@@ -770,17 +774,14 @@ export default function BoardPage() {
                       key={key}
                       className="w-10 shrink-0 relative"
                     >
-                      {/* Stable vertical line — absolute so drag animations don't affect it */}
+                      {/* Vertical line with centered badge */}
                       <div className="absolute inset-x-0 top-0 bottom-0 flex justify-center">
                         <div className="w-px bg-foreground/[0.06]" />
                       </div>
-                      {/* Day labels */}
-                      <div className="relative flex flex-col items-center pt-1 gap-1">
-                        {seg.days.map((d) => (
-                          <span key={d.columnId} className="text-[10px] font-medium text-foreground/20 [writing-mode:vertical-lr] rotate-180 tracking-widest uppercase">
-                            {d.label}
-                          </span>
-                        ))}
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <span className="text-[10px] font-medium text-white bg-foreground/15 backdrop-blur-sm rounded-full px-1.5 py-3 [writing-mode:vertical-lr] rotate-180 tracking-widest uppercase leading-none">
+                          Weekend
+                        </span>
                       </div>
                     </div>
                   );
