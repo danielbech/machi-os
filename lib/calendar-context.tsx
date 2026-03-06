@@ -25,7 +25,7 @@ import {
 } from "@/lib/supabase/calendar";
 import { useWorkspace } from "./workspace-context";
 import { useAuth } from "./auth-context";
-import { getWeekRange } from "@/lib/date-utils";
+import { getWeekRange, getRollingDates, toLocalISO } from "@/lib/date-utils";
 
 export interface ConnectionWithCalendars extends CalendarConnection {
   availableCalendars: GoogleCalendarInfo[];
@@ -76,7 +76,7 @@ async function getValidToken(conn: CalendarConnection): Promise<{ token: string;
 
 export function CalendarProvider({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
-  const { activeProjectId, weekMode, transitionDay, transitionCount } = useWorkspace();
+  const { activeProjectId, weekMode, transitionDay, transitionCount, rollingDaysBack } = useWorkspace();
 
   const [calendarConnections, setCalendarConnections] = useState<ConnectionWithCalendars[]>([]);
   const [calendarEvents, setCalendarEvents] = useState<Record<string, CalendarEvent[]>>({});
@@ -87,8 +87,22 @@ export function CalendarProvider({ children }: { children: React.ReactNode }) {
 
   // Load shared events from Supabase and group by day
   const loadSharedEvents = useCallback(async (projectId: string, mode: WeekMode = "5-day") => {
-    const { monday, friday } = getWeekRange(mode, transitionDay);
-    const dbEvents = await loadSharedCalendarEvents(projectId, monday, friday);
+    let rangeStart: Date;
+    let rangeEnd: Date;
+
+    if (mode === "rolling") {
+      const dates = getRollingDates(rollingDaysBack);
+      const first = dates[0].split("-").map(Number);
+      const last = dates[dates.length - 1].split("-").map(Number);
+      rangeStart = new Date(first[0], first[1] - 1, first[2], 0, 0, 0);
+      rangeEnd = new Date(last[0], last[1] - 1, last[2], 23, 59, 59);
+    } else {
+      const { monday, friday } = getWeekRange(mode, transitionDay);
+      rangeStart = monday;
+      rangeEnd = friday;
+    }
+
+    const dbEvents = await loadSharedCalendarEvents(projectId, rangeStart, rangeEnd);
 
     const seen = new Set<string>();
     const uniqueEvents = dbEvents.filter(e => {
@@ -97,16 +111,15 @@ export function CalendarProvider({ children }: { children: React.ReactNode }) {
       return true;
     });
 
-    const allDays = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
     const grouped: Record<string, CalendarEvent[]> = {};
 
-    uniqueEvents.forEach(e => {
-      const eventDate = new Date(e.start_time);
-      const dayOfWeek = eventDate.getDay();
-      if (mode === "7-day" ? (dayOfWeek >= 0 && dayOfWeek <= 6) : (dayOfWeek >= 1 && dayOfWeek <= 5)) {
-        const dayName = allDays[dayOfWeek];
-        if (!grouped[dayName]) grouped[dayName] = [];
-        grouped[dayName].push({
+    if (mode === "rolling") {
+      // Group by ISO date string to match rolling column keys
+      uniqueEvents.forEach(e => {
+        const eventDate = new Date(e.start_time);
+        const isoDate = toLocalISO(eventDate);
+        if (!grouped[isoDate]) grouped[isoDate] = [];
+        grouped[isoDate].push({
           id: e.google_event_id,
           summary: e.summary,
           description: e.description || undefined,
@@ -116,11 +129,31 @@ export function CalendarProvider({ children }: { children: React.ReactNode }) {
           attendees: e.attendees || [],
           calendarId: e.calendar_id,
         });
-      }
-    });
+      });
+    } else {
+      const allDays = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+      uniqueEvents.forEach(e => {
+        const eventDate = new Date(e.start_time);
+        const dayOfWeek = eventDate.getDay();
+        if (mode === "7-day" ? (dayOfWeek >= 0 && dayOfWeek <= 6) : (dayOfWeek >= 1 && dayOfWeek <= 5)) {
+          const dayName = allDays[dayOfWeek];
+          if (!grouped[dayName]) grouped[dayName] = [];
+          grouped[dayName].push({
+            id: e.google_event_id,
+            summary: e.summary,
+            description: e.description || undefined,
+            start: e.start_time,
+            end: e.end_time,
+            location: e.location || undefined,
+            attendees: e.attendees || [],
+            calendarId: e.calendar_id,
+          });
+        }
+      });
+    }
 
     setCalendarEvents(grouped);
-  }, [transitionDay]);
+  }, [transitionDay, rollingDaysBack]);
 
   // Sync all of the current user's Google Calendar connections to DB
   const syncCalendarEvents = useCallback(async () => {

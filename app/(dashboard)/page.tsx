@@ -870,12 +870,13 @@ export default function BoardPage() {
                 </div>
 
                 <div className="flex flex-col overflow-y-auto px-0.5">
-                  {/* Calendar Events — only in week modes (not custom or rolling) */}
-                  {!isCustom && !isRolling && calendarEvents[columnId]?.map((event) => {
-                    const dayIndex = weekDays.indexOf(columnId as string);
-                    const todayIndex = weekDays.indexOf(todayName as string);
+                  {/* Calendar Events — week modes and rolling (not custom) */}
+                  {!isCustom && calendarEvents[columnId]?.map((event) => {
+                    const isPast = isRolling
+                      ? columnId < getTodayISO()
+                      : weekDays.indexOf(columnId) < weekDays.indexOf(todayName);
                     return (
-                      <BoardCalendarEvent key={event.id} event={event} isPast={dayIndex < todayIndex} />
+                      <BoardCalendarEvent key={event.id} event={event} isPast={isPast} />
                     );
                   })}
 
