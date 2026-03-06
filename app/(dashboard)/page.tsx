@@ -19,7 +19,7 @@ import { BoardAddCard } from "@/components/board-add-card";
 import { useCardPresence } from "@/hooks/use-card-presence";
 import type { Task } from "@/lib/types";
 import { getColumnTitles } from "@/lib/constants";
-import { formatRollingHeader, getTodayISO } from "@/lib/date-utils";
+import { formatRollingHeader, getTodayISO, isWeekendISO } from "@/lib/date-utils";
 import { Input } from "@/components/ui/input";
 import {
   Kanban,
@@ -115,6 +115,17 @@ export default function BoardPage() {
     }
     return result;
   }, [columns, filterMine, hideCompleted, user]);
+
+  // For rolling mode: exclude weekend columns from the Kanban dnd-kit value
+  // so they don't participate in drag-and-drop, while still rendering as separators
+  const kanbanColumns = useMemo(() => {
+    if (!isRolling) return filteredColumns;
+    const result: Record<string, Task[]> = {};
+    for (const [day, tasks] of Object.entries(filteredColumns)) {
+      if (!isWeekendISO(day)) result[day] = tasks;
+    }
+    return result;
+  }, [filteredColumns, isRolling]);
 
   // Reset filters when project changes
   useEffect(() => {
@@ -628,11 +639,21 @@ export default function BoardPage() {
     return (
       <main className="flex min-h-screen flex-col pt-4 pr-4 md:pr-8">
         <div className="flex gap-1 overflow-x-auto pt-1 px-4 pb-3 md:px-8">
-          {columnKeys.map((key, ki) => (
+          {columnKeys.map((key, ki) => {
+            // Weekend separator skeleton
+            if (isRolling && isWeekendISO(key)) {
+              return (
+                <div key={key} className="w-10 shrink-0 flex flex-col items-center pt-1 gap-1">
+                  <div className="h-3 w-3 bg-foreground/[0.04] rounded" />
+                  <div className="flex-1 w-px bg-foreground/[0.04] rounded-full" />
+                </div>
+              );
+            }
+            return (
             <div key={key} className="w-[85vw] sm:w-[280px] shrink-0 p-2.5 space-y-2.5">
               <div className="flex items-baseline gap-2 px-1 mb-1.5">
                 <div className="h-4 w-16 bg-foreground/[0.06] rounded-md" />
-                {!isCustom && <div className="h-3.5 w-8 bg-foreground/[0.04] rounded-md" />}
+                {!isCustom && !isRolling && <div className="h-3.5 w-8 bg-foreground/[0.04] rounded-md" />}
               </div>
               {[...Array(skeletonCounts[ki] ?? 2)].map((_, i) => (
                 <div
@@ -645,7 +666,8 @@ export default function BoardPage() {
                 </div>
               ))}
             </div>
-          ))}
+            );
+          })}
         </div>
       </main>
     );
@@ -655,7 +677,7 @@ export default function BoardPage() {
     <main className="flex min-h-screen flex-col pt-4 pr-4 md:pr-8">
       <div>
         <Kanban
-          value={filteredColumns}
+          value={kanbanColumns}
           onValueChange={async (newCols) => {
             // If cursor is over the backlog, skip — handleSendToBacklog manages state
             if (dragOverTargetRef.current === "backlog") return;
@@ -666,12 +688,16 @@ export default function BoardPage() {
             if (isFiltering) {
               merged = {};
               for (const day of Object.keys(columns)) {
+                if (isRolling && isWeekendISO(day)) { merged[day] = columns[day] || []; continue; }
                 const visibleIds = new Set((newCols[day] || []).map(t => t.id));
                 const hiddenTasks = (columns[day] || []).filter(t => !visibleIds.has(t.id));
                 merged[day] = [...(newCols[day] || []), ...hiddenTasks];
               }
             } else {
-              merged = newCols;
+              // Preserve weekend keys that aren't in the dnd-kit value
+              merged = isRolling
+                ? { ...Object.fromEntries(Object.entries(columns).filter(([d]) => isWeekendISO(d))), ...newCols }
+                : newCols;
             }
             setColumns(merged);
             if (activeProjectId) {
@@ -711,7 +737,52 @@ export default function BoardPage() {
           }}
         >
           <KanbanBoard className="overflow-x-auto pt-1 px-4 pb-3 md:px-8">
-            {Object.entries(filteredColumns).map(([columnId, items]) => (
+            {(() => {
+              const entries = Object.entries(filteredColumns);
+              // Build render segments: group adjacent weekend days in rolling mode
+              type Segment = { type: "column"; columnId: string; items: Task[] } | { type: "weekend"; days: { columnId: string; label: string }[] };
+              const segments: Segment[] = [];
+              for (let i = 0; i < entries.length; i++) {
+                const [columnId, items] = entries[i];
+                if (isRolling && isWeekendISO(columnId)) {
+                  // Collect adjacent weekend days
+                  const weekendDays: { columnId: string; label: string }[] = [];
+                  while (i < entries.length && isRolling && isWeekendISO(entries[i][0])) {
+                    const parts = entries[i][0].split("-").map(Number);
+                    const date = new Date(parts[0], parts[1] - 1, parts[2]);
+                    const dayName = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"][date.getDay()];
+                    weekendDays.push({ columnId: entries[i][0], label: dayName });
+                    i++;
+                  }
+                  i--; // back up since the for loop will increment
+                  segments.push({ type: "weekend", days: weekendDays });
+                } else {
+                  segments.push({ type: "column", columnId, items });
+                }
+              }
+
+              return segments.map((seg) => {
+                // --- Weekend separator ---
+                if (seg.type === "weekend") {
+                  const key = seg.days.map(d => d.columnId).join("-");
+                  return (
+                    <div
+                      key={key}
+                      className="w-10 shrink-0 flex flex-col items-center pt-1 gap-1"
+                    >
+                      {seg.days.map((d) => (
+                        <span key={d.columnId} className="text-[10px] font-medium text-foreground/20 [writing-mode:vertical-lr] rotate-180 tracking-widest uppercase">
+                          {d.label}
+                        </span>
+                      ))}
+                      <div className="flex-1 w-px bg-foreground/[0.06] rounded-full" />
+                    </div>
+                  );
+                }
+
+                // --- Normal column ---
+                const { columnId, items } = seg;
+                return (
               <KanbanColumn
                 key={columnId}
                 value={columnId}
@@ -883,7 +954,9 @@ export default function BoardPage() {
                   )}
                 </div>
               </KanbanColumn>
-            ))}
+                );
+              });
+            })()}
             {isCustom && (
               <div className="w-[85vw] sm:w-[280px] shrink-0 p-2.5">
                 <button

@@ -93,6 +93,14 @@ export function formatRollingHeader(isoDate: string): { label: string; isToday: 
   };
 }
 
+/** Check if an ISO date string falls on a weekend (Saturday or Sunday) */
+export function isWeekendISO(isoDate: string): boolean {
+  const parts = isoDate.split("-").map(Number);
+  const date = new Date(parts[0], parts[1] - 1, parts[2]);
+  const day = date.getDay();
+  return day === 0 || day === 6;
+}
+
 /** Get the cutoff ISO date (7 days ago) for rolling cleanup */
 export function getRollingCutoffDate(): string {
   const d = new Date();

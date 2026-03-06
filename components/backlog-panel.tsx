@@ -5,7 +5,7 @@ import { createPortal } from "react-dom";
 import DOMPurify from "dompurify";
 import type { Task, BacklogFolder, Client, ClientGroup, Member, WeekMode } from "@/lib/types";
 import { getColumnTitles } from "@/lib/constants";
-import { getRollingDates } from "@/lib/date-utils";
+import { getRollingDates, isWeekendISO } from "@/lib/date-utils";
 import {
   DndContext,
   DragOverlay,
@@ -137,7 +137,7 @@ export function BacklogPanel({
   weekMode = "5-day",
   rollingDaysBack = 0,
 }: BacklogPanelProps) {
-  const DAYS = weekMode === "rolling" ? getRollingDates(rollingDaysBack) : weekMode === "7-day" ? SEVEN_DAYS : FIVE_DAYS;
+  const DAYS = weekMode === "rolling" ? getRollingDates(rollingDaysBack).filter(d => !isWeekendISO(d)) : weekMode === "7-day" ? SEVEN_DAYS : FIVE_DAYS;
   const COLUMN_TITLES = getColumnTitles(weekMode, undefined, rollingDaysBack);
   // Manual toggle overrides (true = forced open, false = forced closed) — persisted
   const [clientToggleOverrides, setClientToggleOverrides] = useState<Record<string, boolean>>(() => {
