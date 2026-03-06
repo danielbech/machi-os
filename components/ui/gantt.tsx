@@ -1610,7 +1610,7 @@ export const GanttMarker: FC<
       </div>
       <div
         className="flex-1 w-px"
-        style={{ backgroundColor: color ? `${color}60` : "rgb(255 255 255 / 0.2)" }}
+        style={{ backgroundColor: color ? `${color}60` : "color-mix(in srgb, var(--foreground) 20%, transparent)" }}
       />
     </div>
   );
