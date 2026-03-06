@@ -23,9 +23,7 @@ import {
   todayISO,
   defaultGroupName,
 } from "@/lib/hours-utils";
-import type { InvoiceGroup, HourEntry, Client } from "@/lib/types";
-import { CLIENT_DOT_COLORS } from "@/lib/colors";
-import { ClientIcon } from "@/components/client-icon";
+import type { InvoiceGroup, HourEntry, ClientGroup } from "@/lib/types";
 import {
   Table,
   TableBody,
@@ -118,17 +116,17 @@ function SummaryCards({
     },
     {
       label: "Unbilled value",
-      value: Math.round(unbilledValue).toLocaleString() + " kr",
+      value: Math.round(unbilledValue).toLocaleString() + " dkk",
       icon: DollarSign,
     },
     {
       label: "Billed this year",
-      value: Math.round(billedValue).toLocaleString() + " kr",
+      value: Math.round(billedValue).toLocaleString() + " dkk",
       icon: Receipt,
     },
     {
       label: "Avg. hourly rate",
-      value: avgRate > 0 ? avgRate + " kr/h" : "—",
+      value: avgRate > 0 ? avgRate + " dkk/h" : "—",
       icon: TrendingUp,
     },
   ];
@@ -326,7 +324,7 @@ function InlineDatePicker({
 function InvoiceGroupSection({
   group,
   entries,
-  client,
+  clientGroup,
   onUpdateGroup,
   onDeleteGroup,
   onCreateEntry,
@@ -335,7 +333,7 @@ function InvoiceGroupSection({
 }: {
   group: InvoiceGroup;
   entries: HourEntry[];
-  client?: Client;
+  clientGroup?: ClientGroup;
   onUpdateGroup: (id: string, updates: Parameters<typeof updateInvoiceGroup>[1]) => Promise<void>;
   onDeleteGroup: (id: string) => Promise<void>;
   onCreateEntry: (groupId: string) => Promise<void>;
@@ -347,6 +345,18 @@ function InvoiceGroupSection({
   const totalValue = (totalMinutes / 60) * group.hourly_rate;
   const [copiedShare, setCopiedShare] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState(false);
+
+  // Days since first entry in this group
+  const daysSinceFirst = useMemo(() => {
+    if (entries.length === 0) return null;
+    const sorted = [...entries].sort((a, b) => a.date.localeCompare(b.date));
+    const firstParts = sorted[0].date.split("-").map(Number);
+    const firstDate = new Date(firstParts[0], firstParts[1] - 1, firstParts[2]);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const diff = Math.floor((today.getTime() - firstDate.getTime()) / (1000 * 60 * 60 * 24));
+    return diff;
+  }, [entries]);
 
   const shareUrl = typeof window !== "undefined"
     ? `${window.location.origin}/shared/hours/${group.share_token}`
@@ -369,18 +379,20 @@ function InvoiceGroupSection({
     >
       {/* Group header */}
       <div className="flex items-center gap-3 px-4 py-3 bg-foreground/[0.02]">
-        {client && (
-          <div
-            className={`size-6 rounded-md ${CLIENT_DOT_COLORS[client.color] || "bg-blue-500"} flex items-center justify-center text-white shrink-0`}
-          >
-            {client.icon ? (
-              <ClientIcon icon={client.icon} className="size-3" />
-            ) : (
-              <span className="font-bold text-[9px]">
-                {client.name.charAt(0).toUpperCase()}
+        {clientGroup && (
+          clientGroup.logo_url ? (
+            <img
+              src={clientGroup.logo_url}
+              alt={clientGroup.name}
+              className="size-9 rounded-lg object-cover bg-foreground/5 shrink-0"
+            />
+          ) : (
+            <div className="size-9 rounded-lg bg-foreground/[0.06] flex items-center justify-center shrink-0">
+              <span className="font-bold text-sm text-foreground/40">
+                {clientGroup.name.charAt(0).toUpperCase()}
               </span>
-            )}
-          </div>
+            </div>
+          )
         )}
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
@@ -392,10 +404,13 @@ function InvoiceGroupSection({
             {isClosed && <Lock className="size-3 text-foreground/30 shrink-0" />}
           </div>
           <div className="flex items-center gap-3 text-xs text-foreground/40 mt-0.5">
-            {client && <span>{client.name}</span>}
-            <span>{group.hourly_rate} kr/h</span>
+            {clientGroup && <span>{clientGroup.name}</span>}
+            <span>{group.hourly_rate} dkk/h</span>
             {group.invoice_number && (
               <span>#{group.invoice_number}</span>
+            )}
+            {daysSinceFirst !== null && daysSinceFirst > 0 && (
+              <span className="text-foreground/25">{daysSinceFirst}d since first entry</span>
             )}
           </div>
         </div>
@@ -567,7 +582,7 @@ function InvoiceGroupSection({
             {formatHoursDecimal(totalMinutes)}h
           </span>
           <span className="tabular-nums font-semibold">
-            {Math.round(totalValue).toLocaleString()} kr
+            {Math.round(totalValue).toLocaleString()} dkk
           </span>
         </div>
       </div>
@@ -609,12 +624,12 @@ function InvoiceGroupSection({
 function NewGroupDialog({
   open,
   onOpenChange,
-  clients,
+  clientGroups,
   onCreateGroup,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  clients: Client[];
+  clientGroups: ClientGroup[];
   onCreateGroup: (clientId: string, name: string, rate: number) => Promise<void>;
 }) {
   const [clientId, setClientId] = useState("");
@@ -627,10 +642,10 @@ function NewGroupDialog({
     if (open) {
       setName(defaultGroupName());
       setRate("");
-      setClientId(clients.length === 1 ? clients[0].id : "");
+      setClientId(clientGroups.length === 1 ? clientGroups[0].id : "");
       setTimeout(() => inputRef.current?.focus(), 50);
     }
-  }, [open, clients]);
+  }, [open, clientGroups]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -661,7 +676,7 @@ function NewGroupDialog({
               className="w-full rounded-md border border-foreground/[0.08] bg-foreground/[0.04] px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-foreground/20"
             >
               <option value="">Select client...</option>
-              {clients.map((c) => (
+              {clientGroups.map((c) => (
                 <option key={c.id} value={c.id}>
                   {c.name}
                 </option>
@@ -711,18 +726,18 @@ function NewGroupDialog({
 // ─── Client Filter Tabs ─────────────────────────────────────────────────────
 
 function ClientFilter({
-  clients,
+  clientGroups,
   value,
   onChange,
   groups,
 }: {
-  clients: Client[];
+  clientGroups: ClientGroup[];
   value: string;
   onChange: (id: string) => void;
   groups: InvoiceGroup[];
 }) {
   // Only show clients that have at least one invoice group
-  const clientsWithGroups = clients.filter((c) =>
+  const clientsWithGroups = clientGroups.filter((c) =>
     groups.some((g) => g.client_id === c.id)
   );
 
@@ -762,19 +777,13 @@ function ClientFilter({
 export default function HoursPage() {
   const { user } = useAuth();
   const { activeProjectId } = useWorkspace();
-  const { clients } = useProjectData();
+  const { clientGroups } = useProjectData();
 
   const [groups, setGroups] = useState<InvoiceGroup[]>([]);
   const [entries, setEntries] = useState<HourEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [clientFilter, setClientFilter] = useState("all");
   const [newGroupOpen, setNewGroupOpen] = useState(false);
-
-  // Active clients only for the new group dialog
-  const activeClients = useMemo(
-    () => clients.filter((c) => c.active),
-    [clients]
-  );
 
   // Load data
   const loadData = useCallback(async () => {
@@ -897,7 +906,7 @@ export default function HoursPage() {
       {/* Header */}
       <div className="mb-6 flex items-center gap-3">
         <ClientFilter
-          clients={activeClients}
+          clientGroups={clientGroups}
           value={clientFilter}
           onChange={setClientFilter}
           groups={groups}
@@ -936,7 +945,7 @@ export default function HoursPage() {
               key={group.id}
               group={group}
               entries={entries.filter((e) => e.invoice_group_id === group.id)}
-              client={clients.find((c) => c.id === group.client_id)}
+              clientGroup={clientGroups.find((c) => c.id === group.client_id)}
               onUpdateGroup={handleUpdateGroup}
               onDeleteGroup={handleDeleteGroup}
               onCreateEntry={handleCreateEntry}
@@ -958,7 +967,7 @@ export default function HoursPage() {
               key={group.id}
               group={group}
               entries={entries.filter((e) => e.invoice_group_id === group.id)}
-              client={clients.find((c) => c.id === group.client_id)}
+              clientGroup={clientGroups.find((c) => c.id === group.client_id)}
               onUpdateGroup={handleUpdateGroup}
               onDeleteGroup={handleDeleteGroup}
               onCreateEntry={handleCreateEntry}
@@ -972,7 +981,7 @@ export default function HoursPage() {
       <NewGroupDialog
         open={newGroupOpen}
         onOpenChange={setNewGroupOpen}
-        clients={activeClients}
+        clientGroups={clientGroups}
         onCreateGroup={handleCreateGroup}
       />
     </main>

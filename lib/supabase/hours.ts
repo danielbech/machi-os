@@ -183,7 +183,7 @@ export async function loadInvoiceGroupByShareToken(token: string): Promise<{
       .order('date', { ascending: true })
       .order('created_at', { ascending: true }),
     supabase
-      .from('clients')
+      .from('client_groups')
       .select('name')
       .eq('id', group.client_id)
       .single(),

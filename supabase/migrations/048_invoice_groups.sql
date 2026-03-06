@@ -2,10 +2,10 @@
 CREATE TABLE invoice_groups (
   id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
   project_id uuid NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
-  client_id uuid NOT NULL REFERENCES clients(id) ON DELETE CASCADE,
+  client_id uuid NOT NULL REFERENCES client_groups(id) ON DELETE CASCADE,
   name text NOT NULL,
   invoice_number text,
-  hourly_rate integer NOT NULL,          -- whole currency units (e.g. 850 = 850 kr/hr)
+  hourly_rate integer NOT NULL,          -- whole currency units (e.g. 850 = 850 dkk/hr)
   status text NOT NULL DEFAULT 'active', -- 'active' | 'closed'
   share_token text NOT NULL DEFAULT gen_random_uuid()::text,
   created_at timestamptz DEFAULT now(),

@@ -25,7 +25,7 @@ export default async function SharedHoursPage({
           <div className="flex items-center gap-3 mt-1 text-sm text-foreground/50">
             <span>{clientName}</span>
             <span className="text-foreground/20">·</span>
-            <span>{group.hourly_rate} kr/h</span>
+            <span>{group.hourly_rate} dkk/h</span>
             {group.invoice_number && (
               <>
                 <span className="text-foreground/20">·</span>
@@ -96,7 +96,7 @@ export default async function SharedHoursPage({
               {formatHoursDecimal(totalMinutes)}h
             </span>
             <span className="tabular-nums font-semibold text-base">
-              {Math.round(totalValue).toLocaleString()} kr
+              {Math.round(totalValue).toLocaleString()} dkk
             </span>
           </div>
         </div>

@@ -2,7 +2,7 @@
 CREATE TABLE hour_entries (
   id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
   invoice_group_id uuid NOT NULL REFERENCES invoice_groups(id) ON DELETE CASCADE,
-  client_id uuid NOT NULL REFERENCES clients(id) ON DELETE CASCADE,
+  client_id uuid NOT NULL REFERENCES client_groups(id) ON DELETE CASCADE,
   project_id uuid NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
   description text NOT NULL DEFAULT '',
   duration integer NOT NULL DEFAULT 0,   -- stored in minutes
