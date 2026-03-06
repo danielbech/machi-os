@@ -1,6 +1,6 @@
 import { createClient } from './client'
 import { getAreaIdForProject } from './initialize'
-import type { Task, DayName } from '../types'
+import type { Task } from '../types'
 
 async function resolveAreaId(projectId: string, areaId?: string | null): Promise<string | null> {
   if (areaId) return areaId
@@ -8,17 +8,29 @@ async function resolveAreaId(projectId: string, areaId?: string | null): Promise
 }
 
 // Load all tasks for a project, grouped by day (or by custom column ID)
-export async function loadTasksByDay(projectId: string, cachedAreaId?: string | null, customColumnIds?: string[]): Promise<Record<string, Task[]>> {
+// rollingDateRange: { from, to } ISO date strings for rolling mode filtering
+export async function loadTasksByDay(
+  projectId: string,
+  cachedAreaId?: string | null,
+  customColumnIds?: string[],
+  rollingDateRange?: { from: string; to: string }
+): Promise<Record<string, Task[]>> {
   const supabase = createClient()
   const areaId = await resolveAreaId(projectId, cachedAreaId)
 
   if (!areaId) return {}
 
-  const { data: tasks } = await supabase
+  let query = supabase
     .from('tasks')
     .select('id, title, description, completed, assignees, client, priority, day, type, folder_id, checklist, images, sort_order')
     .eq('area_id', areaId)
     .order('sort_order')
+
+  if (rollingDateRange) {
+    query = query.gte('day', rollingDateRange.from).lte('day', rollingDateRange.to)
+  }
+
+  const { data: tasks } = await query
 
   if (!tasks) return {}
 
@@ -29,7 +41,7 @@ export async function loadTasksByDay(projectId: string, cachedAreaId?: string | 
     for (const colId of customColumnIds) {
       grouped[colId] = []
     }
-  } else {
+  } else if (!rollingDateRange) {
     // Standard mode: group by weekday
     for (const day of ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']) {
       grouped[day] = []
@@ -37,22 +49,22 @@ export async function loadTasksByDay(projectId: string, cachedAreaId?: string | 
   }
 
   tasks.forEach(task => {
-    if (task.day && grouped[task.day]) {
-      grouped[task.day].push({
-        id: task.id,
-        title: task.title,
-        description: task.description || undefined,
-        completed: task.completed,
-        assignees: task.assignees || [],
-        client: task.client || undefined,
-        priority: task.priority || undefined,
-        day: task.day as DayName,
-        type: task.type || 'task',
-        folder_id: task.folder_id || undefined,
-        checklist: task.checklist || [],
-        images: task.images || [],
-      })
-    }
+    if (!task.day) return
+    if (!grouped[task.day]) grouped[task.day] = []
+    grouped[task.day].push({
+      id: task.id,
+      title: task.title,
+      description: task.description || undefined,
+      completed: task.completed,
+      assignees: task.assignees || [],
+      client: task.client || undefined,
+      priority: task.priority || undefined,
+      day: task.day,
+      type: task.type || 'task',
+      folder_id: task.folder_id || undefined,
+      checklist: task.checklist || [],
+      images: task.images || [],
+    })
   })
 
   return grouped
@@ -377,10 +389,47 @@ export async function loadBacklogTasks(projectId: string, cachedAreaId?: string 
     assignees: task.assignees || [],
     client: task.client || undefined,
     priority: task.priority || undefined,
-    day: (task.day as DayName) || undefined,
+    day: task.day || undefined,
     type: task.type || 'task',
     folder_id: task.folder_id || undefined,
     checklist: task.checklist || [],
     images: task.images || [],
   }))
+}
+
+// Delete board tasks older than a cutoff date (rolling mode cleanup)
+export async function cleanupOldRollingTasks(
+  projectId: string,
+  cutoffDate: string,
+  cachedAreaId?: string | null
+): Promise<number> {
+  const supabase = createClient()
+  const areaId = await resolveAreaId(projectId, cachedAreaId)
+  if (!areaId) return 0
+
+  // Only match ISO date strings (YYYY-MM-DD pattern), not weekday names
+  const { data: oldTasks } = await supabase
+    .from('tasks')
+    .select('id, day')
+    .eq('area_id', areaId)
+    .not('day', 'is', null)
+    .lt('day', cutoffDate)
+
+  if (!oldTasks || oldTasks.length === 0) return 0
+
+  // Safety: only delete tasks whose day looks like an ISO date
+  const toDelete = oldTasks.filter(t => t.day && /^\d{4}-\d{2}-\d{2}$/.test(t.day))
+  if (toDelete.length === 0) return 0
+
+  const { error } = await supabase
+    .from('tasks')
+    .delete()
+    .in('id', toDelete.map(t => t.id))
+
+  if (error) {
+    console.error('Error cleaning up old rolling tasks:', error)
+    throw error
+  }
+
+  return toDelete.length
 }

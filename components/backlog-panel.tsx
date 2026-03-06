@@ -3,9 +3,9 @@
 import { useState, useEffect, useRef, KeyboardEvent } from "react";
 import { createPortal } from "react-dom";
 import DOMPurify from "dompurify";
-import type { Task, BacklogFolder, Client, ClientGroup, DayName, Member } from "@/lib/types";
+import type { Task, BacklogFolder, Client, ClientGroup, Member, WeekMode } from "@/lib/types";
 import { getColumnTitles } from "@/lib/constants";
-import type { WeekMode } from "@/lib/types";
+import { getRollingDates } from "@/lib/date-utils";
 import {
   DndContext,
   DragOverlay,
@@ -98,8 +98,8 @@ interface BacklogPanelProps {
   folders: BacklogFolder[];
   clients: Client[];
   clientGroups: ClientGroup[];
-  onSendToDay: (taskId: string, day: DayName) => Promise<void>;
-  onSendFolderToDay: (folderId: string, day: DayName) => Promise<void>;
+  onSendToDay: (taskId: string, day: string) => Promise<void>;
+  onSendFolderToDay: (folderId: string, day: string) => Promise<void>;
   onCreateTask: (title: string, clientId: string, folderId?: string) => Promise<void>;
   onEditTask: (task: Task) => void;
   onDeleteTask: (taskId: string) => void;
@@ -111,10 +111,11 @@ interface BacklogPanelProps {
   onDragActiveChange?: (active: boolean) => void;
   teamMembers: Member[];
   weekMode?: WeekMode;
+  rollingDaysBack?: number;
 }
 
-const FIVE_DAYS: DayName[] = ["monday", "tuesday", "wednesday", "thursday", "friday"];
-const SEVEN_DAYS: DayName[] = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"];
+const FIVE_DAYS = ["monday", "tuesday", "wednesday", "thursday", "friday"];
+const SEVEN_DAYS = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"];
 
 export function BacklogPanel({
   tasks,
@@ -134,9 +135,10 @@ export function BacklogPanel({
   onDragActiveChange,
   teamMembers,
   weekMode = "5-day",
+  rollingDaysBack = 0,
 }: BacklogPanelProps) {
-  const DAYS = weekMode === "7-day" ? SEVEN_DAYS : FIVE_DAYS;
-  const COLUMN_TITLES = getColumnTitles(weekMode);
+  const DAYS = weekMode === "rolling" ? getRollingDates(rollingDaysBack) : weekMode === "7-day" ? SEVEN_DAYS : FIVE_DAYS;
+  const COLUMN_TITLES = getColumnTitles(weekMode, undefined, rollingDaysBack);
   // Manual toggle overrides (true = forced open, false = forced closed) — persisted
   const [clientToggleOverrides, setClientToggleOverrides] = useState<Record<string, boolean>>(() => {
     try {
@@ -361,7 +363,7 @@ export function BacklogPanel({
         const taskId = event.active.id as string;
         setLocalTasks(null);
         setActiveTask(null);
-        onSendToDay(taskId, day as DayName);
+        onSendToDay(taskId, day as string);
         return;
       }
     }

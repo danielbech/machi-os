@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { toast } from "sonner";
-import type { Task, BacklogFolder, DayName } from "@/lib/types";
+import type { Task, BacklogFolder } from "@/lib/types";
 import { createClient } from "@/lib/supabase/client";
 import { loadBacklogTasks, saveTask, deleteTask, updateBacklogTaskOrder } from "@/lib/supabase/tasks-simple";
 import { loadBacklogFolders, createBacklogFolder as createBacklogFolderDb, updateBacklogFolder, deleteBacklogFolder as deleteBacklogFolderDb } from "@/lib/supabase/backlog-folders";
@@ -14,8 +14,8 @@ interface BacklogContextValue {
   toggleBacklog: () => void;
   backlogTasks: Task[];
   backlogFolders: BacklogFolder[];
-  sendBacklogToDay: (taskId: string, day: DayName) => Promise<void>;
-  sendFolderToDay: (folderId: string, day: DayName) => Promise<void>;
+  sendBacklogToDay: (taskId: string, day: string) => Promise<void>;
+  sendFolderToDay: (folderId: string, day: string) => Promise<void>;
   addToBacklog: (task: Task, placement?: { clientId?: string; folderId?: string }) => Promise<void>;
   createBacklogTask: (title: string, clientId: string, folderId?: string) => Promise<void>;
   saveBacklogTask: (task: Task) => Promise<void>;
@@ -31,7 +31,7 @@ interface BacklogContextValue {
   kanbanDragOverBacklog: boolean;
   setKanbanDragOverBacklog: (over: boolean) => void;
   /** Ref for board page to register a callback when a backlog task is sent to a day column */
-  onTaskSentToDayRef: React.MutableRefObject<((task: Task, day: DayName) => void) | null>;
+  onTaskSentToDayRef: React.MutableRefObject<((task: Task, day: string) => void) | null>;
 }
 
 const BacklogContext = createContext<BacklogContextValue | null>(null);
@@ -77,7 +77,7 @@ export function BacklogProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   // Callback ref: board page sets this to optimistically add tasks to columns
-  const onTaskSentToDayRef = useRef<((task: Task, day: DayName) => void) | null>(null);
+  const onTaskSentToDayRef = useRef<((task: Task, day: string) => void) | null>(null);
 
   // Backlog drag state (true when dragging a backlog task)
   const [backlogDragActive, setBacklogDragActive] = useState(false);
@@ -151,7 +151,7 @@ export function BacklogProvider({ children }: { children: React.ReactNode }) {
   }, [activeProjectId, areaId, refreshBacklog]);
 
   // Backlog handlers
-  const sendBacklogToDay = useCallback(async (taskId: string, day: DayName) => {
+  const sendBacklogToDay = useCallback(async (taskId: string, day: string) => {
     if (!activeProjectId) return;
     const task = backlogTasks.find((t) => t.id === taskId);
     if (!task) return;
@@ -163,7 +163,7 @@ export function BacklogProvider({ children }: { children: React.ReactNode }) {
     });
   }, [activeProjectId, backlogTasks, areaId, suppressDuring]);
 
-  const sendFolderToDay = useCallback(async (folderId: string, day: DayName) => {
+  const sendFolderToDay = useCallback(async (folderId: string, day: string) => {
     if (!activeProjectId) return;
     const folderTasks = backlogTasks.filter((t) => t.folder_id === folderId);
     if (folderTasks.length === 0) return;

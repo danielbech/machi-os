@@ -40,3 +40,62 @@ export function getWeekRange(weekMode: WeekMode = "5-day", transitionDay: number
   endDay.setHours(23, 59, 59, 999);
   return { monday, friday: endDay };
 }
+
+// --- Rolling mode utilities ---
+
+const SHORT_DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+const SHORT_MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+/** Convert a Date to local ISO date string (YYYY-MM-DD) */
+export function toLocalISO(date: Date): string {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  const d = String(date.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+}
+
+/** Get today's local ISO date string */
+export function getTodayISO(): string {
+  return toLocalISO(new Date());
+}
+
+/**
+ * Get ISO date strings for the rolling window.
+ * Default: yesterday + today + next 3 days = 5 visible columns.
+ * expandedDaysBack: how many extra past days to show (0–6).
+ */
+export function getRollingDates(expandedDaysBack: number = 0): string[] {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const dates: string[] = [];
+  // Start from (1 + expandedDaysBack) days ago
+  const startOffset = -(1 + expandedDaysBack);
+  // End at today + 3 (4 future days including today)
+  for (let i = startOffset; i <= 3; i++) {
+    const d = new Date(today);
+    d.setDate(today.getDate() + i);
+    dates.push(toLocalISO(d));
+  }
+  return dates;
+}
+
+/** Format an ISO date for a rolling column header */
+export function formatRollingHeader(isoDate: string): { label: string; isToday: boolean; isPast: boolean } {
+  const parts = isoDate.split("-").map(Number);
+  const date = new Date(parts[0], parts[1] - 1, parts[2]);
+  const todayISO = getTodayISO();
+  const dayName = SHORT_DAYS[date.getDay()];
+  const monthDay = `${SHORT_MONTHS[date.getMonth()]} ${date.getDate()}`;
+  return {
+    label: `${dayName} ${monthDay}`,
+    isToday: isoDate === todayISO,
+    isPast: isoDate < todayISO,
+  };
+}
+
+/** Get the cutoff ISO date (7 days ago) for rolling cleanup */
+export function getRollingCutoffDate(): string {
+  const d = new Date();
+  d.setDate(d.getDate() - 7);
+  return toLocalISO(d);
+}

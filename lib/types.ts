@@ -46,7 +46,7 @@ export interface ChecklistItem {
 }
 
 export type DayName = "monday" | "tuesday" | "wednesday" | "thursday" | "friday" | "saturday" | "sunday";
-export type WeekMode = "5-day" | "7-day" | "custom";
+export type WeekMode = "5-day" | "7-day" | "custom" | "rolling";
 
 export interface Task {
   id: string;
@@ -56,7 +56,7 @@ export interface Task {
   completed?: boolean;
   assignees: string[];
   client?: string;
-  day?: DayName;
+  day?: string;  // weekday name (e.g. "monday") or ISO date (e.g. "2026-03-06") depending on mode
   type?: "task" | "note" | "divider";
   folder_id?: string;
   checklist: ChecklistItem[];

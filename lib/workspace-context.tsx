@@ -1,15 +1,15 @@
 "use client";
 
 import { createContext, useContext, useState, useEffect, useCallback, useMemo } from "react";
-import type { Project, WeekMode, DayName, BoardColumn } from "@/lib/types";
+import type { Project, WeekMode, BoardColumn } from "@/lib/types";
 import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
 import { initializeUserData } from "@/lib/supabase/initialize";
 import { getUserWorkspaces, getMyPendingInvites, acceptInvite as acceptInviteApi, declineInvite as declineInviteApi } from "@/lib/supabase/workspace";
 import type { MyPendingInvite } from "@/lib/supabase/workspace";
-import { transitionWeek } from "@/lib/supabase/tasks-simple";
+import { transitionWeek, cleanupOldRollingTasks } from "@/lib/supabase/tasks-simple";
 import { loadBoardColumns, createBoardColumn, updateBoardColumn, deleteBoardColumn } from "@/lib/supabase/board-columns";
-import { getCurrentMonday, getDisplayMonday } from "@/lib/date-utils";
+import { getCurrentMonday, getDisplayMonday, getRollingDates, getTodayISO, getRollingCutoffDate } from "@/lib/date-utils";
 import { useAuth } from "./auth-context";
 
 export interface WorkspaceContextValue {
@@ -22,13 +22,16 @@ export interface WorkspaceContextValue {
   // Week mode & schedule
   weekMode: WeekMode;
   setWeekMode: (mode: WeekMode) => Promise<void>;
-  weekDays: DayName[];
+  weekDays: string[];
   displayMonday: Date;
   transitionDay: number;
   transitionHour: number;
   transitionCount: number;
   transitionToNextWeek: () => Promise<{ deleted: number; carriedOver: number }>;
   setTransitionSchedule: (day: number, hour: number) => Promise<void>;
+  // Rolling mode
+  rollingDaysBack: number;
+  setRollingDaysBack: (n: number) => void;
   // Board columns (custom mode)
   boardColumns: BoardColumn[];
   addBoardColumn: (title: string) => Promise<BoardColumn>;
@@ -54,8 +57,8 @@ export function useWorkspace() {
   return ctx;
 }
 
-const ALL_FIVE_DAYS: DayName[] = ["monday", "tuesday", "wednesday", "thursday", "friday"];
-const ALL_SEVEN_DAYS: DayName[] = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"];
+const ALL_FIVE_DAYS: string[] = ["monday", "tuesday", "wednesday", "thursday", "friday"];
+const ALL_SEVEN_DAYS: string[] = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"];
 
 export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
@@ -86,7 +89,14 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
   const [transitionHour, setTransitionHourState] = useState(17);
   const [transitionCount, setTransitionCount] = useState(0);
 
-  const weekDays = useMemo(() => weekMode === "7-day" ? ALL_SEVEN_DAYS : ALL_FIVE_DAYS, [weekMode]);
+  // Rolling mode
+  const [rollingDaysBack, setRollingDaysBack] = useState(0);
+  const [rollingTodayISO, setRollingTodayISO] = useState(() => getTodayISO());
+
+  const weekDays = useMemo(() => {
+    if (weekMode === "rolling") return getRollingDates(rollingDaysBack);
+    return weekMode === "7-day" ? ALL_SEVEN_DAYS : ALL_FIVE_DAYS;
+  }, [weekMode, rollingDaysBack, rollingTodayISO]);
 
   const setActiveProjectId = useCallback((id: string) => {
     setActiveProjectIdState(id);
@@ -255,7 +265,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
 
   // Auto-trigger: every 60s check if it's transition day >= transition hour and hasn't run this week
   useEffect(() => {
-    if (!activeProjectId || weekMode === "custom") return;
+    if (!activeProjectId || weekMode === "custom" || weekMode === "rolling") return;
 
     const check = () => {
       const now = new Date();
@@ -272,6 +282,26 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     const interval = setInterval(check, 60 * 1000);
     return () => clearInterval(interval);
   }, [activeProjectId, transitionToNextWeek, transitionDay, transitionHour, weekMode]);
+
+  // Rolling mode: cleanup old tasks (>7 days) + detect midnight date change
+  useEffect(() => {
+    if (!activeProjectId || weekMode !== "rolling") return;
+
+    const cleanup = () => {
+      cleanupOldRollingTasks(activeProjectId, getRollingCutoffDate(), null).catch(console.error);
+    };
+    cleanup(); // run on load
+
+    const interval = setInterval(() => {
+      // Check if the date rolled over
+      const now = getTodayISO();
+      if (now !== rollingTodayISO) {
+        setRollingTodayISO(now);
+        cleanup();
+      }
+    }, 60 * 1000);
+    return () => clearInterval(interval);
+  }, [activeProjectId, weekMode, rollingTodayISO]);
 
   const handleAcceptInvite = useCallback(async (invite: MyPendingInvite) => {
     await acceptInviteApi(invite.id, invite.project_id, invite.role);
@@ -292,6 +322,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     refreshWorkspaces,
     weekMode, setWeekMode, weekDays, displayMonday,
     transitionDay, transitionHour, transitionCount, transitionToNextWeek, setTransitionSchedule,
+    rollingDaysBack, setRollingDaysBack,
     boardColumns, addBoardColumn, renameBoardColumn, removeBoardColumn, refreshBoardColumns,
     showCheckmarks, setShowCheckmarks,
     taskRefreshKey, triggerTaskRefresh,
@@ -301,6 +332,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     refreshWorkspaces,
     weekMode, setWeekMode, weekDays, displayMonday,
     transitionDay, transitionHour, transitionCount, transitionToNextWeek, setTransitionSchedule,
+    rollingDaysBack, setRollingDaysBack,
     boardColumns, addBoardColumn, renameBoardColumn, removeBoardColumn, refreshBoardColumns,
     showCheckmarks, setShowCheckmarks,
     taskRefreshKey, triggerTaskRefresh,

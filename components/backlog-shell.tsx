@@ -11,7 +11,7 @@ import { X } from "lucide-react";
 import type { Task } from "@/lib/types";
 
 export function BacklogShell() {
-  const { weekMode } = useWorkspace();
+  const { weekMode, rollingDaysBack } = useWorkspace();
   const { clients, clientGroups, teamMembers } = useProjectData();
   const {
     backlogOpen, toggleBacklog, backlogTasks, backlogFolders,
@@ -131,6 +131,7 @@ export function BacklogShell() {
             onReorderTasks={reorderBacklogTasks}
             teamMembers={teamMembers}
             weekMode={weekMode}
+            rollingDaysBack={rollingDaysBack}
             onDragActiveChange={setBacklogDragActive}
           />
         </div>

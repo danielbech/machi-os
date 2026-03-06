@@ -1042,7 +1042,7 @@ export function SettingsDialog({
                 <div className="text-xs text-muted-foreground px-1">Board view</div>
                 <div className="p-3 rounded-lg border border-border bg-muted/50 space-y-3">
                   <div className="flex gap-1 p-1 rounded-lg bg-muted">
-                    {(["5-day", "7-day", "custom"] as WeekMode[]).map((mode) => (
+                    {(["5-day", "7-day", "rolling", "custom"] as WeekMode[]).map((mode) => (
                       <button
                         key={mode}
                         type="button"
@@ -1052,19 +1052,28 @@ export function SettingsDialog({
                           const weekdays = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
                           const weekdaySet = new Set(weekdays);
                           const weekendSet = new Set(['saturday', 'sunday']);
+                          const isISODate = (day: string) => /^\d{4}-\d{2}-\d{2}$/.test(day);
 
                           // Determine which tasks would be orphaned
                           let orphanFilter: ((day: string) => boolean) | null = null;
                           let description = "";
 
                           if (weekMode === "custom" && mode !== "custom") {
-                            // Custom → weekly: tasks with UUID day values get orphaned
-                            orphanFilter = (day) => !weekdaySet.has(day);
-                            description = "Move tasks to Monday";
+                            // Custom → weekly/rolling: tasks with UUID day values get orphaned
+                            orphanFilter = (day) => !weekdaySet.has(day) && !isISODate(day);
+                            description = mode === "rolling" ? "Move tasks to today" : "Move tasks to Monday";
                           } else if (weekMode !== "custom" && mode === "custom") {
-                            // Weekly → custom: tasks with weekday day values get orphaned
-                            orphanFilter = (day) => weekdaySet.has(day);
+                            // Weekly/rolling → custom: tasks with weekday/ISO day values get orphaned
+                            orphanFilter = (day) => weekdaySet.has(day) || isISODate(day);
                             description = "Move tasks to first column";
+                          } else if (weekMode === "rolling" && (mode === "5-day" || mode === "7-day")) {
+                            // Rolling → weekly: ISO date tasks get orphaned
+                            orphanFilter = (day) => isISODate(day);
+                            description = "Move tasks to Monday";
+                          } else if ((weekMode === "5-day" || weekMode === "7-day") && mode === "rolling") {
+                            // Weekly → rolling: weekday-named tasks get orphaned
+                            orphanFilter = (day) => weekdaySet.has(day);
+                            description = "Move tasks to today";
                           } else if (weekMode === "7-day" && mode === "5-day") {
                             // 7-day → 5-day: only weekend tasks get orphaned
                             orphanFilter = (day) => weekendSet.has(day);
@@ -1092,7 +1101,7 @@ export function SettingsDialog({
                             : "text-muted-foreground hover:text-foreground/60"
                         }`}
                       >
-                        {mode === "5-day" ? "5-day week" : mode === "7-day" ? "7-day week" : "Custom"}
+                        {mode === "5-day" ? "5-day" : mode === "7-day" ? "7-day" : mode === "rolling" ? "Rolling" : "Custom"}
                       </button>
                     ))}
                   </div>
@@ -1131,25 +1140,42 @@ export function SettingsDialog({
                               const weekdays = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
                               const weekdaySet = new Set(weekdays);
                               const weekendSet = new Set(['saturday', 'sunday']);
+                              const isISODate = (day: string) => /^\d{4}-\d{2}-\d{2}$/.test(day);
+                              const { getTodayISO } = await import("@/lib/date-utils");
 
                               if (weekMode !== "custom" && modeSwitchPending === "custom") {
-                                // Weekly → custom
+                                // Weekly/rolling → custom
                                 await onWeekModeChange(modeSwitchPending);
                                 const { loadBoardColumns } = await import("@/lib/supabase/board-columns");
                                 const cols = await loadBoardColumns(activeProjectId!);
                                 if (cols.length > 0) {
                                   const migrated = await migrateBoardTasks(
-                                    activeProjectId!, (day) => weekdaySet.has(day), cols[0].id, areaId
+                                    activeProjectId!, (day) => weekdaySet.has(day) || isISODate(day), cols[0].id, areaId
                                   );
                                   toast.success(`Moved ${migrated} task${migrated !== 1 ? "s" : ""} to ${cols[0].title}`);
                                 }
                               } else if (weekMode === "custom" && modeSwitchPending !== "custom") {
-                                // Custom → weekly
+                                // Custom → weekly/rolling
+                                const targetDay = modeSwitchPending === "rolling" ? getTodayISO() : "monday";
                                 await onWeekModeChange(modeSwitchPending);
                                 const migrated = await migrateBoardTasks(
-                                  activeProjectId!, (day) => !weekdaySet.has(day), "monday", areaId
+                                  activeProjectId!, (day) => !weekdaySet.has(day) && !isISODate(day), targetDay, areaId
+                                );
+                                toast.success(`Moved ${migrated} task${migrated !== 1 ? "s" : ""} to ${modeSwitchPending === "rolling" ? "today" : "Monday"}`);
+                              } else if (weekMode === "rolling" && (modeSwitchPending === "5-day" || modeSwitchPending === "7-day")) {
+                                // Rolling → weekly: move ISO date tasks to Monday
+                                await onWeekModeChange(modeSwitchPending);
+                                const migrated = await migrateBoardTasks(
+                                  activeProjectId!, (day) => isISODate(day), "monday", areaId
                                 );
                                 toast.success(`Moved ${migrated} task${migrated !== 1 ? "s" : ""} to Monday`);
+                              } else if ((weekMode === "5-day" || weekMode === "7-day") && modeSwitchPending === "rolling") {
+                                // Weekly → rolling: move weekday-named tasks to today
+                                await onWeekModeChange(modeSwitchPending);
+                                const migrated = await migrateBoardTasks(
+                                  activeProjectId!, (day) => weekdaySet.has(day), getTodayISO(), areaId
+                                );
+                                toast.success(`Moved ${migrated} task${migrated !== 1 ? "s" : ""} to today`);
                               } else if (weekMode === "7-day" && modeSwitchPending === "5-day") {
                                 // 7-day → 5-day: move weekend tasks to Friday
                                 await onWeekModeChange(modeSwitchPending);
@@ -1198,7 +1224,7 @@ export function SettingsDialog({
                       }`} style={{ marginTop: '2px' }} />
                     </button>
                   </div>
-                  {weekMode !== "custom" && (
+                  {weekMode !== "custom" && weekMode !== "rolling" && (
                     <>
                       <div className="border-t border-border pt-3">
                         <div className="text-xs text-muted-foreground mb-2">Week transition</div>

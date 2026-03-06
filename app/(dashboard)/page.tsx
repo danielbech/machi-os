@@ -17,8 +17,9 @@ import { BoardCalendarEvent } from "@/components/board-calendar-event";
 import { BoardShortcuts } from "@/components/board-shortcuts";
 import { BoardAddCard } from "@/components/board-add-card";
 import { useCardPresence } from "@/hooks/use-card-presence";
-import type { Task, DayName } from "@/lib/types";
+import type { Task } from "@/lib/types";
 import { getColumnTitles } from "@/lib/constants";
+import { formatRollingHeader, getTodayISO } from "@/lib/date-utils";
 import { Input } from "@/components/ui/input";
 import {
   Kanban,
@@ -26,19 +27,20 @@ import {
   KanbanColumn,
   KanbanOverlay,
 } from "@/components/ui/kanban";
-import { Check, CheckCircle, Plus, StickyNote, User, X } from "lucide-react";
+import { Check, CheckCircle, ChevronLeft, Plus, StickyNote, User, X } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 export default function BoardPage() {
   const { user } = useAuth();
-  const { activeProjectId, weekMode, weekDays, displayMonday, boardColumns, addBoardColumn, renameBoardColumn, removeBoardColumn, showCheckmarks } = useWorkspace();
+  const { activeProjectId, weekMode, weekDays, displayMonday, boardColumns, addBoardColumn, renameBoardColumn, removeBoardColumn, showCheckmarks, rollingDaysBack, setRollingDaysBack } = useWorkspace();
   const { clients, clientGroups, teamMembers, areaId } = useProjectData();
   const { columns, setColumns, initialLoading, refreshTasks } = useBoardData();
   const { calendarEvents } = useCalendar();
   const { backlogOpen, addToBacklog, backlogFolders, backlogDragActive, setKanbanDragOverBacklog, onTaskSentToDayRef } = useBacklog();
 
   const isCustom = weekMode === "custom";
-  const columnTitles = getColumnTitles(weekMode, boardColumns);
+  const isRolling = weekMode === "rolling";
+  const columnTitles = getColumnTitles(weekMode, boardColumns, rollingDaysBack);
   const boardColumnIds = useMemo(() => boardColumns.map((c) => c.id), [boardColumns]);
   const columnKeys = isCustom ? boardColumnIds : weekDays;
   const [renamingColumn, setRenamingColumn] = useState<string | null>(null);
@@ -198,6 +200,15 @@ export default function BoardPage() {
 
   // Week dates — uses displayMonday from context (accounts for post-transition offset)
   const getWeekDates = () => {
+    if (isRolling) {
+      // Rolling mode: column keys are ISO dates, formatted via formatRollingHeader
+      const weekDates: Record<string, string> = {};
+      weekDays.forEach((day) => {
+        const { label } = formatRollingHeader(day);
+        weekDates[day] = label;
+      });
+      return weekDates;
+    }
     const monday = new Date(displayMonday);
     const dayOffsets: Record<string, number> = {
       monday: 0, tuesday: 1, wednesday: 2, thursday: 3,
@@ -214,12 +225,13 @@ export default function BoardPage() {
 
   const weekDates = getWeekDates();
 
-  const getTodayName = () => {
+  const getTodayKey = () => {
+    if (isRolling) return getTodayISO();
     const days = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"];
     return days[new Date().getDay()];
   };
 
-  const todayName = getTodayName();
+  const todayName = getTodayKey();
 
   // Task actions
   const handleAddCard = async (columnId: string, index?: number) => {
@@ -238,7 +250,7 @@ export default function BoardPage() {
       assignees: [],
       checklist: [],
       priority: resolvedType === "task" ? "medium" : undefined,
-      day: columnId as DayName,
+      day: columnId as string,
       type: resolvedType,
     };
     const columnItems = [...columns[columnId]];
@@ -278,7 +290,7 @@ export default function BoardPage() {
         if (idx !== -1) {
           updated[col] = [...updated[col]];
           wasCompleted = updated[col][idx].completed || false;
-          updated[col][idx] = { ...updated[col][idx], completed: !wasCompleted, day: col as DayName };
+          updated[col][idx] = { ...updated[col][idx], completed: !wasCompleted, day: col as string };
           updatedTask = updated[col][idx];
           break;
         }
@@ -319,7 +331,7 @@ export default function BoardPage() {
           updated[col][idx] = {
             ...task,
             assignees: isAssigned ? assignees.filter((id) => id !== memberId) : [...assignees, memberId],
-            day: col as DayName,
+            day: col as string,
           };
           updatedTask = updated[col][idx];
           break;
@@ -343,7 +355,7 @@ export default function BoardPage() {
           updated[col][idx] = {
             ...task,
             client: task.client === clientId ? undefined : clientId,
-            day: col as DayName,
+            day: col as string,
           };
           updatedTask = updated[col][idx];
           break;
@@ -365,7 +377,7 @@ export default function BoardPage() {
       client: clipboard.task.client,
       priority: clipboard.task.priority,
       type: clipboard.task.type,
-      day: columnId as DayName,
+      day: columnId as string,
       checklist: clipboard.task.checklist.map(i => ({ ...i, id: crypto.randomUUID() })),
     };
     const columnItems = [...columns[columnId], newCard];
@@ -546,13 +558,13 @@ export default function BoardPage() {
       const idx = updated[column]?.findIndex((t) => t.id === updatedTask.id) ?? -1;
       if (idx !== -1) {
         updated[column] = [...updated[column]];
-        updated[column][idx] = { ...updatedTask, day: column as DayName };
+        updated[column][idx] = { ...updatedTask, day: column as string };
       }
       return updated;
     });
 
     await suppressDuring(async () => {
-      await saveTask(activeProjectId, { ...updatedTask, day: column as DayName }, areaId);
+      await saveTask(activeProjectId, { ...updatedTask, day: column as string }, areaId);
     });
     if (justCompleted) {
       setGlowingCards((prev) => new Set(prev).add(updatedTask.id));
@@ -575,7 +587,7 @@ export default function BoardPage() {
       const idx = updated[col].findIndex((t) => t.id === taskId);
       if (idx !== -1) {
         updated[col] = [...updated[col]];
-        updated[col][idx] = { ...updated[col][idx], title: newTitle, day: col as DayName };
+        updated[col][idx] = { ...updated[col][idx], title: newTitle, day: col as string };
         updatedTask = updated[col][idx];
         break;
       }
@@ -739,6 +751,16 @@ export default function BoardPage() {
                           if (e.key === "Escape") setRenamingColumn(null);
                         }}
                       />
+                    ) : isRolling ? (
+                      (() => {
+                        const { isToday, isPast } = formatRollingHeader(columnId);
+                        return (
+                          <h2 className={`font-semibold ${isToday ? "text-foreground" : isPast ? "text-foreground/40" : ""}`}>
+                            {columnTitles[columnId] || columnId}
+                            {isToday && <span className="ml-2 text-xs text-primary-foreground bg-primary rounded px-1.5 py-0.5 font-medium">Today</span>}
+                          </h2>
+                        );
+                      })()
                     ) : (
                       <h2
                         className={`font-semibold ${isCustom ? "cursor-text hover:text-foreground/80" : ""} ${!isCustom && columnId === todayName ? "text-foreground" : ""}`}
@@ -747,7 +769,7 @@ export default function BoardPage() {
                         {columnTitles[columnId] || columnId}
                       </h2>
                     )}
-                    {!isCustom && (
+                    {!isCustom && !isRolling && (
                       <span className={`text-xs ${columnId === todayName ? "text-primary-foreground bg-primary rounded px-1.5 py-0.5 font-medium" : "text-foreground/40"}`}>{weekDates[columnId]}</span>
                     )}
                     {isCustom && (
@@ -767,10 +789,10 @@ export default function BoardPage() {
                 </div>
 
                 <div className="flex flex-col overflow-y-auto px-0.5">
-                  {/* Calendar Events — only in week modes */}
-                  {!isCustom && calendarEvents[columnId]?.map((event) => {
-                    const dayIndex = weekDays.indexOf(columnId as DayName);
-                    const todayIndex = weekDays.indexOf(todayName as DayName);
+                  {/* Calendar Events — only in week modes (not custom or rolling) */}
+                  {!isCustom && !isRolling && calendarEvents[columnId]?.map((event) => {
+                    const dayIndex = weekDays.indexOf(columnId as string);
+                    const todayIndex = weekDays.indexOf(todayName as string);
                     return (
                       <BoardCalendarEvent key={event.id} event={event} isPast={dayIndex < todayIndex} />
                     );
@@ -995,6 +1017,33 @@ export default function BoardPage() {
           </Tooltip>
         </div>
       </TooltipProvider>
+
+      {/* Rolling mode: floating button to reveal older days */}
+      {isRolling && (
+        <TooltipProvider>
+          <div className="fixed bottom-5 right-[8.5rem] z-50 flex items-center gap-px rounded-full border border-border bg-popover/90 shadow-lg overflow-hidden">
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  onClick={() => setRollingDaysBack(rollingDaysBack > 0 ? 0 : 6)}
+                  aria-label={rollingDaysBack > 0 ? "Hide older days" : "Show older days"}
+                  className={`flex items-center justify-center h-10 px-3 gap-1.5 text-xs transition-all ${
+                    rollingDaysBack > 0
+                      ? "bg-foreground/15 text-foreground"
+                      : "text-foreground/40 hover:text-foreground/70 hover:bg-foreground/[0.06]"
+                  }`}
+                >
+                  <ChevronLeft className="size-3.5" />
+                  {rollingDaysBack > 0 ? "Hide past" : "Show past"}
+                </button>
+              </TooltipTrigger>
+              <TooltipContent side="top" sideOffset={8}>
+                {rollingDaysBack > 0 ? "Collapse to 5 days" : "Show 7 older days"}
+              </TooltipContent>
+            </Tooltip>
+          </div>
+        </TooltipProvider>
+      )}
     </main>
   );
 }

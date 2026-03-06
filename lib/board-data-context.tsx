@@ -6,6 +6,7 @@ import { useWorkspace } from "./workspace-context";
 import { useProjectData } from "./project-data-context";
 import type { Task } from "@/lib/types";
 import { getEmptyColumns } from "@/lib/constants";
+import { getRollingDates } from "@/lib/date-utils";
 
 interface BoardDataContextValue {
   columns: Record<string, Task[]>;
@@ -23,14 +24,22 @@ export function useBoardData() {
 }
 
 export function BoardDataProvider({ children }: { children: React.ReactNode }) {
-  const { activeProjectId, weekMode, weekDays, boardColumns, taskRefreshKey } = useWorkspace();
+  const { activeProjectId, weekMode, weekDays, boardColumns, taskRefreshKey, rollingDaysBack } = useWorkspace();
   const { areaId } = useProjectData();
 
   const isCustom = weekMode === "custom";
+  const isRolling = weekMode === "rolling";
   const boardColumnIds = useMemo(() => boardColumns.map(c => c.id), [boardColumns]);
 
-  const [columns, setColumns] = useState<Record<string, Task[]>>(() => getEmptyColumns(weekMode, boardColumns));
+  const [columns, setColumns] = useState<Record<string, Task[]>>(() => getEmptyColumns(weekMode, boardColumns, rollingDaysBack));
   const [initialLoading, setInitialLoading] = useState(true);
+
+  // Compute rolling date range for Supabase filtering
+  const rollingDateRange = useMemo(() => {
+    if (!isRolling) return undefined;
+    const dates = getRollingDates(rollingDaysBack);
+    return { from: dates[0], to: dates[dates.length - 1] };
+  }, [isRolling, rollingDaysBack]);
 
   const refreshTasks = useCallback(async () => {
     if (!activeProjectId || !areaId) return;
@@ -41,7 +50,7 @@ export function BoardDataProvider({ children }: { children: React.ReactNode }) {
     }
     try {
       const customIds = isCustom ? boardColumnIds : undefined;
-      const tasks = await loadTasksByDay(activeProjectId, areaId, customIds);
+      const tasks = await loadTasksByDay(activeProjectId, areaId, customIds, rollingDateRange);
       const keys = isCustom ? boardColumnIds : weekDays;
       const filtered: Record<string, Task[]> = {};
       for (const key of keys) {
@@ -53,12 +62,12 @@ export function BoardDataProvider({ children }: { children: React.ReactNode }) {
       console.error("Error loading tasks:", error);
       setInitialLoading(false);
     }
-  }, [activeProjectId, weekDays, areaId, isCustom, boardColumnIds]);
+  }, [activeProjectId, weekDays, areaId, isCustom, boardColumnIds, rollingDateRange]);
 
   // Load tasks when active project or data dependencies change
   useEffect(() => {
     if (!activeProjectId) {
-      setColumns(getEmptyColumns(weekMode, boardColumns));
+      setColumns(getEmptyColumns(weekMode, boardColumns, rollingDaysBack));
       setInitialLoading(false);
       return;
     }
