@@ -779,7 +779,7 @@ export default function BoardPage() {
                         <div className="w-px bg-foreground/[0.06]" />
                       </div>
                       <div className="absolute inset-0 flex items-center justify-center">
-                        <span className="text-[9px] font-medium text-foreground/25 bg-background border border-foreground/[0.06] rounded-full px-1 py-3.5 [writing-mode:vertical-lr] rotate-180 tracking-widest uppercase leading-none">
+                        <span className="text-[9px] font-medium text-foreground/35 bg-background border border-foreground/[0.06] rounded-full px-2.5 py-3 [writing-mode:vertical-lr] rotate-180 tracking-widest uppercase leading-none">
                           Weekend
                         </span>
                       </div>
