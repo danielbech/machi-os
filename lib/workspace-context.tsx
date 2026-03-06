@@ -79,7 +79,10 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   // Week mode
-  const [weekMode, setWeekModeState] = useState<WeekMode>("5-day");
+  const [weekMode, setWeekModeState] = useState<WeekMode>(() => {
+    if (typeof window === "undefined") return "5-day";
+    return (localStorage.getItem("flowie-week-mode") as WeekMode) || "5-day";
+  });
   const [boardColumns, setBoardColumns] = useState<BoardColumn[]>([]);
   const [taskRefreshKey, setTaskRefreshKey] = useState(0);
   const triggerTaskRefresh = useCallback(() => setTaskRefreshKey((k) => k + 1), []);
@@ -163,7 +166,9 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const project = userProjects.find((p) => p.id === activeProjectId);
     if (project) {
-      setWeekModeState(project.week_mode || "5-day");
+      const mode = project.week_mode || "5-day";
+      setWeekModeState(mode);
+      localStorage.setItem("flowie-week-mode", mode);
       setTransitionDayState(project.transition_day ?? 5);
       setTransitionHourState(project.transition_hour ?? 17);
     }
@@ -172,6 +177,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
   // setWeekMode: update Supabase + local state, auto-adjust transition day
   const setWeekMode = useCallback(async (mode: WeekMode) => {
     setWeekModeState(mode);
+    localStorage.setItem("flowie-week-mode", mode);
     if (!activeProjectId) return;
     const supabase = createClient();
     const updates: Record<string, unknown> = { week_mode: mode };
