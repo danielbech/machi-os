@@ -792,7 +792,6 @@ export function BacklogPanel({
                         <ClientIcon icon={c.icon} className="size-3.5 text-muted-foreground shrink-0" />
                       ) : null}
                       <span className="truncate">
-                        {group && <span className="text-foreground/40">{group.name} / </span>}
                         {c.name}
                       </span>
                     </DropdownMenuItem>
@@ -851,7 +850,6 @@ export function BacklogPanel({
                         <ClientIcon icon={client.icon} className="size-3.5 text-muted-foreground shrink-0" />
                       ) : null}
                       <span className="text-sm font-medium text-foreground/80 truncate">
-                        {group ? <><span className="text-foreground/40">{group.name}</span><span className="text-foreground/15 mx-1">/</span></> : null}
                         {client.name}
                       </span>
                     </>

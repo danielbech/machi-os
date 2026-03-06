@@ -823,7 +823,6 @@ function ProjectsTab() {
                 </div>
               )}
               <span className="font-medium">
-                {group && <><span className="text-foreground/40">{group.name}</span><span className="text-foreground/15 mx-1">/</span></>}
                 {client.name}
               </span>
             </div>

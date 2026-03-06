@@ -957,10 +957,6 @@ export default function TimelinePage() {
                               />
                             )}
                             <p className="flex-1 truncate text-left font-medium">
-                              {(() => {
-                                const group = parentClient?.client_group_id ? groupMap.get(parentClient.client_group_id) : undefined;
-                                return group ? <><span className="text-foreground/40 font-normal">{group.name}</span><span className="text-foreground/15 mx-0.5">/</span></> : null;
-                              })()}
                               {parentFeature.name}
                             </p>
                             <p className="text-foreground/30 shrink-0">
@@ -1188,7 +1184,6 @@ export default function TimelinePage() {
                     >
                       <ClientAvatar client={client} size="sm" groupLogoUrl={group?.logo_url} />
                       <span className="text-sm font-medium">
-                        {group && <><span className="text-foreground/40">{group.name}</span><span className="text-foreground/15 mx-1">/</span></>}
                         {client.name}
                       </span>
                     </button>

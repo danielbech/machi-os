@@ -78,7 +78,7 @@ export function TaskEditDialog({ task, onClose, onSave, onTaskChange, folders }:
         items.push({
           id: client.client_group_id,
           clientId: client.id,
-          name: group?.name || client.name,
+          name: client.name,
           logo_url: group?.logo_url || client.logo_url,
           icon: !group?.logo_url ? client.icon : undefined,
         });
@@ -246,7 +246,7 @@ export function TaskEditDialog({ task, onClose, onSave, onTaskChange, folders }:
                         (() => {
                           const logo = selectedGroup?.logo_url || selectedClient.logo_url;
                           const icon = !selectedGroup?.logo_url ? selectedClient.icon : undefined;
-                          const name = selectedGroup?.name || selectedClient.name;
+                          const name = selectedClient.name;
                           return (
                             <>
                               {logo ? (

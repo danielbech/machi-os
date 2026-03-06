@@ -369,7 +369,7 @@ export const BoardTaskCard = memo(function BoardTaskCard({
                     const client = clients.find((c) => c.id === item.client);
                     if (!client) return <div />;
                     const group = client.client_group_id ? clientGroups.find(g => g.id === client.client_group_id) : null;
-                    const displayName = group?.name || client.name;
+                    const displayName = client.name;
                     const displayLogo = group?.logo_url || client.logo_url;
                     const displayIcon = !group?.logo_url ? client.icon : undefined;
                     return (
