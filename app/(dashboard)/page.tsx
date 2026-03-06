@@ -779,7 +779,7 @@ export default function BoardPage() {
                         <div className="w-px bg-foreground/[0.06]" />
                       </div>
                       <div className="absolute inset-0 flex items-center justify-center">
-                        <span className="text-[9px] font-medium text-foreground/35 bg-background border border-foreground/[0.06] rounded-full px-2.5 py-3 [writing-mode:vertical-lr] rotate-180 tracking-widest uppercase leading-none">
+                        <span className="text-[9px] font-medium text-foreground/35 bg-background border border-foreground/[0.06] rounded-full px-1.5 py-3 [writing-mode:vertical-lr] rotate-180 tracking-widest uppercase leading-none">
                           Weekend
                         </span>
                       </div>
@@ -1106,24 +1106,26 @@ export default function BoardPage() {
       {/* Rolling mode: icon toggle to reveal older days */}
       {isRolling && (
         <TooltipProvider>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <button
-                onClick={() => setRollingDaysBack(rollingDaysBack > 0 ? 0 : 6)}
-                aria-label={rollingDaysBack > 0 ? "Hide older days" : "Show older days"}
-                className={`fixed bottom-5 right-[8.5rem] z-50 flex items-center justify-center size-9 rounded-full border border-border shadow-lg transition-all ${
-                  rollingDaysBack > 0
-                    ? "bg-foreground/15 text-foreground"
-                    : "bg-popover/90 text-foreground/40 hover:text-foreground/70 hover:bg-foreground/[0.06]"
-                }`}
-              >
-                <ChevronLeft className={`size-4 transition-transform ${rollingDaysBack > 0 ? "rotate-0" : "rotate-180"}`} />
-              </button>
-            </TooltipTrigger>
-            <TooltipContent side="top" sideOffset={8}>
-              {rollingDaysBack > 0 ? "Hide past days" : "Show past days"}
-            </TooltipContent>
-          </Tooltip>
+          <div className="fixed bottom-5 right-[8.5rem] z-50 flex items-center gap-px rounded-full border border-border bg-popover/90 shadow-lg overflow-hidden">
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  onClick={() => setRollingDaysBack(rollingDaysBack > 0 ? 0 : 6)}
+                  aria-label={rollingDaysBack > 0 ? "Hide older days" : "Show older days"}
+                  className={`flex items-center justify-center h-10 w-10 transition-all ${
+                    rollingDaysBack > 0
+                      ? "bg-foreground/15 text-foreground"
+                      : "text-foreground/40 hover:text-foreground/70 hover:bg-foreground/[0.06]"
+                  }`}
+                >
+                  <ChevronLeft className={`size-4 transition-transform ${rollingDaysBack > 0 ? "rotate-0" : "rotate-180"}`} />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent side="top" sideOffset={8}>
+                {rollingDaysBack > 0 ? "Hide past days" : "Show past days"}
+              </TooltipContent>
+            </Tooltip>
+          </div>
         </TooltipProvider>
       )}
     </main>
