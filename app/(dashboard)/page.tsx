@@ -1103,30 +1103,27 @@ export default function BoardPage() {
         </div>
       </TooltipProvider>
 
-      {/* Rolling mode: floating button to reveal older days */}
+      {/* Rolling mode: icon toggle to reveal older days */}
       {isRolling && (
         <TooltipProvider>
-          <div className="fixed bottom-5 right-[8.5rem] z-50 flex items-center gap-px rounded-full border border-border bg-popover/90 shadow-lg overflow-hidden">
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <button
-                  onClick={() => setRollingDaysBack(rollingDaysBack > 0 ? 0 : 6)}
-                  aria-label={rollingDaysBack > 0 ? "Hide older days" : "Show older days"}
-                  className={`flex items-center justify-center h-10 px-3 gap-1.5 text-xs transition-all ${
-                    rollingDaysBack > 0
-                      ? "bg-foreground/15 text-foreground"
-                      : "text-foreground/40 hover:text-foreground/70 hover:bg-foreground/[0.06]"
-                  }`}
-                >
-                  <ChevronLeft className="size-3.5" />
-                  {rollingDaysBack > 0 ? "Hide past" : "Show past"}
-                </button>
-              </TooltipTrigger>
-              <TooltipContent side="top" sideOffset={8}>
-                {rollingDaysBack > 0 ? "Collapse to 5 days" : "Show 7 older days"}
-              </TooltipContent>
-            </Tooltip>
-          </div>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button
+                onClick={() => setRollingDaysBack(rollingDaysBack > 0 ? 0 : 6)}
+                aria-label={rollingDaysBack > 0 ? "Hide older days" : "Show older days"}
+                className={`fixed bottom-5 right-[8.5rem] z-50 flex items-center justify-center size-9 rounded-full border border-border shadow-lg transition-all ${
+                  rollingDaysBack > 0
+                    ? "bg-foreground/15 text-foreground"
+                    : "bg-popover/90 text-foreground/40 hover:text-foreground/70 hover:bg-foreground/[0.06]"
+                }`}
+              >
+                <ChevronLeft className={`size-4 transition-transform ${rollingDaysBack > 0 ? "rotate-0" : "rotate-180"}`} />
+              </button>
+            </TooltipTrigger>
+            <TooltipContent side="top" sideOffset={8}>
+              {rollingDaysBack > 0 ? "Hide past days" : "Show past days"}
+            </TooltipContent>
+          </Tooltip>
         </TooltipProvider>
       )}
     </main>
