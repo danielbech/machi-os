@@ -779,7 +779,7 @@ export default function BoardPage() {
                         <div className="w-px bg-foreground/[0.06]" />
                       </div>
                       <div className="absolute inset-0 flex items-center justify-center">
-                        <span className="text-[9px] font-medium text-foreground/35 bg-background border border-foreground/[0.06] rounded-full px-1.5 py-3 [writing-mode:vertical-lr] rotate-180 tracking-widest uppercase leading-none">
+                        <span className="text-[9px] font-medium text-foreground/35 bg-background border border-foreground/[0.06] rounded-full px-1.5 py-4 [writing-mode:vertical-lr] rotate-180 tracking-widest uppercase leading-none">
                           Weekend
                         </span>
                       </div>
@@ -1106,7 +1106,7 @@ export default function BoardPage() {
       {/* Rolling mode: icon toggle to reveal older days */}
       {isRolling && (
         <TooltipProvider>
-          <div className="fixed bottom-5 right-[8.5rem] z-50 flex items-center gap-px rounded-full border border-border bg-popover/90 shadow-lg overflow-hidden">
+          <div className="fixed bottom-5 right-[9.5rem] z-50 flex items-center gap-px rounded-full border border-border bg-popover/90 shadow-lg overflow-hidden">
             <Tooltip>
               <TooltipTrigger asChild>
                 <button
