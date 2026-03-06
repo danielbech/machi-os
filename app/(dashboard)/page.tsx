@@ -637,8 +637,8 @@ export default function BoardPage() {
   if (initialLoading) {
     const skeletonCounts = [4, 3, 3, 2, 2];
     return (
-      <main className="flex min-h-screen flex-col pt-4 pr-4 md:pr-8">
-        <div className="flex gap-1 overflow-x-auto pt-1 px-4 pb-3 md:px-8">
+      <main className="flex h-screen flex-col pt-4 pr-4 md:pr-8 overflow-hidden">
+        <div className="flex gap-1 overflow-x-auto pt-1 px-4 pb-3 md:px-8 flex-1 min-h-0 items-stretch">
           {columnKeys.map((key, ki) => {
             // Weekend separator skeleton
             if (isRolling && isWeekendISO(key)) {
@@ -674,8 +674,8 @@ export default function BoardPage() {
   }
 
   return (
-    <main className="flex min-h-screen flex-col pt-4 pr-4 md:pr-8">
-      <div>
+    <main className="flex h-screen flex-col pt-4 pr-4 md:pr-8 overflow-hidden">
+      <div className="flex-1 min-h-0 flex flex-col">
         <Kanban
           value={kanbanColumns}
           onValueChange={async (newCols) => {
@@ -736,7 +736,7 @@ export default function BoardPage() {
             }
           }}
         >
-          <KanbanBoard className="overflow-x-auto pt-1 px-4 pb-3 md:px-8">
+          <KanbanBoard className="overflow-x-auto pt-1 px-4 pb-3 md:px-8 flex-1 min-h-0 items-stretch">
             {(() => {
               const entries = Object.entries(filteredColumns);
               // Build render segments: group adjacent weekend days in rolling mode
