@@ -61,20 +61,46 @@ export function getTodayISO(): string {
 
 /**
  * Get ISO date strings for the rolling window.
- * Default: yesterday + today + next 3 days = 5 visible columns.
- * expandedDaysBack: how many extra past days to show (0–6).
+ * Shows 1 past weekday + today + 3 future weekdays (expandedDaysBack adds more past weekdays).
+ * Weekend days that fall between included weekdays are inserted as separators.
  */
 export function getRollingDates(expandedDaysBack: number = 0): string[] {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
-  const dates: string[] = [];
-  // Start from (1 + expandedDaysBack) days ago
-  const startOffset = -(1 + expandedDaysBack);
-  // End at today + 3 (4 future days including today)
-  for (let i = startOffset; i <= 3; i++) {
+  const isWeekend = (d: Date) => d.getDay() === 0 || d.getDay() === 6;
+
+  // Collect past weekdays (1 + expandedDaysBack)
+  const pastCount = 1 + expandedDaysBack;
+  const pastDates: Date[] = [];
+  let offset = -1;
+  while (pastDates.length < pastCount) {
     const d = new Date(today);
-    d.setDate(today.getDate() + i);
-    dates.push(toLocalISO(d));
+    d.setDate(today.getDate() + offset);
+    if (!isWeekend(d)) pastDates.unshift(d);
+    offset--;
+  }
+
+  // Collect future weekdays (3 after today, today itself counts if it's a weekday)
+  const futureDates: Date[] = [];
+  // Always include today even if weekend (rare edge: user opens on weekend)
+  if (!isWeekend(today)) futureDates.push(new Date(today));
+  offset = 1;
+  while (futureDates.length < 4) {
+    const d = new Date(today);
+    d.setDate(today.getDate() + offset);
+    if (!isWeekend(d)) futureDates.push(d);
+    offset++;
+  }
+
+  // Build the full range from first past date to last future date,
+  // including all calendar days (weekends show as separators)
+  const startDate = pastDates[0];
+  const endDate = futureDates[futureDates.length - 1];
+  const dates: string[] = [];
+  const cursor = new Date(startDate);
+  while (cursor <= endDate) {
+    dates.push(toLocalISO(cursor));
+    cursor.setDate(cursor.getDate() + 1);
   }
   return dates;
 }
