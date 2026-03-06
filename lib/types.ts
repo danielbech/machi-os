@@ -135,6 +135,34 @@ export interface FeedbackColumn {
   sort_order: number;
 }
 
+// ─── Hours ──────────────────────────────────────────────────────────────────
+
+export interface InvoiceGroup {
+  id: string;
+  project_id: string;
+  client_id: string;
+  name: string;
+  invoice_number: string | null;
+  hourly_rate: number;
+  status: 'active' | 'closed';
+  share_token: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface HourEntry {
+  id: string;
+  invoice_group_id: string;
+  client_id: string;
+  project_id: string;
+  description: string;
+  duration: number;
+  date: string;
+  logged_by: string;
+  created_at: string;
+  updated_at: string;
+}
+
 export type ReactionType = 'thumbsup' | 'heart' | 'fire';
 
 export interface FeedbackTicket {
