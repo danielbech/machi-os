@@ -768,14 +768,20 @@ export default function BoardPage() {
                   return (
                     <div
                       key={key}
-                      className="w-10 shrink-0 flex flex-col items-center pt-1 gap-1"
+                      className="w-10 shrink-0 relative"
                     >
-                      {seg.days.map((d) => (
-                        <span key={d.columnId} className="text-[10px] font-medium text-foreground/20 [writing-mode:vertical-lr] rotate-180 tracking-widest uppercase">
-                          {d.label}
-                        </span>
-                      ))}
-                      <div className="flex-1 w-px bg-foreground/[0.06] rounded-full" />
+                      {/* Stable vertical line — absolute so drag animations don't affect it */}
+                      <div className="absolute inset-x-0 top-0 bottom-0 flex justify-center">
+                        <div className="w-px bg-foreground/[0.06]" />
+                      </div>
+                      {/* Day labels */}
+                      <div className="relative flex flex-col items-center pt-1 gap-1">
+                        {seg.days.map((d) => (
+                          <span key={d.columnId} className="text-[10px] font-medium text-foreground/20 [writing-mode:vertical-lr] rotate-180 tracking-widest uppercase">
+                            {d.label}
+                          </span>
+                        ))}
+                      </div>
                     </div>
                   );
                 }
@@ -824,11 +830,15 @@ export default function BoardPage() {
                       />
                     ) : isRolling ? (
                       (() => {
-                        const { isToday, isPast } = formatRollingHeader(columnId);
+                        const { dayName, monthDay, isToday, isPast } = formatRollingHeader(columnId);
                         return (
-                          <h2 className={`font-semibold ${isToday ? "text-foreground" : isPast ? "text-foreground/40" : ""}`}>
-                            {columnTitles[columnId] || columnId}
-                            {isToday && <span className="ml-2 text-xs text-primary-foreground bg-primary rounded px-1.5 py-0.5 font-medium">Today</span>}
+                          <h2 className={`flex items-center gap-2 font-semibold ${isToday ? "text-foreground" : isPast ? "text-foreground/40" : ""}`}>
+                            {dayName}
+                            {isToday ? (
+                              <span className="text-xs text-primary-foreground bg-primary rounded px-1.5 py-0.5 font-medium">{monthDay}</span>
+                            ) : (
+                              <span className={`text-[11px] font-medium rounded px-1.5 py-0.5 border ${isPast ? "border-foreground/10 text-foreground/30" : "border-foreground/15 text-foreground/50"}`}>{monthDay}</span>
+                            )}
                           </h2>
                         );
                       })()

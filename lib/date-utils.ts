@@ -106,7 +106,7 @@ export function getRollingDates(expandedDaysBack: number = 0): string[] {
 }
 
 /** Format an ISO date for a rolling column header */
-export function formatRollingHeader(isoDate: string): { label: string; isToday: boolean; isPast: boolean } {
+export function formatRollingHeader(isoDate: string): { label: string; dayName: string; monthDay: string; isToday: boolean; isPast: boolean } {
   const parts = isoDate.split("-").map(Number);
   const date = new Date(parts[0], parts[1] - 1, parts[2]);
   const todayISO = getTodayISO();
@@ -114,6 +114,8 @@ export function formatRollingHeader(isoDate: string): { label: string; isToday: 
   const monthDay = `${SHORT_MONTHS[date.getMonth()]} ${date.getDate()}`;
   return {
     label: `${dayName} ${monthDay}`,
+    dayName,
+    monthDay,
     isToday: isoDate === todayISO,
     isPast: isoDate < todayISO,
   };
