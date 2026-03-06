@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import { loadInvoiceGroupByShareToken } from "@/lib/supabase/hours";
-import { formatDuration, formatHoursDecimal, formatShortDate } from "@/lib/hours-utils";
+import { formatDuration, formatHoursDecimal, formatShortDate, formatMoney, toDKK } from "@/lib/hours-utils";
 
 export default async function SharedHoursPage({
   params,
@@ -25,7 +25,7 @@ export default async function SharedHoursPage({
           <div className="flex items-center gap-3 mt-1 text-sm text-foreground/50">
             <span>{clientName}</span>
             <span className="text-foreground/20">·</span>
-            <span>{group.hourly_rate} dkk/h</span>
+            <span>{group.hourly_rate} {group.currency}/h</span>
             {group.invoice_number && (
               <>
                 <span className="text-foreground/20">·</span>
@@ -96,8 +96,13 @@ export default async function SharedHoursPage({
               {formatHoursDecimal(totalMinutes)}h
             </span>
             <span className="tabular-nums font-semibold text-base">
-              {Math.round(totalValue).toLocaleString()} dkk
+              {formatMoney(totalValue, group.currency)}
             </span>
+            {group.currency !== 'DKK' && (
+              <span className="tabular-nums text-foreground/40">
+                ≈ {formatMoney(toDKK(totalValue, group.exchange_rate), 'DKK')}
+              </span>
+            )}
           </div>
         </div>
 

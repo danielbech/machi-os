@@ -144,6 +144,8 @@ export interface InvoiceGroup {
   name: string;
   invoice_number: string | null;
   hourly_rate: number;
+  currency: string;
+  exchange_rate: number;
   status: 'active' | 'closed';
   share_token: string;
   created_at: string;

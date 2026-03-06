@@ -86,3 +86,55 @@ export function defaultGroupName(): string {
   const now = new Date()
   return `${months[now.getMonth()]} ${now.getFullYear()}`
 }
+
+// ─── Currency ───────────────────────────────────────────────────────────────
+
+export const CURRENCIES = [
+  { code: 'DKK', label: 'DKK — Danish Krone', symbol: 'kr' },
+  { code: 'EUR', label: 'EUR — Euro', symbol: '€' },
+  { code: 'USD', label: 'USD — US Dollar', symbol: '$' },
+  { code: 'GBP', label: 'GBP — British Pound', symbol: '£' },
+  { code: 'SEK', label: 'SEK — Swedish Krona', symbol: 'kr' },
+  { code: 'NOK', label: 'NOK — Norwegian Krone', symbol: 'kr' },
+] as const
+
+export type CurrencyCode = typeof CURRENCIES[number]['code']
+
+export function getCurrencySymbol(code: string): string {
+  return CURRENCIES.find(c => c.code === code)?.symbol || code
+}
+
+/**
+ * Format a monetary value with currency.
+ * formatMoney(1500, 'DKK') → "1,500 DKK"
+ */
+export function formatMoney(amount: number, currency: string): string {
+  return `${Math.round(amount).toLocaleString()} ${currency}`
+}
+
+/**
+ * Convert an amount to DKK using the stored exchange rate.
+ * The exchange_rate is "how many DKK per 1 unit of this currency".
+ */
+export function toDKK(amount: number, exchangeRate: number): number {
+  return amount * exchangeRate
+}
+
+/**
+ * Fetch the current exchange rate from the Frankfurter API (ECB data).
+ * Returns how many DKK per 1 unit of `fromCurrency`.
+ * Returns null if the fetch fails.
+ */
+export async function fetchExchangeRate(fromCurrency: string): Promise<number | null> {
+  if (fromCurrency === 'DKK') return 1
+  try {
+    const res = await fetch(
+      `https://api.frankfurter.dev/v1/latest?base=${fromCurrency}&symbols=DKK`
+    )
+    if (!res.ok) return null
+    const data = await res.json()
+    return data.rates?.DKK ?? null
+  } catch {
+    return null
+  }
+}

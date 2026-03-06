@@ -22,6 +22,10 @@ import {
   formatShortDate,
   todayISO,
   defaultGroupName,
+  CURRENCIES,
+  formatMoney,
+  toDKK,
+  fetchExchangeRate,
 } from "@/lib/hours-utils";
 import type { InvoiceGroup, HourEntry, ClientGroup } from "@/lib/types";
 import {
@@ -86,27 +90,32 @@ function SummaryCards({
     .filter((e) => activeGroups.some((g) => g.id === e.invoice_group_id))
     .reduce((sum, e) => sum + e.duration, 0);
 
-  const unbilledValue = activeGroups.reduce((sum, g) => {
+  // Convert all values to DKK for the summary
+  const unbilledValueDKK = activeGroups.reduce((sum, g) => {
     const groupMinutes = yearEntries
       .filter((e) => e.invoice_group_id === g.id)
       .reduce((s, e) => s + e.duration, 0);
-    return sum + (groupMinutes / 60) * g.hourly_rate;
+    const localValue = (groupMinutes / 60) * g.hourly_rate;
+    return sum + toDKK(localValue, g.exchange_rate);
   }, 0);
 
-  const billedValue = closedGroups.reduce((sum, g) => {
+  const billedValueDKK = closedGroups.reduce((sum, g) => {
     const groupMinutes = yearEntries
       .filter((e) => e.invoice_group_id === g.id)
       .reduce((s, e) => s + e.duration, 0);
-    return sum + (groupMinutes / 60) * g.hourly_rate;
+    const localValue = (groupMinutes / 60) * g.hourly_rate;
+    return sum + toDKK(localValue, g.exchange_rate);
   }, 0);
 
-  const avgRate =
-    activeGroups.length > 0
-      ? Math.round(
-          activeGroups.reduce((s, g) => s + g.hourly_rate, 0) /
-            activeGroups.length
-        )
-      : 0;
+  // Weighted average rate in DKK (weighted by hours logged)
+  const totalActiveMinutes = activeGroups.reduce((sum, g) => {
+    return sum + yearEntries
+      .filter((e) => e.invoice_group_id === g.id)
+      .reduce((s, e) => s + e.duration, 0);
+  }, 0);
+  const avgRateDKK = totalActiveMinutes > 0
+    ? Math.round(unbilledValueDKK / (totalActiveMinutes / 60))
+    : 0;
 
   const cards = [
     {
@@ -116,17 +125,17 @@ function SummaryCards({
     },
     {
       label: "Unbilled value",
-      value: Math.round(unbilledValue).toLocaleString() + " dkk",
+      value: formatMoney(unbilledValueDKK, "DKK"),
       icon: DollarSign,
     },
     {
       label: "Billed this year",
-      value: Math.round(billedValue).toLocaleString() + " dkk",
+      value: formatMoney(billedValueDKK, "DKK"),
       icon: Receipt,
     },
     {
       label: "Avg. hourly rate",
-      value: avgRate > 0 ? avgRate + " dkk/h" : "—",
+      value: avgRateDKK > 0 ? avgRateDKK + " DKK/h" : "—",
       icon: TrendingUp,
     },
   ];
@@ -405,7 +414,10 @@ function InvoiceGroupSection({
           </div>
           <div className="flex items-center gap-3 text-xs text-foreground/40 mt-0.5">
             {clientGroup && <span>{clientGroup.name}</span>}
-            <span>{group.hourly_rate} dkk/h</span>
+            <span>{group.hourly_rate} {group.currency}/h</span>
+            {group.currency !== 'DKK' && (
+              <span className="text-foreground/25">1 {group.currency} = {group.exchange_rate} DKK</span>
+            )}
             {group.invoice_number && (
               <span>#{group.invoice_number}</span>
             )}
@@ -582,8 +594,13 @@ function InvoiceGroupSection({
             {formatHoursDecimal(totalMinutes)}h
           </span>
           <span className="tabular-nums font-semibold">
-            {Math.round(totalValue).toLocaleString()} dkk
+            {formatMoney(totalValue, group.currency)}
           </span>
+          {group.currency !== 'DKK' && (
+            <span className="tabular-nums text-foreground/40 text-xs">
+              ≈ {formatMoney(toDKK(totalValue, group.exchange_rate), "DKK")}
+            </span>
+          )}
         </div>
       </div>
 
@@ -630,11 +647,14 @@ function NewGroupDialog({
   open: boolean;
   onOpenChange: (open: boolean) => void;
   clientGroups: ClientGroup[];
-  onCreateGroup: (clientId: string, name: string, rate: number) => Promise<void>;
+  onCreateGroup: (clientId: string, name: string, rate: number, currency: string, exchangeRate: number) => Promise<void>;
 }) {
   const [clientId, setClientId] = useState("");
   const [name, setName] = useState("");
   const [rate, setRate] = useState("");
+  const [currency, setCurrency] = useState("DKK");
+  const [exchangeRate, setExchangeRate] = useState("1");
+  const [fetchingRate, setFetchingRate] = useState(false);
   const [saving, setSaving] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -642,17 +662,37 @@ function NewGroupDialog({
     if (open) {
       setName(defaultGroupName());
       setRate("");
+      setCurrency("DKK");
+      setExchangeRate("1");
       setClientId(clientGroups.length === 1 ? clientGroups[0].id : "");
       setTimeout(() => inputRef.current?.focus(), 50);
     }
   }, [open, clientGroups]);
+
+  // Auto-fetch exchange rate when currency changes
+  useEffect(() => {
+    if (currency === "DKK") {
+      setExchangeRate("1");
+      return;
+    }
+    let cancelled = false;
+    setFetchingRate(true);
+    fetchExchangeRate(currency).then((rate) => {
+      if (cancelled) return;
+      setFetchingRate(false);
+      if (rate !== null) {
+        setExchangeRate(rate.toFixed(4));
+      }
+    });
+    return () => { cancelled = true; };
+  }, [currency]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!clientId || !name.trim() || !rate) return;
     setSaving(true);
     try {
-      await onCreateGroup(clientId, name.trim(), parseInt(rate));
+      await onCreateGroup(clientId, name.trim(), parseInt(rate), currency, parseFloat(exchangeRate));
       onOpenChange(false);
     } catch {
       toast.error("Failed to create group");
@@ -692,16 +732,50 @@ function NewGroupDialog({
               placeholder="e.g. March 2026"
             />
           </div>
-          <div className="space-y-1.5">
-            <label className="text-xs text-foreground/40">Hourly rate (kr)</label>
-            <Input
-              type="number"
-              value={rate}
-              onChange={(e) => setRate(e.target.value)}
-              placeholder="e.g. 850"
-              min={0}
-            />
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <label className="text-xs text-foreground/40">Hourly rate</label>
+              <Input
+                type="number"
+                value={rate}
+                onChange={(e) => setRate(e.target.value)}
+                placeholder="e.g. 850"
+                min={0}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-xs text-foreground/40">Currency</label>
+              <select
+                value={currency}
+                onChange={(e) => setCurrency(e.target.value)}
+                className="w-full rounded-md border border-foreground/[0.08] bg-foreground/[0.04] px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-foreground/20 h-9"
+              >
+                {CURRENCIES.map((c) => (
+                  <option key={c.code} value={c.code}>
+                    {c.code}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
+          {currency !== "DKK" && (
+            <div className="space-y-1.5">
+              <label className="text-xs text-foreground/40">
+                Exchange rate (1 {currency} = ? DKK)
+                {fetchingRate && <span className="ml-1 text-foreground/20">fetching...</span>}
+              </label>
+              <Input
+                type="number"
+                step="0.0001"
+                value={exchangeRate}
+                onChange={(e) => setExchangeRate(e.target.value)}
+                placeholder="e.g. 7.46"
+              />
+              <p className="text-[11px] text-foreground/25">
+                Auto-filled from ECB. Edit if needed.
+              </p>
+            </div>
+          )}
           <div className="flex justify-end gap-2 pt-2 border-t border-foreground/[0.06]">
             <Button
               variant="ghost"
@@ -804,9 +878,9 @@ export default function HoursPage() {
 
   // CRUD handlers
   const handleCreateGroup = useCallback(
-    async (clientId: string, name: string, rate: number) => {
+    async (clientId: string, name: string, rate: number, currency: string, exchangeRate: number) => {
       if (!activeProjectId) return;
-      const group = await createInvoiceGroup(activeProjectId, clientId, name, rate);
+      const group = await createInvoiceGroup(activeProjectId, clientId, name, rate, currency, exchangeRate);
       setGroups((prev) => [group, ...prev]);
     },
     [activeProjectId]

@@ -24,6 +24,8 @@ export async function createInvoiceGroup(
   clientId: string,
   name: string,
   hourlyRate: number,
+  currency: string = 'DKK',
+  exchangeRate: number = 1,
 ): Promise<InvoiceGroup> {
   const supabase = createClient()
   const { data, error } = await supabase
@@ -33,6 +35,8 @@ export async function createInvoiceGroup(
       client_id: clientId,
       name,
       hourly_rate: hourlyRate,
+      currency,
+      exchange_rate: exchangeRate,
     })
     .select()
     .single()
@@ -47,7 +51,7 @@ export async function createInvoiceGroup(
 
 export async function updateInvoiceGroup(
   groupId: string,
-  updates: { name?: string; invoice_number?: string | null; hourly_rate?: number; status?: 'active' | 'closed' },
+  updates: { name?: string; invoice_number?: string | null; hourly_rate?: number; status?: 'active' | 'closed'; currency?: string; exchange_rate?: number },
 ): Promise<void> {
   const supabase = createClient()
   const { error } = await supabase
@@ -207,6 +211,8 @@ function mapInvoiceGroup(row: any): InvoiceGroup {
     name: row.name,
     invoice_number: row.invoice_number || null,
     hourly_rate: row.hourly_rate,
+    currency: row.currency || 'DKK',
+    exchange_rate: Number(row.exchange_rate) || 1,
     status: row.status,
     share_token: row.share_token,
     created_at: row.created_at,
