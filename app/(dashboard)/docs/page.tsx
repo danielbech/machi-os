@@ -40,6 +40,7 @@ import {
   useSlashCommand,
 } from "@/components/docs/slash-command";
 import { EmojiPicker } from "@/components/docs/emoji-picker";
+import { TableToolbar } from "@/components/docs/table-toolbar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -520,7 +521,7 @@ function DocEditor({
         TaskList,
         TaskItem.configure({ nested: true }),
         Underline,
-        Table.configure({ resizable: false }),
+        Table.configure({ resizable: false, allowTableNodeSelection: true }),
         TableRow,
         TableCell,
         TableHeader,
@@ -630,6 +631,7 @@ function DocEditor({
             }}
           />
           <div className="docs-editor prose-custom relative">
+            {editor && <TableToolbar editor={editor} />}
             <EditorContent editor={editor} />
             {slash.active && slash.range && slash.coords && editor && (
               <div
