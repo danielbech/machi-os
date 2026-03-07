@@ -24,6 +24,11 @@ import Placeholder from "@tiptap/extension-placeholder";
 import TaskList from "@tiptap/extension-task-list";
 import TaskItem from "@tiptap/extension-task-item";
 import Underline from "@tiptap/extension-underline";
+import {
+  SlashCommandExtension,
+  SlashCommandMenu,
+  useSlashCommand,
+} from "@/components/docs/slash-command";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -230,11 +235,12 @@ function DocEditor({
           HTMLAttributes: { class: "text-primary underline underline-offset-2" },
         }),
         Placeholder.configure({
-          placeholder: "Start writing...",
+          placeholder: "Type '/' for commands...",
         }),
         TaskList,
         TaskItem.configure({ nested: true }),
         Underline,
+        SlashCommandExtension,
       ],
       content: Object.keys(doc.content).length > 0 ? doc.content : undefined,
       editorProps: {
@@ -252,6 +258,8 @@ function DocEditor({
     },
     [doc.id]
   );
+
+  const slash = useSlashCommand(editor);
 
   return (
     <div className="max-w-3xl mx-auto px-4 md:px-12 py-10">
@@ -272,8 +280,21 @@ function DocEditor({
         className="w-full text-4xl font-bold bg-transparent outline-none resize-none placeholder:text-foreground/15 leading-tight mb-4"
         rows={1}
       />
-      <div className="docs-editor prose-custom">
+      <div className="docs-editor prose-custom relative">
         <EditorContent editor={editor} />
+        {slash.active && slash.range && slash.coords && editor && (
+          <div
+            className="fixed z-50"
+            style={{ top: slash.coords.top, left: slash.coords.left }}
+          >
+            <SlashCommandMenu
+              editor={editor}
+              range={slash.range}
+              query={slash.query}
+              onClose={slash.close}
+            />
+          </div>
+        )}
       </div>
     </div>
   );
