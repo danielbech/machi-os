@@ -303,7 +303,8 @@
 .docs-editor .tiptap ul[data-type="taskList"] li > label {
   display: flex;
   align-items: center;
-  margin-top: 0.35em;
+  /* line-height is 1.75 (28px at 1rem), checkbox is 18px → (28-18)/2 = 5px top offset */
+  margin-top: 5px;
   cursor: pointer;
   position: relative;
 }
