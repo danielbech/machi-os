@@ -556,6 +556,7 @@ export default function DocsPage() {
                     onDelete={(id) => setDeleteConfirm(id)}
                     onToggle={toggleExpanded}
                     onToggleFavorite={toggleFavorite}
+                    onUpdateIcon={(id, icon) => handleUpdate(id, { icon })}
                     expanded={expandedIds.has(item.id)}
                     isFavorited={favorites.has(item.id)}
                     dropIndicator={

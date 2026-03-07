@@ -20,6 +20,7 @@ import {
   Star,
 } from "lucide-react";
 import type { Doc } from "@/lib/types";
+import { EmojiPicker } from "@/components/docs/emoji-picker";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -61,6 +62,7 @@ export function SortableTreeItem({
   onDelete,
   onToggle,
   onToggleFavorite,
+  onUpdateIcon,
   expanded,
   dropIndicator,
   isFavorited,
@@ -73,6 +75,7 @@ export function SortableTreeItem({
   onDelete: (id: string) => void;
   onToggle: (id: string) => void;
   onToggleFavorite: (id: string) => void;
+  onUpdateIcon: (id: string, icon: string | null) => void;
   expanded: boolean;
   dropIndicator: DropIndicator | null;
   isFavorited: boolean;
@@ -119,24 +122,32 @@ export function SortableTreeItem({
         >
           <GripVertical className="size-3" />
         </div>
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            onToggle(item.id);
-          }}
-          className={`shrink-0 size-5 flex items-center justify-center rounded transition-colors hover:bg-foreground/[0.06] ${
-            item.hasChildren ? "text-foreground/30" : "text-transparent"
-          }`}
+        {item.hasChildren && (
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onToggle(item.id);
+            }}
+            className="shrink-0 size-5 flex items-center justify-center rounded transition-colors hover:bg-foreground/[0.06] text-foreground/30"
+          >
+            <ChevronRight
+              className={`size-3 transition-transform duration-150 ${
+                expanded ? "rotate-90" : ""
+              }`}
+            />
+          </button>
+        )}
+        <EmojiPicker
+          value={item.doc.icon || ""}
+          onChange={(emoji) => onUpdateIcon(item.id, emoji || null)}
         >
-          <ChevronRight
-            className={`size-3 transition-transform duration-150 ${
-              expanded ? "rotate-90" : ""
-            }`}
-          />
-        </button>
-        <span className="text-base leading-none shrink-0">
-          {item.doc.icon || "\ud83d\udcc4"}
-        </span>
+          <button
+            onClick={(e) => e.stopPropagation()}
+            className="text-base leading-none shrink-0 hover:bg-foreground/[0.06] rounded px-0.5 transition-colors"
+          >
+            {item.doc.icon || "📄"}
+          </button>
+        </EmojiPicker>
         <span className="flex-1 truncate">{item.doc.title || "Untitled"}</span>
         <div className="flex items-center opacity-0 group-hover:opacity-100 transition-opacity">
           <button
