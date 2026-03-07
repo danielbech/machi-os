@@ -28,6 +28,7 @@ interface VATReturn {
   endDate: string;
   isSettled: boolean;
   settledAmount: number | null;
+  estimatedAmount: number | null;
 }
 
 interface BankAccount {
@@ -139,16 +140,41 @@ async function fetchFinanceData(): Promise<FinanceData> {
     months.push({ month: monthNames[m], revenue, expenses });
   }
 
+  // Calculate estimated VAT for unsettled periods from invoice/bill tax amounts
+  const allInvoices = invoicesData.invoices || [];
+  const allBills = billsData.bills || [];
+
   const vatReturns: VATReturn[] = (vatData.salesTaxReturns || []).map(
-    (v: { id: string; periodText: string; reportDeadline: string; startDate: string; endDate: string; isSettled: boolean; settledAmount: number | null }) => ({
-      id: v.id,
-      periodText: v.periodText,
-      reportDeadline: v.reportDeadline,
-      startDate: v.startDate,
-      endDate: v.endDate,
-      isSettled: v.isSettled,
-      settledAmount: v.settledAmount,
-    })
+    (v: { id: string; periodText: string; reportDeadline: string; startDate: string; endDate: string; isSettled: boolean; settledAmount: number | null }) => {
+      let estimatedAmount: number | null = null;
+
+      if (!v.isSettled) {
+        const inRange = (date: string) => date >= v.startDate && date <= v.endDate;
+
+        const outputVat = allInvoices
+          .filter((inv: { entryDate: string }) => inRange(inv.entryDate))
+          .reduce((sum: number, inv: { tax: number; exchangeRate: number }) =>
+            sum + (inv.tax || 0) * (inv.exchangeRate || 1), 0);
+
+        const inputVat = allBills
+          .filter((bill: { entryDate: string }) => inRange(bill.entryDate))
+          .reduce((sum: number, bill: { tax: number; exchangeRate: number }) =>
+            sum + (bill.tax || 0) * (bill.exchangeRate || 1), 0);
+
+        estimatedAmount = outputVat - inputVat;
+      }
+
+      return {
+        id: v.id,
+        periodText: v.periodText,
+        reportDeadline: v.reportDeadline,
+        startDate: v.startDate,
+        endDate: v.endDate,
+        isSettled: v.isSettled,
+        settledAmount: v.settledAmount,
+        estimatedAmount,
+      };
+    }
   );
 
   const bankAccounts: BankAccount[] = (accountsData.accounts || []).map(
@@ -397,11 +423,14 @@ function VATCard({ vatReturns }: { vatReturns: VATReturn[] }) {
               <div className="text-[11px] text-muted-foreground mb-0.5">Settled</div>
               <div className="text-lg font-bold text-foreground">{formatDKK(primary.settledAmount)}</div>
             </div>
+          ) : primary.estimatedAmount != null ? (
+            <div>
+              <div className="text-[11px] text-muted-foreground mb-0.5">Estimated (output − input VAT)</div>
+              <div className="text-lg font-bold text-foreground">{formatDKK(primary.estimatedAmount)}</div>
+            </div>
           ) : (
             <div>
-              <div className="text-[11px] text-muted-foreground mb-0.5">
-                {primary.isSettled ? "Settled" : "Amount"}
-              </div>
+              <div className="text-[11px] text-muted-foreground mb-0.5">Amount</div>
               <div className="text-lg font-bold text-muted-foreground">—</div>
             </div>
           )}
