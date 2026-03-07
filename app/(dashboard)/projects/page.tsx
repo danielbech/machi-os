@@ -469,7 +469,6 @@ function StatusesTab() {
             <TableRow className="border-foreground/[0.06] bg-foreground/[0.02] hover:bg-foreground/[0.02]">
               <TableHead>Status</TableHead>
               <TableHead>Projects</TableHead>
-              <TableHead>Visibility</TableHead>
               <TableHead className="w-[50px]" />
             </TableRow>
           </TableHeader>
@@ -484,11 +483,6 @@ function StatusesTab() {
                 <TableCell>
                   <span className="text-xs text-foreground/30">
                     {projectCountByStatus[status.id] || 0}
-                  </span>
-                </TableCell>
-                <TableCell>
-                  <span className={`text-xs ${status.treat_as_active ? "text-foreground/50" : "text-foreground/20"}`}>
-                    {status.treat_as_active ? "Shown in backlog" : "Hidden from backlog"}
                   </span>
                 </TableCell>
                 <TableCell>
@@ -525,7 +519,7 @@ function StatusesTab() {
             ))}
             {clientStatuses.length === 0 && (
               <TableRow className="hover:bg-transparent">
-                <TableCell colSpan={4} className="h-24 text-center text-foreground/30">
+                <TableCell colSpan={3} className="h-24 text-center text-foreground/30">
                   No statuses yet.
                 </TableCell>
               </TableRow>
@@ -587,7 +581,6 @@ function StatusDialog({
   const { clientStatuses, refreshClientStatuses } = useProjectData();
   const [name, setName] = useState("");
   const [color, setColor] = useState("green");
-  const [treatAsActive, setTreatAsActive] = useState(true);
   const [showDottedBorder, setShowDottedBorder] = useState(false);
   const [saving, setSaving] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -597,12 +590,10 @@ function StatusDialog({
     if (editingStatus) {
       setName(editingStatus.name);
       setColor(editingStatus.color);
-      setTreatAsActive(editingStatus.treat_as_active);
       setShowDottedBorder(editingStatus.show_dotted_border);
     } else {
       setName("");
       setColor("green");
-      setTreatAsActive(true);
       setShowDottedBorder(false);
     }
     setTimeout(() => inputRef.current?.focus(), 50);
@@ -616,7 +607,6 @@ function StatusDialog({
         await updateClientStatus(editingStatus.id, {
           name: name.trim(),
           color,
-          treat_as_active: treatAsActive,
           show_dotted_border: showDottedBorder,
         });
       } else {
@@ -625,7 +615,7 @@ function StatusDialog({
           name.trim(),
           color,
           clientStatuses.length,
-          treatAsActive,
+          true,
           showDottedBorder,
         );
       }
@@ -681,21 +671,6 @@ function StatusDialog({
                 />
               ))}
             </div>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <label className="text-xs text-foreground/40">Board visibility</label>
-            <button
-              type="button"
-              onClick={() => setTreatAsActive(!treatAsActive)}
-              className={`px-2.5 py-1 rounded text-xs font-medium transition-all ${
-                treatAsActive
-                  ? "bg-green-500/10 text-green-400"
-                  : "bg-foreground/5 text-foreground/30"
-              }`}
-            >
-              {treatAsActive ? "Shown in backlog" : "Hidden from backlog"}
-            </button>
           </div>
 
           <div className="flex items-center gap-2">
@@ -761,10 +736,8 @@ function ProjectsTab() {
 
   const handleChangeStatus = async (clientId: string, statusId: string) => {
     try {
-      const statusDef = clientStatuses.find((s) => s.id === statusId);
       await updateClientRecord(clientId, {
         status_id: statusId,
-        active: statusDef?.treat_as_active ?? true,
       });
       await refreshClients();
     } catch (error) {
