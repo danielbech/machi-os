@@ -280,52 +280,52 @@ function MonthlyChart({ months }: { months: MonthData[] }) {
           <BarChart data={chartData} margin={{ top: 10, right: 0, left: 0, bottom: 0 }}>
             <CartesianGrid
               strokeDasharray="3 3"
-              stroke="hsl(var(--border) / 0.3)"
+              stroke="color-mix(in srgb, var(--border) 30%, transparent)"
               vertical={false}
             />
             <XAxis
               dataKey="month"
-              tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 11 }}
+              tick={{ fill: "var(--muted-foreground)", fontSize: 11 }}
               axisLine={false}
               tickLine={false}
             />
             <YAxis
-              tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 11 }}
+              tick={{ fill: "var(--muted-foreground)", fontSize: 11 }}
               axisLine={false}
               tickLine={false}
               tickFormatter={(v) => formatCompact(Math.abs(v))}
             />
             <RechartsTooltip
               contentStyle={{
-                backgroundColor: "hsl(var(--popover))",
-                border: "1px solid hsl(var(--border))",
+                backgroundColor: "var(--popover)",
+                border: "1px solid var(--border)",
                 borderRadius: 8,
                 fontSize: 12,
-                color: "hsl(var(--popover-foreground))",
+                color: "var(--popover-foreground)",
               }}
               formatter={(value) => formatDKK(Math.abs(Number(value)))}
-              labelStyle={{ color: "hsl(var(--muted-foreground))" }}
+              labelStyle={{ color: "var(--muted-foreground)" }}
             />
             <ReferenceLine
               y={MONTHLY_TARGET}
-              stroke="hsl(var(--muted-foreground) / 0.4)"
+              stroke="color-mix(in srgb, var(--muted-foreground) 40%, transparent)"
               strokeDasharray="6 4"
               label={{
                 value: "125K target",
                 position: "right",
-                fill: "hsl(var(--muted-foreground) / 0.5)",
+                fill: "color-mix(in srgb, var(--muted-foreground) 50%, transparent)",
                 fontSize: 10,
               }}
             />
-            <ReferenceLine y={0} stroke="hsl(var(--border))" />
+            <ReferenceLine y={0} stroke="var(--border)" />
             <Bar dataKey="revenue" radius={[4, 4, 0, 0]} maxBarSize={32}>
               {chartData.map((_, i) => (
-                <Cell key={i} fill="hsl(var(--chart-2))" />
+                <Cell key={i} fill="var(--chart-2)" />
               ))}
             </Bar>
             <Bar dataKey="expenses" radius={[0, 0, 4, 4]} maxBarSize={32}>
               {chartData.map((_, i) => (
-                <Cell key={i} fill="hsl(var(--chart-5))" />
+                <Cell key={i} fill="var(--chart-5)" />
               ))}
             </Bar>
           </BarChart>
