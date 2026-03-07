@@ -34,7 +34,12 @@ import { Table } from "@tiptap/extension-table";
 import { TableRow } from "@tiptap/extension-table-row";
 import { TableCell } from "@tiptap/extension-table-cell";
 import { TableHeader } from "@tiptap/extension-table-header";
+import CodeBlockLowlight from "@tiptap/extension-code-block-lowlight";
+import { mergeAttributes } from "@tiptap/core";
+import { common, createLowlight } from "lowlight";
 import { ResizableImage } from "@/components/docs/image-extension";
+import { Callout } from "@/components/docs/callout-extension";
+import { ToggleList } from "@/components/docs/toggle-extension";
 import {
   SlashCommandExtension,
   SlashCommandMenu,
@@ -89,6 +94,31 @@ import {
   X,
   GripVertical,
 } from "lucide-react";
+
+// ─── Lowlight (syntax highlighting) ──────────────────────────────────────────
+
+const lowlight = createLowlight(common);
+
+const CodeBlockWithLanguage = CodeBlockLowlight.extend({
+  renderHTML({ node, HTMLAttributes }) {
+    const language = node.attrs.language;
+    return [
+      "pre",
+      mergeAttributes(this.options.HTMLAttributes, HTMLAttributes, {
+        ...(language ? { "data-language": language } : {}),
+      }),
+      [
+        "code",
+        {
+          class: language
+            ? this.options.languageClassPrefix + language
+            : null,
+        },
+        0,
+      ],
+    ];
+  },
+});
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -602,7 +632,11 @@ function DocEditor({
     {
       extensions: [
         StarterKit.configure({
+          codeBlock: false,
           heading: { levels: [1, 2, 3] },
+        }),
+        CodeBlockWithLanguage.configure({
+          lowlight,
         }),
         Link.configure({
           openOnClick: false,
@@ -621,6 +655,8 @@ function DocEditor({
         ResizableImage.configure({
           HTMLAttributes: { class: "docs-image" },
         }),
+        Callout,
+        ToggleList,
         SlashCommandExtension,
       ],
       content: Object.keys(doc.content).length > 0 ? doc.content : undefined,

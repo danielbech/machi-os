@@ -17,6 +17,8 @@ import {
   Type,
   Table,
   ImageIcon,
+  Lightbulb,
+  ChevronRight,
 } from "lucide-react";
 
 // ─── Command definitions ─────────────────────────────────────────────────────
@@ -99,6 +101,35 @@ const COMMANDS: SlashCommandItem[] = [
     icon: Quote,
     command: (editor, range) => {
       editor.chain().focus().deleteRange(range).toggleBlockquote().run();
+    },
+  },
+  {
+    title: "Callout",
+    description: "Highlighted callout block",
+    icon: Lightbulb,
+    command: (editor, range) => {
+      editor.chain().focus().deleteRange(range).run();
+      (editor.commands as any).setCallout({ type: "info" });
+    },
+  },
+  {
+    title: "Toggle",
+    description: "Collapsible toggle section",
+    icon: ChevronRight,
+    command: (editor, range) => {
+      editor
+        .chain()
+        .focus()
+        .deleteRange(range)
+        .insertContent({
+          type: "toggleList",
+          attrs: { open: true },
+          content: [
+            { type: "paragraph", content: [{ type: "text", text: "Toggle" }] },
+            { type: "paragraph" },
+          ],
+        })
+        .run();
     },
   },
   {
