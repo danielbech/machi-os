@@ -48,7 +48,7 @@ async function handleAccountBalances(orgId: string) {
     })
   );
 
-  return { accounts: balances };
+  return { accounts: balances.filter((a) => a.balance !== 0) };
 }
 
 export async function GET(request: NextRequest) {
