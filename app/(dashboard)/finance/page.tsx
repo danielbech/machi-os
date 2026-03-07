@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import {
   BarChart,
   Bar,
@@ -12,16 +12,28 @@ import {
   Tooltip as RechartsTooltip,
 } from "recharts";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Plus, X, ChevronDown } from "lucide-react";
+import { Plus, ChevronRight, Trash2 } from "lucide-react";
 import { useProjectData } from "@/lib/project-data-context";
-import type { Client } from "@/lib/types";
+import type { Client, ClientStatusDef } from "@/lib/types";
+import { CLIENT_DOT_COLORS, getBadgeColorStyle } from "@/lib/colors";
+import { ClientIcon } from "@/components/client-icon";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import { Badge } from "@/components/ui/badge";
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -120,13 +132,17 @@ function usePipeline() {
     save([...items, { ...item, id: `p-${Date.now()}` }]);
   }, [items, save]);
 
+  const update = useCallback((id: string, changes: Partial<PipelineItem>) => {
+    save(items.map((i) => (i.id === id ? { ...i, ...changes } : i)));
+  }, [items, save]);
+
   const remove = useCallback((id: string) => {
     save(items.filter((i) => i.id !== id));
   }, [items, save]);
 
   const total = items.reduce((sum, i) => sum + i.amount, 0);
 
-  return { items, add, remove, total };
+  return { items, add, update, remove, total };
 }
 
 // ─── Data fetching ──────────────────────────────────────────────────────────
@@ -389,67 +405,79 @@ function MonthlyChart({ months }: { months: MonthData[] }) {
 }
 
 
-function ClientAvatar({ client, size = "sm" }: { client: { clientName: string; clientColor: string; clientLogoUrl?: string; clientIcon?: string }; size?: "sm" | "md" }) {
-  const dim = size === "sm" ? "size-5" : "size-6";
-  const textSize = size === "sm" ? "text-[10px]" : "text-xs";
-
-  if (client.clientLogoUrl) {
+function ProjectLogo({ client }: { client: Client | { name: string; color: string; logo_url?: string; icon?: string } }) {
+  const logoUrl = client.logo_url;
+  if (logoUrl) {
     return (
-      <span className={`${dim} rounded-md overflow-hidden shrink-0`} style={{ backgroundColor: client.clientColor || "#444" }}>
-        <img src={client.clientLogoUrl} alt={client.clientName} className={`${dim} object-cover`} />
-      </span>
+      <img
+        src={logoUrl}
+        alt={client.name}
+        className="size-6 rounded-lg object-cover bg-foreground/5 shrink-0"
+      />
     );
   }
+  const colorClass = "color" in client ? CLIENT_DOT_COLORS[client.color] || "bg-blue-500" : "bg-blue-500";
+  return (
+    <div className={`size-6 rounded-lg ${colorClass} flex items-center justify-center text-white shrink-0`}>
+      {"icon" in client && client.icon ? (
+        <ClientIcon icon={client.icon} className="size-3" />
+      ) : (
+        <span className="font-bold text-[9px]">{client.name.charAt(0).toUpperCase()}</span>
+      )}
+    </div>
+  );
+}
 
-  if (client.clientIcon) {
+function InlineAmount({ value, onSave }: { value: number; onSave: (v: number) => void }) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(String(value));
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => { setDraft(String(value)); }, [value]);
+  useEffect(() => { if (editing) inputRef.current?.focus(); }, [editing]);
+
+  const commit = () => {
+    setEditing(false);
+    const parsed = Number(draft.replace(/[^0-9]/g, ""));
+    if (parsed && parsed !== value) onSave(parsed);
+    else setDraft(String(value));
+  };
+
+  if (!editing) {
     return (
-      <span className={`${dim} rounded-md flex items-center justify-center shrink-0 ${textSize}`} style={{ backgroundColor: client.clientColor || "#444" }}>
-        {client.clientIcon}
-      </span>
+      <button
+        onClick={() => setEditing(true)}
+        className="text-left hover:bg-foreground/[0.04] rounded px-1.5 py-0.5 -mx-1.5 -my-0.5 transition-colors tabular-nums text-sm"
+      >
+        {formatDKK(value)}
+      </button>
     );
   }
 
   return (
-    <span className={`${dim} rounded-md flex items-center justify-center shrink-0 ${textSize} font-medium text-white`} style={{ backgroundColor: client.clientColor || "#444" }}>
-      {client.clientName.charAt(0).toUpperCase()}
-    </span>
+    <input
+      ref={inputRef}
+      value={draft}
+      onChange={(e) => setDraft(e.target.value)}
+      onBlur={commit}
+      onKeyDown={(e) => {
+        if (e.key === "Enter") commit();
+        if (e.key === "Escape") { setDraft(String(value)); setEditing(false); }
+      }}
+      className="w-24 bg-transparent outline-none ring-1 ring-foreground/15 rounded px-1.5 py-0.5 -mx-1.5 -my-0.5 text-sm tabular-nums"
+      placeholder="0"
+    />
   );
 }
 
-function Pipeline({ items, onAdd, onRemove, total, clients }: {
-  items: PipelineItem[];
-  onAdd: (item: Omit<PipelineItem, "id">) => void;
-  onRemove: (id: string) => void;
-  total: number;
-  clients: Client[];
-}) {
-  const [selectedClient, setSelectedClient] = useState<Client | null>(null);
-  const [amount, setAmount] = useState("");
-  const [month, setMonth] = useState("");
-
-  const currentYear = new Date().getFullYear();
+function InlineMonthPicker({ value, onSave }: { value: string; onSave: (v: string) => void }) {
+  const [open, setOpen] = useState(false);
   const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
-  const handleAdd = () => {
-    const parsed = Number(amount.replace(/[^0-9]/g, ""));
-    if (!selectedClient || !parsed || !month) return;
-    onAdd({
-      clientId: selectedClient.id,
-      clientName: selectedClient.name,
-      clientColor: selectedClient.color,
-      clientLogoUrl: selectedClient.logo_url,
-      clientIcon: selectedClient.icon,
-      amount: parsed,
-      expectedMonth: month,
-    });
-    setSelectedClient(null);
-    setAmount("");
-    setMonth("");
-  };
-
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter") handleAdd();
-  };
+  const dateObj = useMemo(() => {
+    const [y, m] = value.split("-").map(Number);
+    return new Date(y, m - 1, 15);
+  }, [value]);
 
   const formatMonth = (ym: string) => {
     const [y, m] = ym.split("-");
@@ -457,8 +485,115 @@ function Pipeline({ items, onAdd, onRemove, total, clients }: {
   };
 
   return (
-    <div className="rounded-xl border border-border bg-card p-5 space-y-4">
-      <div className="flex items-center justify-between">
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <button className="text-left hover:bg-foreground/[0.04] rounded px-1.5 py-0.5 -mx-1.5 -my-0.5 transition-colors tabular-nums text-sm">
+          {formatMonth(value)}
+        </button>
+      </PopoverTrigger>
+      <PopoverContent className="w-auto p-0" align="start">
+        <Calendar
+          mode="single"
+          selected={dateObj}
+          onSelect={(date) => {
+            if (date) {
+              const y = date.getFullYear();
+              const m = String(date.getMonth() + 1).padStart(2, "0");
+              onSave(`${y}-${m}`);
+            }
+            setOpen(false);
+          }}
+          defaultMonth={dateObj}
+        />
+      </PopoverContent>
+    </Popover>
+  );
+}
+
+function ClientPicker({ clients, selectedId, onSelect }: { clients: Client[]; selectedId?: string; onSelect: (c: Client) => void }) {
+  const selected = clients.find((c) => c.id === selectedId);
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <button
+          type="button"
+          className="flex items-center gap-2 w-full rounded px-1.5 py-0.5 -mx-1.5 -my-0.5 text-sm outline-none hover:bg-foreground/[0.04] transition-colors text-left"
+        >
+          {selected ? (
+            <>
+              <ProjectLogo client={selected} />
+              <span className="flex-1 truncate">{selected.name}</span>
+            </>
+          ) : (
+            <span className="flex-1 text-foreground/30">Select project...</span>
+          )}
+          <ChevronRight className="size-3 text-foreground/25 rotate-90 shrink-0" />
+        </button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="start" className="min-w-[220px]">
+        {clients.map((c) => (
+          <DropdownMenuItem
+            key={c.id}
+            onClick={() => onSelect(c)}
+            className="flex items-center gap-2"
+          >
+            <ProjectLogo client={c} />
+            <span className="flex-1 truncate">{c.name}</span>
+          </DropdownMenuItem>
+        ))}
+        {clients.length === 0 && (
+          <div className="px-2 py-1.5 text-sm text-foreground/30">No projects found</div>
+        )}
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
+
+function Pipeline({ items, onAdd, onUpdate, onRemove, total, clients, clientStatuses }: {
+  items: PipelineItem[];
+  onAdd: (item: Omit<PipelineItem, "id">) => void;
+  onUpdate: (id: string, changes: Partial<PipelineItem>) => void;
+  onRemove: (id: string) => void;
+  total: number;
+  clients: Client[];
+  clientStatuses: ClientStatusDef[];
+}) {
+  const [addingClient, setAddingClient] = useState<Client | null>(null);
+  const [addingAmount, setAddingAmount] = useState("");
+  const [addingMonth, setAddingMonth] = useState("");
+  const amountRef = useRef<HTMLInputElement>(null);
+
+  const currentYear = new Date().getFullYear();
+  const currentMonth = new Date().getMonth();
+  const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+  const handleAdd = () => {
+    const parsed = Number(addingAmount.replace(/[^0-9]/g, ""));
+    if (!addingClient || !parsed || !addingMonth) return;
+    onAdd({
+      clientId: addingClient.id,
+      clientName: addingClient.name,
+      clientColor: addingClient.color,
+      clientLogoUrl: addingClient.logo_url,
+      clientIcon: addingClient.icon,
+      amount: parsed,
+      expectedMonth: addingMonth,
+    });
+    setAddingClient(null);
+    setAddingAmount("");
+    setAddingMonth("");
+  };
+
+  const defaultMonth = () => {
+    const m = currentMonth + 1;
+    const y = currentYear + Math.floor(m / 12);
+    const mo = (m % 12) + 1;
+    return `${y}-${String(mo).padStart(2, "0")}`;
+  };
+
+  return (
+    <div className="rounded-xl border border-border bg-card overflow-hidden">
+      <div className="flex items-center justify-between px-5 pt-5 pb-3">
         <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
           Pipeline
         </h3>
@@ -469,52 +604,103 @@ function Pipeline({ items, onAdd, onRemove, total, clients }: {
         )}
       </div>
 
-      <div className="flex gap-2">
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <button className="flex items-center gap-2 h-8 rounded-md border border-input bg-background px-3 text-sm min-w-[140px] hover:bg-muted/50 transition-colors">
-              {selectedClient ? (
-                <>
-                  <ClientAvatar client={{ clientName: selectedClient.name, clientColor: selectedClient.color, clientLogoUrl: selectedClient.logo_url, clientIcon: selectedClient.icon }} />
-                  <span className="text-foreground truncate">{selectedClient.name}</span>
-                </>
-              ) : (
-                <span className="text-muted-foreground">Select client</span>
-              )}
-              <ChevronDown className="size-3.5 ml-auto opacity-50 shrink-0" />
-            </button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="start" className="min-w-[180px]">
-            {clients.map((client) => (
-              <DropdownMenuItem
-                key={client.id}
-                onClick={() => setSelectedClient(client)}
-                className="flex items-center gap-2"
-              >
-                <ClientAvatar client={{ clientName: client.name, clientColor: client.color, clientLogoUrl: client.logo_url, clientIcon: client.icon }} />
-                <span>{client.name}</span>
-              </DropdownMenuItem>
-            ))}
-            {clients.length === 0 && (
-              <div className="px-2 py-1.5 text-sm text-muted-foreground">No clients found</div>
-            )}
-          </DropdownMenuContent>
-        </DropdownMenu>
-        <Input
+      <Table>
+        <TableHeader>
+          <TableRow className="border-foreground/[0.06] bg-foreground/[0.02] hover:bg-foreground/[0.02]">
+            <TableHead>Project</TableHead>
+            <TableHead className="w-24">Status</TableHead>
+            <TableHead className="w-32">Amount</TableHead>
+            <TableHead className="w-28">Expected</TableHead>
+            <TableHead className="w-10" />
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {items.map((item) => {
+            const client = clients.find((c) => c.id === item.clientId);
+            const status = client?.status_id ? clientStatuses.find((s) => s.id === client.status_id) : undefined;
+            return (
+              <TableRow key={item.id} className="group/row">
+                <TableCell>
+                  <ClientPicker
+                    clients={clients}
+                    selectedId={item.clientId}
+                    onSelect={(c) => onUpdate(item.id, {
+                      clientId: c.id,
+                      clientName: c.name,
+                      clientColor: c.color,
+                      clientLogoUrl: c.logo_url,
+                      clientIcon: c.icon,
+                    })}
+                  />
+                </TableCell>
+                <TableCell>
+                  {status ? (
+                    <Badge className={`${getBadgeColorStyle(status.color)} text-[10px] px-1.5 py-0 ${status.show_dotted_border ? "border-dashed" : ""}`}>
+                      {status.name}
+                    </Badge>
+                  ) : (
+                    <span className="text-xs text-foreground/20">—</span>
+                  )}
+                </TableCell>
+                <TableCell>
+                  <InlineAmount value={item.amount} onSave={(amount) => onUpdate(item.id, { amount })} />
+                </TableCell>
+                <TableCell>
+                  <InlineMonthPicker value={item.expectedMonth} onSave={(expectedMonth) => onUpdate(item.id, { expectedMonth })} />
+                </TableCell>
+                <TableCell>
+                  <Button
+                    variant="ghost"
+                    size="icon-xs"
+                    className="text-foreground/20 hover:text-destructive opacity-0 group-hover/row:opacity-100 transition-opacity"
+                    onClick={() => onRemove(item.id)}
+                    aria-label="Delete pipeline item"
+                  >
+                    <Trash2 className="size-3.5" />
+                  </Button>
+                </TableCell>
+              </TableRow>
+            );
+          })}
+          {items.length === 0 && (
+            <TableRow className="hover:bg-transparent">
+              <TableCell colSpan={5} className="text-center text-foreground/20 py-6 text-sm">
+                No projects in pipeline
+              </TableCell>
+            </TableRow>
+          )}
+        </TableBody>
+      </Table>
+
+      {/* Add row */}
+      <div className="border-t border-foreground/[0.04] px-4 py-2 flex items-center gap-3">
+        <div className="flex-1">
+          <ClientPicker
+            clients={clients}
+            selectedId={addingClient?.id}
+            onSelect={(c) => {
+              setAddingClient(c);
+              if (!addingMonth) setAddingMonth(defaultMonth());
+              setTimeout(() => amountRef.current?.focus(), 50);
+            }}
+          />
+        </div>
+        <input
+          ref={amountRef}
+          value={addingAmount}
+          onChange={(e) => setAddingAmount(e.target.value)}
+          onKeyDown={(e) => { if (e.key === "Enter") handleAdd(); }}
           placeholder="Amount"
-          value={amount}
-          onChange={(e) => setAmount(e.target.value)}
-          onKeyDown={handleKeyDown}
-          className="w-28 h-8 text-sm tabular-nums"
+          className="w-24 bg-transparent outline-none text-sm tabular-nums placeholder:text-foreground/20 px-1.5 py-0.5"
         />
         <select
-          value={month}
-          onChange={(e) => setMonth(e.target.value)}
-          className="h-8 rounded-md border border-input bg-background px-2 text-sm text-foreground"
+          value={addingMonth}
+          onChange={(e) => setAddingMonth(e.target.value)}
+          className="bg-transparent text-sm text-foreground/50 outline-none"
         >
           <option value="">Month</option>
           {Array.from({ length: 24 }, (_, i) => {
-            const m = new Date().getMonth() + i;
+            const m = currentMonth + i;
             const y = currentYear + Math.floor(m / 12);
             const mo = (m % 12) + 1;
             const val = `${y}-${String(mo).padStart(2, "0")}`;
@@ -525,39 +711,16 @@ function Pipeline({ items, onAdd, onRemove, total, clients }: {
             );
           })}
         </select>
-        <Button size="icon" variant="ghost" className="h-8 w-8 shrink-0" onClick={handleAdd} aria-label="Add pipeline item">
-          <Plus className="size-4" />
+        <Button
+          size="icon-xs"
+          variant="ghost"
+          className="text-foreground/30 hover:text-foreground shrink-0"
+          onClick={handleAdd}
+          aria-label="Add pipeline item"
+        >
+          <Plus className="size-3.5" />
         </Button>
       </div>
-
-      {items.length > 0 && (
-        <div className="space-y-1">
-          {items.map((item) => (
-            <div
-              key={item.id}
-              className="flex items-center justify-between py-1.5 px-1 rounded-md group hover:bg-muted/50 transition-colors"
-            >
-              <div className="flex items-center gap-2.5 min-w-0">
-                <ClientAvatar client={item} />
-                <span className="text-sm text-foreground truncate">{item.clientName}</span>
-                <span className="text-xs text-muted-foreground shrink-0">{formatMonth(item.expectedMonth)}</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="text-sm font-medium tabular-nums text-foreground">
-                  {formatDKK(item.amount)}
-                </span>
-                <button
-                  onClick={() => onRemove(item.id)}
-                  className="opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-foreground"
-                  aria-label={`Remove ${item.clientName}`}
-                >
-                  <X className="size-3.5" />
-                </button>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
     </div>
   );
 }
@@ -581,7 +744,7 @@ export default function FinancePage() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const pipeline = usePipeline();
-  const { clients } = useProjectData();
+  const { clients, clientStatuses } = useProjectData();
 
   useEffect(() => {
     fetchFinanceData()
@@ -613,7 +776,7 @@ export default function FinancePage() {
       </div>
 
       <GoalTracker months={data.months} pipelineTotal={pipeline.total} />
-      <Pipeline items={pipeline.items} onAdd={pipeline.add} onRemove={pipeline.remove} total={pipeline.total} clients={clients} />
+      <Pipeline items={pipeline.items} onAdd={pipeline.add} onUpdate={pipeline.update} onRemove={pipeline.remove} total={pipeline.total} clients={clients} clientStatuses={clientStatuses} />
       <MonthlyChart months={data.months} />
     </main>
   );
