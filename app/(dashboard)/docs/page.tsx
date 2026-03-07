@@ -481,7 +481,7 @@ export default function DocsPage() {
                       : "text-foreground/60 hover:bg-foreground/[0.04] hover:text-foreground/80"
                   }`}
                 >
-                  <Star className="size-3 text-foreground/25 shrink-0 fill-current" />
+                  <Star className="size-3 text-primary shrink-0 fill-current" />
                   <span className="text-base leading-none shrink-0">
                     {doc.icon || "\ud83d\udcc4"}
                   </span>

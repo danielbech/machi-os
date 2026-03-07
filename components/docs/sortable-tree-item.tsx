@@ -161,7 +161,7 @@ export function SortableTreeItem({
             </DropdownMenuTrigger>
             <DropdownMenuContent align="start" className="min-w-[160px]">
               <DropdownMenuItem onClick={() => onToggleFavorite(item.id)}>
-                <Star className={`size-4 ${isFavorited ? "fill-current" : ""}`} />
+                <Star className={`size-4 ${isFavorited ? "fill-current text-primary" : ""}`} />
                 {isFavorited ? "Unfavorite" : "Favorite"}
               </DropdownMenuItem>
               <DropdownMenuSeparator />
