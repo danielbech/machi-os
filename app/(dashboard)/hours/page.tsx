@@ -69,6 +69,7 @@ import {
   DollarSign,
   TrendingUp,
   Receipt,
+  ChevronRight,
 } from "lucide-react";
 
 // ─── Summary Cards ──────────────────────────────────────────────────────────
@@ -354,6 +355,7 @@ function InvoiceGroupSection({
   const totalValue = (totalMinutes / 60) * group.hourly_rate;
   const [copiedShare, setCopiedShare] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState(false);
+  const [collapsed, setCollapsed] = useState(true);
 
   // Days since first entry in this group
   const daysSinceFirst = useMemo(() => {
@@ -388,23 +390,34 @@ function InvoiceGroupSection({
     >
       {/* Group header */}
       <div className="flex items-center gap-3 px-4 py-3 bg-foreground/[0.02]">
+        <button
+          onClick={() => setCollapsed((c) => !c)}
+          className="shrink-0 text-foreground/30 hover:text-foreground/50 transition-colors"
+          aria-label={collapsed ? "Expand group" : "Collapse group"}
+        >
+          <ChevronRight className={`size-4 transition-transform duration-150 ${collapsed ? "" : "rotate-90"}`} />
+        </button>
         {clientGroup && (
           clientGroup.logo_url ? (
             <img
               src={clientGroup.logo_url}
               alt={clientGroup.name}
-              className="size-9 rounded-lg object-cover bg-foreground/5 shrink-0"
+              className="size-9 rounded-lg object-cover bg-foreground/5 shrink-0 cursor-pointer"
+              onClick={() => setCollapsed((c) => !c)}
             />
           ) : (
-            <div className="size-9 rounded-lg bg-foreground/[0.06] flex items-center justify-center shrink-0">
+            <div
+              className="size-9 rounded-lg bg-foreground/[0.06] flex items-center justify-center shrink-0 cursor-pointer"
+              onClick={() => setCollapsed((c) => !c)}
+            >
               <span className="font-bold text-sm text-foreground/40">
                 {clientGroup.name.charAt(0).toUpperCase()}
               </span>
             </div>
           )
         )}
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2">
+        <div className="flex-1 min-w-0 cursor-pointer" onClick={() => setCollapsed((c) => !c)}>
+          <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
             <InlineInput
               value={group.name}
               onSave={(name) => onUpdateGroup(group.id, { name })}
@@ -426,7 +439,16 @@ function InvoiceGroupSection({
             )}
           </div>
         </div>
-        <div className="flex items-center gap-1">
+        {/* Collapsed summary */}
+        {collapsed && (
+          <div className="flex items-center gap-3 text-sm text-foreground/40 shrink-0">
+            <span className="tabular-nums">{formatHoursDecimal(totalMinutes)}h</span>
+            <span className="tabular-nums font-medium text-foreground/60">
+              {formatMoney(totalValue, group.currency)}
+            </span>
+          </div>
+        )}
+        <div className="flex items-center gap-1 shrink-0">
           <Button
             variant="ghost"
             size="icon-xs"
@@ -475,134 +497,139 @@ function InvoiceGroupSection({
         </div>
       </div>
 
-      {/* Invoice number for closed groups */}
-      {isClosed && (
-        <div className="px-4 py-2 bg-foreground/[0.01] border-b border-foreground/[0.04] flex items-center gap-2">
-          <span className="text-xs text-foreground/30">Invoice #</span>
-          <InlineInput
-            value={group.invoice_number || ""}
-            onSave={(invoice_number) =>
-              onUpdateGroup(group.id, { invoice_number: invoice_number || null })
-            }
-            placeholder="Enter invoice number"
-            className="text-xs"
-          />
-        </div>
-      )}
-
-      {/* Entries table */}
-      <Table>
-        <TableHeader>
-          <TableRow className="border-foreground/[0.06] bg-foreground/[0.02] hover:bg-foreground/[0.02]">
-            <TableHead className="w-10">#</TableHead>
-            <TableHead>Description</TableHead>
-            <TableHead className="w-28">Duration</TableHead>
-            <TableHead className="w-28">Date</TableHead>
-            <TableHead className="w-10" />
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {entries.map((entry, i) => (
-            <TableRow key={entry.id} className="group/row">
-              <TableCell className="text-foreground/30 text-xs">
-                {i + 1}
-              </TableCell>
-              <TableCell>
-                {isClosed ? (
-                  <span className="text-sm">{entry.description || "—"}</span>
-                ) : (
-                  <InlineInput
-                    value={entry.description}
-                    onSave={(description) =>
-                      onUpdateEntry(entry.id, { description })
-                    }
-                    placeholder="Description..."
-                  />
-                )}
-              </TableCell>
-              <TableCell>
-                {isClosed ? (
-                  <span className="text-sm tabular-nums">
-                    {formatDuration(entry.duration)}
-                  </span>
-                ) : (
-                  <DurationInput
-                    value={entry.duration}
-                    onSave={(duration) =>
-                      onUpdateEntry(entry.id, { duration })
-                    }
-                  />
-                )}
-              </TableCell>
-              <TableCell>
-                {isClosed ? (
-                  <span className="text-sm tabular-nums">
-                    {formatShortDate(entry.date)}
-                  </span>
-                ) : (
-                  <InlineDatePicker
-                    value={entry.date}
-                    onSave={(date) => onUpdateEntry(entry.id, { date })}
-                  />
-                )}
-              </TableCell>
-              <TableCell>
-                {!isClosed && (
-                  <Button
-                    variant="ghost"
-                    size="icon-xs"
-                    className="text-foreground/20 hover:text-destructive opacity-0 group-hover/row:opacity-100 transition-opacity"
-                    onClick={() => onDeleteEntry(entry.id)}
-                    aria-label="Delete entry"
-                  >
-                    <Trash2 className="size-3.5" />
-                  </Button>
-                )}
-              </TableCell>
-            </TableRow>
-          ))}
-          {entries.length === 0 && isClosed && (
-            <TableRow className="hover:bg-transparent">
-              <TableCell colSpan={5} className="text-center text-foreground/20 py-6 text-sm">
-                No entries
-              </TableCell>
-            </TableRow>
+      {/* Collapsible content */}
+      {!collapsed && (
+        <>
+          {/* Invoice number for closed groups */}
+          {isClosed && (
+            <div className="px-4 py-2 bg-foreground/[0.01] border-b border-foreground/[0.04] flex items-center gap-2">
+              <span className="text-xs text-foreground/30">Invoice #</span>
+              <InlineInput
+                value={group.invoice_number || ""}
+                onSave={(invoice_number) =>
+                  onUpdateGroup(group.id, { invoice_number: invoice_number || null })
+                }
+                placeholder="Enter invoice number"
+                className="text-xs"
+              />
+            </div>
           )}
-        </TableBody>
-      </Table>
 
-      {/* Add entry row */}
-      {!isClosed && (
-        <div className="border-t border-foreground/[0.04]">
-          <button
-            onClick={() => onCreateEntry(group.id)}
-            className="flex items-center gap-2 px-4 py-2.5 text-xs text-foreground/30 hover:text-foreground/50 hover:bg-foreground/[0.02] transition-colors w-full"
-          >
-            <Plus className="size-3.5" />
-            Add entry
-          </button>
-        </div>
-      )}
+          {/* Entries table */}
+          <Table>
+            <TableHeader>
+              <TableRow className="border-foreground/[0.06] bg-foreground/[0.02] hover:bg-foreground/[0.02]">
+                <TableHead className="w-10">#</TableHead>
+                <TableHead>Description</TableHead>
+                <TableHead className="w-28">Duration</TableHead>
+                <TableHead className="w-28">Date</TableHead>
+                <TableHead className="w-10" />
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {entries.map((entry, i) => (
+                <TableRow key={entry.id} className="group/row">
+                  <TableCell className="text-foreground/30 text-xs">
+                    {i + 1}
+                  </TableCell>
+                  <TableCell>
+                    {isClosed ? (
+                      <span className="text-sm">{entry.description || "—"}</span>
+                    ) : (
+                      <InlineInput
+                        value={entry.description}
+                        onSave={(description) =>
+                          onUpdateEntry(entry.id, { description })
+                        }
+                        placeholder="Description..."
+                      />
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    {isClosed ? (
+                      <span className="text-sm tabular-nums">
+                        {formatDuration(entry.duration)}
+                      </span>
+                    ) : (
+                      <DurationInput
+                        value={entry.duration}
+                        onSave={(duration) =>
+                          onUpdateEntry(entry.id, { duration })
+                        }
+                      />
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    {isClosed ? (
+                      <span className="text-sm tabular-nums">
+                        {formatShortDate(entry.date)}
+                      </span>
+                    ) : (
+                      <InlineDatePicker
+                        value={entry.date}
+                        onSave={(date) => onUpdateEntry(entry.id, { date })}
+                      />
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    {!isClosed && (
+                      <Button
+                        variant="ghost"
+                        size="icon-xs"
+                        className="text-foreground/20 hover:text-destructive opacity-0 group-hover/row:opacity-100 transition-opacity"
+                        onClick={() => onDeleteEntry(entry.id)}
+                        aria-label="Delete entry"
+                      >
+                        <Trash2 className="size-3.5" />
+                      </Button>
+                    )}
+                  </TableCell>
+                </TableRow>
+              ))}
+              {entries.length === 0 && isClosed && (
+                <TableRow className="hover:bg-transparent">
+                  <TableCell colSpan={5} className="text-center text-foreground/20 py-6 text-sm">
+                    No entries
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
 
-      {/* Totals footer */}
-      <div className="flex items-center justify-between px-4 py-3 bg-foreground/[0.02] border-t border-foreground/[0.06]">
-        <div className="text-xs text-foreground/40">
-          {entries.length} {entries.length === 1 ? "entry" : "entries"}
-        </div>
-        <div className="flex items-center gap-4 text-sm">
-          <span className="tabular-nums font-medium">
-            {formatHoursDecimal(totalMinutes)}h
-          </span>
-          <span className="tabular-nums font-semibold">
-            {formatMoney(totalValue, group.currency)}
-          </span>
-          {group.currency !== 'DKK' && (
-            <span className="tabular-nums text-foreground/40 text-xs">
-              ≈ {formatMoney(toDKK(totalValue, group.exchange_rate), "DKK")}
-            </span>
+          {/* Add entry row */}
+          {!isClosed && (
+            <div className="border-t border-foreground/[0.04]">
+              <button
+                onClick={() => onCreateEntry(group.id)}
+                className="flex items-center gap-2 px-4 py-2.5 text-xs text-foreground/30 hover:text-foreground/50 hover:bg-foreground/[0.02] transition-colors w-full"
+              >
+                <Plus className="size-3.5" />
+                Add entry
+              </button>
+            </div>
           )}
-        </div>
-      </div>
+
+          {/* Totals footer */}
+          <div className="flex items-center justify-between px-4 py-3 bg-foreground/[0.02] border-t border-foreground/[0.06]">
+            <div className="text-xs text-foreground/40">
+              {entries.length} {entries.length === 1 ? "entry" : "entries"}
+            </div>
+            <div className="flex items-center gap-4 text-sm">
+              <span className="tabular-nums font-medium">
+                {formatHoursDecimal(totalMinutes)}h
+              </span>
+              <span className="tabular-nums font-semibold">
+                {formatMoney(totalValue, group.currency)}
+              </span>
+              {group.currency !== 'DKK' && (
+                <span className="tabular-nums text-foreground/40 text-xs">
+                  ≈ {formatMoney(toDKK(totalValue, group.exchange_rate), "DKK")}
+                </span>
+              )}
+            </div>
+          </div>
+        </>
+      )}
 
       {/* Delete confirmation dialog */}
       <Dialog open={deleteConfirm} onOpenChange={setDeleteConfirm}>
