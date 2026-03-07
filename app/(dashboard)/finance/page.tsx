@@ -45,8 +45,9 @@ interface FinanceData {
 const YEARLY_GOAL = 1_500_000;
 const MONTHLY_TARGET = 125_000;
 
-async function billyGet(endpoint: string) {
-  const res = await fetch(`/api/billy?endpoint=${encodeURIComponent(endpoint)}`);
+async function billyGet(path: string, params?: Record<string, string>) {
+  const qs = new URLSearchParams({ endpoint: path, ...params });
+  const res = await fetch(`/api/billy?${qs}`);
   if (!res.ok) throw new Error(`API error: ${res.status}`);
   return res.json();
 }
@@ -73,18 +74,26 @@ async function fetchFinanceData(): Promise<FinanceData> {
   const orgId = orgData.organization.id;
   const orgName = orgData.organization.name;
 
-  const year = new Date().getFullYear();
+  const year = String(new Date().getFullYear());
 
   // Step 2: Fetch all data in parallel
   const [invoicesData, billsData, vatData, accountsData] = await Promise.all([
-    billyGet(
-      `/invoices?organizationId=${orgId}&minEntryDate=${year}-01-01&maxEntryDate=${year}-12-31&state=approved&pageSize=1000`
-    ),
-    billyGet(
-      `/bills?organizationId=${orgId}&minEntryDate=${year}-01-01&maxEntryDate=${year}-12-31&state=approved&pageSize=1000`
-    ),
-    billyGet(`/salesTaxReturns?organizationId=${orgId}`),
-    billyGet(`/accounts?organizationId=${orgId}`),
+    billyGet("/invoices", {
+      organizationId: orgId,
+      minEntryDate: `${year}-01-01`,
+      maxEntryDate: `${year}-12-31`,
+      state: "approved",
+      pageSize: "1000",
+    }),
+    billyGet("/bills", {
+      organizationId: orgId,
+      minEntryDate: `${year}-01-01`,
+      maxEntryDate: `${year}-12-31`,
+      state: "approved",
+      pageSize: "1000",
+    }),
+    billyGet("/salesTaxReturns", { organizationId: orgId }),
+    billyGet("/accounts", { organizationId: orgId }),
   ]);
 
   // Step 3: Aggregate by month
@@ -97,11 +106,13 @@ async function fetchFinanceData(): Promise<FinanceData> {
 
     const revenue = (invoicesData.invoices || [])
       .filter((inv: { entryDate: string }) => inv.entryDate?.startsWith(prefix))
-      .reduce((sum: number, inv: { amount: number }) => sum + (inv.amount || 0), 0);
+      .reduce((sum: number, inv: { amount: number; exchangeRate: number }) =>
+        sum + (inv.amount || 0) * (inv.exchangeRate || 1), 0);
 
     const expenses = (billsData.bills || [])
       .filter((bill: { entryDate: string }) => bill.entryDate?.startsWith(prefix))
-      .reduce((sum: number, bill: { amount: number }) => sum + (bill.amount || 0), 0);
+      .reduce((sum: number, bill: { amount: number; exchangeRate: number }) =>
+        sum + (bill.amount || 0) * (bill.exchangeRate || 1), 0);
 
     months.push({ month: monthNames[m], revenue, expenses });
   }
