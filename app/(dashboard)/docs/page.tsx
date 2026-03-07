@@ -41,6 +41,7 @@ import {
 } from "@/components/docs/slash-command";
 import { EmojiPicker } from "@/components/docs/emoji-picker";
 import { TableToolbar } from "@/components/docs/table-toolbar";
+import { BubbleToolbar } from "@/components/docs/bubble-toolbar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -497,8 +498,13 @@ function DocEditor({
       try {
         const url = await uploadDocImage(file, docIdRef.current);
         return url;
-      } catch {
-        toast.error("Failed to upload image");
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : "Unknown error";
+        if (msg.includes("Bucket not found") || msg.includes("not found")) {
+          toast.error("Image storage not configured. Create a 'doc-images' bucket in Supabase.");
+        } else {
+          toast.error(`Image upload failed: ${msg}`);
+        }
         return null;
       }
     },
@@ -632,6 +638,7 @@ function DocEditor({
           />
           <div className="docs-editor prose-custom relative">
             {editor && <TableToolbar editor={editor} />}
+            {editor && <BubbleToolbar editor={editor} />}
             <EditorContent editor={editor} />
             {slash.active && slash.range && slash.coords && editor && (
               <div

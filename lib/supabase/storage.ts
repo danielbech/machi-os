@@ -131,7 +131,8 @@ export async function uploadDocImage(file: File, docId: string): Promise<string>
   validateImageFile(file)
   const supabase = createClient()
 
-  const ext = file.name.split('.').pop() || 'png'
+  // For pasted images (e.g. screenshots) the name may be "image.png" — ensure a valid extension
+  const ext = file.name.split('.').pop()?.toLowerCase() || 'png'
   const path = `${docId}/${Date.now()}.${ext}`
 
   const { error } = await supabase.storage
@@ -140,7 +141,7 @@ export async function uploadDocImage(file: File, docId: string): Promise<string>
 
   if (error) {
     console.error('Error uploading doc image:', error)
-    throw error
+    throw new Error(error.message || 'Failed to upload image')
   }
 
   const { data } = supabase.storage

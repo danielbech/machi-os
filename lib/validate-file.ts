@@ -11,8 +11,9 @@ export function validateImageFile(file: File): void {
     throw new Error("Invalid file type. Use JPEG, PNG, GIF, WebP, or SVG");
   }
 
+  // Extension check — skip for pasted/blob files where name may be missing or synthetic
   const ext = file.name.split(".").pop()?.toLowerCase();
-  if (!ext || !ALLOWED_EXTENSIONS.includes(ext)) {
+  if (ext && !ALLOWED_EXTENSIONS.includes(ext)) {
     throw new Error("Invalid file extension");
   }
 }
