@@ -184,6 +184,7 @@ export async function loadInvoiceGroupByShareToken(token: string): Promise<{
   group: InvoiceGroup;
   entries: HourEntry[];
   clientName: string;
+  clientLogoUrl: string | null;
 } | null> {
   // This is called from a server component — import admin client dynamically
   const { createAdminClient } = await import('./server')
@@ -206,7 +207,7 @@ export async function loadInvoiceGroupByShareToken(token: string): Promise<{
       .order('created_at', { ascending: true }),
     supabase
       .from('client_groups')
-      .select('name')
+      .select('name, logo_url')
       .eq('id', group.client_id)
       .single(),
   ])
@@ -215,6 +216,7 @@ export async function loadInvoiceGroupByShareToken(token: string): Promise<{
     group: mapInvoiceGroup(group),
     entries: (entries || []).map(mapHourEntry),
     clientName: client?.name || 'Unknown',
+    clientLogoUrl: client?.logo_url || null,
   }
 }
 

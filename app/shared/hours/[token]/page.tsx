@@ -12,7 +12,7 @@ export default async function SharedHoursPage({
 
   if (!data) return notFound();
 
-  const { group, entries, clientName } = data;
+  const { group, entries, clientName, clientLogoUrl } = data;
   const totalMinutes = entries.reduce((s, e) => s + e.duration, 0);
   const totalValue = (totalMinutes / 60) * group.hourly_rate;
 
@@ -21,17 +21,34 @@ export default async function SharedHoursPage({
       <div className="max-w-3xl mx-auto px-4 py-12 md:py-20">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-2xl font-bold">{group.name}</h1>
-          <div className="flex items-center gap-3 mt-1 text-sm text-foreground/50">
-            <span>{clientName}</span>
-            <span className="text-foreground/20">·</span>
-            <span>{group.hourly_rate} {group.currency}/h</span>
-            {group.invoice_number && (
-              <>
-                <span className="text-foreground/20">·</span>
-                <span>Invoice #{group.invoice_number}</span>
-              </>
+          <div className="flex items-center gap-3 mb-3">
+            {clientLogoUrl ? (
+              <img
+                src={clientLogoUrl}
+                alt={clientName}
+                className="size-10 rounded-xl object-cover bg-foreground/5"
+              />
+            ) : (
+              <div className="size-10 rounded-xl bg-foreground/[0.06] flex items-center justify-center">
+                <span className="font-bold text-foreground/40">
+                  {clientName.charAt(0).toUpperCase()}
+                </span>
+              </div>
             )}
+            <div>
+              <h1 className="text-2xl font-bold">{group.name}</h1>
+              <div className="flex items-center gap-3 mt-0.5 text-sm text-foreground/50">
+                <span>{clientName}</span>
+                <span className="text-foreground/20">·</span>
+                <span>{group.hourly_rate} {group.currency}/h</span>
+                {group.invoice_number && (
+                  <>
+                    <span className="text-foreground/20">·</span>
+                    <span>Invoice #{group.invoice_number}</span>
+                  </>
+                )}
+              </div>
+            </div>
           </div>
         </div>
 
@@ -106,8 +123,13 @@ export default async function SharedHoursPage({
           </div>
         </div>
 
+        {/* Disclaimer */}
+        <p className="mt-6 text-[11px] text-foreground/25 text-center leading-relaxed">
+          This is a confidential link. Please do not share it outside your organisation.
+        </p>
+
         {/* Footer */}
-        <div className="mt-12 text-center text-xs text-foreground/20">
+        <div className="mt-8 text-center text-xs text-foreground/20">
           Powered by Flowie
         </div>
       </div>
