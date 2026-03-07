@@ -31,6 +31,7 @@ interface BankAccount {
   id: string;
   name: string;
   accountNo: string;
+  balance: number;
 }
 
 interface FinanceData {
@@ -93,7 +94,7 @@ async function fetchFinanceData(): Promise<FinanceData> {
       pageSize: "1000",
     }),
     billyGet("/salesTaxReturns", { organizationId: orgId }),
-    billyGet("/accounts", { organizationId: orgId }),
+    billyGet("/accountBalances", { organizationId: orgId }),
   ]);
 
   // Step 3: Aggregate by month
@@ -126,14 +127,15 @@ async function fetchFinanceData(): Promise<FinanceData> {
     })
   );
 
-  // Step 5: Bank accounts
-  const bankAccounts: BankAccount[] = (accountsData.accounts || [])
-    .filter((a: { isBankAccount: boolean }) => a.isBankAccount)
-    .map((a: { id: string; name: string; accountNo: string }) => ({
+  // Step 5: Bank accounts (with balances computed server-side)
+  const bankAccounts: BankAccount[] = (accountsData.accounts || []).map(
+    (a: { id: string; name: string; accountNo: string; balance: number }) => ({
       id: a.id,
       name: a.name,
       accountNo: a.accountNo,
-    }));
+      balance: a.balance,
+    })
+  );
 
   return { orgName, months, vatReturns, bankAccounts };
 }
@@ -395,8 +397,13 @@ function BankCard({ accounts }: { accounts: BankAccount[] }) {
               key={acc.id}
               className="flex items-center justify-between py-1.5 border-b border-foreground/[0.04] last:border-0"
             >
-              <span className="text-sm text-foreground/70">{acc.name}</span>
-              <span className="text-xs font-mono text-foreground/30">{acc.accountNo || "—"}</span>
+              <div className="flex flex-col">
+                <span className="text-sm text-foreground/70">{acc.name}</span>
+                <span className="text-[11px] text-foreground/20">{acc.accountNo || "—"}</span>
+              </div>
+              <span className={`text-sm font-semibold ${acc.balance >= 0 ? "text-foreground/70" : "text-red-400"}`}>
+                {formatDKK(acc.balance)}
+              </span>
             </div>
           ))}
         </div>
