@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import {
   BarChart,
   Bar,
@@ -11,6 +11,9 @@ import {
   ResponsiveContainer,
   Tooltip as RechartsTooltip,
 } from "recharts";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Plus, X } from "lucide-react";
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -23,6 +26,13 @@ interface MonthData {
 interface FinanceData {
   orgName: string;
   months: MonthData[];
+}
+
+interface PipelineItem {
+  id: string;
+  name: string;
+  amount: number;
+  expectedMonth: string; // "YYYY-MM"
 }
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
@@ -75,6 +85,36 @@ function useChartColors() {
   }, []);
 
   return colors;
+}
+
+const PIPELINE_KEY = "flowie-finance-pipeline";
+
+function usePipeline() {
+  const [items, setItems] = useState<PipelineItem[]>([]);
+
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem(PIPELINE_KEY);
+      if (stored) setItems(JSON.parse(stored));
+    } catch {}
+  }, []);
+
+  const save = useCallback((next: PipelineItem[]) => {
+    setItems(next);
+    localStorage.setItem(PIPELINE_KEY, JSON.stringify(next));
+  }, []);
+
+  const add = useCallback((item: Omit<PipelineItem, "id">) => {
+    save([...items, { ...item, id: `p-${Date.now()}` }]);
+  }, [items, save]);
+
+  const remove = useCallback((id: string) => {
+    save(items.filter((i) => i.id !== id));
+  }, [items, save]);
+
+  const total = items.reduce((sum, i) => sum + i.amount, 0);
+
+  return { items, add, remove, total };
 }
 
 // ─── Data fetching ──────────────────────────────────────────────────────────
@@ -149,7 +189,7 @@ function ChartTooltip({ active, payload, label }: { active?: boolean; payload?: 
 
 // ─── Components ─────────────────────────────────────────────────────────────
 
-function GoalTracker({ months }: { months: MonthData[] }) {
+function GoalTracker({ months, pipelineTotal }: { months: MonthData[]; pipelineTotal: number }) {
   const now = new Date();
   const currentMonth = now.getMonth();
   const dayOfMonth = now.getDate();
@@ -157,6 +197,9 @@ function GoalTracker({ months }: { months: MonthData[] }) {
 
   const ytdRevenue = months.reduce((sum, m) => sum + m.revenue, 0);
   const progressPct = Math.min((ytdRevenue / YEARLY_GOAL) * 100, 100);
+
+  const projectedRevenue = ytdRevenue + pipelineTotal;
+  const projectedPct = Math.min((projectedRevenue / YEARLY_GOAL) * 100, 100);
 
   const expectedFraction = (currentMonth + dayOfMonth / daysInMonth) / 12;
   const expectedRevenue = YEARLY_GOAL * expectedFraction;
@@ -199,6 +242,12 @@ function GoalTracker({ months }: { months: MonthData[] }) {
           </span>
         </div>
         <div className="relative h-3 rounded-full bg-muted overflow-hidden">
+          {pipelineTotal > 0 && (
+            <div
+              className="absolute inset-y-0 left-0 rounded-full bg-chart-4/40 transition-all duration-500"
+              style={{ width: `${projectedPct}%` }}
+            />
+          )}
           <div
             className="absolute inset-y-0 left-0 rounded-full bg-chart-2 transition-all duration-500"
             style={{ width: `${progressPct}%` }}
@@ -210,6 +259,9 @@ function GoalTracker({ months }: { months: MonthData[] }) {
         </div>
         <div className="flex justify-between text-[11px] text-muted-foreground">
           <span>{progressPct.toFixed(1)}% achieved</span>
+          {pipelineTotal > 0 && (
+            <span className="text-chart-4">{projectedPct.toFixed(1)}% with pipeline</span>
+          )}
           <span>{expectedPct.toFixed(1)}% expected</span>
         </div>
       </div>
@@ -325,6 +377,119 @@ function MonthlyChart({ months }: { months: MonthData[] }) {
 }
 
 
+function Pipeline({ items, onAdd, onRemove, total }: {
+  items: PipelineItem[];
+  onAdd: (item: Omit<PipelineItem, "id">) => void;
+  onRemove: (id: string) => void;
+  total: number;
+}) {
+  const [name, setName] = useState("");
+  const [amount, setAmount] = useState("");
+  const [month, setMonth] = useState("");
+
+  const currentYear = new Date().getFullYear();
+  const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+  const handleAdd = () => {
+    const parsed = Number(amount.replace(/[^0-9]/g, ""));
+    if (!name.trim() || !parsed || !month) return;
+    onAdd({ name: name.trim(), amount: parsed, expectedMonth: month });
+    setName("");
+    setAmount("");
+    setMonth("");
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter") handleAdd();
+  };
+
+  const formatMonth = (ym: string) => {
+    const [y, m] = ym.split("-");
+    return `${monthNames[parseInt(m) - 1]} ${y}`;
+  };
+
+  return (
+    <div className="rounded-xl border border-border bg-card p-5 space-y-4">
+      <div className="flex items-center justify-between">
+        <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
+          Pipeline
+        </h3>
+        {total > 0 && (
+          <span className="text-xs text-chart-4 font-medium">
+            {formatDKK(total)} expected
+          </span>
+        )}
+      </div>
+
+      <div className="flex gap-2">
+        <Input
+          placeholder="Project name"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          onKeyDown={handleKeyDown}
+          className="flex-1 h-8 text-sm"
+        />
+        <Input
+          placeholder="Amount"
+          value={amount}
+          onChange={(e) => setAmount(e.target.value)}
+          onKeyDown={handleKeyDown}
+          className="w-28 h-8 text-sm tabular-nums"
+        />
+        <select
+          value={month}
+          onChange={(e) => setMonth(e.target.value)}
+          className="h-8 rounded-md border border-input bg-background px-2 text-sm text-foreground"
+        >
+          <option value="">Month</option>
+          {Array.from({ length: 24 }, (_, i) => {
+            const m = new Date().getMonth() + i;
+            const y = currentYear + Math.floor(m / 12);
+            const mo = (m % 12) + 1;
+            const val = `${y}-${String(mo).padStart(2, "0")}`;
+            return (
+              <option key={val} value={val}>
+                {monthNames[mo - 1]} {y}
+              </option>
+            );
+          })}
+        </select>
+        <Button size="icon" variant="ghost" className="h-8 w-8 shrink-0" onClick={handleAdd} aria-label="Add pipeline item">
+          <Plus className="size-4" />
+        </Button>
+      </div>
+
+      {items.length > 0 && (
+        <div className="space-y-1">
+          {items.map((item) => (
+            <div
+              key={item.id}
+              className="flex items-center justify-between py-1.5 px-1 rounded-md group hover:bg-muted/50 transition-colors"
+            >
+              <div className="flex items-center gap-3 min-w-0">
+                <span className="text-sm text-foreground truncate">{item.name}</span>
+                <span className="text-xs text-muted-foreground shrink-0">{formatMonth(item.expectedMonth)}</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-medium tabular-nums text-foreground">
+                  {formatDKK(item.amount)}
+                </span>
+                <button
+                  onClick={() => onRemove(item.id)}
+                  className="opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-foreground"
+                  aria-label={`Remove ${item.name}`}
+                >
+                  <X className="size-3.5" />
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── Loading skeleton ───────────────────────────────────────────────────────
 
 function Skeleton() {
@@ -343,6 +508,7 @@ export default function FinancePage() {
   const [data, setData] = useState<FinanceData | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const pipeline = usePipeline();
 
   useEffect(() => {
     fetchFinanceData()
@@ -373,9 +539,9 @@ export default function FinancePage() {
         <span className="text-xs text-muted-foreground">{data.orgName}</span>
       </div>
 
-      <GoalTracker months={data.months} />
+      <GoalTracker months={data.months} pipelineTotal={pipeline.total} />
+      <Pipeline items={pipeline.items} onAdd={pipeline.add} onRemove={pipeline.remove} total={pipeline.total} />
       <MonthlyChart months={data.months} />
-
     </main>
   );
 }
