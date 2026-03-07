@@ -301,17 +301,27 @@
 }
 
 .docs-editor .tiptap ul[data-type="taskList"] li > label {
-  margin-top: 0.25em;
+  display: flex;
+  align-items: center;
+  margin-top: 0.35em;
+  cursor: pointer;
 }
 
 .docs-editor .tiptap ul[data-type="taskList"] li > label input[type="checkbox"] {
   appearance: none;
-  width: 1rem;
-  height: 1rem;
+  -webkit-appearance: none;
+  width: 1.125rem;
+  height: 1.125rem;
   border: 2px solid oklch(from var(--foreground) l c h / 0.2);
   border-radius: 0.25rem;
   cursor: pointer;
   position: relative;
+  flex-shrink: 0;
+  transition: background-color 0.15s, border-color 0.15s;
+}
+
+.docs-editor .tiptap ul[data-type="taskList"] li > label input[type="checkbox"]:hover {
+  border-color: oklch(from var(--foreground) l c h / 0.35);
 }
 
 .docs-editor .tiptap ul[data-type="taskList"] li > label input[type="checkbox"]:checked {
@@ -320,12 +330,20 @@
 }
 
 .docs-editor .tiptap ul[data-type="taskList"] li > label input[type="checkbox"]:checked::after {
-  content: "✓";
+  content: "";
   position: absolute;
-  top: -1px;
-  left: 1px;
-  font-size: 0.7rem;
-  color: var(--primary-foreground);
+  top: 1px;
+  left: 4px;
+  width: 5px;
+  height: 9px;
+  border: solid var(--primary-foreground);
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+}
+
+/* Hide the Tiptap checkboxStyler span — we style the input directly */
+.docs-editor .tiptap ul[data-type="taskList"] li > label > span {
+  display: none;
 }
 
 .docs-editor .tiptap ul[data-type="taskList"] li[data-checked="true"] > div > p {

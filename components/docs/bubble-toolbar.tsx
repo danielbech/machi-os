@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useState, useRef, useEffect } from "react";
 import type { Editor } from "@tiptap/react";
 import { BubbleMenu } from "@tiptap/react/menus";
 import {
@@ -46,12 +46,18 @@ export function BubbleToolbar({ editor }: { editor: Editor }) {
   return (
     <BubbleMenu
       editor={editor}
+      appendTo={() => document.body}
       shouldShow={({ editor: e, state }) => {
         const { selection } = state;
         const { empty } = selection;
         if (empty) return false;
         if (e.isActive("codeBlock")) return false;
         return true;
+      }}
+      options={{
+        strategy: "fixed",
+        placement: "top",
+        offset: 8,
       }}
     >
       {linkInput ? (
