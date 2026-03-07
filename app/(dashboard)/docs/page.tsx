@@ -67,6 +67,7 @@ import {
   DragOverlay,
   type DragStartEvent,
   type DragEndEvent,
+  type DragOverEvent,
 } from "@dnd-kit/core";
 import {
   SortableContext,
@@ -101,6 +102,14 @@ interface FlatItem {
   depth: number;
   hasChildren: boolean;
   parentId: string | null;
+}
+
+type DropPosition = "before" | "after" | "child";
+
+interface DropIndicator {
+  overId: string;
+  position: DropPosition;
+  depth: number;
 }
 
 // ─── Build nested tree from flat list ────────────────────────────────────────
@@ -143,6 +152,17 @@ function flattenTree(
   return result;
 }
 
+// ─── Drop indicator line ─────────────────────────────────────────────────────
+
+function DropLine({ depth }: { depth: number }) {
+  return (
+    <div
+      className="h-0.5 bg-primary rounded-full"
+      style={{ marginLeft: `${depth * 16 + 8}px`, marginRight: 8 }}
+    />
+  );
+}
+
 // ─── Sortable page tree item ─────────────────────────────────────────────────
 
 function SortableTreeItem({
@@ -153,6 +173,7 @@ function SortableTreeItem({
   onDelete,
   onToggle,
   expanded,
+  dropIndicator,
 }: {
   item: FlatItem;
   activeId: string | null;
@@ -161,6 +182,7 @@ function SortableTreeItem({
   onDelete: (id: string) => void;
   onToggle: (id: string) => void;
   expanded: boolean;
+  dropIndicator: DropIndicator | null;
 }) {
   const {
     attributes,
@@ -172,20 +194,27 @@ function SortableTreeItem({
   } = useSortable({ id: item.id });
 
   const isActive = selectedId === item.id;
+  const isDropChild = dropIndicator?.overId === item.id && dropIndicator.position === "child";
 
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
-    opacity: isDragging ? 0.4 : 1,
+    opacity: isDragging ? 0.3 : 1,
   };
 
   return (
-    <div ref={setNodeRef} style={style} {...attributes}>
+    <div ref={setNodeRef} style={style} {...attributes} data-sortable-id={item.id}>
+      {/* Drop line above */}
+      {dropIndicator?.overId === item.id && dropIndicator.position === "before" && (
+        <DropLine depth={dropIndicator.depth} />
+      )}
       <div
         className={`group flex items-center gap-0.5 py-1 px-1 rounded-md text-sm cursor-pointer transition-colors ${
-          isActive
-            ? "bg-foreground/[0.08] text-foreground"
-            : "text-foreground/60 hover:bg-foreground/[0.04] hover:text-foreground/80"
+          isDropChild
+            ? "bg-primary/10 ring-1 ring-primary/30"
+            : isActive
+              ? "bg-foreground/[0.08] text-foreground"
+              : "text-foreground/60 hover:bg-foreground/[0.04] hover:text-foreground/80"
         }`}
         style={{ paddingLeft: `${item.depth * 16 + 4}px` }}
         onClick={() => onSelect(item.id)}
@@ -254,6 +283,10 @@ function SortableTreeItem({
           </DropdownMenu>
         </div>
       </div>
+      {/* Drop line below */}
+      {dropIndicator?.overId === item.id && dropIndicator.position === "after" && (
+        <DropLine depth={dropIndicator.depth} />
+      )}
     </div>
   );
 }
@@ -734,6 +767,8 @@ export default function DocsPage() {
   const [searchOpen, setSearchOpen] = useState(false);
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
   const [dragActiveId, setDragActiveId] = useState<string | null>(null);
+  const [dropIndicator, setDropIndicator] = useState<DropIndicator | null>(null);
+  const sidebarRef = useRef<HTMLDivElement>(null);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
@@ -848,38 +883,119 @@ export default function DocsPage() {
     [docs, activeDocId]
   );
 
+  // Compute drop indicator based on pointer position relative to the over item
+  const computeDropIndicator = useCallback(
+    (overId: string, pointerY: number, pointerX: number): DropIndicator | null => {
+      if (!sidebarRef.current) return null;
+      const overItem = flatItems.find((i) => i.id === overId);
+      if (!overItem) return null;
+
+      // Find the DOM element for the over item
+      const el = sidebarRef.current.querySelector(`[data-sortable-id="${overId}"]`);
+      if (!el) return null;
+      const rect = el.getBoundingClientRect();
+      const sidebarRect = sidebarRef.current.getBoundingClientRect();
+
+      // How far right is the pointer from the sidebar left edge?
+      const relativeX = pointerX - sidebarRect.left;
+      // Threshold: if pointer is indented past the item's current indent + ~40px, treat as "nest inside"
+      const nestThreshold = overItem.depth * 16 + 60;
+
+      // Vertical position within the item
+      const relativeY = pointerY - rect.top;
+      const midY = rect.height / 2;
+
+      if (relativeX > nestThreshold) {
+        // Nesting — drop as child of this item
+        return { overId, position: "child", depth: overItem.depth + 1 };
+      } else if (relativeY < midY) {
+        // Drop before (same level as over item)
+        return { overId, position: "before", depth: overItem.depth };
+      } else {
+        // Drop after (same level as over item)
+        return { overId, position: "after", depth: overItem.depth };
+      }
+    },
+    [flatItems]
+  );
+
   const handleDragStart = useCallback((event: DragStartEvent) => {
     setDragActiveId(event.active.id as string);
   }, []);
 
+  const handleDragOver = useCallback(
+    (event: DragOverEvent) => {
+      const { over, active } = event;
+      if (!over || over.id === active.id) {
+        setDropIndicator(null);
+        return;
+      }
+      // Get pointer coordinates from the activator event
+      const pointerEvent = event.activatorEvent as PointerEvent;
+      // Use the current translated position
+      const currentY = pointerEvent.clientY + (event.delta?.y || 0);
+      const currentX = pointerEvent.clientX + (event.delta?.x || 0);
+      const indicator = computeDropIndicator(over.id as string, currentY, currentX);
+      setDropIndicator(indicator);
+    },
+    [computeDropIndicator]
+  );
+
   const handleDragEnd = useCallback(
     async (event: DragEndEvent) => {
+      const currentIndicator = dropIndicator;
       setDragActiveId(null);
+      setDropIndicator(null);
+
       const { active, over } = event;
-      if (!over || active.id === over.id) return;
+      if (!over || active.id === over.id || !currentIndicator) return;
 
-      const activeIdx = flatItems.findIndex((i) => i.id === active.id);
-      const overIdx = flatItems.findIndex((i) => i.id === over.id);
-      if (activeIdx === -1 || overIdx === -1) return;
+      const activeItem = flatItems.find((i) => i.id === active.id);
+      const overItem = flatItems.find((i) => i.id === over.id);
+      if (!activeItem || !overItem) return;
 
-      const activeItem = flatItems[activeIdx];
-      const overItem = flatItems[overIdx];
+      let newParentId: string | null;
+      let targetSiblings: Doc[];
+      let insertBeforeId: string | null = null;
 
-      // Move to same parent as the target item
-      const newParentId = overItem.parentId;
+      if (currentIndicator.position === "child") {
+        // Drop as child of the over item
+        newParentId = overItem.id;
+        targetSiblings = docs
+          .filter((d) => d.parent_id === newParentId && d.id !== activeItem.id)
+          .sort((a, b) => a.sort_order - b.sort_order);
+        // Append at end
+      } else {
+        // Drop as sibling (before or after the over item)
+        newParentId = overItem.parentId;
+        targetSiblings = docs
+          .filter((d) => d.parent_id === newParentId && d.id !== activeItem.id)
+          .sort((a, b) => a.sort_order - b.sort_order);
 
-      // Get siblings of the target parent (excluding the dragged item)
-      const siblings = docs
-        .filter((d) => d.parent_id === newParentId && d.id !== activeItem.id)
-        .sort((a, b) => a.sort_order - b.sort_order);
-
-      // Find where to insert among siblings
-      const overSiblingIdx = siblings.findIndex((s) => s.id === overItem.id);
-      const insertIdx = overIdx > activeIdx ? overSiblingIdx + 1 : overSiblingIdx;
+        if (currentIndicator.position === "before") {
+          insertBeforeId = overItem.id;
+        } else {
+          // "after" — insert after the over item
+          const overIdx = targetSiblings.findIndex((s) => s.id === overItem.id);
+          if (overIdx >= 0 && overIdx + 1 < targetSiblings.length) {
+            insertBeforeId = targetSiblings[overIdx + 1].id;
+          }
+        }
+      }
 
       // Build new order
-      const ordered = [...siblings];
-      ordered.splice(Math.max(0, insertIdx), 0, { ...activeItem.doc, parent_id: newParentId });
+      const ordered: Doc[] = [];
+      let inserted = false;
+      for (const s of targetSiblings) {
+        if (insertBeforeId && s.id === insertBeforeId) {
+          ordered.push({ ...activeItem.doc, parent_id: newParentId });
+          inserted = true;
+        }
+        ordered.push(s);
+      }
+      if (!inserted) {
+        ordered.push({ ...activeItem.doc, parent_id: newParentId });
+      }
 
       // Prepare updates
       const updates = ordered.map((d, i) => ({
@@ -897,15 +1013,15 @@ export default function DocsPage() {
         })
       );
 
-      // If parent changed, expand the new parent
-      if (newParentId && newParentId !== activeItem.parentId) {
+      // Expand the new parent
+      if (newParentId) {
         setExpandedIds((prev) => new Set([...prev, newParentId]));
       }
 
       // Persist
       await reorderDocs(updates);
     },
-    [flatItems, docs]
+    [flatItems, docs, dropIndicator]
   );
 
   if (loading) {
@@ -960,7 +1076,7 @@ export default function DocsPage() {
             </Button>
           </div>
         </div>
-        <div className="flex-1 overflow-y-auto px-1 pb-3">
+        <div ref={sidebarRef} className="flex-1 overflow-y-auto px-1 pb-3">
           {tree.length === 0 ? (
             <div className="px-3 py-8 text-center">
               <FileText className="size-8 text-foreground/10 mx-auto mb-3" />
@@ -981,6 +1097,7 @@ export default function DocsPage() {
               collisionDetection={closestCenter}
               modifiers={[restrictToVerticalAxis]}
               onDragStart={handleDragStart}
+              onDragOver={handleDragOver}
               onDragEnd={handleDragEnd}
             >
               <SortableContext
@@ -997,6 +1114,11 @@ export default function DocsPage() {
                     onDelete={(id) => setDeleteConfirm(id)}
                     onToggle={toggleExpanded}
                     expanded={expandedIds.has(item.id)}
+                    dropIndicator={
+                      dragActiveId && dragActiveId !== item.id && dropIndicator?.overId === item.id
+                        ? dropIndicator
+                        : null
+                    }
                   />
                 ))}
               </SortableContext>
