@@ -305,45 +305,51 @@
   align-items: center;
   margin-top: 0.35em;
   cursor: pointer;
+  position: relative;
 }
 
+/* Hide the actual input, use the span as visual checkbox */
 .docs-editor .tiptap ul[data-type="taskList"] li > label input[type="checkbox"] {
-  appearance: none;
-  -webkit-appearance: none;
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+}
+
+/* The checkboxStyler span becomes the visible checkbox */
+.docs-editor .tiptap ul[data-type="taskList"] li > label > span {
+  display: flex;
+  align-items: center;
+  justify-content: center;
   width: 1.125rem;
   height: 1.125rem;
   border: 2px solid oklch(from var(--foreground) l c h / 0.2);
   border-radius: 0.25rem;
   cursor: pointer;
-  position: relative;
   flex-shrink: 0;
   transition: background-color 0.15s, border-color 0.15s;
 }
 
-.docs-editor .tiptap ul[data-type="taskList"] li > label input[type="checkbox"]:hover {
+.docs-editor .tiptap ul[data-type="taskList"] li > label:hover > span {
   border-color: oklch(from var(--foreground) l c h / 0.35);
 }
 
-.docs-editor .tiptap ul[data-type="taskList"] li > label input[type="checkbox"]:checked {
+/* Checked state — use data-checked on the li */
+.docs-editor .tiptap ul[data-type="taskList"] li[data-checked="true"] > label > span {
   background: var(--primary);
   border-color: var(--primary);
 }
 
-.docs-editor .tiptap ul[data-type="taskList"] li > label input[type="checkbox"]:checked::after {
+.docs-editor .tiptap ul[data-type="taskList"] li[data-checked="true"] > label > span::after {
   content: "";
-  position: absolute;
-  top: 1px;
-  left: 4px;
+  display: block;
   width: 5px;
   height: 9px;
   border: solid var(--primary-foreground);
   border-width: 0 2px 2px 0;
   transform: rotate(45deg);
-}
-
-/* Hide the Tiptap checkboxStyler span — we style the input directly */
-.docs-editor .tiptap ul[data-type="taskList"] li > label > span {
-  display: none;
+  margin-top: -1px;
 }
 
 .docs-editor .tiptap ul[data-type="taskList"] li[data-checked="true"] > div > p {
@@ -354,6 +360,9 @@
 .docs-editor .tiptap img {
   max-width: 100%;
   border-radius: 0.5rem;
+}
+
+.docs-editor .tiptap .docs-image-wrapper {
   margin: 0.75em 0;
 }
 

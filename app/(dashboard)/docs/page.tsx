@@ -33,7 +33,7 @@ import { Table } from "@tiptap/extension-table";
 import { TableRow } from "@tiptap/extension-table-row";
 import { TableCell } from "@tiptap/extension-table-cell";
 import { TableHeader } from "@tiptap/extension-table-header";
-import Image from "@tiptap/extension-image";
+import { ResizableImage } from "@/components/docs/image-extension";
 import {
   SlashCommandExtension,
   SlashCommandMenu,
@@ -531,7 +531,7 @@ function DocEditor({
         TableRow,
         TableCell,
         TableHeader,
-        Image.configure({
+        ResizableImage.configure({
           HTMLAttributes: { class: "docs-image" },
         }),
         SlashCommandExtension,
@@ -549,11 +549,11 @@ function DocEditor({
           event.preventDefault();
           handleImageUpload(file).then((url) => {
             if (url) {
-              const { tr } = view.state;
               const pos = view.posAtCoords({ left: event.clientX, top: event.clientY });
               if (pos) {
-                const node = view.state.schema.nodes.image.create({ src: url });
-                view.dispatch(tr.insert(pos.pos, node));
+                const node = view.state.schema.nodes.image.create({ src: url, width: null });
+                const tr = view.state.tr.insert(pos.pos, node);
+                view.dispatch(tr);
               }
             }
           });
@@ -567,9 +567,9 @@ function DocEditor({
           event.preventDefault();
           handleImageUpload(file).then((url) => {
             if (url) {
-              const { tr, selection } = view.state;
-              const node = view.state.schema.nodes.image.create({ src: url });
-              view.dispatch(tr.replaceSelectionWith(node));
+              const node = view.state.schema.nodes.image.create({ src: url, width: null });
+              const tr = view.state.tr.replaceSelectionWith(node);
+              view.dispatch(tr);
             }
           });
           return true;
