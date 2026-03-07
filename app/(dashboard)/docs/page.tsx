@@ -45,6 +45,7 @@ import { ResizableImage } from "@/components/docs/image-extension";
 import { Callout } from "@/components/docs/callout-extension";
 import { ToggleList } from "@/components/docs/toggle-extension";
 import { Embed } from "@/components/docs/embed-extension";
+import { TableOfContents } from "@/components/docs/toc-extension";
 import {
   SlashCommandExtension,
   SlashCommandMenu,
@@ -66,6 +67,7 @@ import {
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
@@ -101,6 +103,8 @@ import {
   X,
   GripVertical,
   ImagePlus,
+  Keyboard,
+  Star,
 } from "lucide-react";
 
 // ─── Lowlight (syntax highlighting) ──────────────────────────────────────────
@@ -223,8 +227,10 @@ function SortableTreeItem({
   onDuplicate,
   onDelete,
   onToggle,
+  onToggleFavorite,
   expanded,
   dropIndicator,
+  isFavorited,
 }: {
   item: FlatItem;
   activeId: string | null;
@@ -233,8 +239,10 @@ function SortableTreeItem({
   onDuplicate: (id: string) => void;
   onDelete: (id: string) => void;
   onToggle: (id: string) => void;
+  onToggleFavorite: (id: string) => void;
   expanded: boolean;
   dropIndicator: DropIndicator | null;
+  isFavorited: boolean;
 }) {
   const {
     attributes,
@@ -319,6 +327,11 @@ function SortableTreeItem({
               </button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="start" className="min-w-[160px]">
+              <DropdownMenuItem onClick={() => onToggleFavorite(item.id)}>
+                <Star className={`size-4 ${isFavorited ? "fill-current" : ""}`} />
+                {isFavorited ? "Unfavorite" : "Favorite"}
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
               <DropdownMenuItem onClick={() => onCreateChild(item.id)}>
                 <FilePlus className="size-4" />
                 Add sub-page
@@ -788,6 +801,7 @@ function DocEditor({
         Callout,
         ToggleList,
         Embed,
+        TableOfContents,
         SlashCommandExtension,
         createMentionExtension(() => docsRef.current),
       ],
@@ -1043,6 +1057,96 @@ function DocEditor({
   );
 }
 
+// ─── Keyboard shortcuts dialog ───────────────────────────────────────────────
+
+const SHORTCUT_GROUPS = [
+  {
+    label: "Text Formatting",
+    shortcuts: [
+      { keys: ["⌘", "B"], description: "Bold" },
+      { keys: ["⌘", "I"], description: "Italic" },
+      { keys: ["⌘", "U"], description: "Underline" },
+      { keys: ["⌘", "⇧", "S"], description: "Strikethrough" },
+      { keys: ["⌘", "E"], description: "Inline code" },
+      { keys: ["⌘", "K"], description: "Search pages" },
+    ],
+  },
+  {
+    label: "Blocks",
+    shortcuts: [
+      { keys: ["/"], description: "Slash commands" },
+      { keys: ["@"], description: "Mention a page" },
+      { keys: ["⌘", "⇧", "7"], description: "Numbered list" },
+      { keys: ["⌘", "⇧", "8"], description: "Bullet list" },
+      { keys: ["⌘", "⇧", "9"], description: "Task list" },
+    ],
+  },
+  {
+    label: "Editing",
+    shortcuts: [
+      { keys: ["⌘", "Z"], description: "Undo" },
+      { keys: ["⌘", "⇧", "Z"], description: "Redo" },
+      { keys: ["Tab"], description: "Indent (in lists)" },
+      { keys: ["⇧", "Tab"], description: "Outdent" },
+    ],
+  },
+];
+
+function KeyBadge({ children }: { children: React.ReactNode }) {
+  return (
+    <kbd className="bg-foreground/[0.06] text-foreground/60 font-mono text-xs px-1.5 py-0.5 rounded">
+      {children}
+    </kbd>
+  );
+}
+
+function KeyboardShortcutsDialog({
+  open,
+  onOpenChange,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+}) {
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Keyboard Shortcuts</DialogTitle>
+          <DialogDescription className="sr-only">
+            List of available keyboard shortcuts for the docs editor
+          </DialogDescription>
+        </DialogHeader>
+        <div className="space-y-5">
+          {SHORTCUT_GROUPS.map((group) => (
+            <div key={group.label}>
+              <h4 className="text-xs font-medium text-foreground/40 uppercase tracking-wider mb-2">
+                {group.label}
+              </h4>
+              <div className="space-y-1.5">
+                {group.shortcuts.map((shortcut) => (
+                  <div
+                    key={shortcut.description}
+                    className="flex items-center justify-between py-1"
+                  >
+                    <span className="text-sm text-foreground/70">
+                      {shortcut.description}
+                    </span>
+                    <div className="flex items-center gap-1">
+                      {shortcut.keys.map((key, i) => (
+                        <KeyBadge key={i}>{key}</KeyBadge>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 // ─── Main page ───────────────────────────────────────────────────────────────
 
 export default function DocsPage() {
@@ -1054,14 +1158,58 @@ export default function DocsPage() {
   const [loading, setLoading] = useState(true);
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
   const [showComments, setShowComments] = useState(false);
+  const [shortcutsOpen, setShortcutsOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
   const [dragActiveId, setDragActiveId] = useState<string | null>(null);
   const [dropIndicator, setDropIndicator] = useState<DropIndicator | null>(null);
+  const [favorites, setFavorites] = useState<Set<string>>(new Set());
   const sidebarRef = useRef<HTMLDivElement>(null);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
+  );
+
+  // Load favorites from localStorage
+  useEffect(() => {
+    if (!activeProjectId) return;
+    try {
+      const stored = localStorage.getItem(`doc-favorites-${activeProjectId}`);
+      if (stored) {
+        setFavorites(new Set(JSON.parse(stored)));
+      }
+    } catch {
+      // Ignore parse errors
+    }
+  }, [activeProjectId]);
+
+  // Save favorites to localStorage whenever they change
+  const saveFavorites = useCallback(
+    (next: Set<string>) => {
+      if (!activeProjectId) return;
+      setFavorites(next);
+      localStorage.setItem(
+        `doc-favorites-${activeProjectId}`,
+        JSON.stringify([...next])
+      );
+    },
+    [activeProjectId]
+  );
+
+  const toggleFavorite = useCallback(
+    (id: string) => {
+      const next = new Set(favorites);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      saveFavorites(next);
+    },
+    [favorites, saveFavorites]
+  );
+
+  // Favorited docs for the sidebar section
+  const favoritedDocs = useMemo(
+    () => docs.filter((d) => favorites.has(d.id)),
+    [docs, favorites]
   );
 
   // Load docs
@@ -1142,12 +1290,16 @@ export default function DocsPage() {
     []
   );
 
-  // Keyboard shortcut for search
+  // Keyboard shortcuts
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key === "k") {
         e.preventDefault();
         setSearchOpen(true);
+      }
+      if ((e.metaKey || e.ctrlKey) && e.key === "/") {
+        e.preventDefault();
+        setShortcutsOpen((v) => !v);
       }
     };
     window.addEventListener("keydown", handleKeyDown);
@@ -1355,32 +1507,61 @@ export default function DocsPage() {
     <main className="flex min-h-screen">
       {/* Sidebar tree */}
       <div className="w-64 shrink-0 border-r border-foreground/[0.06] flex flex-col">
-        <div className="flex items-center justify-between px-3 pt-3 pb-2">
-          <span className="text-xs font-medium text-foreground/40 uppercase tracking-wide">
-            Pages
-          </span>
-          <div className="flex items-center gap-0.5">
-            <Button
-              variant="ghost"
-              size="icon-xs"
-              onClick={() => setSearchOpen(true)}
-              className="text-foreground/30 hover:text-foreground/60"
-              aria-label="Search pages"
-            >
-              <Search className="size-3.5" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon-xs"
-              onClick={() => handleCreate(null)}
-              className="text-foreground/30 hover:text-foreground/60"
-              aria-label="New page"
-            >
-              <Plus className="size-4" />
-            </Button>
+        <div ref={sidebarRef} className="flex-1 overflow-y-auto pb-3">
+          {/* Favorites section */}
+          {favoritedDocs.length > 0 && (
+            <div className="px-1">
+              <div className="flex items-center px-3 pt-3 pb-2">
+                <span className="text-xs font-medium text-foreground/40 uppercase tracking-wide">
+                  Favorites
+                </span>
+              </div>
+              {favoritedDocs.map((doc) => (
+                <button
+                  key={doc.id}
+                  onClick={() => setActiveDocId(doc.id)}
+                  className={`flex items-center gap-1.5 w-full py-1 px-2 rounded-md text-sm cursor-pointer transition-colors ${
+                    activeDocId === doc.id
+                      ? "bg-foreground/[0.08] text-foreground"
+                      : "text-foreground/60 hover:bg-foreground/[0.04] hover:text-foreground/80"
+                  }`}
+                >
+                  <Star className="size-3 text-foreground/25 shrink-0 fill-current" />
+                  <span className="text-base leading-none shrink-0">
+                    {doc.icon || "\ud83d\udcc4"}
+                  </span>
+                  <span className="flex-1 truncate">{doc.title || "Untitled"}</span>
+                </button>
+              ))}
+            </div>
+          )}
+          {/* Pages section */}
+          <div className="flex items-center justify-between px-3 pt-3 pb-2">
+            <span className="text-xs font-medium text-foreground/40 uppercase tracking-wide">
+              Pages
+            </span>
+            <div className="flex items-center gap-0.5">
+              <Button
+                variant="ghost"
+                size="icon-xs"
+                onClick={() => setSearchOpen(true)}
+                className="text-foreground/30 hover:text-foreground/60"
+                aria-label="Search pages"
+              >
+                <Search className="size-3.5" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon-xs"
+                onClick={() => handleCreate(null)}
+                className="text-foreground/30 hover:text-foreground/60"
+                aria-label="New page"
+              >
+                <Plus className="size-4" />
+              </Button>
+            </div>
           </div>
-        </div>
-        <div ref={sidebarRef} className="flex-1 overflow-y-auto px-1 pb-3">
+          <div className="px-1">
           {tree.length === 0 ? (
             <div className="px-3 py-8 text-center">
               <FileText className="size-8 text-foreground/10 mx-auto mb-3" />
@@ -1418,7 +1599,9 @@ export default function DocsPage() {
                     onDuplicate={handleDuplicate}
                     onDelete={(id) => setDeleteConfirm(id)}
                     onToggle={toggleExpanded}
+                    onToggleFavorite={toggleFavorite}
                     expanded={expandedIds.has(item.id)}
+                    isFavorited={favorites.has(item.id)}
                     dropIndicator={
                       dragActiveId && dragActiveId !== item.id && dropIndicator?.overId === item.id
                         ? dropIndicator
@@ -1434,7 +1617,7 @@ export default function DocsPage() {
                   return (
                     <div className="flex items-center gap-1 py-1 px-2 rounded-md text-sm bg-popover border border-foreground/[0.08] shadow-lg">
                       <span className="text-base leading-none shrink-0">
-                        {item.doc.icon || "📄"}
+                        {item.doc.icon || "\ud83d\udcc4"}
                       </span>
                       <span className="truncate">{item.doc.title || "Untitled"}</span>
                     </div>
@@ -1443,6 +1626,7 @@ export default function DocsPage() {
               </DragOverlay>
             </DndContext>
           )}
+          </div>
         </div>
       </div>
 
@@ -1450,6 +1634,15 @@ export default function DocsPage() {
       <div className="flex-1 flex flex-col overflow-hidden">
         {activeDoc && (
           <div className="flex items-center justify-end gap-1 px-4 py-2 border-b border-foreground/[0.04]">
+            <Button
+              variant="ghost"
+              size="icon-xs"
+              onClick={() => setShortcutsOpen(true)}
+              className="text-foreground/25 hover:text-foreground/50"
+              aria-label="Keyboard shortcuts"
+            >
+              <Keyboard className="size-3.5" />
+            </Button>
             <Button
               variant="ghost"
               size="icon-xs"
@@ -1508,6 +1701,12 @@ export default function DocsPage() {
           onSelect={(docId) => setActiveDocId(docId)}
         />
       )}
+
+      {/* Keyboard shortcuts dialog */}
+      <KeyboardShortcutsDialog
+        open={shortcutsOpen}
+        onOpenChange={setShortcutsOpen}
+      />
 
       {/* Delete confirmation */}
       <Dialog

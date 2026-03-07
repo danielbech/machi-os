@@ -162,6 +162,15 @@ const COMMANDS: SlashCommandItem[] = [
     },
   },
   {
+    title: "Table of Contents",
+    description: "Auto-generated from headings",
+    icon: List,
+    command: (editor, range) => {
+      editor.chain().focus().deleteRange(range).run();
+      (editor.commands as any).setTableOfContents();
+    },
+  },
+  {
     title: "Divider",
     description: "Horizontal separator line",
     icon: Minus,
