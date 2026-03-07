@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import {
   BarChart,
   Bar,
@@ -72,24 +72,29 @@ function formatCompact(amount: number) {
 }
 
 function useChartColors() {
-  const [colors, setColors] = useState({ revenue: "#22c55e", expenses: "#ef4444", grid: "#333", muted: "#888", border: "#333", popover: "#111", popoverFg: "#eee" });
-  const ref = useRef<HTMLDivElement>(null);
+  const [colors, setColors] = useState({ revenue: "#22c55e", expenses: "#ef4444", grid: "#333", muted: "#888", border: "#333" });
 
   useEffect(() => {
-    if (!ref.current) return;
-    const s = getComputedStyle(ref.current);
-    setColors({
-      revenue: s.getPropertyValue("--chart-2").trim() || "#22c55e",
-      expenses: s.getPropertyValue("--chart-5").trim() || "#ef4444",
-      grid: s.getPropertyValue("--border").trim() || "#333",
-      muted: s.getPropertyValue("--muted-foreground").trim() || "#888",
-      border: s.getPropertyValue("--border").trim() || "#333",
-      popover: s.getPropertyValue("--popover").trim() || "#111",
-      popoverFg: s.getPropertyValue("--popover-foreground").trim() || "#eee",
-    });
+    function readColors() {
+      const s = getComputedStyle(document.documentElement);
+      setColors({
+        revenue: s.getPropertyValue("--chart-2").trim() || "#22c55e",
+        expenses: s.getPropertyValue("--chart-5").trim() || "#ef4444",
+        grid: s.getPropertyValue("--border").trim() || "#333",
+        muted: s.getPropertyValue("--muted-foreground").trim() || "#888",
+        border: s.getPropertyValue("--border").trim() || "#333",
+      });
+    }
+
+    readColors();
+
+    // Re-read when theme changes (inline style mutations on <html>)
+    const observer = new MutationObserver(readColors);
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ["style", "class"] });
+    return () => observer.disconnect();
   }, []);
 
-  return { colors, ref };
+  return colors;
 }
 
 // ─── Data fetching ──────────────────────────────────────────────────────────
@@ -308,7 +313,7 @@ function MonthlyChart({ months }: { months: MonthData[] }) {
   const totalRevenue = months.reduce((s, m) => s + m.revenue, 0);
   const totalExpenses = months.reduce((s, m) => s + m.expenses, 0);
   const result = totalRevenue - totalExpenses;
-  const { colors, ref } = useChartColors();
+  const colors = useChartColors();
 
   const chartData = months.map((m) => ({
     month: m.month,
@@ -317,7 +322,7 @@ function MonthlyChart({ months }: { months: MonthData[] }) {
   }));
 
   return (
-    <div ref={ref} className="rounded-xl border border-border bg-card p-5 space-y-4">
+    <div className="rounded-xl border border-border bg-card p-5 space-y-4">
       <div className="flex items-center justify-between flex-wrap gap-2">
         <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
           Monthly Overview
