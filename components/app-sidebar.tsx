@@ -30,7 +30,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { CreateWorkspaceDialog } from "@/components/create-workspace-dialog";
-import { LayoutDashboard, FolderKanban, Inbox, Settings, Check, ChevronDown, MessageSquarePlus, GanttChart, Plus, Pencil, Mail, Clock } from "lucide-react";
+import { LayoutDashboard, FolderKanban, Inbox, Settings, Check, ChevronDown, MessageSquarePlus, GanttChart, Plus, Pencil, Mail, Clock, FileText } from "lucide-react";
 import { PendingInvitesDialog } from "@/components/pending-invites-dialog";
 
 export function AppSidebar() {
@@ -201,6 +201,14 @@ export function AppSidebar() {
                     <Link href="/hours" onClick={() => { if (backlogOpen) toggleBacklog(); setOpenMobile(false); }}>
                       <Clock />
                       <span>Hours</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+                <SidebarMenuItem>
+                  <SidebarMenuButton asChild isActive={pathname.startsWith("/docs")} tooltip="Docs">
+                    <Link href="/docs" onClick={() => { if (backlogOpen) toggleBacklog(); setOpenMobile(false); }}>
+                      <FileText />
+                      <span>Docs</span>
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>

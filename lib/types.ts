@@ -166,6 +166,21 @@ export interface HourEntry {
   updated_at: string;
 }
 
+// ─── Docs ────────────────────────────────────────────────────────────────────
+
+export interface Doc {
+  id: string;
+  project_id: string;
+  parent_id: string | null;
+  created_by: string;
+  title: string;
+  content: Record<string, unknown>;
+  icon: string | null;
+  sort_order: number;
+  created_at: string;
+  updated_at: string;
+}
+
 export type ReactionType = 'thumbsup' | 'heart' | 'fire';
 
 export interface FeedbackTicket {
