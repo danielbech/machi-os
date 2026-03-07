@@ -1,17 +1,12 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
 import data from "@emoji-mart/data";
-import Picker from "@emoji-mart/react";
-
-interface EmojiSelectEvent {
-  native: string;
-}
 
 export function EmojiPicker({
   value,
@@ -23,6 +18,43 @@ export function EmojiPicker({
   children: React.ReactNode;
 }) {
   const [open, setOpen] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const pickerRef = useRef<unknown>(null);
+
+  const handleSelect = useCallback(
+    (emoji: { native: string }) => {
+      onChange(emoji.native);
+      setOpen(false);
+    },
+    [onChange]
+  );
+
+  useEffect(() => {
+    if (!open || !containerRef.current) return;
+
+    // Dynamically import emoji-mart (vanilla) to avoid SSR issues
+    let cancelled = false;
+    import("emoji-mart").then(({ Picker }) => {
+      if (cancelled || !containerRef.current) return;
+      // Clear previous picker
+      containerRef.current.innerHTML = "";
+      pickerRef.current = new Picker({
+        data,
+        onEmojiSelect: handleSelect,
+        theme: "auto",
+        skinTonePosition: "none",
+        previewPosition: "none",
+        maxFrequentRows: 1,
+        perLine: 8,
+        set: "native",
+      });
+      containerRef.current.appendChild(pickerRef.current as unknown as Node);
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [open, handleSelect]);
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -33,19 +65,7 @@ export function EmojiPicker({
         side="right"
         sideOffset={4}
       >
-        <Picker
-          data={data}
-          onEmojiSelect={(emoji: EmojiSelectEvent) => {
-            onChange(emoji.native);
-            setOpen(false);
-          }}
-          theme="auto"
-          skinTonePosition="none"
-          previewPosition="none"
-          maxFrequentRows={1}
-          perLine={8}
-          set="native"
-        />
+        <div ref={containerRef} />
         {value && (
           <div className="bg-popover border border-foreground/[0.08] border-t-0 rounded-b-lg px-3 py-2">
             <button
