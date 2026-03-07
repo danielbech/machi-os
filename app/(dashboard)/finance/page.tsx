@@ -13,7 +13,15 @@ import {
 } from "recharts";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Plus, X } from "lucide-react";
+import { Plus, X, ChevronDown } from "lucide-react";
+import { useProjectData } from "@/lib/project-data-context";
+import type { Client } from "@/lib/types";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -30,7 +38,11 @@ interface FinanceData {
 
 interface PipelineItem {
   id: string;
-  name: string;
+  clientId: string;
+  clientName: string;
+  clientColor: string;
+  clientLogoUrl?: string;
+  clientIcon?: string;
   amount: number;
   expectedMonth: string; // "YYYY-MM"
 }
@@ -377,13 +389,41 @@ function MonthlyChart({ months }: { months: MonthData[] }) {
 }
 
 
-function Pipeline({ items, onAdd, onRemove, total }: {
+function ClientAvatar({ client, size = "sm" }: { client: { clientName: string; clientColor: string; clientLogoUrl?: string; clientIcon?: string }; size?: "sm" | "md" }) {
+  const dim = size === "sm" ? "size-5" : "size-6";
+  const textSize = size === "sm" ? "text-[10px]" : "text-xs";
+
+  if (client.clientLogoUrl) {
+    return (
+      <span className={`${dim} rounded-md overflow-hidden shrink-0`} style={{ backgroundColor: client.clientColor || "#444" }}>
+        <img src={client.clientLogoUrl} alt={client.clientName} className={`${dim} object-cover`} />
+      </span>
+    );
+  }
+
+  if (client.clientIcon) {
+    return (
+      <span className={`${dim} rounded-md flex items-center justify-center shrink-0 ${textSize}`} style={{ backgroundColor: client.clientColor || "#444" }}>
+        {client.clientIcon}
+      </span>
+    );
+  }
+
+  return (
+    <span className={`${dim} rounded-md flex items-center justify-center shrink-0 ${textSize} font-medium text-white`} style={{ backgroundColor: client.clientColor || "#444" }}>
+      {client.clientName.charAt(0).toUpperCase()}
+    </span>
+  );
+}
+
+function Pipeline({ items, onAdd, onRemove, total, clients }: {
   items: PipelineItem[];
   onAdd: (item: Omit<PipelineItem, "id">) => void;
   onRemove: (id: string) => void;
   total: number;
+  clients: Client[];
 }) {
-  const [name, setName] = useState("");
+  const [selectedClient, setSelectedClient] = useState<Client | null>(null);
   const [amount, setAmount] = useState("");
   const [month, setMonth] = useState("");
 
@@ -392,9 +432,17 @@ function Pipeline({ items, onAdd, onRemove, total }: {
 
   const handleAdd = () => {
     const parsed = Number(amount.replace(/[^0-9]/g, ""));
-    if (!name.trim() || !parsed || !month) return;
-    onAdd({ name: name.trim(), amount: parsed, expectedMonth: month });
-    setName("");
+    if (!selectedClient || !parsed || !month) return;
+    onAdd({
+      clientId: selectedClient.id,
+      clientName: selectedClient.name,
+      clientColor: selectedClient.color,
+      clientLogoUrl: selectedClient.logo_url,
+      clientIcon: selectedClient.icon,
+      amount: parsed,
+      expectedMonth: month,
+    });
+    setSelectedClient(null);
     setAmount("");
     setMonth("");
   };
@@ -422,13 +470,36 @@ function Pipeline({ items, onAdd, onRemove, total }: {
       </div>
 
       <div className="flex gap-2">
-        <Input
-          placeholder="Project name"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          onKeyDown={handleKeyDown}
-          className="flex-1 h-8 text-sm"
-        />
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button className="flex items-center gap-2 h-8 rounded-md border border-input bg-background px-3 text-sm min-w-[140px] hover:bg-muted/50 transition-colors">
+              {selectedClient ? (
+                <>
+                  <ClientAvatar client={{ clientName: selectedClient.name, clientColor: selectedClient.color, clientLogoUrl: selectedClient.logo_url, clientIcon: selectedClient.icon }} />
+                  <span className="text-foreground truncate">{selectedClient.name}</span>
+                </>
+              ) : (
+                <span className="text-muted-foreground">Select client</span>
+              )}
+              <ChevronDown className="size-3.5 ml-auto opacity-50 shrink-0" />
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start" className="min-w-[180px]">
+            {clients.map((client) => (
+              <DropdownMenuItem
+                key={client.id}
+                onClick={() => setSelectedClient(client)}
+                className="flex items-center gap-2"
+              >
+                <ClientAvatar client={{ clientName: client.name, clientColor: client.color, clientLogoUrl: client.logo_url, clientIcon: client.icon }} />
+                <span>{client.name}</span>
+              </DropdownMenuItem>
+            ))}
+            {clients.length === 0 && (
+              <div className="px-2 py-1.5 text-sm text-muted-foreground">No clients found</div>
+            )}
+          </DropdownMenuContent>
+        </DropdownMenu>
         <Input
           placeholder="Amount"
           value={amount}
@@ -466,8 +537,9 @@ function Pipeline({ items, onAdd, onRemove, total }: {
               key={item.id}
               className="flex items-center justify-between py-1.5 px-1 rounded-md group hover:bg-muted/50 transition-colors"
             >
-              <div className="flex items-center gap-3 min-w-0">
-                <span className="text-sm text-foreground truncate">{item.name}</span>
+              <div className="flex items-center gap-2.5 min-w-0">
+                <ClientAvatar client={item} />
+                <span className="text-sm text-foreground truncate">{item.clientName}</span>
                 <span className="text-xs text-muted-foreground shrink-0">{formatMonth(item.expectedMonth)}</span>
               </div>
               <div className="flex items-center gap-2">
@@ -477,7 +549,7 @@ function Pipeline({ items, onAdd, onRemove, total }: {
                 <button
                   onClick={() => onRemove(item.id)}
                   className="opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-foreground"
-                  aria-label={`Remove ${item.name}`}
+                  aria-label={`Remove ${item.clientName}`}
                 >
                   <X className="size-3.5" />
                 </button>
@@ -509,6 +581,7 @@ export default function FinancePage() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const pipeline = usePipeline();
+  const { clients } = useProjectData();
 
   useEffect(() => {
     fetchFinanceData()
@@ -540,7 +613,7 @@ export default function FinancePage() {
       </div>
 
       <GoalTracker months={data.months} pipelineTotal={pipeline.total} />
-      <Pipeline items={pipeline.items} onAdd={pipeline.add} onRemove={pipeline.remove} total={pipeline.total} />
+      <Pipeline items={pipeline.items} onAdd={pipeline.add} onRemove={pipeline.remove} total={pipeline.total} clients={clients} />
       <MonthlyChart months={data.months} />
     </main>
   );
