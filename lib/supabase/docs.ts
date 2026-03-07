@@ -75,6 +75,23 @@ export async function deleteDoc(docId: string): Promise<void> {
   }
 }
 
+// ─── Reorder ─────────────────────────────────────────────────────────────────
+
+export async function reorderDocs(
+  updates: { id: string; parent_id: string | null; sort_order: number }[],
+): Promise<void> {
+  const supabase = createClient()
+  const now = new Date().toISOString()
+  await Promise.all(
+    updates.map(({ id, parent_id, sort_order }) =>
+      supabase
+        .from('docs')
+        .update({ parent_id, sort_order, updated_at: now })
+        .eq('id', id)
+    ),
+  )
+}
+
 // ─── Search ──────────────────────────────────────────────────────────────────
 
 export async function searchDocs(

@@ -15,6 +15,7 @@ import {
   createDoc,
   updateDoc,
   deleteDoc,
+  reorderDocs,
   searchDocs,
   loadDocComments,
   createDocComment,
@@ -58,6 +59,23 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import {
+  DndContext,
+  closestCenter,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragOverlay,
+  type DragStartEvent,
+  type DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  SortableContext,
+  verticalListSortingStrategy,
+  useSortable,
+} from "@dnd-kit/sortable";
+import { restrictToVerticalAxis } from "@dnd-kit/modifiers";
+import { CSS } from "@dnd-kit/utilities";
+import {
   Plus,
   FileText,
   ChevronRight,
@@ -68,12 +86,21 @@ import {
   MessageSquare,
   Send,
   X,
+  GripVertical,
 } from "lucide-react";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
 interface DocTreeNode extends Doc {
   children: DocTreeNode[];
+}
+
+interface FlatItem {
+  id: string;
+  doc: Doc;
+  depth: number;
+  hasChildren: boolean;
+  parentId: string | null;
 }
 
 // ─── Build nested tree from flat list ────────────────────────────────────────
@@ -98,45 +125,85 @@ function buildTree(docs: Doc[]): DocTreeNode[] {
   return roots;
 }
 
-// ─── Page tree item ──────────────────────────────────────────────────────────
+// ─── Flatten tree for sortable context ───────────────────────────────────────
 
-function TreeItem({
-  node,
-  depth,
-  activeId,
+function flattenTree(
+  nodes: DocTreeNode[],
+  depth: number,
+  expandedIds: Set<string>,
+): FlatItem[] {
+  const result: FlatItem[] = [];
+  for (const node of nodes) {
+    const hasChildren = node.children.length > 0;
+    result.push({ id: node.id, doc: node, depth, hasChildren, parentId: node.parent_id });
+    if (hasChildren && expandedIds.has(node.id)) {
+      result.push(...flattenTree(node.children, depth + 1, expandedIds));
+    }
+  }
+  return result;
+}
+
+// ─── Sortable page tree item ─────────────────────────────────────────────────
+
+function SortableTreeItem({
+  item,
+  activeId: selectedId,
   onSelect,
   onCreateChild,
   onDelete,
+  onToggle,
+  expanded,
 }: {
-  node: DocTreeNode;
-  depth: number;
+  item: FlatItem;
   activeId: string | null;
   onSelect: (id: string) => void;
   onCreateChild: (parentId: string) => void;
   onDelete: (id: string) => void;
+  onToggle: (id: string) => void;
+  expanded: boolean;
 }) {
-  const [expanded, setExpanded] = useState(true);
-  const hasChildren = node.children.length > 0;
-  const isActive = activeId === node.id;
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: item.id });
+
+  const isActive = selectedId === item.id;
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.4 : 1,
+  };
 
   return (
-    <div>
+    <div ref={setNodeRef} style={style} {...attributes}>
       <div
-        className={`group flex items-center gap-1 py-1 px-2 rounded-md text-sm cursor-pointer transition-colors ${
+        className={`group flex items-center gap-0.5 py-1 px-1 rounded-md text-sm cursor-pointer transition-colors ${
           isActive
             ? "bg-foreground/[0.08] text-foreground"
             : "text-foreground/60 hover:bg-foreground/[0.04] hover:text-foreground/80"
         }`}
-        style={{ paddingLeft: `${depth * 16 + 8}px` }}
-        onClick={() => onSelect(node.id)}
+        style={{ paddingLeft: `${item.depth * 16 + 4}px` }}
+        onClick={() => onSelect(item.id)}
       >
+        <div
+          {...listeners}
+          className="shrink-0 size-5 flex items-center justify-center rounded cursor-grab active:cursor-grabbing text-transparent group-hover:text-foreground/20 hover:!text-foreground/40 transition-colors"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <GripVertical className="size-3" />
+        </div>
         <button
           onClick={(e) => {
             e.stopPropagation();
-            setExpanded((v) => !v);
+            onToggle(item.id);
           }}
           className={`shrink-0 size-5 flex items-center justify-center rounded transition-colors hover:bg-foreground/[0.06] ${
-            hasChildren ? "text-foreground/30" : "text-transparent"
+            item.hasChildren ? "text-foreground/30" : "text-transparent"
           }`}
         >
           <ChevronRight
@@ -146,14 +213,14 @@ function TreeItem({
           />
         </button>
         <span className="text-base leading-none shrink-0">
-          {node.icon || "📄"}
+          {item.doc.icon || "📄"}
         </span>
-        <span className="flex-1 truncate">{node.title || "Untitled"}</span>
+        <span className="flex-1 truncate">{item.doc.title || "Untitled"}</span>
         <div className="flex items-center opacity-0 group-hover:opacity-100 transition-opacity">
           <button
             onClick={(e) => {
               e.stopPropagation();
-              onCreateChild(node.id);
+              onCreateChild(item.id);
             }}
             className="size-5 flex items-center justify-center rounded hover:bg-foreground/[0.08] text-foreground/30 hover:text-foreground/50"
             aria-label="Add sub-page"
@@ -171,14 +238,14 @@ function TreeItem({
               </button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="start" className="min-w-[160px]">
-              <DropdownMenuItem onClick={() => onCreateChild(node.id)}>
+              <DropdownMenuItem onClick={() => onCreateChild(item.id)}>
                 <FilePlus className="size-4" />
                 Add sub-page
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem
                 className="text-destructive"
-                onClick={() => onDelete(node.id)}
+                onClick={() => onDelete(item.id)}
               >
                 <Trash2 className="size-4" />
                 Delete
@@ -187,19 +254,6 @@ function TreeItem({
           </DropdownMenu>
         </div>
       </div>
-      {expanded &&
-        hasChildren &&
-        node.children.map((child) => (
-          <TreeItem
-            key={child.id}
-            node={child}
-            depth={depth + 1}
-            activeId={activeId}
-            onSelect={onSelect}
-            onCreateChild={onCreateChild}
-            onDelete={onDelete}
-          />
-        ))}
     </div>
   );
 }
@@ -678,6 +732,12 @@ export default function DocsPage() {
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
   const [showComments, setShowComments] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
+  const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
+  const [dragActiveId, setDragActiveId] = useState<string | null>(null);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
+  );
 
   // Load docs
   const loadAllDocs = useCallback(async () => {
@@ -699,7 +759,28 @@ export default function DocsPage() {
     }
   }, [loading, docs, activeDocId]);
 
+  // Expand all by default when docs first load
+  useEffect(() => {
+    if (docs.length > 0 && expandedIds.size === 0) {
+      setExpandedIds(new Set(docs.filter((d) => docs.some((c) => c.parent_id === d.id)).map((d) => d.id)));
+    }
+  }, [docs]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const toggleExpanded = useCallback((id: string) => {
+    setExpandedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }, []);
+
   const tree = useMemo(() => buildTree(docs), [docs]);
+
+  const flatItems = useMemo(
+    () => flattenTree(tree, 0, expandedIds),
+    [tree, expandedIds]
+  );
 
   const activeDoc = useMemo(
     () => docs.find((d) => d.id === activeDocId) || null,
@@ -765,6 +846,66 @@ export default function DocsPage() {
       setDeleteConfirm(null);
     },
     [docs, activeDocId]
+  );
+
+  const handleDragStart = useCallback((event: DragStartEvent) => {
+    setDragActiveId(event.active.id as string);
+  }, []);
+
+  const handleDragEnd = useCallback(
+    async (event: DragEndEvent) => {
+      setDragActiveId(null);
+      const { active, over } = event;
+      if (!over || active.id === over.id) return;
+
+      const activeIdx = flatItems.findIndex((i) => i.id === active.id);
+      const overIdx = flatItems.findIndex((i) => i.id === over.id);
+      if (activeIdx === -1 || overIdx === -1) return;
+
+      const activeItem = flatItems[activeIdx];
+      const overItem = flatItems[overIdx];
+
+      // Move to same parent as the target item
+      const newParentId = overItem.parentId;
+
+      // Get siblings of the target parent (excluding the dragged item)
+      const siblings = docs
+        .filter((d) => d.parent_id === newParentId && d.id !== activeItem.id)
+        .sort((a, b) => a.sort_order - b.sort_order);
+
+      // Find where to insert among siblings
+      const overSiblingIdx = siblings.findIndex((s) => s.id === overItem.id);
+      const insertIdx = overIdx > activeIdx ? overSiblingIdx + 1 : overSiblingIdx;
+
+      // Build new order
+      const ordered = [...siblings];
+      ordered.splice(Math.max(0, insertIdx), 0, { ...activeItem.doc, parent_id: newParentId });
+
+      // Prepare updates
+      const updates = ordered.map((d, i) => ({
+        id: d.id,
+        parent_id: newParentId,
+        sort_order: i,
+      }));
+
+      // Optimistic update
+      setDocs((prev) =>
+        prev.map((d) => {
+          const update = updates.find((u) => u.id === d.id);
+          if (update) return { ...d, parent_id: update.parent_id, sort_order: update.sort_order };
+          return d;
+        })
+      );
+
+      // If parent changed, expand the new parent
+      if (newParentId && newParentId !== activeItem.parentId) {
+        setExpandedIds((prev) => new Set([...prev, newParentId]));
+      }
+
+      // Persist
+      await reorderDocs(updates);
+    },
+    [flatItems, docs]
   );
 
   if (loading) {
@@ -835,17 +976,45 @@ export default function DocsPage() {
               </Button>
             </div>
           ) : (
-            tree.map((node) => (
-              <TreeItem
-                key={node.id}
-                node={node}
-                depth={0}
-                activeId={activeDocId}
-                onSelect={setActiveDocId}
-                onCreateChild={(parentId) => handleCreate(parentId)}
-                onDelete={(id) => setDeleteConfirm(id)}
-              />
-            ))
+            <DndContext
+              sensors={sensors}
+              collisionDetection={closestCenter}
+              modifiers={[restrictToVerticalAxis]}
+              onDragStart={handleDragStart}
+              onDragEnd={handleDragEnd}
+            >
+              <SortableContext
+                items={flatItems.map((i) => i.id)}
+                strategy={verticalListSortingStrategy}
+              >
+                {flatItems.map((item) => (
+                  <SortableTreeItem
+                    key={item.id}
+                    item={item}
+                    activeId={activeDocId}
+                    onSelect={setActiveDocId}
+                    onCreateChild={(parentId) => handleCreate(parentId)}
+                    onDelete={(id) => setDeleteConfirm(id)}
+                    onToggle={toggleExpanded}
+                    expanded={expandedIds.has(item.id)}
+                  />
+                ))}
+              </SortableContext>
+              <DragOverlay>
+                {dragActiveId ? (() => {
+                  const item = flatItems.find((i) => i.id === dragActiveId);
+                  if (!item) return null;
+                  return (
+                    <div className="flex items-center gap-1 py-1 px-2 rounded-md text-sm bg-popover border border-foreground/[0.08] shadow-lg">
+                      <span className="text-base leading-none shrink-0">
+                        {item.doc.icon || "📄"}
+                      </span>
+                      <span className="truncate">{item.doc.title || "Untitled"}</span>
+                    </div>
+                  );
+                })() : null}
+              </DragOverlay>
+            </DndContext>
           )}
         </div>
       </div>
