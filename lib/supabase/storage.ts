@@ -3,6 +3,7 @@ import { validateImageFile } from '../validate-file'
 
 const BUCKET = 'Project Logos'
 const TASK_IMAGES_BUCKET = 'task-images'
+const DOC_IMAGES_BUCKET = 'doc-images'
 
 export async function uploadClientLogo(file: File, clientId: string): Promise<string> {
   validateImageFile(file)
@@ -124,6 +125,29 @@ export async function deleteTaskImage(imageUrl: string): Promise<void> {
   if (error) {
     console.error('Error deleting task image:', error)
   }
+}
+
+export async function uploadDocImage(file: File, docId: string): Promise<string> {
+  validateImageFile(file)
+  const supabase = createClient()
+
+  const ext = file.name.split('.').pop() || 'png'
+  const path = `${docId}/${Date.now()}.${ext}`
+
+  const { error } = await supabase.storage
+    .from(DOC_IMAGES_BUCKET)
+    .upload(path, file)
+
+  if (error) {
+    console.error('Error uploading doc image:', error)
+    throw error
+  }
+
+  const { data } = supabase.storage
+    .from(DOC_IMAGES_BUCKET)
+    .getPublicUrl(path)
+
+  return data.publicUrl
 }
 
 export async function deleteClientLogo(logoUrl: string): Promise<void> {

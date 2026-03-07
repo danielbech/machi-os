@@ -15,6 +15,8 @@ import {
   Quote,
   Minus,
   Type,
+  Table,
+  ImageIcon,
 } from "lucide-react";
 
 // ─── Command definitions ─────────────────────────────────────────────────────
@@ -97,6 +99,25 @@ const COMMANDS: SlashCommandItem[] = [
     icon: Quote,
     command: (editor, range) => {
       editor.chain().focus().deleteRange(range).toggleBlockquote().run();
+    },
+  },
+  {
+    title: "Table",
+    description: "Insert a table",
+    icon: Table,
+    command: (editor, range) => {
+      editor.chain().focus().deleteRange(range).insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run();
+    },
+  },
+  {
+    title: "Image",
+    description: "Upload an image",
+    icon: ImageIcon,
+    command: (editor, range) => {
+      editor.chain().focus().deleteRange(range).run();
+      // Trigger file input (the DocEditor component handles this)
+      const fileInput = document.querySelector<HTMLInputElement>('input[data-doc-image-upload]');
+      if (fileInput) fileInput.click();
     },
   },
   {

@@ -181,6 +181,25 @@ export interface Doc {
   updated_at: string;
 }
 
+export interface DocComment {
+  id: string;
+  doc_id: string;
+  project_id: string;
+  user_id: string;
+  parent_id: string | null;
+  content: string;
+  selection: string | null;
+  resolved_at: string | null;
+  created_at: string;
+  updated_at: string;
+  author?: {
+    display_name: string;
+    initials: string;
+    color: string;
+    avatar_url?: string;
+  };
+}
+
 export type ReactionType = 'thumbsup' | 'heart' | 'fire';
 
 export interface FeedbackTicket {

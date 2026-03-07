@@ -339,6 +339,41 @@
   margin: 0.75em 0;
 }
 
+.docs-editor .tiptap table {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 0.75em 0;
+  overflow: hidden;
+  border-radius: 0.25rem;
+}
+
+.docs-editor .tiptap table td,
+.docs-editor .tiptap table th {
+  border: 1px solid oklch(from var(--foreground) l c h / 0.1);
+  padding: 0.5rem 0.75rem;
+  min-width: 80px;
+  vertical-align: top;
+  position: relative;
+}
+
+.docs-editor .tiptap table th {
+  font-weight: 600;
+  background: oklch(from var(--foreground) l c h / 0.04);
+  color: var(--foreground);
+}
+
+.docs-editor .tiptap table td {
+  color: oklch(from var(--foreground) l c h / 0.75);
+}
+
+.docs-editor .tiptap table .selectedCell {
+  background: oklch(from var(--foreground) l c h / 0.06);
+}
+
+.docs-editor .tiptap table p {
+  margin: 0;
+}
+
 /* Card completion glow — color driven by --glow RGB custom property */
 @keyframes card-complete-glow {
   0% {

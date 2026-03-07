@@ -1,5 +1,5 @@
 import { createClient } from './client'
-import type { Doc } from '../types'
+import type { Doc, DocComment } from '../types'
 
 export async function loadDocs(projectId: string): Promise<Doc[]> {
   const supabase = createClient()
@@ -75,6 +75,102 @@ export async function deleteDoc(docId: string): Promise<void> {
   }
 }
 
+// ─── Search ──────────────────────────────────────────────────────────────────
+
+export async function searchDocs(
+  projectId: string,
+  query: string,
+): Promise<Doc[]> {
+  const supabase = createClient()
+  const q = `%${query}%`
+  const { data, error } = await supabase
+    .from('docs')
+    .select('*')
+    .eq('project_id', projectId)
+    .or(`title.ilike.${q}`)
+    .order('updated_at', { ascending: false })
+    .limit(20)
+
+  if (error) {
+    console.error('Error searching docs:', error)
+    return []
+  }
+
+  return (data || []).map(mapDoc)
+}
+
+// ─── Comments ────────────────────────────────────────────────────────────────
+
+export async function loadDocComments(docId: string): Promise<DocComment[]> {
+  const supabase = createClient()
+  const { data, error } = await supabase
+    .from('doc_comments')
+    .select('*')
+    .eq('doc_id', docId)
+    .order('created_at', { ascending: true })
+
+  if (error) {
+    console.error('Error loading comments:', error)
+    return []
+  }
+
+  return (data || []).map(mapComment)
+}
+
+export async function createDocComment(comment: {
+  doc_id: string;
+  project_id: string;
+  user_id: string;
+  content: string;
+  parent_id?: string;
+  selection?: string;
+}): Promise<DocComment> {
+  const supabase = createClient()
+  const { data, error } = await supabase
+    .from('doc_comments')
+    .insert(comment)
+    .select()
+    .single()
+
+  if (error) {
+    console.error('Error creating comment:', error)
+    throw error
+  }
+
+  return mapComment(data)
+}
+
+export async function updateDocComment(
+  commentId: string,
+  updates: { content?: string; resolved_at?: string | null },
+): Promise<void> {
+  const supabase = createClient()
+  const { error } = await supabase
+    .from('doc_comments')
+    .update({ ...updates, updated_at: new Date().toISOString() })
+    .eq('id', commentId)
+
+  if (error) {
+    console.error('Error updating comment:', error)
+    throw error
+  }
+}
+
+export async function deleteDocComment(commentId: string): Promise<void> {
+  const supabase = createClient()
+  const { error } = await supabase
+    .from('doc_comments')
+    .delete()
+    .eq('id', commentId)
+
+  if (error) {
+    console.error('Error deleting comment:', error)
+    throw error
+  }
+}
+
+// ─── Mappers ─────────────────────────────────────────────────────────────────
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function mapDoc(row: any): Doc {
   return {
@@ -86,6 +182,22 @@ function mapDoc(row: any): Doc {
     content: row.content || {},
     icon: row.icon || null,
     sort_order: row.sort_order ?? 0,
+    created_at: row.created_at,
+    updated_at: row.updated_at,
+  }
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function mapComment(row: any): DocComment {
+  return {
+    id: row.id,
+    doc_id: row.doc_id,
+    project_id: row.project_id,
+    user_id: row.user_id,
+    parent_id: row.parent_id || null,
+    content: row.content,
+    selection: row.selection || null,
+    resolved_at: row.resolved_at || null,
     created_at: row.created_at,
     updated_at: row.updated_at,
   }
