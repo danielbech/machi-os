@@ -948,6 +948,30 @@
   background: oklch(from var(--foreground) l c h / 0.1);
 }
 
+/* ─── Inline comment highlights ─────────────────────────────────────────── */
+
+.docs-editor .tiptap .comment-highlight {
+  background: hsla(45, 80%, 60%, 0.15);
+  border-bottom: 2px solid hsla(45, 80%, 60%, 0.4);
+  cursor: pointer;
+  transition: background-color 0.15s;
+}
+
+.docs-editor .tiptap .comment-highlight:hover {
+  background: hsla(45, 80%, 60%, 0.25);
+}
+
+/* Resolved comments — muted */
+.docs-editor .tiptap .comment-highlight.resolved {
+  background: hsla(45, 80%, 60%, 0.05);
+  border-bottom-color: hsla(45, 80%, 60%, 0.15);
+}
+
+/* Active/focused comment highlight */
+.docs-editor .tiptap .comment-highlight.active {
+  background: hsla(45, 80%, 60%, 0.3);
+}
+
 /* Card completion glow — color driven by --glow RGB custom property */
 @keyframes card-complete-glow {
   0% {

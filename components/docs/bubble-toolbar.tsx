@@ -18,6 +18,7 @@ import {
   Quote,
   RemoveFormatting,
   Highlighter,
+  MessageSquareQuote,
 } from "lucide-react";
 
 // ─── Color palettes ──────────────────────────────────────────────────────────
@@ -112,7 +113,13 @@ function ColorPopover({
 
 // ─── Bubble Toolbar ──────────────────────────────────────────────────────────
 
-export function BubbleToolbar({ editor }: { editor: Editor }) {
+export function BubbleToolbar({
+  editor,
+  onComment,
+}: {
+  editor: Editor;
+  onComment?: (selectedText: string) => void;
+}) {
   const [linkInput, setLinkInput] = useState(false);
   const [linkUrl, setLinkUrl] = useState("");
   const [showTextColor, setShowTextColor] = useState(false);
@@ -370,6 +377,26 @@ export function BubbleToolbar({ editor }: { editor: Editor }) {
           >
             <RemoveFormatting className="size-3.5" />
           </button>
+
+          {/* Comment */}
+          {onComment && (
+            <>
+              <div className={sep} />
+              <button
+                className={btn(false)}
+                onClick={() => {
+                  const { from, to } = editor.state.selection;
+                  const selectedText = editor.state.doc.textBetween(from, to, " ");
+                  if (selectedText.trim()) {
+                    onComment(selectedText);
+                  }
+                }}
+                title="Comment on selection"
+              >
+                <MessageSquareQuote className="size-3.5" />
+              </button>
+            </>
+          )}
         </div>
       )}
     </BubbleMenu>

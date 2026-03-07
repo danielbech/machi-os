@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { toast } from "sonner";
 import { uploadDocImage } from "@/lib/supabase/storage";
-import type { Doc } from "@/lib/types";
+import type { Doc, DocComment } from "@/lib/types";
 import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import Link from "@tiptap/extension-link";
@@ -37,6 +37,8 @@ import { TableToolbar } from "@/components/docs/table-toolbar";
 import { BubbleToolbar } from "@/components/docs/bubble-toolbar";
 import { Breadcrumbs } from "@/components/docs/breadcrumbs";
 import { CommentsPanel } from "@/components/docs/comments-panel";
+import { CommentMark } from "@/components/docs/comment-mark";
+import { loadDocComments } from "@/lib/supabase/docs";
 import { ImagePlus } from "lucide-react";
 
 // ─── Lowlight (syntax highlighting) ──────────────────────────────────────────
@@ -107,12 +109,24 @@ export function DocEditor({
   const [titleHovered, setTitleHovered] = useState(false);
   const [wordCount, setWordCount] = useState({ words: 0, characters: 0 });
 
+  // ─── Comments state ─────────────────────────────────────────────────────
+  const [comments, setComments] = useState<DocComment[]>([]);
+  const [pendingSelection, setPendingSelection] = useState<string | null>(null);
+  const [activeCommentId, setActiveCommentId] = useState<string | null>(null);
+
+  // Load comments on mount
+  useEffect(() => {
+    loadDocComments(doc.id).then((c) => setComments(c));
+  }, [doc.id]);
+
   // Reset when doc changes
   useEffect(() => {
     setTitle(doc.title);
     docIdRef.current = doc.id;
     setCoverHovered(false);
     setTitleHovered(false);
+    setPendingSelection(null);
+    setActiveCommentId(null);
   }, [doc.id, doc.title]);
 
   // Auto-resize title textarea
@@ -164,6 +178,14 @@ export function DocEditor({
     [onUpdate]
   );
 
+  // ─── Comment handler from bubble toolbar ────────────────────────────────
+  const handleComment = useCallback(
+    (selectedText: string) => {
+      setPendingSelection(selectedText);
+    },
+    []
+  );
+
   const editor = useEditor(
     {
       extensions: [
@@ -200,6 +222,7 @@ export function DocEditor({
         TableOfContents,
         SlashCommandExtension,
         createMentionExtension(() => docsRef.current),
+        CommentMark,
       ],
       content: Object.keys(doc.content).length > 0 ? doc.content : undefined,
       editorProps: {
@@ -208,6 +231,17 @@ export function DocEditor({
         },
         handleClick: (view, pos, event) => {
           const target = event.target as HTMLElement;
+
+          // Handle clicking on comment highlights
+          const commentEl = target.closest?.(".comment-highlight");
+          if (commentEl) {
+            const commentId = commentEl.getAttribute("data-comment-id");
+            if (commentId) {
+              setActiveCommentId(commentId);
+              return false; // Don't prevent default cursor placement
+            }
+          }
+
           const mentionEl = target.closest?.(".mention");
           if (mentionEl) {
             const docId = mentionEl.getAttribute("data-id");
@@ -288,6 +322,9 @@ export function DocEditor({
         const text = e.state.doc.textContent;
         const words = text.split(/\s+/).filter(Boolean).length;
         setWordCount({ words, characters: text.length });
+
+        // Apply resolved styles to comment marks on load
+        applyResolvedStyles(e, comments);
       },
       onUpdate: ({ editor: e }) => {
         const json = e.getJSON();
@@ -302,6 +339,14 @@ export function DocEditor({
     },
     [doc.id]
   );
+
+  // Apply resolved styles after comments load
+  useEffect(() => {
+    if (editor && comments.length > 0) {
+      // Small delay to ensure DOM is ready
+      setTimeout(() => applyResolvedStyles(editor, comments), 100);
+    }
+  }, [editor, comments]);
 
   const slash = useSlashCommand(editor);
 
@@ -419,7 +464,9 @@ export function DocEditor({
           />
           <div className="docs-editor prose-custom relative">
             {editor && <TableToolbar editor={editor} />}
-            {editor && <BubbleToolbar editor={editor} />}
+            {editor && (
+              <BubbleToolbar editor={editor} onComment={handleComment} />
+            )}
             <EditorContent editor={editor} />
             {slash.active && slash.range && slash.coords && editor && (
               <div
@@ -445,10 +492,45 @@ export function DocEditor({
       </div>
       {/* Comments sidebar */}
       {showComments && (
-        <div className="w-72 shrink-0 border-l border-foreground/[0.06] flex flex-col">
-          <CommentsPanel docId={doc.id} projectId={projectId} userId={userId} />
+        <div className="w-80 shrink-0 border-l border-foreground/[0.06] flex flex-col">
+          <CommentsPanel
+            docId={doc.id}
+            projectId={projectId}
+            userId={userId}
+            editor={editor}
+            comments={comments}
+            onCommentsChange={setComments}
+            pendingSelection={pendingSelection}
+            onClearPending={() => setPendingSelection(null)}
+            activeCommentId={activeCommentId}
+            onSetActiveComment={setActiveCommentId}
+          />
         </div>
       )}
     </div>
   );
+}
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+/**
+ * After loading comments, apply the "resolved" CSS class to matching
+ * comment-highlight spans in the editor DOM.
+ */
+function applyResolvedStyles(
+  editor: { view: { dom: HTMLElement } },
+  comments: DocComment[]
+) {
+  const resolvedIds = new Set(
+    comments.filter((c) => c.resolved_at).map((c) => c.id)
+  );
+
+  const editorDom = editor.view.dom;
+  const spans = editorDom.querySelectorAll("span[data-comment-id]");
+  spans.forEach((span) => {
+    const id = span.getAttribute("data-comment-id");
+    if (id && resolvedIds.has(id)) {
+      span.classList.add("resolved");
+    }
+  });
 }
