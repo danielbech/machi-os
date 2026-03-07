@@ -22,6 +22,7 @@ export interface ClientStatusDef {
   color: string;
   sort_order: number;
   treat_as_active: boolean;
+  show_dotted_border: boolean;
   created_at: string;
 }
 

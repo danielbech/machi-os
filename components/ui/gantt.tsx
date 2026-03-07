@@ -1119,6 +1119,7 @@ export type GanttFeatureItemCardProps = Pick<GanttFeature, "id"> & {
   accentColor?: string;
   selected?: boolean;
   onSelect?: () => void;
+  dashed?: boolean;
 };
 
 export const GanttFeatureItemCard: FC<GanttFeatureItemCardProps> = ({
@@ -1127,6 +1128,7 @@ export const GanttFeatureItemCard: FC<GanttFeatureItemCardProps> = ({
   accentColor,
   selected,
   onSelect,
+  dashed,
 }) => {
   const [globalDragging, setDragging] = useGanttDragging();
   const { attributes, listeners, setNodeRef } = useDraggable({ id });
@@ -1149,6 +1151,7 @@ export const GanttFeatureItemCard: FC<GanttFeatureItemCardProps> = ({
         ...(selected && accentColor
           ? { "--tw-ring-color": `${accentColor}50`, borderTopColor: `${accentColor}50`, borderRightColor: `${accentColor}50`, borderBottomColor: `${accentColor}50`, borderLeftColor: `${accentColor}50` } as React.CSSProperties
           : {}),
+        ...(dashed ? { borderStyle: "dashed" } : {}),
       }}
       onClick={globalDragging ? undefined : onSelect}
     >
@@ -1180,6 +1183,7 @@ export type GanttFeatureItemProps = GanttFeature & {
   accentColor?: string;
   selected?: boolean;
   onSelect?: () => void;
+  dashed?: boolean;
 };
 
 export const GanttFeatureItem: FC<GanttFeatureItemProps> = ({
@@ -1189,6 +1193,7 @@ export const GanttFeatureItem: FC<GanttFeatureItemProps> = ({
   accentColor,
   selected,
   onSelect,
+  dashed,
   ...feature
 }) => {
   const [scrollX] = useGanttScrollX();
@@ -1302,7 +1307,7 @@ export const GanttFeatureItem: FC<GanttFeatureItemProps> = ({
           onDragStart={handleItemDragStart}
           sensors={[mouseSensor]}
         >
-          <GanttFeatureItemCard id={feature.id} accentColor={accentColor} selected={selected} onSelect={onSelect}>
+          <GanttFeatureItemCard id={feature.id} accentColor={accentColor} selected={selected} onSelect={onSelect} dashed={dashed}>
             {children ?? (
               <p className="flex-1 truncate text-xs">{feature.name}</p>
             )}

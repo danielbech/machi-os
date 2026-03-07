@@ -235,7 +235,7 @@ function SortableTimelineGroup({
 
 export default function TimelinePage() {
   const { activeProjectId } = useWorkspace();
-  const { clients, clientGroups } = useProjectData();
+  const { clients, clientGroups, clientStatuses } = useProjectData();
   const [entries, setEntries] = useState<TimelineEntry[]>([]);
   const [initialLoading, setInitialLoading] = useState(true);
   const [zoomLevel, setZoomLevel] = useState(() => {
@@ -345,6 +345,7 @@ export default function TimelinePage() {
   );
 
   const clientMap = new Map(clients.map((c) => [c.id, c]));
+  const statusMap = new Map(clientStatuses.map((s) => [s.id, s]));
   const groupMap = new Map(clientGroups.map((g) => [g.id, g]));
   const getGroupLogoUrl = (client: Client) => {
     const group = client.client_group_id ? groupMap.get(client.client_group_id) : undefined;
@@ -1022,12 +1023,15 @@ export default function TimelinePage() {
                           : undefined;
                         const isMilestone = entry.start_date === entry.end_date;
                         const accent = getAccentColor(entry);
+                        const clientStatus = client?.status_id ? statusMap.get(client.status_id) : undefined;
+                        const dashed = clientStatus?.show_dotted_border ?? false;
                         return (
                           <GanttFeatureItem
                             key={feature.id}
                             {...feature}
                             onMove={handleMove}
                             accentColor={accent}
+                            dashed={dashed}
                             selected={selectedEntryId === feature.id}
                             onSelect={() => {
                               setSelectedEntryId(feature.id);

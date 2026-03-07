@@ -6,7 +6,7 @@ export async function loadClientStatuses(projectId: string): Promise<ClientStatu
 
   const { data, error } = await supabase
     .from('client_statuses')
-    .select('id, project_id, name, color, sort_order, treat_as_active, created_at')
+    .select('id, project_id, name, color, sort_order, treat_as_active, show_dotted_border, created_at')
     .eq('project_id', projectId)
     .order('sort_order')
 
@@ -22,6 +22,7 @@ export async function loadClientStatuses(projectId: string): Promise<ClientStatu
     color: s.color,
     sort_order: s.sort_order,
     treat_as_active: s.treat_as_active,
+    show_dotted_border: s.show_dotted_border ?? false,
     created_at: s.created_at,
   }))
 }
@@ -32,6 +33,7 @@ export async function createClientStatus(
   color: string,
   sortOrder: number,
   treatAsActive: boolean = true,
+  showDottedBorder: boolean = false,
 ): Promise<ClientStatusDef> {
   const supabase = createClient()
 
@@ -43,6 +45,7 @@ export async function createClientStatus(
       color,
       sort_order: sortOrder,
       treat_as_active: treatAsActive,
+      show_dotted_border: showDottedBorder,
     })
     .select()
     .single()
@@ -59,13 +62,14 @@ export async function createClientStatus(
     color: data.color,
     sort_order: data.sort_order,
     treat_as_active: data.treat_as_active,
+    show_dotted_border: data.show_dotted_border ?? false,
     created_at: data.created_at,
   }
 }
 
 export async function updateClientStatus(
   statusId: string,
-  updates: { name?: string; color?: string; sort_order?: number; treat_as_active?: boolean }
+  updates: { name?: string; color?: string; sort_order?: number; treat_as_active?: boolean; show_dotted_border?: boolean }
 ): Promise<void> {
   const supabase = createClient()
 
@@ -95,10 +99,10 @@ export async function deleteClientStatus(statusId: string): Promise<void> {
 }
 
 const DEFAULT_STATUSES = [
-  { name: 'Active', color: 'green', sort_order: 0, treat_as_active: true },
-  { name: 'Upcoming', color: 'blue', sort_order: 1, treat_as_active: true },
-  { name: 'Expected', color: 'amber', sort_order: 2, treat_as_active: true },
-  { name: 'Idle', color: 'gray', sort_order: 3, treat_as_active: false },
+  { name: 'Active', color: 'green', sort_order: 0, treat_as_active: true, show_dotted_border: false },
+  { name: 'Upcoming', color: 'blue', sort_order: 1, treat_as_active: true, show_dotted_border: true },
+  { name: 'Expected', color: 'amber', sort_order: 2, treat_as_active: true, show_dotted_border: true },
+  { name: 'Idle', color: 'gray', sort_order: 3, treat_as_active: false, show_dotted_border: false },
 ]
 
 export async function seedDefaultStatuses(projectId: string): Promise<ClientStatusDef[]> {
@@ -121,6 +125,7 @@ export async function seedDefaultStatuses(projectId: string): Promise<ClientStat
     color: s.color,
     sort_order: s.sort_order,
     treat_as_active: s.treat_as_active,
+    show_dotted_border: s.show_dotted_border ?? false,
     created_at: s.created_at,
   }))
 }

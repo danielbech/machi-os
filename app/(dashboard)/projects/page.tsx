@@ -588,6 +588,7 @@ function StatusDialog({
   const [name, setName] = useState("");
   const [color, setColor] = useState("green");
   const [treatAsActive, setTreatAsActive] = useState(true);
+  const [showDottedBorder, setShowDottedBorder] = useState(false);
   const [saving, setSaving] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -597,10 +598,12 @@ function StatusDialog({
       setName(editingStatus.name);
       setColor(editingStatus.color);
       setTreatAsActive(editingStatus.treat_as_active);
+      setShowDottedBorder(editingStatus.show_dotted_border);
     } else {
       setName("");
       setColor("green");
       setTreatAsActive(true);
+      setShowDottedBorder(false);
     }
     setTimeout(() => inputRef.current?.focus(), 50);
   }, [open, editingStatus]);
@@ -614,6 +617,7 @@ function StatusDialog({
           name: name.trim(),
           color,
           treat_as_active: treatAsActive,
+          show_dotted_border: showDottedBorder,
         });
       } else {
         await createClientStatus(
@@ -622,6 +626,7 @@ function StatusDialog({
           color,
           clientStatuses.length,
           treatAsActive,
+          showDottedBorder,
         );
       }
       await refreshClientStatuses();
@@ -690,6 +695,21 @@ function StatusDialog({
               }`}
             >
               {treatAsActive ? "Shown in backlog" : "Hidden from backlog"}
+            </button>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <label className="text-xs text-foreground/40">Timeline style</label>
+            <button
+              type="button"
+              onClick={() => setShowDottedBorder(!showDottedBorder)}
+              className={`px-2.5 py-1 rounded text-xs font-medium transition-all ${
+                showDottedBorder
+                  ? "bg-blue-500/10 text-blue-400"
+                  : "bg-foreground/5 text-foreground/30"
+              }`}
+            >
+              {showDottedBorder ? "Dotted border" : "Solid border"}
             </button>
           </div>
 
