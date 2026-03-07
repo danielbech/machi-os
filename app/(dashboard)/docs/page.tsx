@@ -50,6 +50,7 @@ import {
   Keyboard,
   Star,
 } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { DocEditor } from "@/components/docs/doc-editor";
 import { SortableTreeItem } from "@/components/docs/sortable-tree-item";
 import type { FlatItem, DropIndicator } from "@/components/docs/sortable-tree-item";
@@ -592,15 +593,6 @@ export default function DocsPage() {
             <Button
               variant="ghost"
               size="icon-xs"
-              onClick={() => setShortcutsOpen(true)}
-              className="text-foreground/25 hover:text-foreground/50"
-              aria-label="Keyboard shortcuts"
-            >
-              <Keyboard className="size-3.5" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon-xs"
               onClick={() => setShowComments((v) => !v)}
               className={`${showComments ? "text-foreground/60" : "text-foreground/25 hover:text-foreground/50"}`}
               aria-label="Toggle comments"
@@ -645,6 +637,28 @@ export default function DocsPage() {
           </div>
         )}
         </div>
+      </div>
+
+      {/* Floating keyboard shortcuts button */}
+      <div className="fixed bottom-5 right-5 z-50">
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <button
+              onClick={() => setShortcutsOpen((v) => !v)}
+              className={`flex items-center justify-center size-10 rounded-full border shadow-lg transition-all ${
+                shortcutsOpen
+                  ? "bg-foreground/10 border-foreground/20 text-foreground"
+                  : "bg-popover/90 border-border text-muted-foreground hover:text-foreground hover:border-ring/20"
+              }`}
+              aria-label="Keyboard shortcuts"
+            >
+              <Keyboard className="size-4" />
+            </button>
+          </TooltipTrigger>
+          <TooltipContent side="top" sideOffset={8}>
+            Shortcuts
+          </TooltipContent>
+        </Tooltip>
       </div>
 
       {/* Search dialog */}
