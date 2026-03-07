@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 const BILLY_BASE = "https://api.billysbilling.com/v2";
 const TOKEN = process.env.BILLY_ACCESS_TOKEN;
 
-const ALLOWED_ENDPOINTS = ["/organization", "/invoices", "/bills", "/salesTaxReturns", "/accounts", "/accountBalances", "/bankLines"];
+const ALLOWED_ENDPOINTS = ["/organization", "/invoices", "/bills", "/salesTaxReturns", "/accounts", "/accountBalances", "/postings"];
 
 async function billyFetch(path: string, revalidate = 300) {
   const res = await fetch(`${BILLY_BASE}${path}`, {
@@ -16,12 +16,23 @@ async function billyFetch(path: string, revalidate = 300) {
   return res.json();
 }
 
-async function getLatestBankBalance(accountId: string): Promise<number | null> {
-  const data = await billyFetch(
-    `/bankLines?accountId=${accountId}&pageSize=1&sortProperty=entryDate&sortDirection=DESC`
-  );
-  const lines = data.bankLines || [];
-  return lines.length > 0 ? lines[0].balance : null;
+async function fetchPostingsBalance(orgId: string, accountId: string): Promise<number> {
+  let balance = 0;
+  let page = 1;
+  let pageCount = 1;
+
+  while (page <= pageCount) {
+    const data = await billyFetch(
+      `/postings?organizationId=${orgId}&accountId=${accountId}&pageSize=1000&page=${page}`
+    );
+    pageCount = data.meta?.paging?.pageCount || 1;
+    for (const p of data.postings || []) {
+      balance += p.side === "debit" ? p.amount : -p.amount;
+    }
+    page++;
+  }
+
+  return balance;
 }
 
 async function handleAccountBalances(orgId: string) {
@@ -32,7 +43,7 @@ async function handleAccountBalances(orgId: string) {
 
   const balances = await Promise.all(
     bankAccounts.map(async (a: { id: string; name: string; accountNo: number }) => {
-      const balance = await getLatestBankBalance(a.id);
+      const balance = await fetchPostingsBalance(orgId, a.id);
       return { id: a.id, name: a.name, accountNo: a.accountNo, balance };
     })
   );

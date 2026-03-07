@@ -385,9 +385,12 @@ function VATCard({ vatReturns }: { vatReturns: VATReturn[] }) {
 function BankCard({ accounts }: { accounts: BankAccount[] }) {
   return (
     <div className="rounded-xl border border-foreground/[0.06] bg-foreground/[0.02] p-5 space-y-3">
-      <h3 className="text-sm font-semibold text-foreground/60 uppercase tracking-wider">
-        Bank Accounts
-      </h3>
+      <div className="flex items-center justify-between">
+        <h3 className="text-sm font-semibold text-foreground/60 uppercase tracking-wider">
+          Bank Accounts
+        </h3>
+        <span className="text-[10px] text-foreground/20">Accounting balance</span>
+      </div>
       {accounts.length === 0 ? (
         <div className="text-sm text-foreground/20">No bank accounts found</div>
       ) : (
