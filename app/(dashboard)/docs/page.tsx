@@ -44,11 +44,13 @@ import { common, createLowlight } from "lowlight";
 import { ResizableImage } from "@/components/docs/image-extension";
 import { Callout } from "@/components/docs/callout-extension";
 import { ToggleList } from "@/components/docs/toggle-extension";
+import { Embed } from "@/components/docs/embed-extension";
 import {
   SlashCommandExtension,
   SlashCommandMenu,
   useSlashCommand,
 } from "@/components/docs/slash-command";
+import { createMentionExtension } from "@/components/docs/mention-extension";
 import { EmojiPicker } from "@/components/docs/emoji-picker";
 import { TableToolbar } from "@/components/docs/table-toolbar";
 import { BubbleToolbar } from "@/components/docs/bubble-toolbar";
@@ -494,6 +496,24 @@ function CommentsPanel({
   );
 }
 
+// ─── Helpers ─────────────────────────────────────────────────────────────────
+
+function extractTextFromContent(content: Record<string, unknown>): string {
+  const texts: string[] = [];
+  function walk(node: Record<string, unknown>) {
+    if (node.type === "text" && typeof node.text === "string") {
+      texts.push(node.text);
+    }
+    if (Array.isArray(node.content)) {
+      for (const child of node.content) {
+        walk(child as Record<string, unknown>);
+      }
+    }
+  }
+  walk(content);
+  return texts.join(" ");
+}
+
 // ─── Search dialog ───────────────────────────────────────────────────────────
 
 function SearchDialog({
@@ -569,19 +589,28 @@ function SearchDialog({
           ) : results.length === 0 ? (
             <p className="text-xs text-foreground/25 text-center py-8">No pages found</p>
           ) : (
-            results.map((doc) => (
-              <button
-                key={doc.id}
-                onClick={() => {
-                  onSelect(doc.id);
-                  onOpenChange(false);
-                }}
-                className="flex items-center gap-2 w-full px-4 py-2.5 text-left hover:bg-foreground/[0.04] transition-colors"
-              >
-                <span className="text-base shrink-0">{doc.icon || "📄"}</span>
-                <span className="text-sm truncate">{doc.title || "Untitled"}</span>
-              </button>
-            ))
+            results.map((doc) => {
+              const preview = extractTextFromContent(doc.content);
+              const truncated = preview.length > 80 ? preview.slice(0, 80) + "\u2026" : preview;
+              return (
+                <button
+                  key={doc.id}
+                  onClick={() => {
+                    onSelect(doc.id);
+                    onOpenChange(false);
+                  }}
+                  className="flex items-start gap-2 w-full px-4 py-2.5 text-left hover:bg-foreground/[0.04] transition-colors"
+                >
+                  <span className="text-base shrink-0 mt-0.5">{doc.icon || "\ud83d\udcc4"}</span>
+                  <div className="flex-1 min-w-0">
+                    <span className="text-sm truncate block">{doc.title || "Untitled"}</span>
+                    {truncated && (
+                      <span className="text-xs text-foreground/30 truncate block">{truncated}</span>
+                    )}
+                  </div>
+                </button>
+              );
+            })
           )}
         </div>
       </DialogContent>
@@ -661,10 +690,13 @@ function DocEditor({
   const [title, setTitle] = useState(doc.title);
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const docIdRef = useRef(doc.id);
+  const docsRef = useRef(docs);
+  docsRef.current = docs;
   const fileInputRef = useRef<HTMLInputElement>(null);
   const coverInputRef = useRef<HTMLInputElement>(null);
   const [coverHovered, setCoverHovered] = useState(false);
   const [titleHovered, setTitleHovered] = useState(false);
+  const [wordCount, setWordCount] = useState({ words: 0, characters: 0 });
 
   // Reset when doc changes
   useEffect(() => {
@@ -755,12 +787,26 @@ function DocEditor({
         }),
         Callout,
         ToggleList,
+        Embed,
         SlashCommandExtension,
+        createMentionExtension(() => docsRef.current),
       ],
       content: Object.keys(doc.content).length > 0 ? doc.content : undefined,
       editorProps: {
         attributes: {
           class: "outline-none min-h-[calc(100vh-280px)]",
+        },
+        handleClick: (view, pos, event) => {
+          const target = event.target as HTMLElement;
+          const mentionEl = target.closest?.(".mention");
+          if (mentionEl) {
+            const docId = mentionEl.getAttribute("data-id");
+            if (docId) {
+              onNavigate(docId);
+              return true;
+            }
+          }
+          return false;
         },
         handleDrop: (view, event) => {
           const files = event.dataTransfer?.files;
@@ -828,12 +874,20 @@ function DocEditor({
           return true;
         },
       },
+      onCreate: ({ editor: e }) => {
+        const text = e.state.doc.textContent;
+        const words = text.split(/\s+/).filter(Boolean).length;
+        setWordCount({ words, characters: text.length });
+      },
       onUpdate: ({ editor: e }) => {
         const json = e.getJSON();
         if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
         saveTimerRef.current = setTimeout(() => {
           onUpdate(docIdRef.current, { content: json as Record<string, unknown> });
         }, 500);
+        const text = e.state.doc.textContent;
+        const words = text.split(/\s+/).filter(Boolean).length;
+        setWordCount({ words, characters: text.length });
       },
     },
     [doc.id]
@@ -970,6 +1024,12 @@ function DocEditor({
                 />
               </div>
             )}
+          </div>
+          {/* Word count */}
+          <div className="flex justify-end pt-8 pb-4">
+            <span className="text-[11px] text-foreground/20">
+              {wordCount.words} words &middot; {wordCount.characters} characters
+            </span>
           </div>
         </div>
       </div>

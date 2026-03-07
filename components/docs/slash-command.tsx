@@ -19,6 +19,7 @@ import {
   ImageIcon,
   Lightbulb,
   ChevronRight,
+  Globe,
 } from "lucide-react";
 
 // ─── Command definitions ─────────────────────────────────────────────────────
@@ -149,6 +150,15 @@ const COMMANDS: SlashCommandItem[] = [
       // Trigger file input (the DocEditor component handles this)
       const fileInput = document.querySelector<HTMLInputElement>('input[data-doc-image-upload]');
       if (fileInput) fileInput.click();
+    },
+  },
+  {
+    title: "Embed",
+    description: "Embed a URL (YouTube, Figma, etc.)",
+    icon: Globe,
+    command: (editor, range) => {
+      editor.chain().focus().deleteRange(range).run();
+      (editor.commands as any).setEmbed({ src: "" });
     },
   },
   {

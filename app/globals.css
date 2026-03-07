@@ -700,6 +700,193 @@
   padding-left: 0.25rem;
 }
 
+/* ─── Embed blocks ──────────────────────────────────────────────────────── */
+
+.docs-editor .tiptap .embed-wrapper {
+  margin: 0.75em 0;
+  border-radius: 0.5rem;
+  max-width: 100%;
+}
+
+/* Input state — URL input card */
+.docs-editor .tiptap .embed-input-card {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.625rem 0.75rem;
+  border: 1px dashed oklch(from var(--foreground) l c h / 0.15);
+  border-radius: 0.5rem;
+  background: oklch(from var(--foreground) l c h / 0.02);
+  transition: border-color 0.15s, background-color 0.15s;
+}
+
+.docs-editor .tiptap .embed-input-card:focus-within {
+  border-color: oklch(from var(--foreground) l c h / 0.25);
+  background: oklch(from var(--foreground) l c h / 0.03);
+}
+
+.docs-editor .tiptap .embed-input-icon {
+  color: oklch(from var(--foreground) l c h / 0.3);
+  flex-shrink: 0;
+}
+
+.docs-editor .tiptap .embed-url-input {
+  flex: 1;
+  min-width: 0;
+  background: transparent;
+  border: none;
+  outline: none;
+  font-size: 0.875rem;
+  color: var(--foreground);
+  font-family: inherit;
+}
+
+.docs-editor .tiptap .embed-url-input::placeholder {
+  color: oklch(from var(--foreground) l c h / 0.3);
+}
+
+/* Remove button — shared across states */
+.docs-editor .tiptap .embed-remove-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  border-radius: 0.25rem;
+  border: none;
+  background: transparent;
+  color: oklch(from var(--foreground) l c h / 0.3);
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background-color 0.15s, color 0.15s;
+}
+
+.docs-editor .tiptap .embed-remove-btn:hover {
+  background: oklch(from var(--foreground) l c h / 0.08);
+  color: oklch(from var(--foreground) l c h / 0.6);
+}
+
+/* Remove button overlay position (for iframes) */
+.docs-editor .tiptap .embed-remove-overlay {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  background: oklch(from var(--foreground) l c h / 0.06);
+  backdrop-filter: blur(4px);
+  opacity: 0;
+  transition: opacity 0.15s;
+  z-index: 2;
+}
+
+.docs-editor .tiptap .embed-iframe-container:hover .embed-remove-overlay {
+  opacity: 1;
+}
+
+/* Iframe container */
+.docs-editor .tiptap .embed-iframe-container {
+  position: relative;
+  border-radius: 0.5rem;
+  overflow: hidden;
+  border: 1px solid oklch(from var(--foreground) l c h / 0.08);
+}
+
+/* 16:9 aspect ratio for YouTube */
+.docs-editor .tiptap .embed-aspect-ratio {
+  position: relative;
+  width: 100%;
+  padding-bottom: 56.25%; /* 16:9 */
+}
+
+/* Figma gets a taller aspect ratio */
+.docs-editor .tiptap .embed-aspect-figma {
+  padding-bottom: 66.67%; /* ~3:2 */
+}
+
+.docs-editor .tiptap .embed-iframe {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  border: none;
+  border-radius: 0.5rem;
+}
+
+.docs-editor .tiptap .embed-error {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: oklch(from var(--foreground) l c h / 0.4);
+  font-size: 0.875rem;
+  background: oklch(from var(--foreground) l c h / 0.03);
+}
+
+/* Generic URL link card */
+.docs-editor .tiptap .embed-link-card {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.625rem 0.75rem;
+  border: 1px solid oklch(from var(--foreground) l c h / 0.1);
+  border-radius: 0.5rem;
+  background: oklch(from var(--foreground) l c h / 0.02);
+  transition: border-color 0.15s;
+}
+
+.docs-editor .tiptap .embed-link-card:hover {
+  border-color: oklch(from var(--foreground) l c h / 0.15);
+}
+
+.docs-editor .tiptap .embed-link-anchor {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex: 1;
+  min-width: 0;
+  text-decoration: none;
+  color: oklch(from var(--foreground) l c h / 0.7);
+  transition: color 0.15s;
+}
+
+.docs-editor .tiptap .embed-link-anchor:hover {
+  color: var(--foreground);
+}
+
+.docs-editor .tiptap .embed-link-icon {
+  flex-shrink: 0;
+  color: oklch(from var(--foreground) l c h / 0.35);
+}
+
+.docs-editor .tiptap .embed-link-url {
+  font-size: 0.8125rem;
+  font-family: var(--font-mono);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ─── Inline mentions (page references) ────────────────────────────────── */
+
+.docs-editor .tiptap .mention {
+  background: oklch(from var(--foreground) l c h / 0.06);
+  color: var(--primary);
+  padding: 0.05em 0.35em;
+  border-radius: 0.25rem;
+  font-size: 0.9375em;
+  cursor: pointer;
+  transition: background-color 0.15s;
+  text-decoration: none;
+}
+
+.docs-editor .tiptap .mention:hover {
+  background: oklch(from var(--foreground) l c h / 0.1);
+}
+
 /* Card completion glow — color driven by --glow RGB custom property */
 @keyframes card-complete-glow {
   0% {

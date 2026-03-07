@@ -145,7 +145,7 @@ export async function searchDocs(
     .from('docs')
     .select('*')
     .eq('project_id', projectId)
-    .or(`title.ilike.${q}`)
+    .or(`title.ilike.${q},content::text.ilike.${q}`)
     .order('updated_at', { ascending: false })
     .limit(20)
 
