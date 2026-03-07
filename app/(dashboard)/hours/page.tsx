@@ -57,6 +57,7 @@ import {
 import { Calendar } from "@/components/ui/calendar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { ClientGroupDialog } from "@/components/client-group-dialog";
 import {
   Plus,
   MoreHorizontal,
@@ -683,7 +684,10 @@ function NewGroupDialog({
   const [exchangeRate, setExchangeRate] = useState("1");
   const [fetchingRate, setFetchingRate] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [newClientOpen, setNewClientOpen] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  const selectedClient = clientGroups.find((c) => c.id === clientId);
 
   useEffect(() => {
     if (open) {
@@ -729,6 +733,7 @@ function NewGroupDialog({
   };
 
   return (
+    <>
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[400px]">
         <DialogHeader>
@@ -737,18 +742,71 @@ function NewGroupDialog({
         <form onSubmit={handleSubmit} className="space-y-4 pt-2">
           <div className="space-y-1.5">
             <label className="text-xs text-foreground/40">Client</label>
-            <select
-              value={clientId}
-              onChange={(e) => setClientId(e.target.value)}
-              className="w-full rounded-md border border-foreground/[0.08] bg-foreground/[0.04] px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-foreground/20"
-            >
-              <option value="">Select client...</option>
-              {clientGroups.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.name}
-                </option>
-              ))}
-            </select>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button
+                  type="button"
+                  className="flex items-center gap-2 w-full rounded-md border border-foreground/[0.08] bg-foreground/[0.04] px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-foreground/20 text-left"
+                >
+                  {selectedClient ? (
+                    <>
+                      {selectedClient.logo_url ? (
+                        <img
+                          src={selectedClient.logo_url}
+                          alt=""
+                          className="size-5 rounded-md object-cover bg-foreground/5 shrink-0"
+                        />
+                      ) : (
+                        <div className="size-5 rounded-md bg-foreground/[0.08] flex items-center justify-center shrink-0">
+                          <span className="text-[10px] font-bold text-foreground/40">
+                            {selectedClient.name.charAt(0).toUpperCase()}
+                          </span>
+                        </div>
+                      )}
+                      <span className="flex-1 truncate">{selectedClient.name}</span>
+                    </>
+                  ) : (
+                    <span className="flex-1 text-foreground/30">Select client...</span>
+                  )}
+                  <ChevronRight className="size-3.5 text-foreground/25 rotate-90 shrink-0" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start" className="min-w-[240px]">
+                {clientGroups.map((c) => (
+                  <DropdownMenuItem
+                    key={c.id}
+                    onClick={() => setClientId(c.id)}
+                    className="flex items-center gap-2"
+                  >
+                    {c.logo_url ? (
+                      <img
+                        src={c.logo_url}
+                        alt=""
+                        className="size-5 rounded-md object-cover bg-foreground/5 shrink-0"
+                      />
+                    ) : (
+                      <div className="size-5 rounded-md bg-foreground/[0.08] flex items-center justify-center shrink-0">
+                        <span className="text-[10px] font-bold text-foreground/40">
+                          {c.name.charAt(0).toUpperCase()}
+                        </span>
+                      </div>
+                    )}
+                    <span className="flex-1 truncate">{c.name}</span>
+                    {c.id === clientId && <Check className="size-3.5 text-foreground/50 shrink-0" />}
+                  </DropdownMenuItem>
+                ))}
+                {clientGroups.length > 0 && <DropdownMenuSeparator />}
+                <DropdownMenuItem
+                  onClick={() => setNewClientOpen(true)}
+                  className="flex items-center gap-2 text-foreground/50"
+                >
+                  <div className="size-5 rounded-md border border-dashed border-foreground/15 flex items-center justify-center shrink-0">
+                    <Plus className="size-3 text-foreground/30" />
+                  </div>
+                  New client...
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
           <div className="space-y-1.5">
             <label className="text-xs text-foreground/40">Group name</label>
@@ -821,6 +879,13 @@ function NewGroupDialog({
         </form>
       </DialogContent>
     </Dialog>
+
+      <ClientGroupDialog
+        open={newClientOpen}
+        onOpenChange={setNewClientOpen}
+        onCreated={(groupId) => setClientId(groupId)}
+      />
+    </>
   );
 }
 
