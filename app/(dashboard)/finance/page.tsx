@@ -278,51 +278,52 @@ function MonthlyChart({ months }: { months: MonthData[] }) {
           <BarChart data={chartData} margin={{ top: 10, right: 0, left: 0, bottom: 0 }}>
             <CartesianGrid
               strokeDasharray="3 3"
-              stroke="rgba(255,255,255,0.04)"
+              stroke="hsl(var(--border) / 0.3)"
               vertical={false}
             />
             <XAxis
               dataKey="month"
-              tick={{ fill: "rgba(255,255,255,0.3)", fontSize: 11 }}
+              tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 11 }}
               axisLine={false}
               tickLine={false}
             />
             <YAxis
-              tick={{ fill: "rgba(255,255,255,0.3)", fontSize: 11 }}
+              tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 11 }}
               axisLine={false}
               tickLine={false}
               tickFormatter={(v) => formatCompact(Math.abs(v))}
             />
             <RechartsTooltip
               contentStyle={{
-                backgroundColor: "rgba(2,6,23,0.95)",
-                border: "1px solid rgba(255,255,255,0.08)",
+                backgroundColor: "hsl(var(--popover))",
+                border: "1px solid hsl(var(--border))",
                 borderRadius: 8,
                 fontSize: 12,
+                color: "hsl(var(--popover-foreground))",
               }}
               formatter={(value) => formatDKK(Math.abs(Number(value)))}
-              labelStyle={{ color: "rgba(255,255,255,0.5)" }}
+              labelStyle={{ color: "hsl(var(--muted-foreground))" }}
             />
             <ReferenceLine
               y={MONTHLY_TARGET}
-              stroke="rgba(255,255,255,0.2)"
+              stroke="hsl(var(--muted-foreground) / 0.4)"
               strokeDasharray="6 4"
               label={{
                 value: "125K target",
                 position: "right",
-                fill: "rgba(255,255,255,0.25)",
+                fill: "hsl(var(--muted-foreground) / 0.5)",
                 fontSize: 10,
               }}
             />
-            <ReferenceLine y={0} stroke="rgba(255,255,255,0.08)" />
+            <ReferenceLine y={0} stroke="hsl(var(--border))" />
             <Bar dataKey="revenue" radius={[4, 4, 0, 0]} maxBarSize={32}>
               {chartData.map((_, i) => (
-                <Cell key={i} fill="rgba(34,197,94,0.6)" />
+                <Cell key={i} fill="hsl(var(--chart-2))" />
               ))}
             </Bar>
             <Bar dataKey="expenses" radius={[0, 0, 4, 4]} maxBarSize={32}>
               {chartData.map((_, i) => (
-                <Cell key={i} fill="rgba(239,68,68,0.5)" />
+                <Cell key={i} fill="hsl(var(--chart-5))" />
               ))}
             </Bar>
           </BarChart>
