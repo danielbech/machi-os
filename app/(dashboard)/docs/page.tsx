@@ -15,6 +15,7 @@ import {
   createDoc,
   updateDoc,
   deleteDoc,
+  duplicateDoc,
   reorderDocs,
   searchDocs,
   loadDocComments,
@@ -30,6 +31,9 @@ import Placeholder from "@tiptap/extension-placeholder";
 import TaskList from "@tiptap/extension-task-list";
 import TaskItem from "@tiptap/extension-task-item";
 import Underline from "@tiptap/extension-underline";
+import { TextStyle } from "@tiptap/extension-text-style";
+import Color from "@tiptap/extension-color";
+import Highlight from "@tiptap/extension-highlight";
 import { Table } from "@tiptap/extension-table";
 import { TableRow } from "@tiptap/extension-table-row";
 import { TableCell } from "@tiptap/extension-table-cell";
@@ -88,11 +92,13 @@ import {
   MoreHorizontal,
   Trash2,
   FilePlus,
+  Copy,
   Search,
   MessageSquare,
   Send,
   X,
   GripVertical,
+  ImagePlus,
 } from "lucide-react";
 
 // ─── Lowlight (syntax highlighting) ──────────────────────────────────────────
@@ -119,6 +125,18 @@ const CodeBlockWithLanguage = CodeBlockLowlight.extend({
     ];
   },
 });
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+function getRelativeTime(dateStr: string): string {
+  const now = Date.now();
+  const date = new Date(dateStr).getTime();
+  const diffSec = Math.floor((now - date) / 1000);
+  if (diffSec < 60) return "just now";
+  if (diffSec < 3600) return `${Math.floor(diffSec / 60)} min ago`;
+  if (diffSec < 86400) return `${Math.floor(diffSec / 3600)} hours ago`;
+  return new Date(dateStr).toLocaleDateString("en-US", { month: "short", day: "numeric" });
+}
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -200,6 +218,7 @@ function SortableTreeItem({
   activeId: selectedId,
   onSelect,
   onCreateChild,
+  onDuplicate,
   onDelete,
   onToggle,
   expanded,
@@ -209,6 +228,7 @@ function SortableTreeItem({
   activeId: string | null;
   onSelect: (id: string) => void;
   onCreateChild: (parentId: string) => void;
+  onDuplicate: (id: string) => void;
   onDelete: (id: string) => void;
   onToggle: (id: string) => void;
   expanded: boolean;
@@ -300,6 +320,10 @@ function SortableTreeItem({
               <DropdownMenuItem onClick={() => onCreateChild(item.id)}>
                 <FilePlus className="size-4" />
                 Add sub-page
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => onDuplicate(item.id)}>
+                <Copy className="size-4" />
+                Duplicate
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem
@@ -565,17 +589,70 @@ function SearchDialog({
   );
 }
 
+// ─── Breadcrumbs ──────────────────────────────────────────────────────────────
+
+function Breadcrumbs({
+  docs,
+  activeDocId,
+  onNavigate,
+}: {
+  docs: Doc[];
+  activeDocId: string;
+  onNavigate: (docId: string) => void;
+}) {
+  const ancestors = useMemo(() => {
+    const chain: Doc[] = [];
+    let current = docs.find((d) => d.id === activeDocId);
+    if (!current) return chain;
+    // Walk up the parent chain (exclude the current doc itself — it's shown as the last item)
+    while (current?.parent_id) {
+      const parent = docs.find((d) => d.id === current!.parent_id);
+      if (!parent) break;
+      chain.unshift(parent);
+      current = parent;
+    }
+    return chain;
+  }, [docs, activeDocId]);
+
+  const currentDoc = docs.find((d) => d.id === activeDocId);
+  if (!currentDoc || ancestors.length === 0) return null;
+
+  return (
+    <div className="flex items-center gap-1 text-xs text-foreground/40 mb-2 flex-wrap">
+      {ancestors.map((ancestor, i) => (
+        <span key={ancestor.id} className="flex items-center gap-1">
+          {i > 0 && <ChevronRight className="size-3 text-foreground/20 shrink-0" />}
+          <button
+            onClick={() => onNavigate(ancestor.id)}
+            className="hover:text-foreground/60 transition-colors truncate max-w-[150px]"
+          >
+            {ancestor.icon ? `${ancestor.icon} ` : ""}{ancestor.title || "Untitled"}
+          </button>
+        </span>
+      ))}
+      <ChevronRight className="size-3 text-foreground/20 shrink-0" />
+      <span className="text-foreground/50 truncate max-w-[150px]">
+        {currentDoc.icon ? `${currentDoc.icon} ` : ""}{currentDoc.title || "Untitled"}
+      </span>
+    </div>
+  );
+}
+
 // ─── Editor component ────────────────────────────────────────────────────────
 
 function DocEditor({
   doc,
+  docs,
   onUpdate,
+  onNavigate,
   projectId,
   userId,
   showComments,
 }: {
   doc: Doc;
-  onUpdate: (id: string, updates: { title?: string; content?: Record<string, unknown>; icon?: string | null }) => void;
+  docs: Doc[];
+  onUpdate: (id: string, updates: { title?: string; content?: Record<string, unknown>; icon?: string | null; cover_image?: string | null }) => void;
+  onNavigate: (docId: string) => void;
   projectId: string;
   userId: string;
   showComments: boolean;
@@ -585,11 +662,16 @@ function DocEditor({
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const docIdRef = useRef(doc.id);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const coverInputRef = useRef<HTMLInputElement>(null);
+  const [coverHovered, setCoverHovered] = useState(false);
+  const [titleHovered, setTitleHovered] = useState(false);
 
   // Reset when doc changes
   useEffect(() => {
     setTitle(doc.title);
     docIdRef.current = doc.id;
+    setCoverHovered(false);
+    setTitleHovered(false);
   }, [doc.id, doc.title]);
 
   // Auto-resize title textarea
@@ -628,6 +710,19 @@ function DocEditor({
     []
   );
 
+  const handleCoverUpload = useCallback(
+    async (file: File) => {
+      try {
+        const url = await uploadDocImage(file, docIdRef.current);
+        onUpdate(docIdRef.current, { cover_image: url });
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : "Unknown error";
+        toast.error(`Cover upload failed: ${msg}`);
+      }
+    },
+    [onUpdate]
+  );
+
   const editor = useEditor(
     {
       extensions: [
@@ -648,6 +743,9 @@ function DocEditor({
         TaskList,
         TaskItem.configure({ nested: true }),
         Underline,
+        TextStyle,
+        Color,
+        Highlight.configure({ multicolor: true }),
         Table.configure({ resizable: false, allowTableNodeSelection: true }),
         TableRow,
         TableCell,
@@ -746,9 +844,56 @@ function DocEditor({
   return (
     <div className="flex h-full">
       <div className="flex-1 overflow-y-auto">
+        {/* Cover image */}
+        {doc.cover_image ? (
+          <div
+            className="relative w-full h-[200px] group/cover"
+            onMouseEnter={() => setCoverHovered(true)}
+            onMouseLeave={() => setCoverHovered(false)}
+          >
+            <img
+              src={doc.cover_image}
+              alt=""
+              className="w-full h-full object-cover"
+            />
+            <div className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-background/80 to-transparent" />
+            {coverHovered && (
+              <div className="absolute top-3 right-3 flex items-center gap-1.5">
+                <button
+                  onClick={() => coverInputRef.current?.click()}
+                  className="px-2.5 py-1 text-xs font-medium rounded-md bg-foreground/10 backdrop-blur-sm text-foreground/70 hover:text-foreground hover:bg-foreground/20 transition-colors"
+                >
+                  Change cover
+                </button>
+                <button
+                  onClick={() => onUpdate(doc.id, { cover_image: null })}
+                  className="px-2.5 py-1 text-xs font-medium rounded-md bg-foreground/10 backdrop-blur-sm text-foreground/70 hover:text-foreground hover:bg-foreground/20 transition-colors"
+                >
+                  Remove cover
+                </button>
+              </div>
+            )}
+          </div>
+        ) : null}
         <div className="max-w-3xl mx-auto px-4 md:px-12 py-10">
+          {/* Breadcrumbs */}
+          <Breadcrumbs docs={docs} activeDocId={doc.id} onNavigate={onNavigate} />
           {/* Icon + Title */}
-          <div className="mb-4">
+          <div
+            className="mb-4 relative"
+            onMouseEnter={() => setTitleHovered(true)}
+            onMouseLeave={() => setTitleHovered(false)}
+          >
+            {/* Add cover button — shown on hover when no cover image */}
+            {!doc.cover_image && titleHovered && (
+              <button
+                onClick={() => coverInputRef.current?.click()}
+                className="absolute -top-7 left-0 flex items-center gap-1 px-2 py-0.5 text-xs text-foreground/30 hover:text-foreground/50 hover:bg-foreground/[0.04] rounded transition-colors"
+              >
+                <ImagePlus className="size-3.5" />
+                Add cover
+              </button>
+            )}
             <EmojiPicker
               value={doc.icon || undefined}
               onChange={(emoji) => onUpdate(doc.id, { icon: emoji || null })}
@@ -774,6 +919,11 @@ function DocEditor({
               className="w-full text-4xl font-bold bg-transparent outline-none resize-none placeholder:text-foreground/15 leading-tight"
               rows={1}
             />
+            {doc.updated_at !== doc.created_at && (
+              <p className="text-[11px] text-foreground/25 mt-1">
+                Last edited {getRelativeTime(doc.updated_at)}
+              </p>
+            )}
           </div>
           <input
             ref={fileInputRef}
@@ -788,6 +938,18 @@ function DocEditor({
               if (url) {
                 editor.chain().focus().setImage({ src: url }).run();
               }
+              e.target.value = "";
+            }}
+          />
+          <input
+            ref={coverInputRef}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={async (e) => {
+              const file = e.target.files?.[0];
+              if (!file) return;
+              await handleCoverUpload(file);
               e.target.value = "";
             }}
           />
@@ -910,11 +1072,11 @@ export default function DocsPage() {
   const handleUpdate = useCallback(
     async (
       id: string,
-      updates: { title?: string; content?: Record<string, unknown>; icon?: string | null }
+      updates: { title?: string; content?: Record<string, unknown>; icon?: string | null; cover_image?: string | null }
     ) => {
       await updateDoc(id, updates);
       setDocs((prev) =>
-        prev.map((d) => (d.id === id ? { ...d, ...updates } : d))
+        prev.map((d) => (d.id === id ? { ...d, ...updates, updated_at: new Date().toISOString() } : d))
       );
     },
     []
@@ -949,6 +1111,20 @@ export default function DocsPage() {
       setDeleteConfirm(null);
     },
     [docs, activeDocId]
+  );
+
+  const handleDuplicate = useCallback(
+    async (id: string) => {
+      if (!user) return;
+      try {
+        const newDoc = await duplicateDoc(id, user.id);
+        setDocs((prev) => [...prev, newDoc]);
+        setActiveDocId(newDoc.id);
+      } catch {
+        toast.error("Failed to duplicate page");
+      }
+    },
+    [user]
   );
 
   // Compute drop indicator based on pointer position relative to the over item
@@ -1179,6 +1355,7 @@ export default function DocsPage() {
                     activeId={activeDocId}
                     onSelect={setActiveDocId}
                     onCreateChild={(parentId) => handleCreate(parentId)}
+                    onDuplicate={handleDuplicate}
                     onDelete={(id) => setDeleteConfirm(id)}
                     onToggle={toggleExpanded}
                     expanded={expandedIds.has(item.id)}
@@ -1229,7 +1406,9 @@ export default function DocsPage() {
           <DocEditor
             key={activeDoc.id}
             doc={activeDoc}
+            docs={docs}
             onUpdate={handleUpdate}
+            onNavigate={setActiveDocId}
             projectId={activeProjectId!}
             userId={user!.id}
             showComments={showComments}

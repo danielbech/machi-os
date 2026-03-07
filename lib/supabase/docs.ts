@@ -48,7 +48,7 @@ export async function createDoc(
 
 export async function updateDoc(
   docId: string,
-  updates: { title?: string; content?: Record<string, unknown>; icon?: string | null; parent_id?: string | null; sort_order?: number },
+  updates: { title?: string; content?: Record<string, unknown>; icon?: string | null; cover_image?: string | null; parent_id?: string | null; sort_order?: number },
 ): Promise<void> {
   const supabase = createClient()
   const { error } = await supabase
@@ -60,6 +60,47 @@ export async function updateDoc(
     console.error('Error updating doc:', error)
     throw error
   }
+}
+
+export async function duplicateDoc(docId: string, userId: string): Promise<Doc> {
+  const supabase = createClient()
+
+  // 1. Load the original doc
+  const { data: original, error: loadError } = await supabase
+    .from('docs')
+    .select('*')
+    .eq('id', docId)
+    .single()
+
+  if (loadError || !original) {
+    console.error('Error loading doc for duplication:', loadError)
+    throw loadError || new Error('Doc not found')
+  }
+
+  // 2. Create a new doc with same project_id, parent_id, title + " (copy)", content, icon
+  // 3. Set sort_order to original + 1
+  const { data, error } = await supabase
+    .from('docs')
+    .insert({
+      project_id: original.project_id,
+      created_by: userId,
+      parent_id: original.parent_id,
+      title: (original.title || 'Untitled') + ' (copy)',
+      content: original.content || {},
+      icon: original.icon || null,
+      cover_image: original.cover_image || null,
+      sort_order: (original.sort_order ?? 0) + 1,
+    })
+    .select()
+    .single()
+
+  if (error) {
+    console.error('Error duplicating doc:', error)
+    throw error
+  }
+
+  // 4. Return the new doc
+  return mapDoc(data)
 }
 
 export async function deleteDoc(docId: string): Promise<void> {
@@ -198,6 +239,7 @@ function mapDoc(row: any): Doc {
     title: row.title,
     content: row.content || {},
     icon: row.icon || null,
+    cover_image: row.cover_image || null,
     sort_order: row.sort_order ?? 0,
     created_at: row.created_at,
     updated_at: row.updated_at,

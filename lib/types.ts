@@ -176,6 +176,7 @@ export interface Doc {
   title: string;
   content: Record<string, unknown>;
   icon: string | null;
+  cover_image: string | null;
   sort_order: number;
   created_at: string;
   updated_at: string;
