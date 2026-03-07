@@ -14,7 +14,26 @@ import {
   createHourEntry,
   updateHourEntry,
   deleteHourEntry,
+  reorderInvoiceGroups,
 } from "@/lib/supabase/hours";
+import {
+  DndContext,
+  closestCenter,
+  MouseSensor,
+  TouchSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+  type DraggableAttributes,
+} from "@dnd-kit/core";
+import {
+  SortableContext,
+  useSortable,
+  arrayMove,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
+import { restrictToVerticalAxis } from "@dnd-kit/modifiers";
+import { CSS } from "@dnd-kit/utilities";
 import {
   parseTimeInput,
   formatDuration,
@@ -71,6 +90,7 @@ import {
   TrendingUp,
   Receipt,
   ChevronRight,
+  GripVertical,
 } from "lucide-react";
 
 // ─── Summary Cards ──────────────────────────────────────────────────────────
@@ -330,6 +350,39 @@ function InlineDatePicker({
   );
 }
 
+// ─── Sortable wrapper ────────────────────────────────────────────────────────
+
+function SortableGroupItem({
+  id,
+  children,
+}: {
+  id: string;
+  children: (dragHandleProps: { listeners: ReturnType<typeof useSortable>["listeners"]; attributes: DraggableAttributes }) => React.ReactNode;
+}) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : undefined,
+    position: "relative" as const,
+    zIndex: isDragging ? 10 : undefined,
+  };
+
+  return (
+    <div ref={setNodeRef} style={style}>
+      {children({ listeners, attributes })}
+    </div>
+  );
+}
+
 // ─── Invoice Group Section ──────────────────────────────────────────────────
 
 function InvoiceGroupSection({
@@ -341,6 +394,7 @@ function InvoiceGroupSection({
   onCreateEntry,
   onUpdateEntry,
   onDeleteEntry,
+  dragHandleProps,
 }: {
   group: InvoiceGroup;
   entries: HourEntry[];
@@ -350,6 +404,7 @@ function InvoiceGroupSection({
   onCreateEntry: (groupId: string) => Promise<void>;
   onUpdateEntry: (id: string, updates: Parameters<typeof updateHourEntry>[1]) => Promise<void>;
   onDeleteEntry: (id: string) => Promise<void>;
+  dragHandleProps?: { listeners: ReturnType<typeof useSortable>["listeners"]; attributes: DraggableAttributes };
 }) {
   const isClosed = group.status === "closed";
   const totalMinutes = entries.reduce((s, e) => s + e.duration, 0);
@@ -391,13 +446,25 @@ function InvoiceGroupSection({
     >
       {/* Group header */}
       <div className="flex items-center gap-3 px-4 py-3 bg-foreground/[0.02]">
-        <button
-          onClick={() => setCollapsed((c) => !c)}
-          className="shrink-0 text-foreground/30 hover:text-foreground/50 transition-colors"
-          aria-label={collapsed ? "Expand group" : "Collapse group"}
-        >
-          <ChevronRight className={`size-4 transition-transform duration-150 ${collapsed ? "" : "rotate-90"}`} />
-        </button>
+        <div className="flex items-center gap-1 shrink-0">
+          {dragHandleProps && (
+            <button
+              className="cursor-grab active:cursor-grabbing text-foreground/15 hover:text-foreground/30 transition-colors touch-none"
+              aria-label="Drag to reorder"
+              {...dragHandleProps.listeners}
+              {...dragHandleProps.attributes}
+            >
+              <GripVertical className="size-4" />
+            </button>
+          )}
+          <button
+            onClick={() => setCollapsed((c) => !c)}
+            className="text-foreground/30 hover:text-foreground/50 transition-colors"
+            aria-label={collapsed ? "Expand group" : "Collapse group"}
+          >
+            <ChevronRight className={`size-4 transition-transform duration-150 ${collapsed ? "" : "rotate-90"}`} />
+          </button>
+        </div>
         {clientGroup && (
           clientGroup.logo_url ? (
             <img
@@ -1039,6 +1106,31 @@ export default function HoursPage() {
   const activeGroups = filteredGroups.filter((g) => g.status === "active");
   const closedGroups = filteredGroups.filter((g) => g.status === "closed");
 
+  // Drag-and-drop reordering
+  const sensors = useSensors(
+    useSensor(MouseSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 200, tolerance: 5 } }),
+  );
+
+  const handleDragEnd = useCallback(
+    async (event: DragEndEvent) => {
+      const { active, over } = event;
+      if (!over || active.id === over.id) return;
+
+      const oldIndex = groups.findIndex((g) => g.id === active.id);
+      const newIndex = groups.findIndex((g) => g.id === over.id);
+      if (oldIndex === -1 || newIndex === -1) return;
+
+      const reordered = arrayMove(groups, oldIndex, newIndex);
+      setGroups(reordered);
+
+      await reorderInvoiceGroups(
+        reordered.map((g, i) => ({ id: g.id, sort_order: i }))
+      );
+    },
+    [groups]
+  );
+
   // Loading skeleton
   if (loading) {
     return (
@@ -1105,43 +1197,63 @@ export default function HoursPage() {
           </div>
         </div>
       ) : (
-        <div className="space-y-4">
-          {activeGroups.map((group) => (
-            <InvoiceGroupSection
-              key={group.id}
-              group={group}
-              entries={entries.filter((e) => e.invoice_group_id === group.id)}
-              clientGroup={clientGroups.find((c) => c.id === group.client_id)}
-              onUpdateGroup={handleUpdateGroup}
-              onDeleteGroup={handleDeleteGroup}
-              onCreateEntry={handleCreateEntry}
-              onUpdateEntry={handleUpdateEntry}
-              onDeleteEntry={handleDeleteEntry}
-            />
-          ))}
-          {closedGroups.length > 0 && activeGroups.length > 0 && (
-            <div className="flex items-center gap-3 pt-4">
-              <div className="h-px flex-1 bg-foreground/[0.06]" />
-              <span className="text-xs text-foreground/25 font-medium uppercase tracking-wide">
-                Closed
-              </span>
-              <div className="h-px flex-1 bg-foreground/[0.06]" />
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCenter}
+          modifiers={[restrictToVerticalAxis]}
+          onDragEnd={handleDragEnd}
+        >
+          <SortableContext
+            items={filteredGroups.map((g) => g.id)}
+            strategy={verticalListSortingStrategy}
+          >
+            <div className="space-y-4">
+              {activeGroups.map((group) => (
+                <SortableGroupItem key={group.id} id={group.id}>
+                  {(dragHandleProps) => (
+                    <InvoiceGroupSection
+                      group={group}
+                      entries={entries.filter((e) => e.invoice_group_id === group.id)}
+                      clientGroup={clientGroups.find((c) => c.id === group.client_id)}
+                      onUpdateGroup={handleUpdateGroup}
+                      onDeleteGroup={handleDeleteGroup}
+                      onCreateEntry={handleCreateEntry}
+                      onUpdateEntry={handleUpdateEntry}
+                      onDeleteEntry={handleDeleteEntry}
+                      dragHandleProps={dragHandleProps}
+                    />
+                  )}
+                </SortableGroupItem>
+              ))}
+              {closedGroups.length > 0 && activeGroups.length > 0 && (
+                <div className="flex items-center gap-3 pt-4">
+                  <div className="h-px flex-1 bg-foreground/[0.06]" />
+                  <span className="text-xs text-foreground/25 font-medium uppercase tracking-wide">
+                    Closed
+                  </span>
+                  <div className="h-px flex-1 bg-foreground/[0.06]" />
+                </div>
+              )}
+              {closedGroups.map((group) => (
+                <SortableGroupItem key={group.id} id={group.id}>
+                  {(dragHandleProps) => (
+                    <InvoiceGroupSection
+                      group={group}
+                      entries={entries.filter((e) => e.invoice_group_id === group.id)}
+                      clientGroup={clientGroups.find((c) => c.id === group.client_id)}
+                      onUpdateGroup={handleUpdateGroup}
+                      onDeleteGroup={handleDeleteGroup}
+                      onCreateEntry={handleCreateEntry}
+                      onUpdateEntry={handleUpdateEntry}
+                      onDeleteEntry={handleDeleteEntry}
+                      dragHandleProps={dragHandleProps}
+                    />
+                  )}
+                </SortableGroupItem>
+              ))}
             </div>
-          )}
-          {closedGroups.map((group) => (
-            <InvoiceGroupSection
-              key={group.id}
-              group={group}
-              entries={entries.filter((e) => e.invoice_group_id === group.id)}
-              clientGroup={clientGroups.find((c) => c.id === group.client_id)}
-              onUpdateGroup={handleUpdateGroup}
-              onDeleteGroup={handleDeleteGroup}
-              onCreateEntry={handleCreateEntry}
-              onUpdateEntry={handleUpdateEntry}
-              onDeleteEntry={handleDeleteEntry}
-            />
-          ))}
-        </div>
+          </SortableContext>
+        </DndContext>
       )}
 
       <NewGroupDialog

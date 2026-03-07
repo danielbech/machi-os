@@ -9,7 +9,7 @@ export async function loadInvoiceGroups(projectId: string): Promise<InvoiceGroup
     .from('invoice_groups')
     .select('*')
     .eq('project_id', projectId)
-    .order('created_at', { ascending: false })
+    .order('sort_order', { ascending: true })
 
   if (error) {
     console.error('Error loading invoice groups:', error)
@@ -160,6 +160,24 @@ export async function deleteHourEntry(entryId: string): Promise<void> {
   }
 }
 
+export async function reorderInvoiceGroups(
+  updates: { id: string; sort_order: number }[],
+): Promise<void> {
+  const supabase = createClient()
+  const promises = updates.map((u) =>
+    supabase
+      .from('invoice_groups')
+      .update({ sort_order: u.sort_order })
+      .eq('id', u.id)
+  )
+  const results = await Promise.all(promises)
+  const failed = results.find((r) => r.error)
+  if (failed?.error) {
+    console.error('Error reordering invoice groups:', failed.error)
+    throw failed.error
+  }
+}
+
 // ─── Shared view (server-side, bypasses RLS) ────────────────────────────────
 
 export async function loadInvoiceGroupByShareToken(token: string): Promise<{
@@ -214,6 +232,7 @@ function mapInvoiceGroup(row: any): InvoiceGroup {
     currency: row.currency || 'DKK',
     exchange_rate: Number(row.exchange_rate) || 1,
     status: row.status,
+    sort_order: row.sort_order ?? 0,
     share_token: row.share_token,
     created_at: row.created_at,
     updated_at: row.updated_at,
