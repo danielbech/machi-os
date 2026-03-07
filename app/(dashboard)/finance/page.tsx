@@ -14,7 +14,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Plus, ChevronRight, Trash2 } from "lucide-react";
 import { useProjectData } from "@/lib/project-data-context";
-import type { Client, ClientStatusDef } from "@/lib/types";
+import type { Client, ClientStatusDef, ClientGroup } from "@/lib/types";
 import { CLIENT_DOT_COLORS, getBadgeColorStyle } from "@/lib/colors";
 import { ClientIcon } from "@/components/client-icon";
 import {
@@ -405,8 +405,8 @@ function MonthlyChart({ months }: { months: MonthData[] }) {
 }
 
 
-function ProjectLogo({ client }: { client: Client | { name: string; color: string; logo_url?: string; icon?: string } }) {
-  const logoUrl = client.logo_url;
+function ProjectLogo({ client, groupLogoUrl }: { client: Client | { name: string; color: string; logo_url?: string; icon?: string }; groupLogoUrl?: string }) {
+  const logoUrl = groupLogoUrl || client.logo_url;
   if (logoUrl) {
     return (
       <img
@@ -510,8 +510,9 @@ function InlineMonthPicker({ value, onSave }: { value: string; onSave: (v: strin
   );
 }
 
-function ClientPicker({ clients, selectedId, onSelect }: { clients: Client[]; selectedId?: string; onSelect: (c: Client) => void }) {
+function ClientPicker({ clients, clientGroups, selectedId, onSelect }: { clients: Client[]; clientGroups: ClientGroup[]; selectedId?: string; onSelect: (c: Client) => void }) {
   const selected = clients.find((c) => c.id === selectedId);
+  const getGroupLogo = (c: Client) => c.client_group_id ? clientGroups.find((g) => g.id === c.client_group_id)?.logo_url : undefined;
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -521,7 +522,7 @@ function ClientPicker({ clients, selectedId, onSelect }: { clients: Client[]; se
         >
           {selected ? (
             <>
-              <ProjectLogo client={selected} />
+              <ProjectLogo client={selected} groupLogoUrl={getGroupLogo(selected)} />
               <span className="flex-1 truncate">{selected.name}</span>
             </>
           ) : (
@@ -537,7 +538,7 @@ function ClientPicker({ clients, selectedId, onSelect }: { clients: Client[]; se
             onClick={() => onSelect(c)}
             className="flex items-center gap-2"
           >
-            <ProjectLogo client={c} />
+            <ProjectLogo client={c} groupLogoUrl={getGroupLogo(c)} />
             <span className="flex-1 truncate">{c.name}</span>
           </DropdownMenuItem>
         ))}
@@ -549,13 +550,14 @@ function ClientPicker({ clients, selectedId, onSelect }: { clients: Client[]; se
   );
 }
 
-function Pipeline({ items, onAdd, onUpdate, onRemove, total, clients, clientStatuses }: {
+function Pipeline({ items, onAdd, onUpdate, onRemove, total, clients, clientGroups, clientStatuses }: {
   items: PipelineItem[];
   onAdd: (item: Omit<PipelineItem, "id">) => void;
   onUpdate: (id: string, changes: Partial<PipelineItem>) => void;
   onRemove: (id: string) => void;
   total: number;
   clients: Client[];
+  clientGroups: ClientGroup[];
   clientStatuses: ClientStatusDef[];
 }) {
   const [addingClient, setAddingClient] = useState<Client | null>(null);
@@ -623,6 +625,7 @@ function Pipeline({ items, onAdd, onUpdate, onRemove, total, clients, clientStat
                 <TableCell>
                   <ClientPicker
                     clients={clients}
+                    clientGroups={clientGroups}
                     selectedId={item.clientId}
                     onSelect={(c) => onUpdate(item.id, {
                       clientId: c.id,
@@ -677,6 +680,7 @@ function Pipeline({ items, onAdd, onUpdate, onRemove, total, clients, clientStat
         <div className="flex-1">
           <ClientPicker
             clients={clients}
+            clientGroups={clientGroups}
             selectedId={addingClient?.id}
             onSelect={(c) => {
               setAddingClient(c);
@@ -744,7 +748,7 @@ export default function FinancePage() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const pipeline = usePipeline();
-  const { clients, clientStatuses } = useProjectData();
+  const { clients, clientGroups, clientStatuses } = useProjectData();
 
   useEffect(() => {
     fetchFinanceData()
@@ -776,7 +780,7 @@ export default function FinancePage() {
       </div>
 
       <GoalTracker months={data.months} pipelineTotal={pipeline.total} />
-      <Pipeline items={pipeline.items} onAdd={pipeline.add} onUpdate={pipeline.update} onRemove={pipeline.remove} total={pipeline.total} clients={clients} clientStatuses={clientStatuses} />
+      <Pipeline items={pipeline.items} onAdd={pipeline.add} onUpdate={pipeline.update} onRemove={pipeline.remove} total={pipeline.total} clients={clients} clientGroups={clientGroups} clientStatuses={clientStatuses} />
       <MonthlyChart months={data.months} />
     </main>
   );
