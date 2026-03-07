@@ -5,17 +5,21 @@ import { NodeViewWrapper, type NodeViewProps } from "@tiptap/react";
 
 export function ResizableImageView({ node, updateAttributes, selected }: NodeViewProps) {
   const { src, alt, width } = node.attrs;
-  const imgRef = useRef<HTMLImageElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
   const [resizing, setResizing] = useState(false);
+  const [localWidth, setLocalWidth] = useState<number | null>(null);
   const startXRef = useRef(0);
   const startWidthRef = useRef(0);
 
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
+    const container = containerRef.current;
+    if (!container) return;
     setResizing(true);
     startXRef.current = e.clientX;
-    startWidthRef.current = imgRef.current?.offsetWidth || 400;
+    startWidthRef.current = container.offsetWidth;
+    setLocalWidth(container.offsetWidth);
   }, []);
 
   useEffect(() => {
@@ -24,11 +28,15 @@ export function ResizableImageView({ node, updateAttributes, selected }: NodeVie
     const handleMouseMove = (e: MouseEvent) => {
       const diff = e.clientX - startXRef.current;
       const newWidth = Math.max(100, startWidthRef.current + diff);
-      updateAttributes({ width: newWidth });
+      setLocalWidth(newWidth);
     };
 
     const handleMouseUp = () => {
       setResizing(false);
+      if (localWidth !== null) {
+        updateAttributes({ width: localWidth });
+      }
+      setLocalWidth(null);
     };
 
     document.addEventListener("mousemove", handleMouseMove);
@@ -37,18 +45,20 @@ export function ResizableImageView({ node, updateAttributes, selected }: NodeVie
       document.removeEventListener("mousemove", handleMouseMove);
       document.removeEventListener("mouseup", handleMouseUp);
     };
-  }, [resizing, updateAttributes]);
+  }, [resizing, localWidth, updateAttributes]);
+
+  const displayWidth = localWidth ?? width;
 
   return (
-    <NodeViewWrapper className="docs-image-wrapper" data-drag-handle>
+    <NodeViewWrapper className="docs-image-wrapper">
       <div
+        ref={containerRef}
         className={`relative inline-block group ${
           selected ? "ring-2 ring-primary/40 rounded-lg" : ""
         }`}
-        style={{ width: width ? `${width}px` : undefined, maxWidth: "100%" }}
+        style={{ width: displayWidth ? `${displayWidth}px` : undefined, maxWidth: "100%" }}
       >
         <img
-          ref={imgRef}
           src={src}
           alt={alt || ""}
           className="block rounded-lg w-full"
@@ -57,11 +67,11 @@ export function ResizableImageView({ node, updateAttributes, selected }: NodeVie
         {/* Right resize handle */}
         <div
           onMouseDown={handleMouseDown}
-          className={`absolute top-0 right-0 w-2 h-full cursor-ew-resize ${
+          className={`absolute top-0 -right-1 w-3 h-full cursor-col-resize ${
             selected || resizing ? "opacity-100" : "opacity-0 group-hover:opacity-100"
           } transition-opacity`}
         >
-          <div className="absolute right-0 top-1/2 -translate-y-1/2 w-1 h-8 rounded-full bg-foreground/20 hover:bg-foreground/40 transition-colors" />
+          <div className="absolute right-0.5 top-1/2 -translate-y-1/2 w-1.5 h-10 rounded-full bg-primary/50 hover:bg-primary/80 transition-colors" />
         </div>
       </div>
     </NodeViewWrapper>
