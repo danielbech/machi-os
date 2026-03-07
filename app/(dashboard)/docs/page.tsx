@@ -634,16 +634,32 @@ function DocEditor({
           const file = files[0];
           if (!file.type.startsWith("image/")) return false;
           event.preventDefault();
-          handleImageUpload(file).then((url) => {
-            if (url) {
-              const pos = view.posAtCoords({ left: event.clientX, top: event.clientY });
-              if (pos) {
-                const node = view.state.schema.nodes.image.create({ src: url, width: null });
-                const tr = view.state.tr.insert(pos.pos, node);
-                view.dispatch(tr);
-              }
+
+          // Insert base64 immediately for instant feedback
+          const reader = new FileReader();
+          reader.onload = () => {
+            const dataUrl = reader.result as string;
+            const pos = view.posAtCoords({ left: event.clientX, top: event.clientY });
+            if (pos) {
+              const node = view.state.schema.nodes.image.create({ src: dataUrl, width: null });
+              const tr = view.state.tr.insert(pos.pos, node);
+              view.dispatch(tr);
             }
-          });
+
+            // Upload in background and swap URL
+            handleImageUpload(file).then((url) => {
+              if (!url) return;
+              const { state } = view;
+              const swapTr = state.tr;
+              state.doc.descendants((n, p) => {
+                if (n.type.name === "image" && n.attrs.src === dataUrl) {
+                  swapTr.setNodeMarkup(p, undefined, { ...n.attrs, src: url });
+                }
+              });
+              if (swapTr.docChanged) view.dispatch(swapTr);
+            });
+          };
+          reader.readAsDataURL(file);
           return true;
         },
         handlePaste: (view, event) => {
@@ -652,13 +668,29 @@ function DocEditor({
           const file = files[0];
           if (!file.type.startsWith("image/")) return false;
           event.preventDefault();
-          handleImageUpload(file).then((url) => {
-            if (url) {
-              const node = view.state.schema.nodes.image.create({ src: url, width: null });
-              const tr = view.state.tr.replaceSelectionWith(node);
-              view.dispatch(tr);
-            }
-          });
+
+          // Insert base64 immediately for instant feedback
+          const reader = new FileReader();
+          reader.onload = () => {
+            const dataUrl = reader.result as string;
+            const node = view.state.schema.nodes.image.create({ src: dataUrl, width: null });
+            const tr = view.state.tr.replaceSelectionWith(node);
+            view.dispatch(tr);
+
+            // Upload in background and swap URL
+            handleImageUpload(file).then((url) => {
+              if (!url) return;
+              const { state } = view;
+              const swapTr = state.tr;
+              state.doc.descendants((n, p) => {
+                if (n.type.name === "image" && n.attrs.src === dataUrl) {
+                  swapTr.setNodeMarkup(p, undefined, { ...n.attrs, src: url });
+                }
+              });
+              if (swapTr.docChanged) view.dispatch(swapTr);
+            });
+          };
+          reader.readAsDataURL(file);
           return true;
         },
       },
