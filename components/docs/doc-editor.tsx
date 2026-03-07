@@ -342,9 +342,9 @@ export function DocEditor({
         <div className="max-w-3xl mx-auto px-4 md:px-12 py-10">
           {/* Breadcrumbs */}
           <Breadcrumbs docs={docs} activeDocId={doc.id} onNavigate={onNavigate} />
-          {/* Icon + Title */}
+          {/* Icon + Title — pt-8 creates hover zone above for the "Add cover" button */}
           <div
-            className="mb-4 relative"
+            className="mb-4 relative pt-8 -mt-8"
             onMouseEnter={() => setTitleHovered(true)}
             onMouseLeave={() => setTitleHovered(false)}
           >
@@ -352,7 +352,7 @@ export function DocEditor({
             {!doc.cover_image && titleHovered && (
               <button
                 onClick={() => coverInputRef.current?.click()}
-                className="absolute -top-7 left-0 flex items-center gap-1 px-2 py-0.5 text-xs text-foreground/30 hover:text-foreground/50 hover:bg-foreground/[0.04] rounded transition-colors"
+                className="absolute top-1 left-0 flex items-center gap-1 px-2 py-0.5 text-xs text-foreground/30 hover:text-foreground/50 hover:bg-foreground/[0.04] rounded transition-colors"
               >
                 <ImagePlus className="size-3.5" />
                 Add cover
