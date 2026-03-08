@@ -12,7 +12,24 @@ import {
   Tooltip as RechartsTooltip,
 } from "recharts";
 import { Button } from "@/components/ui/button";
-import { Plus, ChevronRight, Trash2 } from "lucide-react";
+import { Plus, ChevronRight, Trash2, GripVertical } from "lucide-react";
+import {
+  DndContext,
+  closestCenter,
+  MouseSensor,
+  TouchSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  SortableContext,
+  useSortable,
+  arrayMove,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
+import { restrictToVerticalAxis } from "@dnd-kit/modifiers";
+import { CSS } from "@dnd-kit/utilities";
 import { useProjectData } from "@/lib/project-data-context";
 import type { Client, ClientStatusDef, ClientGroup } from "@/lib/types";
 import { CLIENT_DOT_COLORS, getBadgeColorStyle } from "@/lib/colors";
@@ -140,9 +157,13 @@ function usePipeline() {
     save(items.filter((i) => i.id !== id));
   }, [items, save]);
 
+  const reorder = useCallback((oldIndex: number, newIndex: number) => {
+    save(arrayMove(items, oldIndex, newIndex));
+  }, [items, save]);
+
   const total = items.reduce((sum, i) => sum + i.amount, 0);
 
-  return { items, add, update, remove, total };
+  return { items, add, update, remove, reorder, total };
 }
 
 // ─── Data fetching ──────────────────────────────────────────────────────────
@@ -550,11 +571,36 @@ function ClientPicker({ clients, clientGroups, selectedId, onSelect }: { clients
   );
 }
 
-function Pipeline({ items, onAdd, onUpdate, onRemove, total, clients, clientGroups, clientStatuses }: {
+function SortablePipelineRow({ item, children }: { item: PipelineItem; children: React.ReactNode }) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: item.id });
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : undefined,
+  };
+  return (
+    <TableRow ref={setNodeRef} style={style} className="group/row">
+      <TableCell className="w-8 px-2">
+        <button
+          className="cursor-grab active:cursor-grabbing text-foreground/15 hover:text-foreground/30 transition-colors touch-none"
+          aria-label="Drag to reorder"
+          {...listeners}
+          {...attributes}
+        >
+          <GripVertical className="size-3.5" />
+        </button>
+      </TableCell>
+      {children}
+    </TableRow>
+  );
+}
+
+function Pipeline({ items, onAdd, onUpdate, onRemove, onReorder, total, clients, clientGroups, clientStatuses }: {
   items: PipelineItem[];
   onAdd: (item: Omit<PipelineItem, "id">) => void;
   onUpdate: (id: string, changes: Partial<PipelineItem>) => void;
   onRemove: (id: string) => void;
+  onReorder: (oldIndex: number, newIndex: number) => void;
   total: number;
   clients: Client[];
   clientGroups: ClientGroup[];
@@ -564,6 +610,19 @@ function Pipeline({ items, onAdd, onUpdate, onRemove, total, clients, clientGrou
   const [addingAmount, setAddingAmount] = useState("");
   const [addingMonth, setAddingMonth] = useState("");
   const amountRef = useRef<HTMLInputElement>(null);
+
+  const mouseSensor = useSensor(MouseSensor, { activationConstraint: { distance: 5 } });
+  const touchSensor = useSensor(TouchSensor, { activationConstraint: { delay: 200, tolerance: 5 } });
+  const sensors = useSensors(mouseSensor, touchSensor);
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (over && active.id !== over.id) {
+      const oldIndex = items.findIndex((i) => i.id === active.id);
+      const newIndex = items.findIndex((i) => i.id === over.id);
+      if (oldIndex !== -1 && newIndex !== -1) onReorder(oldIndex, newIndex);
+    }
+  };
 
   const currentYear = new Date().getFullYear();
   const currentMonth = new Date().getMonth();
@@ -595,85 +654,90 @@ function Pipeline({ items, onAdd, onUpdate, onRemove, total, clients, clientGrou
 
   return (
     <div className="rounded-xl border border-border bg-card overflow-hidden">
-      <div className="flex items-center justify-between px-5 pt-5 pb-3">
+      <div className="px-5 pt-5 pb-3">
         <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
           Pipeline
         </h3>
         {total > 0 && (
-          <span className="text-xs text-chart-4 font-medium">
-            {formatDKK(total)} expected
-          </span>
+          <div className="text-2xl font-bold text-foreground mt-1">
+            {formatDKK(total)}
+          </div>
         )}
       </div>
 
-      <Table>
-        <TableHeader>
-          <TableRow className="border-foreground/[0.06] bg-foreground/[0.02] hover:bg-foreground/[0.02]">
-            <TableHead>Project</TableHead>
-            <TableHead className="w-24">Status</TableHead>
-            <TableHead className="w-32">Amount</TableHead>
-            <TableHead className="w-28">Expected</TableHead>
-            <TableHead className="w-10" />
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {items.map((item) => {
-            const client = clients.find((c) => c.id === item.clientId);
-            const status = client?.status_id ? clientStatuses.find((s) => s.id === client.status_id) : undefined;
-            return (
-              <TableRow key={item.id} className="group/row">
-                <TableCell>
-                  <ClientPicker
-                    clients={clients}
-                    clientGroups={clientGroups}
-                    selectedId={item.clientId}
-                    onSelect={(c) => onUpdate(item.id, {
-                      clientId: c.id,
-                      clientName: c.name,
-                      clientColor: c.color,
-                      clientLogoUrl: c.logo_url,
-                      clientIcon: c.icon,
-                    })}
-                  />
-                </TableCell>
-                <TableCell>
-                  {status ? (
-                    <Badge className={`${getBadgeColorStyle(status.color)} text-[10px] px-1.5 py-0 ${status.show_dotted_border ? "border-dashed" : ""}`}>
-                      {status.name}
-                    </Badge>
-                  ) : (
-                    <span className="text-xs text-foreground/20">—</span>
-                  )}
-                </TableCell>
-                <TableCell>
-                  <InlineAmount value={item.amount} onSave={(amount) => onUpdate(item.id, { amount })} />
-                </TableCell>
-                <TableCell>
-                  <InlineMonthPicker value={item.expectedMonth} onSave={(expectedMonth) => onUpdate(item.id, { expectedMonth })} />
-                </TableCell>
-                <TableCell>
-                  <Button
-                    variant="ghost"
-                    size="icon-xs"
-                    className="text-foreground/20 hover:text-destructive opacity-0 group-hover/row:opacity-100 transition-opacity"
-                    onClick={() => onRemove(item.id)}
-                    aria-label="Delete pipeline item"
-                  >
-                    <Trash2 className="size-3.5" />
-                  </Button>
+      <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd} modifiers={[restrictToVerticalAxis]}>
+        <Table>
+          <TableHeader>
+            <TableRow className="border-foreground/[0.06] bg-foreground/[0.02] hover:bg-foreground/[0.02]">
+              <TableHead className="w-8 px-2" />
+              <TableHead>Project</TableHead>
+              <TableHead className="w-24">Status</TableHead>
+              <TableHead className="w-32">Amount</TableHead>
+              <TableHead className="w-28">Expected</TableHead>
+              <TableHead className="w-10" />
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            <SortableContext items={items.map((i) => i.id)} strategy={verticalListSortingStrategy}>
+              {items.map((item) => {
+                const client = clients.find((c) => c.id === item.clientId);
+                const status = client?.status_id ? clientStatuses.find((s) => s.id === client.status_id) : undefined;
+                return (
+                  <SortablePipelineRow key={item.id} item={item}>
+                    <TableCell>
+                      <ClientPicker
+                        clients={clients}
+                        clientGroups={clientGroups}
+                        selectedId={item.clientId}
+                        onSelect={(c) => onUpdate(item.id, {
+                          clientId: c.id,
+                          clientName: c.name,
+                          clientColor: c.color,
+                          clientLogoUrl: c.logo_url,
+                          clientIcon: c.icon,
+                        })}
+                      />
+                    </TableCell>
+                    <TableCell>
+                      {status ? (
+                        <Badge className={`${getBadgeColorStyle(status.color)} text-[10px] px-1.5 py-0 ${status.show_dotted_border ? "border-dashed" : ""}`}>
+                          {status.name}
+                        </Badge>
+                      ) : (
+                        <span className="text-xs text-foreground/20">—</span>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      <InlineAmount value={item.amount} onSave={(amount) => onUpdate(item.id, { amount })} />
+                    </TableCell>
+                    <TableCell>
+                      <InlineMonthPicker value={item.expectedMonth} onSave={(expectedMonth) => onUpdate(item.id, { expectedMonth })} />
+                    </TableCell>
+                    <TableCell>
+                      <Button
+                        variant="ghost"
+                        size="icon-xs"
+                        className="text-foreground/20 hover:text-destructive opacity-0 group-hover/row:opacity-100 transition-opacity"
+                        onClick={() => onRemove(item.id)}
+                        aria-label="Delete pipeline item"
+                      >
+                        <Trash2 className="size-3.5" />
+                      </Button>
+                    </TableCell>
+                  </SortablePipelineRow>
+                );
+              })}
+            </SortableContext>
+            {items.length === 0 && (
+              <TableRow className="hover:bg-transparent">
+                <TableCell colSpan={6} className="text-center text-foreground/20 py-6 text-sm">
+                  No projects in pipeline
                 </TableCell>
               </TableRow>
-            );
-          })}
-          {items.length === 0 && (
-            <TableRow className="hover:bg-transparent">
-              <TableCell colSpan={5} className="text-center text-foreground/20 py-6 text-sm">
-                No projects in pipeline
-              </TableCell>
-            </TableRow>
-          )}
-        </TableBody>
-      </Table>
+            )}
+          </TableBody>
+        </Table>
+      </DndContext>
 
       {/* Add row */}
       <div className="border-t border-foreground/[0.04] px-4 py-2 flex items-center gap-3">
@@ -780,7 +844,7 @@ export default function FinancePage() {
       </div>
 
       <GoalTracker months={data.months} pipelineTotal={pipeline.total} />
-      <Pipeline items={pipeline.items} onAdd={pipeline.add} onUpdate={pipeline.update} onRemove={pipeline.remove} total={pipeline.total} clients={clients} clientGroups={clientGroups} clientStatuses={clientStatuses} />
+      <Pipeline items={pipeline.items} onAdd={pipeline.add} onUpdate={pipeline.update} onRemove={pipeline.remove} onReorder={pipeline.reorder} total={pipeline.total} clients={clients} clientGroups={clientGroups} clientStatuses={clientStatuses} />
       <MonthlyChart months={data.months} />
     </main>
   );
