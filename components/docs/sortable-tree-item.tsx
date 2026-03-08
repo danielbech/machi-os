@@ -1,7 +1,6 @@
 "use client";
 
 import { useSortable } from "@dnd-kit/sortable";
-import { CSS } from "@dnd-kit/utilities";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -84,17 +83,13 @@ export function SortableTreeItem({
     attributes,
     listeners,
     setNodeRef,
-    transform,
-    transition,
     isDragging,
-  } = useSortable({ id: item.id });
+  } = useSortable({ id: item.id, animateLayoutChanges: () => false });
 
   const isActive = selectedId === item.id;
   const isDropChild = dropIndicator?.overId === item.id && dropIndicator.position === "child";
 
   const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
     opacity: isDragging ? 0.3 : 1,
   };
 

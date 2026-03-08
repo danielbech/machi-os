@@ -33,6 +33,7 @@ import {
   useSensor,
   useSensors,
   DragOverlay,
+  MeasuringStrategy,
   type DragStartEvent,
   type DragEndEvent,
   type DragOverEvent,
@@ -41,7 +42,6 @@ import {
   SortableContext,
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
-import { restrictToVerticalAxis } from "@dnd-kit/modifiers";
 import {
   Plus,
   FileText,
@@ -123,7 +123,7 @@ export default function DocsPage() {
   const sidebarRef = useRef<HTMLDivElement>(null);
 
   const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } })
   );
 
   // Load favorites from localStorage
@@ -536,10 +536,10 @@ export default function DocsPage() {
             <DndContext
               sensors={sensors}
               collisionDetection={closestCenter}
-              modifiers={[restrictToVerticalAxis]}
               onDragStart={handleDragStart}
               onDragOver={handleDragOver}
               onDragEnd={handleDragEnd}
+              measuring={{ droppable: { strategy: MeasuringStrategy.Always } }}
             >
               <SortableContext
                 items={flatItems.map((i) => i.id)}
@@ -567,7 +567,7 @@ export default function DocsPage() {
                   />
                 ))}
               </SortableContext>
-              <DragOverlay>
+              <DragOverlay dropAnimation={null}>
                 {dragActiveId ? (() => {
                   const item = flatItems.find((i) => i.id === dragActiveId);
                   if (!item) return null;
