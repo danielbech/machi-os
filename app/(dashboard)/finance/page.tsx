@@ -273,6 +273,7 @@ interface PipelineSegment {
   statusColor: string;
   amount: number;
   sortOrder: number;
+  showDottedBorder: boolean;
 }
 
 function GoalTracker({ months, pipelineItems, clients, clientStatuses }: {
@@ -305,6 +306,7 @@ function GoalTracker({ months, pipelineItems, clients, clientStatuses }: {
           statusColor: status.color,
           amount: item.amount,
           sortOrder: status.sort_order,
+          showDottedBorder: status.show_dotted_border ?? false,
         });
       }
     }
@@ -313,7 +315,7 @@ function GoalTracker({ months, pipelineItems, clients, clientStatuses }: {
 
   // Build cumulative layers (invoiced + each status segment)
   const layers = useMemo(() => {
-    const result: { label: string; color: string; textColor: string; cumulative: number; amount: number }[] = [];
+    const result: { label: string; color: string; textColor: string; cumulative: number; amount: number; showDottedBorder: boolean }[] = [];
     let cumulative = ytdRevenue;
     // Reverse so we render widest (least certain) first as the bottom layer
     for (const seg of [...segments].reverse()) {
@@ -329,6 +331,7 @@ function GoalTracker({ months, pipelineItems, clients, clientStatuses }: {
         textColor: STATUS_TEXT_COLORS[seg.statusColor] || "text-foreground/30",
         cumulative,
         amount: seg.amount,
+        showDottedBorder: seg.showDottedBorder,
       });
     }
     return result;
@@ -378,13 +381,20 @@ function GoalTracker({ months, pipelineItems, clients, clientStatuses }: {
             of {formatDKK(YEARLY_GOAL)}
           </span>
         </div>
-        <div className="relative h-3 rounded-full bg-muted overflow-hidden">
+        <div className="relative h-5 rounded-full bg-muted overflow-hidden">
           {/* Render layers from widest (least certain) to narrowest (most certain) */}
           {[...layers].reverse().map((layer) => (
             <div
               key={layer.label}
-              className={`absolute inset-y-0 left-0 rounded-full ${layer.color} transition-all duration-500`}
-              style={{ width: `${Math.min((layer.cumulative / YEARLY_GOAL) * 100, 100)}%`, opacity: 0.5 }}
+              className={`absolute inset-y-0 left-0 rounded-full transition-all duration-500 ${
+                layer.showDottedBorder
+                  ? `border-2 border-dashed ${layer.color.replace("bg-", "border-")} bg-transparent`
+                  : `${layer.color}`
+              }`}
+              style={{
+                width: `${Math.min((layer.cumulative / YEARLY_GOAL) * 100, 100)}%`,
+                ...(layer.showDottedBorder ? {} : { opacity: 0.5 }),
+              }}
             />
           ))}
           {/* Invoiced revenue — solid foreground */}
@@ -400,7 +410,7 @@ function GoalTracker({ months, pipelineItems, clients, clientStatuses }: {
         </div>
         {/* Legend */}
         <div className="flex flex-wrap gap-x-3 gap-y-0.5 text-[11px] text-muted-foreground">
-          <span>
+          <span className="font-semibold text-foreground/80">
             <span className="inline-block size-2 rounded-full bg-foreground mr-1 align-middle" />
             Invoiced {formatDKK(ytdRevenue)}
           </span>

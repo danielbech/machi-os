@@ -45,7 +45,10 @@ import { ImagePlus } from "lucide-react";
 
 const lowlight = createLowlight(common);
 
-const CodeBlockWithLanguage = CodeBlockLowlight.extend({
+const CodeBlockWithLanguage = CodeBlockLowlight.configure({
+  lowlight,
+  defaultLanguage: null,
+}).extend({
   renderHTML({ node, HTMLAttributes }) {
     const language = node.attrs.language;
     return [
@@ -193,9 +196,7 @@ export function DocEditor({
           codeBlock: false,
           heading: { levels: [1, 2, 3] },
         }),
-        CodeBlockWithLanguage.configure({
-          lowlight,
-        }),
+        CodeBlockWithLanguage,
         Link.configure({
           openOnClick: false,
           HTMLAttributes: { class: "text-primary underline underline-offset-2" },
