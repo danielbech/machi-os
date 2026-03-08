@@ -253,6 +253,21 @@ const STATUS_BAR_COLORS: Record<string, string> = {
   gray: "bg-foreground/20",
 };
 
+// Maps status badge color names → Tailwind border classes for dotted segments
+const STATUS_BORDER_COLORS: Record<string, string> = {
+  green: "border-green-500",
+  yellow: "border-yellow-500",
+  blue: "border-blue-500",
+  purple: "border-purple-500",
+  orange: "border-orange-500",
+  pink: "border-pink-500",
+  red: "border-red-500",
+  cyan: "border-cyan-500",
+  amber: "border-amber-500",
+  white: "border-foreground/30",
+  gray: "border-foreground/20",
+};
+
 // Maps status badge color names → Tailwind text classes for the legend
 const STATUS_TEXT_COLORS: Record<string, string> = {
   green: "text-green-400",
@@ -315,7 +330,7 @@ function GoalTracker({ months, pipelineItems, clients, clientStatuses }: {
 
   // Build cumulative layers (invoiced + each status segment)
   const layers = useMemo(() => {
-    const result: { label: string; color: string; textColor: string; cumulative: number; amount: number; showDottedBorder: boolean }[] = [];
+    const result: { label: string; color: string; borderColor: string; textColor: string; cumulative: number; amount: number; showDottedBorder: boolean }[] = [];
     let cumulative = ytdRevenue;
     // Reverse so we render widest (least certain) first as the bottom layer
     for (const seg of [...segments].reverse()) {
@@ -328,6 +343,7 @@ function GoalTracker({ months, pipelineItems, clients, clientStatuses }: {
       result.push({
         label: seg.statusName,
         color: STATUS_BAR_COLORS[seg.statusColor] || "bg-foreground/20",
+        borderColor: STATUS_BORDER_COLORS[seg.statusColor] || "border-foreground/20",
         textColor: STATUS_TEXT_COLORS[seg.statusColor] || "text-foreground/30",
         cumulative,
         amount: seg.amount,
@@ -388,7 +404,7 @@ function GoalTracker({ months, pipelineItems, clients, clientStatuses }: {
               key={layer.label}
               className={`absolute inset-y-0 left-0 rounded-full transition-all duration-500 ${
                 layer.showDottedBorder
-                  ? `border-2 border-dashed ${layer.color.replace("bg-", "border-")} bg-transparent`
+                  ? `border-2 border-dashed ${layer.borderColor} bg-transparent`
                   : `${layer.color}`
               }`}
               style={{
