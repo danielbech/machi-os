@@ -710,7 +710,7 @@ function SortablePipelineRow({ item, children }: { item: PipelineItem; children:
     <TableRow ref={setNodeRef} style={style} className="group/row">
       <TableCell className="w-8 px-2">
         <button
-          className="cursor-grab active:cursor-grabbing text-foreground/15 hover:text-foreground/30 transition-colors touch-none"
+          className="cursor-grab active:cursor-grabbing text-foreground opacity-15 hover:opacity-30 transition-opacity touch-none"
           aria-label="Drag to reorder"
           {...listeners}
           {...attributes}
@@ -845,7 +845,7 @@ function Pipeline({ items, onAdd, onUpdate, onRemove, onReorder, total, clients,
                       <Button
                         variant="ghost"
                         size="icon-xs"
-                        className="text-foreground/20 hover:text-destructive opacity-0 group-hover/row:opacity-100 transition-opacity"
+                        className="text-destructive opacity-0 group-hover/row:opacity-20 hover:!opacity-100 transition-opacity"
                         onClick={() => onRemove(item.id)}
                         aria-label="Delete pipeline item"
                       >
@@ -910,7 +910,7 @@ function Pipeline({ items, onAdd, onUpdate, onRemove, onReorder, total, clients,
         <Button
           size="icon-xs"
           variant="ghost"
-          className="text-foreground/30 hover:text-foreground shrink-0"
+          className="opacity-30 hover:opacity-100 text-foreground shrink-0"
           onClick={handleAdd}
           aria-label="Add pipeline item"
         >
