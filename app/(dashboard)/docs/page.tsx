@@ -82,6 +82,12 @@ function buildTree(docs: Doc[]): DocTreeNode[] {
     }
   }
 
+  // Sort roots and children by sort_order so optimistic updates reorder immediately
+  for (const node of map.values()) {
+    node.children.sort((a, b) => a.sort_order - b.sort_order);
+  }
+  roots.sort((a, b) => a.sort_order - b.sort_order);
+
   return roots;
 }
 
@@ -123,7 +129,7 @@ export default function DocsPage() {
   const sidebarRef = useRef<HTMLDivElement>(null);
 
   const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 8 } })
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
   );
 
   // Load favorites from localStorage
