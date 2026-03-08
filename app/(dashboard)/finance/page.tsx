@@ -238,7 +238,49 @@ function ChartTooltip({ active, payload, label }: { active?: boolean; payload?: 
 
 // ─── Components ─────────────────────────────────────────────────────────────
 
-function GoalTracker({ months, pipelineTotal }: { months: MonthData[]; pipelineTotal: number }) {
+// Maps status badge color names → solid Tailwind bg classes for the progress bar
+const STATUS_BAR_COLORS: Record<string, string> = {
+  green: "bg-green-500",
+  yellow: "bg-yellow-500",
+  blue: "bg-blue-500",
+  purple: "bg-purple-500",
+  orange: "bg-orange-500",
+  pink: "bg-pink-500",
+  red: "bg-red-500",
+  cyan: "bg-cyan-500",
+  amber: "bg-amber-500",
+  white: "bg-foreground/30",
+  gray: "bg-foreground/20",
+};
+
+// Maps status badge color names → Tailwind text classes for the legend
+const STATUS_TEXT_COLORS: Record<string, string> = {
+  green: "text-green-400",
+  yellow: "text-yellow-400",
+  blue: "text-blue-400",
+  purple: "text-purple-400",
+  orange: "text-orange-400",
+  pink: "text-pink-400",
+  red: "text-red-400",
+  cyan: "text-cyan-400",
+  amber: "text-amber-400",
+  white: "text-foreground/50",
+  gray: "text-foreground/30",
+};
+
+interface PipelineSegment {
+  statusName: string;
+  statusColor: string;
+  amount: number;
+  sortOrder: number;
+}
+
+function GoalTracker({ months, pipelineItems, clients, clientStatuses }: {
+  months: MonthData[];
+  pipelineItems: PipelineItem[];
+  clients: Client[];
+  clientStatuses: ClientStatusDef[];
+}) {
   const now = new Date();
   const currentMonth = now.getMonth();
   const dayOfMonth = now.getDate();
@@ -247,6 +289,52 @@ function GoalTracker({ months, pipelineTotal }: { months: MonthData[]; pipelineT
   const ytdRevenue = months.reduce((sum, m) => sum + m.revenue, 0);
   const progressPct = Math.min((ytdRevenue / YEARLY_GOAL) * 100, 100);
 
+  // Group pipeline items by their client's status, sorted by status sort_order
+  const segments = useMemo(() => {
+    const byStatus = new Map<string, PipelineSegment>();
+    for (const item of pipelineItems) {
+      const client = clients.find((c) => c.id === item.clientId);
+      const status = client?.status_id ? clientStatuses.find((s) => s.id === client.status_id) : undefined;
+      if (!status) continue;
+      const existing = byStatus.get(status.id);
+      if (existing) {
+        existing.amount += item.amount;
+      } else {
+        byStatus.set(status.id, {
+          statusName: status.name,
+          statusColor: status.color,
+          amount: item.amount,
+          sortOrder: status.sort_order,
+        });
+      }
+    }
+    return Array.from(byStatus.values()).sort((a, b) => a.sortOrder - b.sortOrder);
+  }, [pipelineItems, clients, clientStatuses]);
+
+  // Build cumulative layers (invoiced + each status segment)
+  const layers = useMemo(() => {
+    const result: { label: string; color: string; textColor: string; cumulative: number; amount: number }[] = [];
+    let cumulative = ytdRevenue;
+    // Reverse so we render widest (least certain) first as the bottom layer
+    for (const seg of [...segments].reverse()) {
+      cumulative += seg.amount;
+    }
+    // Now build forward for correct cumulative values
+    cumulative = ytdRevenue;
+    for (const seg of segments) {
+      cumulative += seg.amount;
+      result.push({
+        label: seg.statusName,
+        color: STATUS_BAR_COLORS[seg.statusColor] || "bg-foreground/20",
+        textColor: STATUS_TEXT_COLORS[seg.statusColor] || "text-foreground/30",
+        cumulative,
+        amount: seg.amount,
+      });
+    }
+    return result;
+  }, [segments, ytdRevenue]);
+
+  const pipelineTotal = pipelineItems.reduce((sum, i) => sum + i.amount, 0);
   const projectedRevenue = ytdRevenue + pipelineTotal;
   const projectedPct = Math.min((projectedRevenue / YEARLY_GOAL) * 100, 100);
 
@@ -291,27 +379,41 @@ function GoalTracker({ months, pipelineTotal }: { months: MonthData[]; pipelineT
           </span>
         </div>
         <div className="relative h-3 rounded-full bg-muted overflow-hidden">
-          {pipelineTotal > 0 && (
+          {/* Render layers from widest (least certain) to narrowest (most certain) */}
+          {[...layers].reverse().map((layer) => (
             <div
-              className="absolute inset-y-0 left-0 rounded-full bg-chart-4/40 transition-all duration-500"
-              style={{ width: `${projectedPct}%` }}
+              key={layer.label}
+              className={`absolute inset-y-0 left-0 rounded-full ${layer.color} transition-all duration-500`}
+              style={{ width: `${Math.min((layer.cumulative / YEARLY_GOAL) * 100, 100)}%`, opacity: 0.5 }}
             />
-          )}
+          ))}
+          {/* Invoiced revenue — solid foreground */}
           <div
-            className="absolute inset-y-0 left-0 rounded-full bg-chart-2 transition-all duration-500"
+            className="absolute inset-y-0 left-0 rounded-full bg-foreground transition-all duration-500"
             style={{ width: `${progressPct}%` }}
           />
+          {/* Expected pace marker */}
           <div
             className="absolute top-0 bottom-0 w-0.5 bg-foreground/50"
             style={{ left: `${expectedPct}%` }}
           />
         </div>
-        <div className="flex justify-between text-[11px] text-muted-foreground">
-          <span>{progressPct.toFixed(1)}% achieved</span>
-          {pipelineTotal > 0 && (
-            <span className="text-chart-4">{projectedPct.toFixed(1)}% with pipeline</span>
+        {/* Legend */}
+        <div className="flex flex-wrap gap-x-3 gap-y-0.5 text-[11px] text-muted-foreground">
+          <span>
+            <span className="inline-block size-2 rounded-full bg-foreground mr-1 align-middle" />
+            Invoiced {formatDKK(ytdRevenue)}
+          </span>
+          {layers.map((layer) => (
+            <span key={layer.label}>
+              <span className={`inline-block size-2 rounded-full ${layer.color} mr-1 align-middle opacity-70`} />
+              <span className={layer.textColor}>{layer.label}</span>{" "}
+              {formatDKK(layer.amount)}
+            </span>
+          ))}
+          {projectedPct > 0 && projectedPct < 100 && (
+            <span className="ml-auto">{expectedPct.toFixed(1)}% expected pace</span>
           )}
-          <span>{expectedPct.toFixed(1)}% expected</span>
         </div>
       </div>
 
@@ -843,7 +945,7 @@ export default function FinancePage() {
         <span className="text-xs text-muted-foreground">{data.orgName}</span>
       </div>
 
-      <GoalTracker months={data.months} pipelineTotal={pipeline.total} />
+      <GoalTracker months={data.months} pipelineItems={pipeline.items} clients={clients} clientStatuses={clientStatuses} />
       <Pipeline items={pipeline.items} onAdd={pipeline.add} onUpdate={pipeline.update} onRemove={pipeline.remove} onReorder={pipeline.reorder} total={pipeline.total} clients={clients} clientGroups={clientGroups} clientStatuses={clientStatuses} />
       <MonthlyChart months={data.months} />
     </main>
