@@ -128,14 +128,15 @@ function SummaryCards({
     return sum + toDKK(localValue, g.exchange_rate);
   }, 0);
 
-  // Weighted average rate in DKK (weighted by hours logged)
-  const totalActiveMinutes = activeGroups.reduce((sum, g) => {
+  // Weighted average rate in DKK (weighted by hours logged across all groups)
+  const totalAllMinutes = groups.reduce((sum, g) => {
     return sum + yearEntries
       .filter((e) => e.invoice_group_id === g.id)
       .reduce((s, e) => s + e.duration, 0);
   }, 0);
-  const avgRateDKK = totalActiveMinutes > 0
-    ? Math.round(unbilledValueDKK / (totalActiveMinutes / 60))
+  const totalAllValueDKK = unbilledValueDKK + billedValueDKK;
+  const avgRateDKK = totalAllMinutes > 0
+    ? Math.round(totalAllValueDKK / (totalAllMinutes / 60))
     : 0;
 
   const cards = [
