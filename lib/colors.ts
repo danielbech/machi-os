@@ -111,3 +111,29 @@ export const WORKSPACE_COLORS = [
   "#FF3700", "#3b82f6", "#22c55e", "#a855f7", "#ec4899",
   "#ef4444", "#eab308", "#06b6d4", "#6366f1", "#14b8a6",
 ];
+
+// ─── Editor text & highlight colors (docs bubble toolbar) ───────────────────
+
+export const EDITOR_TEXT_COLORS = [
+  { name: "Default", color: null },
+  { name: "Red", color: "hsl(0 70% 60%)" },
+  { name: "Orange", color: "hsl(25 70% 60%)" },
+  { name: "Yellow", color: "hsl(45 70% 60%)" },
+  { name: "Green", color: "hsl(140 55% 55%)" },
+  { name: "Blue", color: "hsl(210 70% 60%)" },
+  { name: "Purple", color: "hsl(270 60% 65%)" },
+  { name: "Pink", color: "hsl(330 65% 65%)" },
+  { name: "Gray", color: "hsl(0 0% 55%)" },
+] as const;
+
+export const EDITOR_HIGHLIGHT_COLORS = [
+  { name: "None", color: null },
+  { name: "Red", color: "hsla(0, 70%, 60%, 0.2)" },
+  { name: "Orange", color: "hsla(25, 70%, 60%, 0.2)" },
+  { name: "Yellow", color: "hsla(45, 70%, 60%, 0.2)" },
+  { name: "Green", color: "hsla(140, 55%, 55%, 0.2)" },
+  { name: "Blue", color: "hsla(210, 70%, 60%, 0.2)" },
+  { name: "Purple", color: "hsla(270, 60%, 65%, 0.2)" },
+  { name: "Pink", color: "hsla(330, 65%, 65%, 0.2)" },
+  { name: "Gray", color: "hsla(0, 0%, 55%, 0.2)" },
+] as const;

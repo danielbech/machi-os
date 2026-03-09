@@ -42,6 +42,7 @@ import {
 } from "@/lib/supabase/pipeline";
 import { CLIENT_DOT_COLORS, getBadgeColorStyle } from "@/lib/colors";
 import { ClientIcon } from "@/components/client-icon";
+import { formatDKK, formatCompact } from "@/lib/utils";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -83,20 +84,6 @@ async function billyGet(path: string, params?: Record<string, string>) {
   const res = await fetch(`/api/billy?${qs}`);
   if (!res.ok) throw new Error(`API error: ${res.status}`);
   return res.json();
-}
-
-function formatDKK(amount: number) {
-  return new Intl.NumberFormat("da-DK", {
-    style: "currency",
-    currency: "DKK",
-    maximumFractionDigits: 0,
-  }).format(amount);
-}
-
-function formatCompact(amount: number) {
-  if (Math.abs(amount) >= 1_000_000) return `${(amount / 1_000_000).toFixed(1)}M`;
-  if (Math.abs(amount) >= 1_000) return `${(amount / 1_000).toFixed(0)}K`;
-  return amount.toFixed(0);
 }
 
 function useChartColors() {

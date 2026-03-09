@@ -20,32 +20,7 @@ import {
   Highlighter,
   MessageSquareQuote,
 } from "lucide-react";
-
-// ─── Color palettes ──────────────────────────────────────────────────────────
-
-const TEXT_COLORS = [
-  { name: "Default", color: null },
-  { name: "Red", color: "hsl(0 70% 60%)" },
-  { name: "Orange", color: "hsl(25 70% 60%)" },
-  { name: "Yellow", color: "hsl(45 70% 60%)" },
-  { name: "Green", color: "hsl(140 55% 55%)" },
-  { name: "Blue", color: "hsl(210 70% 60%)" },
-  { name: "Purple", color: "hsl(270 60% 65%)" },
-  { name: "Pink", color: "hsl(330 65% 65%)" },
-  { name: "Gray", color: "hsl(0 0% 55%)" },
-];
-
-const HIGHLIGHT_COLORS = [
-  { name: "None", color: null },
-  { name: "Red", color: "hsla(0, 70%, 60%, 0.2)" },
-  { name: "Orange", color: "hsla(25, 70%, 60%, 0.2)" },
-  { name: "Yellow", color: "hsla(45, 70%, 60%, 0.2)" },
-  { name: "Green", color: "hsla(140, 55%, 55%, 0.2)" },
-  { name: "Blue", color: "hsla(210, 70%, 60%, 0.2)" },
-  { name: "Purple", color: "hsla(270, 60%, 65%, 0.2)" },
-  { name: "Pink", color: "hsla(330, 65%, 65%, 0.2)" },
-  { name: "Gray", color: "hsla(0, 0%, 55%, 0.2)" },
-];
+import { EDITOR_TEXT_COLORS, EDITOR_HIGHLIGHT_COLORS } from "@/lib/colors";
 
 // ─── Color Popover ───────────────────────────────────────────────────────────
 
@@ -55,7 +30,7 @@ function ColorPopover({
   onClose,
   activeColor,
 }: {
-  colors: { name: string; color: string | null }[];
+  colors: readonly { readonly name: string; readonly color: string | null }[];
   onSelect: (color: string | null) => void;
   onClose: () => void;
   activeColor: string | null;
@@ -256,7 +231,7 @@ export function BubbleToolbar({
             </button>
             {showTextColor && (
               <ColorPopover
-                colors={TEXT_COLORS}
+                colors={EDITOR_TEXT_COLORS}
                 activeColor={currentTextColor}
                 onSelect={(color) => {
                   if (color) {
@@ -284,7 +259,7 @@ export function BubbleToolbar({
             </button>
             {showHighlight && (
               <ColorPopover
-                colors={HIGHLIGHT_COLORS}
+                colors={EDITOR_HIGHLIGHT_COLORS}
                 activeColor={currentHighlight}
                 onSelect={(color) => {
                   if (color) {

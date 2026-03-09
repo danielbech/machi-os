@@ -29,7 +29,3 @@ export function getEmptyColumns(weekMode: WeekMode, boardColumns?: BoardColumn[]
   const titles = getColumnTitles(weekMode, boardColumns, rollingDaysBack);
   return Object.fromEntries(Object.keys(titles).map((k) => [k, []]));
 }
-
-// Backward-compatible aliases (default to 5-day)
-export const COLUMN_TITLES = getColumnTitles("5-day");
-export const EMPTY_COLUMNS = getEmptyColumns("5-day");

@@ -1,11 +1,6 @@
 import { createClient } from './client'
-import { getAreaIdForProject } from './initialize'
+import { resolveAreaId } from './helpers'
 import type { Task } from '../types'
-
-async function resolveAreaId(projectId: string, areaId?: string | null): Promise<string | null> {
-  if (areaId) return areaId
-  return getAreaIdForProject(projectId)
-}
 
 // Load all tasks for a project, grouped by day (or by custom column ID)
 // rollingDateRange: { from, to } ISO date strings for rolling mode filtering

@@ -63,16 +63,8 @@ export function formatShortDate(dateStr: string): string {
   return `${months[date.getMonth()]} ${date.getDate()}`
 }
 
-/**
- * Get today's date as YYYY-MM-DD.
- */
-export function todayISO(): string {
-  const d = new Date()
-  const y = d.getFullYear()
-  const m = String(d.getMonth() + 1).padStart(2, '0')
-  const day = String(d.getDate()).padStart(2, '0')
-  return `${y}-${m}-${day}`
-}
+// Re-export getTodayISO from date-utils for backward compatibility
+export { getTodayISO as todayISO } from './date-utils'
 
 /**
  * Get the default invoice group name for the current month.

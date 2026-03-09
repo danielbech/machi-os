@@ -1,11 +1,6 @@
 import { createClient } from './client'
-import { getAreaIdForProject } from './initialize'
+import { resolveAreaId } from './helpers'
 import type { BacklogFolder } from '../types'
-
-async function resolveAreaId(projectId: string, areaId?: string | null): Promise<string | null> {
-  if (areaId) return areaId
-  return getAreaIdForProject(projectId)
-}
 
 export async function loadBacklogFolders(projectId: string, cachedAreaId?: string | null): Promise<BacklogFolder[]> {
   const supabase = createClient()
