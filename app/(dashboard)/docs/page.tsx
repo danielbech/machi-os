@@ -120,6 +120,7 @@ export default function DocsPage() {
   const [loading, setLoading] = useState(true);
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
   const [showComments, setShowComments] = useState(false);
+  const [commentCount, setCommentCount] = useState(0);
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
@@ -601,10 +602,15 @@ export default function DocsPage() {
               variant="ghost"
               size="icon-xs"
               onClick={() => setShowComments((v) => !v)}
-              className={`${showComments ? "text-foreground/60" : "text-foreground/25 hover:text-foreground/50"}`}
+              className={`relative ${showComments ? "text-foreground/60" : "text-foreground/25 hover:text-foreground/50"}`}
               aria-label="Toggle comments"
             >
               <MessageSquare className="size-3.5" />
+              {commentCount > 0 && (
+                <span className="absolute -top-0.5 -right-0.5 size-3.5 flex items-center justify-center rounded-full bg-primary text-[8px] font-bold text-primary-foreground">
+                  {commentCount > 9 ? "9+" : commentCount}
+                </span>
+              )}
             </Button>
           </div>
         )}
@@ -619,6 +625,7 @@ export default function DocsPage() {
             projectId={activeProjectId!}
             userId={user!.id}
             showComments={showComments}
+            onCommentCountChange={setCommentCount}
           />
         ) : (
           <div className="flex items-center justify-center h-full">

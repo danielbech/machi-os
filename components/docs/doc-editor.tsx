@@ -37,6 +37,7 @@ import { TableToolbar } from "@/components/docs/table-toolbar";
 import { BubbleToolbar } from "@/components/docs/bubble-toolbar";
 import { Breadcrumbs } from "@/components/docs/breadcrumbs";
 import { CommentsPanel } from "@/components/docs/comments-panel";
+import { InlineCommentPopover } from "@/components/docs/inline-comment-popover";
 import { CommentMark } from "@/components/docs/comment-mark";
 import { loadDocComments } from "@/lib/supabase/docs";
 import { ImagePlus } from "lucide-react";
@@ -91,6 +92,7 @@ export function DocEditor({
   projectId,
   userId,
   showComments,
+  onCommentCountChange,
 }: {
   doc: Doc;
   docs: Doc[];
@@ -99,6 +101,7 @@ export function DocEditor({
   projectId: string;
   userId: string;
   showComments: boolean;
+  onCommentCountChange?: (count: number) => void;
 }) {
   const titleRef = useRef<HTMLTextAreaElement>(null);
   const [title, setTitle] = useState(doc.title);
@@ -116,11 +119,29 @@ export function DocEditor({
   const [comments, setComments] = useState<DocComment[]>([]);
   const [pendingSelection, setPendingSelection] = useState<string | null>(null);
   const [activeCommentId, setActiveCommentId] = useState<string | null>(null);
+  const [inlinePopover, setInlinePopover] = useState<{
+    commentId: string;
+    rect: { top: number; left: number; bottom: number };
+  } | null>(null);
+
+  // Wrap setComments to also report count
+  const updateComments = useCallback((next: DocComment[] | ((prev: DocComment[]) => DocComment[])) => {
+    setComments((prev) => {
+      const result = typeof next === "function" ? next(prev) : next;
+      const openCount = result.filter((c) => !c.parent_id && !c.resolved_at).length;
+      onCommentCountChange?.(openCount);
+      return result;
+    });
+  }, [onCommentCountChange]);
 
   // Load comments on mount
   useEffect(() => {
-    loadDocComments(doc.id).then((c) => setComments(c));
-  }, [doc.id]);
+    loadDocComments(doc.id).then((c) => {
+      setComments(c);
+      const openCount = c.filter((cm) => !cm.parent_id && !cm.resolved_at).length;
+      onCommentCountChange?.(openCount);
+    });
+  }, [doc.id, onCommentCountChange]);
 
   // Reset when doc changes
   useEffect(() => {
@@ -130,6 +151,7 @@ export function DocEditor({
     setTitleHovered(false);
     setPendingSelection(null);
     setActiveCommentId(null);
+    setInlinePopover(null);
   }, [doc.id, doc.title]);
 
   // Auto-resize title textarea
@@ -233,13 +255,18 @@ export function DocEditor({
         handleClick: (view, pos, event) => {
           const target = event.target as HTMLElement;
 
-          // Handle clicking on comment highlights
+          // Handle clicking on comment highlights — open inline popover
           const commentEl = target.closest?.(".comment-highlight");
           if (commentEl) {
             const commentId = commentEl.getAttribute("data-comment-id");
             if (commentId) {
               setActiveCommentId(commentId);
-              return false; // Don't prevent default cursor placement
+              const rect = (commentEl as HTMLElement).getBoundingClientRect();
+              setInlinePopover({
+                commentId,
+                rect: { top: rect.top, left: rect.left, bottom: rect.bottom },
+              });
+              return false;
             }
           }
 
@@ -500,13 +527,30 @@ export function DocEditor({
             userId={userId}
             editor={editor}
             comments={comments}
-            onCommentsChange={setComments}
+            onCommentsChange={updateComments}
             pendingSelection={pendingSelection}
             onClearPending={() => setPendingSelection(null)}
             activeCommentId={activeCommentId}
             onSetActiveComment={setActiveCommentId}
           />
         </div>
+      )}
+      {/* Inline comment popover */}
+      {inlinePopover && editor && (
+        <InlineCommentPopover
+          commentId={inlinePopover.commentId}
+          comments={comments}
+          onCommentsChange={updateComments}
+          editor={editor}
+          userId={userId}
+          docId={doc.id}
+          projectId={projectId}
+          anchorRect={inlinePopover.rect}
+          onClose={() => {
+            setInlinePopover(null);
+            setActiveCommentId(null);
+          }}
+        />
       )}
     </div>
   );
