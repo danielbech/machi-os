@@ -130,7 +130,10 @@ export default async function SharedHoursPage({
 
         {/* Footer */}
         <div className="mt-8 text-center text-xs text-foreground/20">
-          Powered by Flowie
+          Hourly registration by{" "}
+          <a href="https://www.oimachi.co" target="_blank" rel="noopener noreferrer" className="underline hover:text-foreground/40 transition-colors">
+            Oimachi ApS
+          </a>
         </div>
       </div>
     </div>
