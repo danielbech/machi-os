@@ -16,6 +16,14 @@ export default async function SharedHoursPage({
   const totalMinutes = entries.reduce((s, e) => s + e.duration, 0);
   const totalValue = (totalMinutes / 60) * group.hourly_rate;
 
+  // Date range from entries
+  const sortedDates = entries.map((e) => e.date).sort();
+  const dateRange = sortedDates.length > 0
+    ? sortedDates[0] === sortedDates[sortedDates.length - 1]
+      ? formatShortDate(sortedDates[0])
+      : `${formatShortDate(sortedDates[0])} – ${formatShortDate(sortedDates[sortedDates.length - 1])}`
+    : null;
+
   return (
     <div className="min-h-screen bg-background text-foreground">
       <div className="max-w-3xl mx-auto px-4 py-12 md:py-20">
@@ -39,6 +47,8 @@ export default async function SharedHoursPage({
               <h1 className="text-2xl font-bold">{group.name}</h1>
               <div className="flex items-center gap-3 mt-0.5 text-sm text-foreground/50">
                 <span>{clientName}</span>
+                <span className="text-foreground/20">·</span>
+                {dateRange && <span>{dateRange}</span>}
                 <span className="text-foreground/20">·</span>
                 <span>{group.hourly_rate} {group.currency}/h</span>
                 {group.invoice_number && (
