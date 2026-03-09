@@ -61,7 +61,7 @@ export function getTodayISO(): string {
 
 /**
  * Get ISO date strings for the rolling window.
- * Shows 1 past weekday + today + 3 future weekdays (expandedDaysBack adds more past weekdays).
+ * Shows 1 past weekday + today + 4 future weekdays (expandedDaysBack adds more past weekdays).
  * Weekend days that fall between included weekdays are inserted as separators.
  */
 export function getRollingDates(expandedDaysBack: number = 0): string[] {
@@ -80,12 +80,12 @@ export function getRollingDates(expandedDaysBack: number = 0): string[] {
     offset--;
   }
 
-  // Collect future weekdays (3 after today, today itself counts if it's a weekday)
+  // Collect future weekdays (4 after today, today itself counts if it's a weekday)
   const futureDates: Date[] = [];
   // Always include today even if weekend (rare edge: user opens on weekend)
   if (!isWeekend(today)) futureDates.push(new Date(today));
   offset = 1;
-  while (futureDates.length < 4) {
+  while (futureDates.length < 5) {
     const d = new Date(today);
     d.setDate(today.getDate() + offset);
     if (!isWeekend(d)) futureDates.push(d);
