@@ -123,17 +123,17 @@ export default async function SharedHoursPage({
           </div>
         </div>
 
-        {/* Disclaimer */}
-        <p className="mt-6 text-[11px] text-foreground/25 text-center leading-relaxed">
-          This is a confidential link. Please do not share it outside your organisation.
-        </p>
-
         {/* Footer */}
-        <div className="mt-8 text-center text-xs text-foreground/20">
-          Hourly registration by{" "}
-          <a href="https://www.oimachi.co" target="_blank" rel="noopener noreferrer" className="underline hover:text-foreground/40 transition-colors">
-            Oimachi ApS
-          </a>
+        <div className="mt-8 text-center space-y-1">
+          <p className="text-xs text-foreground/40">
+            Hourly registration by{" "}
+            <a href="https://www.oimachi.co" target="_blank" rel="noopener noreferrer" className="underline hover:text-foreground/60 transition-colors">
+              Oimachi ApS
+            </a>
+          </p>
+          <p className="text-[11px] text-foreground/20">
+            This is a confidential link. Please do not share it outside your organisation.
+          </p>
         </div>
       </div>
     </div>
