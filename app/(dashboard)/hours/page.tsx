@@ -37,7 +37,6 @@ import { CSS } from "@dnd-kit/utilities";
 import {
   parseTimeInput,
   formatDuration,
-  formatHoursDecimal,
   formatShortDate,
   todayISO,
   defaultGroupName,
@@ -142,7 +141,7 @@ function SummaryCards({
   const cards = [
     {
       label: "Unbilled hours",
-      value: formatHoursDecimal(unbilledMinutes) + "h",
+      value: formatDuration(unbilledMinutes),
       icon: Clock,
     },
     {
@@ -510,7 +509,7 @@ function InvoiceGroupSection({
         {/* Collapsed summary */}
         {collapsed && (
           <div className="flex items-center gap-3 text-sm text-foreground/40 shrink-0">
-            <span className="tabular-nums">{formatHoursDecimal(totalMinutes)}h</span>
+            <span className="tabular-nums">{formatDuration(totalMinutes)}</span>
             <span className="tabular-nums font-medium text-foreground/60">
               {formatMoney(totalValue, group.currency)}
             </span>
@@ -684,7 +683,7 @@ function InvoiceGroupSection({
             </div>
             <div className="flex items-center gap-4 text-sm">
               <span className="tabular-nums font-medium">
-                {formatHoursDecimal(totalMinutes)}h
+                {formatDuration(totalMinutes)}
               </span>
               <span className="tabular-nums font-semibold">
                 {formatMoney(totalValue, group.currency)}
