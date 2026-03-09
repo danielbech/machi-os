@@ -31,7 +31,15 @@ import {
 import { restrictToVerticalAxis } from "@dnd-kit/modifiers";
 import { CSS } from "@dnd-kit/utilities";
 import { useProjectData } from "@/lib/project-data-context";
-import type { Client, ClientStatusDef, ClientGroup } from "@/lib/types";
+import { useWorkspace } from "@/lib/workspace-context";
+import type { Client, ClientStatusDef, ClientGroup, PipelineItem } from "@/lib/types";
+import {
+  loadPipelineItems,
+  createPipelineItem,
+  updatePipelineItem,
+  deletePipelineItem,
+  reorderPipelineItems,
+} from "@/lib/supabase/pipeline";
 import { CLIENT_DOT_COLORS, getBadgeColorStyle } from "@/lib/colors";
 import { ClientIcon } from "@/components/client-icon";
 import {
@@ -63,17 +71,6 @@ interface MonthData {
 interface FinanceData {
   orgName: string;
   months: MonthData[];
-}
-
-interface PipelineItem {
-  id: string;
-  clientId: string;
-  clientName: string;
-  clientColor: string;
-  clientLogoUrl?: string;
-  clientIcon?: string;
-  amount: number;
-  expectedMonth: string; // "YYYY-MM"
 }
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
@@ -128,38 +125,37 @@ function useChartColors() {
   return colors;
 }
 
-const PIPELINE_KEY = "flowie-finance-pipeline";
-
-function usePipeline() {
+function usePipeline(projectId: string | null) {
   const [items, setItems] = useState<PipelineItem[]>([]);
 
   useEffect(() => {
-    try {
-      const stored = localStorage.getItem(PIPELINE_KEY);
-      if (stored) setItems(JSON.parse(stored));
-    } catch {}
+    if (!projectId) { setItems([]); return; }
+    loadPipelineItems(projectId).then(setItems);
+  }, [projectId]);
+
+  const add = useCallback(async (item: { client_id: string; amount: number; expected_month: string }) => {
+    if (!projectId) return;
+    const maxSort = items.reduce((max, i) => Math.max(max, i.sort_order), -1);
+    const created = await createPipelineItem(projectId, { ...item, sort_order: maxSort + 1 });
+    setItems((prev) => [...prev, created]);
+  }, [projectId, items]);
+
+  const update = useCallback(async (id: string, changes: Partial<Pick<PipelineItem, "client_id" | "amount" | "expected_month">>) => {
+    setItems((prev) => prev.map((i) => (i.id === id ? { ...i, ...changes } : i)));
+    await updatePipelineItem(id, changes);
   }, []);
 
-  const save = useCallback((next: PipelineItem[]) => {
-    setItems(next);
-    localStorage.setItem(PIPELINE_KEY, JSON.stringify(next));
+  const remove = useCallback(async (id: string) => {
+    setItems((prev) => prev.filter((i) => i.id !== id));
+    await deletePipelineItem(id);
   }, []);
 
-  const add = useCallback((item: Omit<PipelineItem, "id">) => {
-    save([...items, { ...item, id: `p-${Date.now()}` }]);
-  }, [items, save]);
-
-  const update = useCallback((id: string, changes: Partial<PipelineItem>) => {
-    save(items.map((i) => (i.id === id ? { ...i, ...changes } : i)));
-  }, [items, save]);
-
-  const remove = useCallback((id: string) => {
-    save(items.filter((i) => i.id !== id));
-  }, [items, save]);
-
-  const reorder = useCallback((oldIndex: number, newIndex: number) => {
-    save(arrayMove(items, oldIndex, newIndex));
-  }, [items, save]);
+  const reorder = useCallback(async (oldIndex: number, newIndex: number) => {
+    const reordered = arrayMove(items, oldIndex, newIndex);
+    const withOrder = reordered.map((item, i) => ({ ...item, sort_order: i }));
+    setItems(withOrder);
+    await reorderPipelineItems(withOrder.map((item) => ({ id: item.id, sort_order: item.sort_order })));
+  }, [items]);
 
   const total = items.reduce((sum, i) => sum + i.amount, 0);
 
@@ -309,7 +305,7 @@ function GoalTracker({ months, pipelineItems, clients, clientStatuses }: {
   const segments = useMemo(() => {
     const byStatus = new Map<string, PipelineSegment>();
     for (const item of pipelineItems) {
-      const client = clients.find((c) => c.id === item.clientId);
+      const client = clients.find((c) => c.id === item.client_id);
       const status = client?.status_id ? clientStatuses.find((s) => s.id === client.status_id) : undefined;
       if (!status) continue;
       const existing = byStatus.get(status.id);
@@ -725,8 +721,8 @@ function SortablePipelineRow({ item, children }: { item: PipelineItem; children:
 
 function Pipeline({ items, onAdd, onUpdate, onRemove, onReorder, total, clients, clientGroups, clientStatuses }: {
   items: PipelineItem[];
-  onAdd: (item: Omit<PipelineItem, "id">) => void;
-  onUpdate: (id: string, changes: Partial<PipelineItem>) => void;
+  onAdd: (item: { client_id: string; amount: number; expected_month: string }) => void;
+  onUpdate: (id: string, changes: Partial<Pick<PipelineItem, "client_id" | "amount" | "expected_month">>) => void;
   onRemove: (id: string) => void;
   onReorder: (oldIndex: number, newIndex: number) => void;
   total: number;
@@ -760,13 +756,9 @@ function Pipeline({ items, onAdd, onUpdate, onRemove, onReorder, total, clients,
     const parsed = Number(addingAmount.replace(/[^0-9]/g, ""));
     if (!addingClient || !parsed || !addingMonth) return;
     onAdd({
-      clientId: addingClient.id,
-      clientName: addingClient.name,
-      clientColor: addingClient.color,
-      clientLogoUrl: addingClient.logo_url,
-      clientIcon: addingClient.icon,
+      client_id: addingClient.id,
       amount: parsed,
-      expectedMonth: addingMonth,
+      expected_month: addingMonth,
     });
     setAddingClient(null);
     setAddingAmount("");
@@ -808,7 +800,7 @@ function Pipeline({ items, onAdd, onUpdate, onRemove, onReorder, total, clients,
           <TableBody>
             <SortableContext items={items.map((i) => i.id)} strategy={verticalListSortingStrategy}>
               {items.map((item) => {
-                const client = clients.find((c) => c.id === item.clientId);
+                const client = clients.find((c) => c.id === item.client_id);
                 const status = client?.status_id ? clientStatuses.find((s) => s.id === client.status_id) : undefined;
                 return (
                   <SortablePipelineRow key={item.id} item={item}>
@@ -816,14 +808,8 @@ function Pipeline({ items, onAdd, onUpdate, onRemove, onReorder, total, clients,
                       <ClientPicker
                         clients={clients}
                         clientGroups={clientGroups}
-                        selectedId={item.clientId}
-                        onSelect={(c) => onUpdate(item.id, {
-                          clientId: c.id,
-                          clientName: c.name,
-                          clientColor: c.color,
-                          clientLogoUrl: c.logo_url,
-                          clientIcon: c.icon,
-                        })}
+                        selectedId={item.client_id}
+                        onSelect={(c) => onUpdate(item.id, { client_id: c.id })}
                       />
                     </TableCell>
                     <TableCell>
@@ -839,7 +825,7 @@ function Pipeline({ items, onAdd, onUpdate, onRemove, onReorder, total, clients,
                       <InlineAmount value={item.amount} onSave={(amount) => onUpdate(item.id, { amount })} />
                     </TableCell>
                     <TableCell>
-                      <InlineMonthPicker value={item.expectedMonth} onSave={(expectedMonth) => onUpdate(item.id, { expectedMonth })} />
+                      <InlineMonthPicker value={item.expected_month} onSave={(expected_month) => onUpdate(item.id, { expected_month })} />
                     </TableCell>
                     <TableCell>
                       <Button
@@ -939,7 +925,8 @@ export default function FinancePage() {
   const [data, setData] = useState<FinanceData | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-  const pipeline = usePipeline();
+  const { activeProjectId } = useWorkspace();
+  const pipeline = usePipeline(activeProjectId);
   const { clients, clientGroups, clientStatuses } = useProjectData();
 
   useEffect(() => {

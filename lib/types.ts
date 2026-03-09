@@ -167,6 +167,17 @@ export interface HourEntry {
   updated_at: string;
 }
 
+export interface PipelineItem {
+  id: string;
+  project_id: string;
+  client_id: string;
+  amount: number;
+  expected_month: string; // "YYYY-MM"
+  sort_order: number;
+  created_at: string;
+  updated_at: string;
+}
+
 // ─── Docs ────────────────────────────────────────────────────────────────────
 
 export interface Doc {
