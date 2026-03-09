@@ -495,7 +495,18 @@ function InvoiceGroupSection({
           </div>
           <div className="flex items-center gap-3 text-xs text-foreground/40 mt-0.5">
             {clientGroup && <span>{clientGroup.name}</span>}
-            <span>{group.hourly_rate} {group.currency}/h</span>
+            <span className="inline-flex items-center gap-0.5">
+              <InlineInput
+                value={String(group.hourly_rate)}
+                onSave={(v) => {
+                  const rate = parseFloat(v);
+                  if (!isNaN(rate) && rate > 0) onUpdateGroup(group.id, { hourly_rate: rate });
+                }}
+                type="number"
+                className="text-xs"
+              />
+              <span>{group.currency}/h</span>
+            </span>
             {group.currency !== 'DKK' && (
               <span className="text-foreground/25">1 {group.currency} = {group.exchange_rate} DKK</span>
             )}
