@@ -38,6 +38,7 @@ import { BubbleToolbar } from "@/components/docs/bubble-toolbar";
 import { Breadcrumbs } from "@/components/docs/breadcrumbs";
 import { CommentsPanel } from "@/components/docs/comments-panel";
 import { InlineCommentPopover } from "@/components/docs/inline-comment-popover";
+import { BlockHandle } from "@/components/docs/block-handle";
 import { CommentMark } from "@/components/docs/comment-mark";
 import { loadDocComments } from "@/lib/supabase/docs";
 import { ImagePlus } from "lucide-react";
@@ -161,6 +162,13 @@ export function DocEditor({
       titleRef.current.style.height = titleRef.current.scrollHeight + "px";
     }
   }, [title]);
+
+  // Auto-focus title on new (untitled) docs
+  useEffect(() => {
+    if (!doc.title && titleRef.current) {
+      setTimeout(() => titleRef.current?.focus(), 100);
+    }
+  }, [doc.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const debouncedSaveTitle = useCallback(
     (newTitle: string) => {
@@ -380,7 +388,7 @@ export function DocEditor({
 
   return (
     <div className="flex h-full">
-      <div className="flex-1 overflow-y-auto">
+      <div className="flex-1 overflow-y-auto animate-doc-enter">
         {/* Cover image */}
         {doc.cover_image ? (
           <div
@@ -495,6 +503,7 @@ export function DocEditor({
             {editor && (
               <BubbleToolbar editor={editor} onComment={handleComment} />
             )}
+            {editor && <BlockHandle editor={editor} />}
             <EditorContent editor={editor} />
             {slash.active && slash.range && slash.coords && editor && (
               <div
@@ -519,8 +528,12 @@ export function DocEditor({
         </div>
       </div>
       {/* Comments sidebar */}
-      {showComments && (
-        <div className="w-80 shrink-0 border-l border-foreground/[0.06] flex flex-col">
+      <div
+        className={`shrink-0 border-l border-foreground/[0.06] flex flex-col transition-all duration-200 ease-out overflow-hidden ${
+          showComments ? "w-80 opacity-100" : "w-0 opacity-0 border-l-0"
+        }`}
+      >
+        <div className="w-80 min-w-[320px] flex flex-col h-full">
           <CommentsPanel
             docId={doc.id}
             projectId={projectId}
@@ -534,7 +547,7 @@ export function DocEditor({
             onSetActiveComment={setActiveCommentId}
           />
         </div>
-      )}
+      </div>
       {/* Inline comment popover */}
       {inlinePopover && editor && (
         <InlineCommentPopover

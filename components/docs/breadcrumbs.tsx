@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
-import { ChevronRight } from "lucide-react";
+import { ChevronRight, FileText } from "lucide-react";
 import type { Doc } from "@/lib/types";
 
 export function Breadcrumbs({
@@ -28,25 +28,24 @@ export function Breadcrumbs({
   }, [docs, activeDocId]);
 
   const currentDoc = docs.find((d) => d.id === activeDocId);
-  if (!currentDoc || ancestors.length === 0) return null;
+  if (!currentDoc) return null;
 
   return (
-    <div className="flex items-center gap-1 text-xs text-foreground/40 mb-2 flex-wrap">
-      {ancestors.map((ancestor, i) => (
-        <span key={ancestor.id} className="flex items-center gap-1">
-          {i > 0 && <ChevronRight className="size-3 text-foreground/20 shrink-0" />}
+    <nav className="flex items-center gap-0.5 text-xs text-foreground/30 mb-3 flex-wrap">
+      {ancestors.map((ancestor) => (
+        <span key={ancestor.id} className="flex items-center gap-0.5">
           <button
             onClick={() => onNavigate(ancestor.id)}
-            className="hover:text-foreground/60 transition-colors truncate max-w-[150px]"
+            className="px-1.5 py-0.5 rounded hover:text-foreground/60 hover:bg-foreground/[0.04] transition-colors truncate max-w-[160px]"
           >
             {ancestor.icon ? `${ancestor.icon} ` : ""}{ancestor.title || "Untitled"}
           </button>
+          <ChevronRight className="size-3 text-foreground/15 shrink-0" />
         </span>
       ))}
-      <ChevronRight className="size-3 text-foreground/20 shrink-0" />
-      <span className="text-foreground/50 truncate max-w-[150px]">
+      <span className="px-1.5 py-0.5 text-foreground/45 truncate max-w-[200px]">
         {currentDoc.icon ? `${currentDoc.icon} ` : ""}{currentDoc.title || "Untitled"}
       </span>
-    </div>
+    </nav>
   );
 }
