@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import { loadInvoiceGroupByShareToken } from "@/lib/supabase/hours";
-import { formatDuration, formatHoursDecimal, formatShortDate, formatMoney, toDKK } from "@/lib/hours-utils";
+import { formatDuration, formatShortDate, formatMoney, toDKK } from "@/lib/hours-utils";
 
 export default async function SharedHoursPage({
   params,
@@ -110,7 +110,7 @@ export default async function SharedHoursPage({
           </span>
           <div className="flex items-center gap-4 text-sm">
             <span className="tabular-nums font-medium">
-              {formatHoursDecimal(totalMinutes)}h
+              {formatDuration(totalMinutes)}
             </span>
             <span className="tabular-nums font-semibold text-base">
               {formatMoney(totalValue, group.currency)}
