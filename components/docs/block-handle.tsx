@@ -2,11 +2,12 @@
 
 import { useEffect, useRef, useState, useCallback } from "react";
 import type { Editor } from "@tiptap/react";
+import { NodeSelection } from "@tiptap/pm/state";
 import { GripVertical, Plus } from "lucide-react";
 
-// ─── Turn-into menu items ────────────────────────────────────────────────────
+// ─── Menu items ─────────────────────────────────────────────────────────────
 
-const TURN_INTO_OPTIONS = [
+const ADD_BLOCK_OPTIONS = [
   { label: "Text", type: "paragraph", icon: "Aa" },
   { label: "Heading 1", type: "heading", attrs: { level: 1 }, icon: "H1" },
   { label: "Heading 2", type: "heading", attrs: { level: 2 }, icon: "H2" },
@@ -17,6 +18,8 @@ const TURN_INTO_OPTIONS = [
   { label: "Blockquote", type: "blockquote", icon: "❝" },
   { label: "Code Block", type: "codeBlock", icon: "</>" },
 ] as const;
+
+const TURN_INTO_OPTIONS = ADD_BLOCK_OPTIONS;
 
 // ─── Block Handle Overlay ────────────────────────────────────────────────────
 
@@ -68,10 +71,10 @@ export function BlockHandle({ editor }: { editor: Editor }) {
       const blockRect = block.getBoundingClientRect();
       const editorRect = editorDom.getBoundingClientRect();
 
-      // Position to the left of the block
+      // Position to the LEFT of the editor content area
       setPosition({
         top: blockRect.top,
-        left: editorRect.left - 44,
+        left: editorRect.left - 48,
       });
       setActiveNode({ pos, node: block, type: nodeType });
       setVisible(true);
@@ -133,24 +136,86 @@ export function BlockHandle({ editor }: { editor: Editor }) {
     };
   }, [showMenu]);
 
-  // ─── Plus button: insert a new paragraph below ────────────────────────────
+  // ─── Plus button: open add-block menu ──────────────────────────────────────
 
-  const handleAdd = useCallback(() => {
-    if (!activeNode) return;
-    const { pos } = activeNode;
-    const resolved = editor.state.doc.resolve(pos);
-    // Find the end of the current top-level block
-    const endOfBlock = resolved.after(1);
-    // Insert a new paragraph
-    editor
-      .chain()
-      .focus()
-      .insertContentAt(endOfBlock, { type: "paragraph" })
-      .setTextSelection(endOfBlock + 1)
-      .run();
-    setShowMenu(null);
-    setVisible(false);
-  }, [editor, activeNode]);
+  const handleAddBlock = useCallback(
+    (option: (typeof ADD_BLOCK_OPTIONS)[number]) => {
+      if (!activeNode) return;
+      const { pos } = activeNode;
+      const resolved = editor.state.doc.resolve(pos);
+      const endOfBlock = resolved.after(1);
+
+      // Insert a new block below and focus it
+      switch (option.type) {
+        case "paragraph":
+          editor
+            .chain()
+            .focus()
+            .insertContentAt(endOfBlock, { type: "paragraph" })
+            .setTextSelection(endOfBlock + 1)
+            .run();
+          break;
+        case "heading":
+          editor
+            .chain()
+            .focus()
+            .insertContentAt(endOfBlock, { type: "paragraph" })
+            .setTextSelection(endOfBlock + 1)
+            .setHeading({ level: option.attrs!.level as 1 | 2 | 3 })
+            .run();
+          break;
+        case "bulletList":
+          editor
+            .chain()
+            .focus()
+            .insertContentAt(endOfBlock, { type: "paragraph" })
+            .setTextSelection(endOfBlock + 1)
+            .toggleBulletList()
+            .run();
+          break;
+        case "orderedList":
+          editor
+            .chain()
+            .focus()
+            .insertContentAt(endOfBlock, { type: "paragraph" })
+            .setTextSelection(endOfBlock + 1)
+            .toggleOrderedList()
+            .run();
+          break;
+        case "taskList":
+          editor
+            .chain()
+            .focus()
+            .insertContentAt(endOfBlock, { type: "paragraph" })
+            .setTextSelection(endOfBlock + 1)
+            .toggleTaskList()
+            .run();
+          break;
+        case "blockquote":
+          editor
+            .chain()
+            .focus()
+            .insertContentAt(endOfBlock, { type: "paragraph" })
+            .setTextSelection(endOfBlock + 1)
+            .toggleBlockquote()
+            .run();
+          break;
+        case "codeBlock":
+          editor
+            .chain()
+            .focus()
+            .insertContentAt(endOfBlock, { type: "paragraph" })
+            .setTextSelection(endOfBlock + 1)
+            .toggleCodeBlock()
+            .run();
+          break;
+      }
+
+      setShowMenu(null);
+      setVisible(false);
+    },
+    [editor, activeNode]
+  );
 
   // ─── Turn into ────────────────────────────────────────────────────────────
 
@@ -206,15 +271,20 @@ export function BlockHandle({ editor }: { editor: Editor }) {
       const { pos } = activeNode;
       const resolved = editor.state.doc.resolve(pos);
       const nodeStart = resolved.before(1);
-      const nodeEnd = resolved.after(1);
 
-      // Select the block so ProseMirror's built-in drag handles it
-      editor.chain().setTextSelection({ from: nodeStart, to: nodeEnd }).run();
+      // Create a NodeSelection so ProseMirror handles the drag natively
+      try {
+        const nodeSelection = NodeSelection.create(editor.state.doc, nodeStart);
+        editor.view.dispatch(editor.state.tr.setSelection(nodeSelection));
+      } catch {
+        // Fallback: use text selection for the whole block
+        const nodeEnd = resolved.after(1);
+        editor.chain().setTextSelection({ from: nodeStart, to: nodeEnd }).run();
+      }
 
-      // Let ProseMirror handle the actual drag
-      const slice = editor.state.selection.content();
       e.dataTransfer.effectAllowed = "move";
-      // Use a transparent drag image
+
+      // Create a ghost drag image
       const ghost = document.createElement("div");
       ghost.style.position = "absolute";
       ghost.style.top = "-1000px";
@@ -224,6 +294,7 @@ export function BlockHandle({ editor }: { editor: Editor }) {
       ghost.style.fontSize = "12px";
       ghost.style.background = "var(--popover)";
       ghost.style.border = "1px solid var(--border)";
+      ghost.style.color = "var(--foreground)";
       document.body.appendChild(ghost);
       e.dataTransfer.setDragImage(ghost, 0, 0);
       setTimeout(() => document.body.removeChild(ghost), 0);
@@ -235,7 +306,7 @@ export function BlockHandle({ editor }: { editor: Editor }) {
 
   return (
     <>
-      {/* Handle buttons */}
+      {/* Handle buttons — positioned to the LEFT of the editor */}
       <div
         ref={handleRef}
         className="fixed z-40 flex items-center gap-px"
@@ -244,8 +315,15 @@ export function BlockHandle({ editor }: { editor: Editor }) {
         onMouseLeave={() => { if (!showMenu) scheduleHide(); }}
       >
         <button
-          onClick={handleAdd}
-          className="flex items-center justify-center size-5 rounded text-foreground/20 hover:text-foreground/50 hover:bg-foreground/[0.05] transition-colors"
+          onClick={() => {
+            if (showMenu === "add") {
+              setShowMenu(null);
+            } else {
+              setMenuPos({ top: position.top, left: position.left });
+              setShowMenu("add");
+            }
+          }}
+          className="flex items-center justify-center size-6 rounded text-foreground/20 hover:text-foreground/50 hover:bg-foreground/[0.05] transition-colors"
           aria-label="Add block below"
         >
           <Plus className="size-3.5" />
@@ -261,19 +339,44 @@ export function BlockHandle({ editor }: { editor: Editor }) {
               setShowMenu("turnInto");
             }
           }}
-          className="flex items-center justify-center size-5 rounded text-foreground/20 hover:text-foreground/50 hover:bg-foreground/[0.05] transition-colors cursor-grab active:cursor-grabbing"
+          className="flex items-center justify-center size-6 rounded text-foreground/20 hover:text-foreground/50 hover:bg-foreground/[0.05] transition-colors cursor-grab active:cursor-grabbing"
           aria-label="Drag or click for options"
         >
           <GripVertical className="size-3.5" />
         </button>
       </div>
 
+      {/* Add block menu */}
+      {showMenu === "add" && (
+        <div
+          ref={menuRef}
+          className="fixed z-50 w-[180px] rounded-lg border border-foreground/[0.08] bg-popover shadow-xl py-1 animate-in fade-in-0 zoom-in-95 duration-100"
+          style={{ top: menuPos.top + 30, left: menuPos.left }}
+        >
+          <div className="px-2 py-1 text-[10px] font-medium text-foreground/30 uppercase tracking-wider">
+            Add block
+          </div>
+          {ADD_BLOCK_OPTIONS.map((option) => (
+            <button
+              key={option.type + ("attrs" in option ? JSON.stringify(option.attrs) : "")}
+              onClick={() => handleAddBlock(option)}
+              className="w-full flex items-center gap-2.5 px-2 py-1.5 text-sm text-foreground/60 hover:text-foreground hover:bg-foreground/[0.05] transition-colors"
+            >
+              <span className="w-5 text-center text-xs text-foreground/30 font-mono shrink-0">
+                {option.icon}
+              </span>
+              {option.label}
+            </button>
+          ))}
+        </div>
+      )}
+
       {/* Turn-into menu */}
       {showMenu === "turnInto" && (
         <div
           ref={menuRef}
           className="fixed z-50 w-[180px] rounded-lg border border-foreground/[0.08] bg-popover shadow-xl py-1 animate-in fade-in-0 zoom-in-95 duration-100"
-          style={{ top: menuPos.top + 28, left: menuPos.left }}
+          style={{ top: menuPos.top + 30, left: menuPos.left }}
         >
           <div className="px-2 py-1 text-[10px] font-medium text-foreground/30 uppercase tracking-wider">
             Turn into
