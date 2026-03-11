@@ -84,6 +84,22 @@ export default function BoardPage() {
   // Suppress realtime reload while user is inline-editing a card title
   const isInlineEditing = useRef(false);
 
+  // ─── Debounced task save ─────────────────────────────────────────────────
+  // Coalesces rapid updates (assignee/client toggles) into a single DB write
+  const pendingSaves = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
+  const debouncedSaveTask = useCallback((task: Task) => {
+    if (!activeProjectId) return;
+    const existing = pendingSaves.current.get(task.id);
+    if (existing) clearTimeout(existing);
+    pendingSaves.current.set(
+      task.id,
+      setTimeout(() => {
+        pendingSaves.current.delete(task.id);
+        saveTask(activeProjectId, task, areaId);
+      }, 300)
+    );
+  }, [activeProjectId, areaId]);
+
   // Stable callbacks for BoardTaskCard to maximize React.memo effectiveness
   const handleCopy = useCallback((task: Task, col: string) => setClipboard({ task, column: col }), []);
   const handleNewlyCreatedSeen = useCallback(() => setNewlyCreatedCardId(null), []);
@@ -290,7 +306,7 @@ export default function BoardPage() {
     }
   };
 
-  const toggleComplete = async (taskId: string) => {
+  const toggleComplete = (taskId: string) => {
     if (!activeProjectId) return;
     let updatedTask: Task | null = null;
     let wasCompleted = false;
@@ -324,10 +340,10 @@ export default function BoardPage() {
         return next;
       });
     }
-    if (updatedTask) await saveTask(activeProjectId, updatedTask, areaId);
+    if (updatedTask) debouncedSaveTask(updatedTask);
   };
 
-  const toggleAssignee = async (taskId: string, memberId: string) => {
+  const toggleAssignee = (taskId: string, memberId: string) => {
     if (!activeProjectId) return;
     let updatedTask: Task | null = null;
     setColumns((prev) => {
@@ -350,10 +366,10 @@ export default function BoardPage() {
       }
       return updated;
     });
-    if (updatedTask) await saveTask(activeProjectId, updatedTask, areaId);
+    if (updatedTask) debouncedSaveTask(updatedTask);
   };
 
-  const toggleClient = async (taskId: string, clientId: string) => {
+  const toggleClient = (taskId: string, clientId: string) => {
     if (!activeProjectId) return;
     let updatedTask: Task | null = null;
     setColumns((prev) => {
@@ -374,7 +390,7 @@ export default function BoardPage() {
       }
       return updated;
     });
-    if (updatedTask) await saveTask(activeProjectId, updatedTask, areaId);
+    if (updatedTask) debouncedSaveTask(updatedTask);
   };
 
   const pasteTask = async (columnId: string) => {
@@ -589,7 +605,7 @@ export default function BoardPage() {
     }
   };
 
-  const handleInlineTitleChange = async (taskId: string, newTitle: string) => {
+  const handleInlineTitleChange = (taskId: string, newTitle: string) => {
     if (!activeProjectId) return;
     // Optimistic local state update
     const updated = { ...columns };
@@ -604,11 +620,7 @@ export default function BoardPage() {
       }
     }
     setColumns(updated);
-    if (updatedTask) {
-      await suppressDuring(async () => {
-        await saveTask(activeProjectId, updatedTask!, areaId);
-      });
-    }
+    if (updatedTask) debouncedSaveTask(updatedTask);
   };
 
   // Send kanban task to backlog (via drag or action)
