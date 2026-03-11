@@ -93,9 +93,6 @@ export interface PendingInvite {
   created_at: string;
 }
 
-export type FeedbackCategory = "idea" | "bug" | "feedback";
-export type FeedbackStatus = "open" | "resolved";
-
 export type TimelineEntryType = "project" | "event";
 
 export interface TimelineEntry {
@@ -123,13 +120,6 @@ export interface TimelineMarker {
 }
 
 export interface BoardColumn {
-  id: string;
-  project_id: string;
-  title: string;
-  sort_order: number;
-}
-
-export interface FeedbackColumn {
   id: string;
   project_id: string;
   title: string;
@@ -213,24 +203,30 @@ export interface DocComment {
   };
 }
 
-export type ReactionType = 'thumbsup' | 'heart' | 'fire';
+// ─── Website Feedback ──────────────────────────────────────────────────────
 
-export interface FeedbackTicket {
+export interface WebsiteFeedbackBoard {
   id: string;
-  user_id: string;
+  project_id: string;
+  client_id: string;
   title: string;
-  description: string;
-  category: FeedbackCategory;
-  status: FeedbackStatus;
-  column_id: string | null;
-  sort_order: number;
-  reactions: Record<ReactionType, number>;
-  user_reactions: ReactionType[];
+  share_token: string;
+  statuses: string[];
   created_at: string;
-  author?: {
-    display_name: string;
-    initials: string;
-    color: string;
-    avatar_url?: string;
-  };
+  updated_at: string;
+}
+
+export interface WebsiteFeedbackItem {
+  id: string;
+  board_id: string;
+  project_id: string;
+  description: string;
+  status: string;
+  media_urls: string[];
+  resolution_note: string | null;
+  submitted_by: string | null;
+  user_id: string | null;
+  sort_order: number;
+  created_at: string;
+  updated_at: string;
 }
