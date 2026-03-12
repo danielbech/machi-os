@@ -220,6 +220,14 @@ export function AppSidebar() {
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
+                <SidebarMenuItem>
+                  <SidebarMenuButton asChild isActive={pathname === "/feedback"} tooltip="Feedback">
+                    <Link href="/feedback" onClick={() => { if (backlogOpen) toggleBacklog(); setOpenMobile(false); }}>
+                      <MessageSquarePlus />
+                      <span>Feedback</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
               </SidebarMenu>
             </SidebarGroupContent>
           </SidebarGroup>
@@ -240,14 +248,6 @@ export function AppSidebar() {
                 </SidebarMenuButton>
               </SidebarMenuItem>
             )}
-            <SidebarMenuItem>
-              <SidebarMenuButton asChild isActive={pathname === "/feedback"} tooltip="Feedback">
-                <Link href="/feedback" onClick={() => setOpenMobile(false)}>
-                  <MessageSquarePlus />
-                  <span>Feedback</span>
-                </Link>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
             <SidebarMenuItem>
               <SidebarMenuButton onClick={() => { handleOpenSettings(); setOpenMobile(false); }} tooltip="Settings">
                 <Settings />
