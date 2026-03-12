@@ -166,10 +166,10 @@ export default function BoardPage() {
     } finally {
       suppressCount.current--;
       if (suppressCount.current === 0) {
-        // Small grace period for realtime events that arrive right after DB write
+        // Grace period for realtime events that arrive after DB write
         setTimeout(() => {
           if (suppressCount.current === 0) suppressTaskReload.current = false;
-        }, 300);
+        }, 800);
       }
     }
   }, []);
@@ -280,22 +280,33 @@ export default function BoardPage() {
       day: columnId as string,
       type: resolvedType,
     };
-    const columnItems = [...columns[columnId]];
-    if (index !== undefined && index !== null) {
-      columnItems.splice(index, 0, newCard);
-    } else {
-      columnItems.push(newCard);
-    }
-    setColumns({ ...columns, [columnId]: columnItems });
+    setColumns((prev) => {
+      const columnItems = [...(prev[columnId] || [])];
+      if (index !== undefined && index !== null) {
+        columnItems.splice(index, 0, newCard);
+      } else {
+        columnItems.push(newCard);
+      }
+      return { ...prev, [columnId]: columnItems };
+    });
     try {
-      const realId = await saveTask(activeProjectId, newCard, areaId);
-      const updatedItems = columnItems.map((item) =>
-        item.id === tempId ? { ...item, id: realId } : item
-      );
-      setColumns({ ...columns, [columnId]: updatedItems });
+      let realId = "";
+      await suppressDuring(async () => {
+        realId = await saveTask(activeProjectId, newCard, areaId);
+      });
+      setColumns((prev) => {
+        const updatedItems = (prev[columnId] || []).map((item) =>
+          item.id === tempId ? { ...item, id: realId } : item
+        );
+        return { ...prev, [columnId]: updatedItems };
+      });
       setNewlyCreatedCardId(realId);
       // Persist correct sort order for the whole column
-      await updateDayTasks(activeProjectId, columnId, updatedItems, areaId);
+      setColumns((prev) => {
+        const items = prev[columnId] || [];
+        updateDayTasks(activeProjectId, columnId, items, areaId);
+        return prev;
+      });
     } catch {
       // Rollback: remove the optimistic card
       setColumns((prev) => ({
@@ -407,15 +418,26 @@ export default function BoardPage() {
       day: columnId as string,
       checklist: clipboard.task.checklist.map(i => ({ ...i, id: crypto.randomUUID() })),
     };
-    const columnItems = [...columns[columnId], newCard];
-    setColumns({ ...columns, [columnId]: columnItems });
-    const realId = await saveTask(activeProjectId, newCard, areaId);
-    const updatedItems = columnItems.map((item) =>
-      item.id === tempId ? { ...item, id: realId } : item
-    );
-    setColumns({ ...columns, [columnId]: updatedItems });
+    setColumns((prev) => ({
+      ...prev,
+      [columnId]: [...(prev[columnId] || []), newCard],
+    }));
+    let realId = "";
+    await suppressDuring(async () => {
+      realId = await saveTask(activeProjectId, newCard, areaId);
+    });
+    setColumns((prev) => {
+      const updatedItems = (prev[columnId] || []).map((item) =>
+        item.id === tempId ? { ...item, id: realId } : item
+      );
+      return { ...prev, [columnId]: updatedItems };
+    });
     setNewlyCreatedCardId(realId);
-    await updateDayTasks(activeProjectId, columnId, updatedItems, areaId);
+    setColumns((prev) => {
+      const items = prev[columnId] || [];
+      updateDayTasks(activeProjectId, columnId, items, areaId);
+      return prev;
+    });
   };
 
   // Global paste shortcut — paste into whichever column is hovered

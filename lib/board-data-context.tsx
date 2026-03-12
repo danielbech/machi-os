@@ -53,8 +53,14 @@ export function BoardDataProvider({ children }: { children: React.ReactNode }) {
       const tasks = await loadTasksByDay(activeProjectId, areaId, customIds, rollingDateRange);
       const keys = isCustom ? boardColumnIds : weekDays;
       const filtered: Record<string, Task[]> = {};
+      const seenIds = new Set<string>();
       for (const key of keys) {
-        filtered[key] = tasks[key] || [];
+        const deduped = (tasks[key] || []).filter((t) => {
+          if (seenIds.has(t.id)) return false;
+          seenIds.add(t.id);
+          return true;
+        });
+        filtered[key] = deduped;
       }
       setColumns(filtered);
       setInitialLoading(false);
