@@ -493,7 +493,7 @@ function InvoiceGroupSection({
             />
             {isClosed && <Lock className="size-3 text-foreground/30 shrink-0" />}
           </div>
-          <div className="flex items-center gap-3 text-xs text-foreground/40 mt-0.5">
+          <div className="flex items-center gap-3 text-xs text-foreground/40 mt-0.5" onClick={(e) => e.stopPropagation()}>
             {clientGroup && <span>{clientGroup.name}</span>}
             <span className="inline-flex items-center gap-0.5">
               <InlineInput
