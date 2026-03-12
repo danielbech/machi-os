@@ -401,6 +401,13 @@ function GoalTracker({ months, pipelineItems, clients, clientStatuses }: {
             className="absolute inset-y-0 left-0 rounded-full bg-foreground transition-all duration-500"
             style={{ width: `${progressPct}%` }}
           />
+          {/* Projected total marker (invoiced + pipeline) */}
+          {pipelineTotal > 0 && projectedPct > progressPct && (
+            <div
+              className="absolute top-0 bottom-0 w-0.5 border-l-2 border-dashed border-foreground/30"
+              style={{ left: `${projectedPct}%` }}
+            />
+          )}
           {/* Expected pace marker */}
           <div
             className="absolute top-0 bottom-0 w-0.5 bg-foreground/50"
@@ -420,6 +427,12 @@ function GoalTracker({ months, pipelineItems, clients, clientStatuses }: {
               {formatDKK(layer.amount)}
             </span>
           ))}
+          {pipelineTotal > 0 && (
+            <span>
+              <span className="inline-block w-2 h-0 border-t-2 border-dashed border-foreground/30 mr-1 align-middle" />
+              Projected {formatDKK(projectedRevenue)}
+            </span>
+          )}
           {projectedPct > 0 && projectedPct < 100 && (
             <span className="ml-auto">{expectedPct.toFixed(1)}% expected pace</span>
           )}
