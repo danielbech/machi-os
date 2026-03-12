@@ -178,7 +178,13 @@ export async function getEventsGroupedByDay(
   const allEvents = await Promise.all(
     calendarIds.map(calId => fetchCalendarEvents(token, startDate, endDate, calId).catch(() => []))
   );
-  const events = allEvents.flat();
+  // Deduplicate events that appear in multiple calendars (shared calendars, subscriptions)
+  const seen = new Set<string>();
+  const events = allEvents.flat().filter(e => {
+    if (seen.has(e.id)) return false;
+    seen.add(e.id);
+    return true;
+  });
 
   const grouped: Record<string, CalendarEvent[]> = {};
   const days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday'];

@@ -50,28 +50,40 @@ export function useCalendar() {
   return ctx;
 }
 
-// Get a valid access token for a connection, refreshing if expired
+// Get a valid access token for a connection, refreshing if expired.
+// Uses a per-connection lock to prevent concurrent refresh calls (thundering herd).
+const refreshLocks = new Map<string, Promise<{ token: string; updated: boolean; newExpiry?: Date }>>();
+
 async function getValidToken(conn: CalendarConnection): Promise<{ token: string; updated: boolean; newExpiry?: Date }> {
   const expiresAt = new Date(conn.expires_at);
   const now = new Date();
-  // Refresh if token expires within 5 minutes
   const needsRefresh = expiresAt.getTime() - now.getTime() < 5 * 60 * 1000;
 
   if (!needsRefresh) {
     return { token: conn.access_token, updated: false };
   }
 
+  // If a refresh is already in flight for this connection, wait for it
+  const existing = refreshLocks.get(conn.id);
+  if (existing) return existing;
+
   if (!conn.refresh_token) {
     throw new Error("Token expired and no refresh token available");
   }
 
-  const result = await refreshAccessToken(conn.refresh_token);
-  const newExpiry = new Date(Date.now() + result.expires_in * 1000);
+  const refreshPromise = (async () => {
+    try {
+      const result = await refreshAccessToken(conn.refresh_token!);
+      const newExpiry = new Date(Date.now() + result.expires_in * 1000);
+      await updateConnectionToken(conn.id, result.access_token, newExpiry);
+      return { token: result.access_token, updated: true, newExpiry };
+    } finally {
+      refreshLocks.delete(conn.id);
+    }
+  })();
 
-  // Persist the new access token to DB
-  await updateConnectionToken(conn.id, result.access_token, newExpiry);
-
-  return { token: result.access_token, updated: true, newExpiry };
+  refreshLocks.set(conn.id, refreshPromise);
+  return refreshPromise;
 }
 
 export function CalendarProvider({ children }: { children: React.ReactNode }) {
@@ -84,6 +96,9 @@ export function CalendarProvider({ children }: { children: React.ReactNode }) {
   const [lastSyncedAt, setLastSyncedAt] = useState<Date | null>(null);
 
   const googleCalendarConnected = calendarConnections.length > 0;
+  // Ref to access current connections inside sync without causing dependency loops
+  const connectionsRef = useRef(calendarConnections);
+  connectionsRef.current = calendarConnections;
 
   // Load shared events from Supabase and group by day
   const loadSharedEvents = useCallback(async (projectId: string, mode: WeekMode = "5-day") => {
@@ -198,14 +213,18 @@ export function CalendarProvider({ children }: { children: React.ReactNode }) {
           updatedConnections.push({ ...updatedConn, availableCalendars: calendars });
         } catch (error) {
           const message = error instanceof Error ? error.message : "Unknown error";
-          console.error(`Failed to sync connection ${conn.google_email}:`, message);
+          console.error(`Failed to sync connection ${conn.google_email} (${conn.id}):`, message);
 
           if (message.includes("no refresh token") || message.includes("Token expired")) {
             toast.error(`${conn.google_email}: session expired — please reconnect`);
+            // Auth failure: clear calendars to show broken state
+            updatedConnections.push({ ...conn, availableCalendars: [] });
           } else {
             toast.error(`Failed to sync ${conn.google_email}`);
+            // Transient failure: preserve previous calendar list from state
+            const prev = connectionsRef.current.find(c => c.id === conn.id);
+            updatedConnections.push({ ...conn, availableCalendars: prev?.availableCalendars || [] });
           }
-          updatedConnections.push({ ...conn, availableCalendars: [] });
         }
       }
 
