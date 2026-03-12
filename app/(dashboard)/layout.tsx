@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { AuthProvider, useAuth } from "@/lib/auth-context";
 import { WorkspaceProvider, useWorkspace } from "@/lib/workspace-context";
 import { ProjectDataProvider } from "@/lib/project-data-context";
@@ -17,7 +17,6 @@ import { BacklogShell } from "@/components/backlog-shell";
 import { ErrorBoundary } from "@/components/error-boundary";
 import { CursorOverlay } from "@/components/cursor-overlay";
 import { WelcomeDialog } from "@/components/welcome-dialog";
-import { PendingInvitesDialog } from "@/components/pending-invites-dialog";
 
 function ThemeBridge({ children }: { children: React.ReactNode }) {
   const { activeProjectId } = useWorkspace();
@@ -26,21 +25,12 @@ function ThemeBridge({ children }: { children: React.ReactNode }) {
 
 function DashboardGate({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
-  const { pendingInvites } = useWorkspace();
   const { backlogOpen, backlogWidth } = useBacklog();
   const isMobile = useIsMobile();
   const [showWelcome, setShowWelcome] = useState(() => {
     if (typeof window === "undefined") return false;
     return !localStorage.getItem("flowie-welcome-seen");
   });
-  const [showInvites, setShowInvites] = useState(false);
-
-  // Auto-open invites dialog when pending invites arrive
-  useEffect(() => {
-    if (pendingInvites.length > 0 && !showWelcome) {
-      setShowInvites(true);
-    }
-  }, [pendingInvites.length, showWelcome]);
 
   if (loading) {
     return (
@@ -96,10 +86,6 @@ function DashboardGate({ children }: { children: React.ReactNode }) {
             localStorage.setItem("flowie-welcome-seen", "true");
             setShowWelcome(false);
           }}
-        />
-        <PendingInvitesDialog
-          open={showInvites}
-          onOpenChange={setShowInvites}
         />
       </SidebarProvider>
     </TooltipProvider>

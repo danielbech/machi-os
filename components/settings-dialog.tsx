@@ -4,14 +4,14 @@ import { useState, useEffect, useRef } from "react";
 import { toast } from "sonner";
 import type { User } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/client";
-import { removeUserFromWorkspace, getPendingInvites, cancelInvite, updateWorkspace, type WorkspaceMember } from "@/lib/supabase/workspace";
+import { updateWorkspace } from "@/lib/supabase/workspace";
 import { loadCurrentProfile, updateProfile, uploadAvatar } from "@/lib/supabase/profiles";
 import { uploadWorkspaceLogo, deleteWorkspaceLogo } from "@/lib/supabase/storage";
 import { WORKSPACE_COLORS } from "@/lib/colors";
 import { THEMES } from "@/lib/themes";
 import { useTheme } from "@/lib/theme-context";
 import { countOrphanedTasks, migrateBoardTasks } from "@/lib/supabase/tasks-simple";
-import type { PendingInvite, WeekMode, Project, BoardColumn } from "@/lib/types";
+import type { WeekMode, Project, BoardColumn } from "@/lib/types";
 import type { ConnectionWithCalendars } from "@/lib/calendar-context";
 import {
   Dialog,
@@ -22,7 +22,7 @@ import {
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { RefreshCw, Plus, X, ChevronDown, Camera, User as UserIcon, Trash2, GitCommitHorizontal, Check, Sun, Moon, Monitor } from "lucide-react";
+import { RefreshCw, Plus, X, ChevronDown, Camera, Trash2, GitCommitHorizontal, Check, Sun, Moon, Monitor } from "lucide-react";
 
 interface SettingsDialogProps {
   open: boolean;
@@ -33,8 +33,6 @@ interface SettingsDialogProps {
   onGoogleCalendarConnect: () => void;
   onDisconnectAccount: (connectionId: string) => Promise<void>;
   onSyncCalendarEvents: () => Promise<void>;
-  workspaceMembers: WorkspaceMember[];
-  onMembersChange: (members: WorkspaceMember[]) => void;
   // Multi-account calendar
   calendarConnections: ConnectionWithCalendars[];
   onUpdateSelectedCalendars: (connectionId: string, calendarIds: string[]) => Promise<void>;
@@ -57,8 +55,7 @@ interface SettingsDialogProps {
   // Workspace management
   activeProject?: Project;
   lastSyncedAt?: Date | null;
-  refreshWorkspaces?: () => Promise<void>;
-  userProjectCount: number;
+  refreshWorkspace?: () => Promise<void>;
   defaultTab?: string;
 }
 
@@ -202,8 +199,6 @@ export function SettingsDialog({
   onGoogleCalendarConnect,
   onDisconnectAccount,
   onSyncCalendarEvents,
-  workspaceMembers,
-  onMembersChange,
   calendarConnections,
   onUpdateSelectedCalendars,
   onTransitionWeek,
@@ -220,17 +215,10 @@ export function SettingsDialog({
   onProfileUpdate,
   activeProject,
   lastSyncedAt,
-  refreshWorkspaces,
-  userProjectCount,
+  refreshWorkspace,
   defaultTab = "workspace",
 }: SettingsDialogProps) {
-  const isAdmin = activeProject?.role === 'owner' || activeProject?.role === 'admin';
   const [settingsTab, setSettingsTab] = useState(defaultTab);
-  const [inviteEmail, setInviteEmail] = useState("");
-  const [inviteRole, setInviteRole] = useState<"admin" | "member">("member");
-  const [inviteLoading, setInviteLoading] = useState(false);
-  const [inviteMessage, setInviteMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
-  const [pendingInvites, setPendingInvites] = useState<PendingInvite[]>([]);
   const [syncing, setSyncing] = useState(false);
   const [transitioning, setTransitioning] = useState(false);
   const [transitionResult, setTransitionResult] = useState<string | null>(null);
@@ -252,10 +240,6 @@ export function SettingsDialog({
   const [wsLogoUploading, setWsLogoUploading] = useState(false);
   const wsLogoInputRef = useRef<HTMLInputElement>(null);
   const [wsSaving, setWsSaving] = useState(false);
-  const [deleteConfirmName, setDeleteConfirmName] = useState("");
-  const [deleting, setDeleting] = useState(false);
-  const [deleteError, setDeleteError] = useState<string | null>(null);
-
   // Delete account state
   const [deleteAccountConfirm, setDeleteAccountConfirm] = useState("");
   const [deletingAccount, setDeletingAccount] = useState(false);
@@ -296,8 +280,6 @@ export function SettingsDialog({
       setWsName(activeProject.name);
       setWsColor(activeProject.color);
       setWsLogo(activeProject.logo_url);
-      setDeleteConfirmName("");
-      setDeleteError(null);
     }
   }, [open, activeProject]);
 
@@ -361,7 +343,7 @@ export function SettingsDialog({
       const url = await uploadWorkspaceLogo(file, activeProjectId);
       await updateWorkspace(activeProjectId, { logo_url: url });
       setWsLogo(url);
-      await refreshWorkspaces?.();
+      await refreshWorkspace?.();
     } catch (err) {
       console.error('Workspace logo upload failed:', err);
       toast.error("Failed to upload logo");
@@ -379,72 +361,12 @@ export function SettingsDialog({
       await deleteWorkspaceLogo(wsLogo);
       await updateWorkspace(activeProjectId, { logo_url: null });
       setWsLogo(undefined);
-      await refreshWorkspaces?.();
+      await refreshWorkspace?.();
     } catch (err) {
       console.error('Workspace logo remove failed:', err);
       toast.error("Failed to remove logo");
     } finally {
       setWsLogoUploading(false);
-    }
-  };
-
-  // Load pending invites when dialog opens
-  useEffect(() => {
-    if (!open || !activeProjectId) return;
-
-    getPendingInvites(activeProjectId).then(setPendingInvites);
-  }, [open, activeProjectId]);
-
-  // Clear message after 4 seconds
-  useEffect(() => {
-    if (!inviteMessage) return;
-    const timeout = setTimeout(() => setInviteMessage(null), 4000);
-    return () => clearTimeout(timeout);
-  }, [inviteMessage]);
-
-  const handleInvite = async () => {
-    if (!inviteEmail.trim() || !activeProjectId) return;
-
-    setInviteLoading(true);
-    setInviteMessage(null);
-
-    try {
-      const res = await fetch('/api/invite', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          email: inviteEmail.trim(),
-          projectId: activeProjectId,
-          role: inviteRole,
-        }),
-      });
-
-      const data = await res.json();
-
-      if (!res.ok) {
-        setInviteMessage({ type: 'error', text: data.error || 'Failed to invite' });
-        return;
-      }
-
-      setInviteMessage({ type: 'success', text: data.message });
-      setInviteEmail('');
-
-      // Refresh pending invites
-      const invites = await getPendingInvites(activeProjectId);
-      setPendingInvites(invites);
-    } catch {
-      setInviteMessage({ type: 'error', text: 'Network error' });
-    } finally {
-      setInviteLoading(false);
-    }
-  };
-
-  const handleCancelInvite = async (inviteId: string) => {
-    try {
-      await cancelInvite(inviteId);
-      setPendingInvites(pendingInvites.filter(i => i.id !== inviteId));
-    } catch {
-      toast.error("Failed to cancel invite");
     }
   };
 
@@ -865,7 +787,7 @@ export function SettingsDialog({
                               if (!activeProjectId || c === activeProject.color) return;
                               try {
                                 await updateWorkspace(activeProjectId, { color: c });
-                                await refreshWorkspaces?.();
+                                await refreshWorkspace?.();
                               } catch (err) {
                                 console.error("Failed to update color:", err);
                                 toast.error("Failed to update color");
@@ -893,7 +815,7 @@ export function SettingsDialog({
                         setWsSaving(true);
                         try {
                           await updateWorkspace(activeProjectId, { name: wsName.trim() });
-                          await refreshWorkspaces?.();
+                          await refreshWorkspace?.();
                         } catch (err) {
                           console.error("Failed to update workspace:", err);
                           toast.error("Failed to update workspace");
@@ -905,135 +827,6 @@ export function SettingsDialog({
                       {wsSaving ? "Saving..." : "Save name"}
                     </Button>
                   </div>
-                </div>
-              )}
-
-              {/* Members + pending invites in one list */}
-              <div className="space-y-2">
-                <div className="text-xs text-muted-foreground px-1">Members</div>
-                {workspaceMembers.map((member) => (
-                  <div
-                    key={member.id}
-                    className="flex items-center gap-3 p-3 rounded-lg border border-border bg-muted/50"
-                  >
-                    {member.avatar_url ? (
-                      <img
-                        src={member.avatar_url}
-                        alt={member.display_name || ''}
-                        className="size-8 rounded-full object-cover shrink-0"
-                      />
-                    ) : (
-                      <div className="size-8 rounded-full bg-muted flex items-center justify-center shrink-0">
-                        <UserIcon className="size-4 text-foreground/30" />
-                      </div>
-                    )}
-                    <div className="flex-1 min-w-0">
-                      <div className="text-sm font-medium flex items-center gap-2">
-                        <span className="truncate">{member.display_name || member.email || member.user_id}</span>
-                        {member.role === 'owner' && (
-                          <span className="text-xs px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-400 shrink-0">
-                            Owner
-                          </span>
-                        )}
-                        {member.role === 'admin' && (
-                          <span className="text-xs px-1.5 py-0.5 rounded bg-purple-500/20 text-purple-400 shrink-0">
-                            Admin
-                          </span>
-                        )}
-                      </div>
-                      {member.display_name && member.email && (
-                        <div className="text-xs text-muted-foreground truncate">{member.email}</div>
-                      )}
-                    </div>
-                    {isAdmin && member.role !== 'owner' && (
-                      <Button
-                        size="sm"
-                        variant="destructive-ghost"
-                        className="shrink-0"
-                        onClick={async () => {
-                          if (confirm('Remove this member from the workspace?')) {
-                            try {
-                              await removeUserFromWorkspace(member.id);
-                              onMembersChange(workspaceMembers.filter(m => m.id !== member.id));
-                            } catch (error) {
-                              console.error('Failed to remove member:', error);
-                              toast.error("Failed to remove member");
-                            }
-                          }
-                        }}
-                      >
-                        Remove
-                      </Button>
-                    )}
-                  </div>
-                ))}
-                {isAdmin && pendingInvites.map((invite) => (
-                  <div
-                    key={invite.id}
-                    className="flex items-center gap-3 p-3 rounded-lg border border-dashed border-border bg-muted/50"
-                  >
-                    <div className="size-8 rounded-full bg-muted flex items-center justify-center shrink-0 border border-dashed border-border">
-                      <UserIcon className="size-4 text-foreground/20" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="text-sm font-medium flex items-center gap-2">
-                        <span className="truncate text-foreground/50">{invite.email}</span>
-                        <span className="text-xs px-1.5 py-0.5 rounded bg-yellow-500/15 text-yellow-400/80 shrink-0">
-                          Pending
-                        </span>
-                      </div>
-                      <div className="text-xs text-foreground/30">
-                        {invite.role} &middot; invited {new Date(invite.created_at).toLocaleDateString()}
-                      </div>
-                    </div>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      className="text-muted-foreground hover:text-red-400 hover:bg-red-500/10 shrink-0"
-                      onClick={() => handleCancelInvite(invite.id)}
-                    >
-                      Cancel
-                    </Button>
-                  </div>
-                ))}
-              </div>
-
-              {/* Invite form — only for owners/admins */}
-              {isAdmin && (
-                <div className="p-3 rounded-lg border border-border bg-muted/50 space-y-3">
-                  <div className="text-xs text-muted-foreground">
-                    Invite members to collaborate on this workspace
-                  </div>
-                  <div className="flex gap-2">
-                    <Input
-                      type="email"
-                      placeholder="email@example.com"
-                      value={inviteEmail}
-                      onChange={(e) => setInviteEmail(e.target.value)}
-                      onKeyDown={(e) => { if (e.key === 'Enter') handleInvite(); }}
-                      className="flex-1"
-                    />
-                    <select
-                      value={inviteRole}
-                      onChange={(e) => setInviteRole(e.target.value as "admin" | "member")}
-                      className="px-3 py-1.5 rounded-md border border-border bg-input text-sm outline-none focus:border-ring focus:ring-1 focus:ring-ring/30"
-                    >
-                      <option value="member">Member</option>
-                      <option value="admin">Admin</option>
-                    </select>
-                    <Button
-                      size="sm"
-                      onClick={handleInvite}
-                      disabled={inviteLoading || !inviteEmail.trim()}
-                    >
-                      {inviteLoading ? '...' : 'Invite'}
-                    </Button>
-                  </div>
-                  {inviteMessage && (
-                    <div className={`text-xs ${inviteMessage.type === 'success' ? 'text-green-400' : 'text-red-400'}`}>
-                      {inviteMessage.text}
-                    </div>
-                  )}
                 </div>
               )}
 
@@ -1283,65 +1076,6 @@ export function SettingsDialog({
                 </div>
               </div>
 
-              {/* Delete workspace */}
-              {activeProject && activeProject.role === "owner" && userProjectCount > 1 && (
-                <div className="space-y-3 pt-3">
-                  <div className="text-xs text-muted-foreground px-1">Danger zone</div>
-                  <div className="p-3 rounded-lg border border-red-500/20 bg-red-500/[0.03] space-y-3">
-                    <div className="flex items-center gap-2">
-                      <Trash2 className="size-4 text-red-400 shrink-0" />
-                      <div>
-                        <div className="text-sm font-medium text-red-400">Delete workspace</div>
-                        <div className="text-xs text-muted-foreground">
-                          This will permanently delete all tasks, clients, calendar data, and members.
-                        </div>
-                      </div>
-                    </div>
-                    <div>
-                      <label className="text-xs text-muted-foreground block mb-1">
-                        Type <span className="font-mono text-foreground/60">{activeProject.name}</span> to confirm
-                      </label>
-                      <Input
-                        value={deleteConfirmName}
-                        onChange={(e) => setDeleteConfirmName(e.target.value)}
-                        placeholder={activeProject.name}
-                        className="h-8"
-                      />
-                    </div>
-                    {deleteError && <div className="text-xs text-red-400">{deleteError}</div>}
-                    <Button
-                      size="sm"
-                      variant="destructive"
-                      className="w-full"
-                      disabled={deleting || deleteConfirmName !== activeProject.name}
-                      onClick={async () => {
-                        setDeleting(true);
-                        setDeleteError(null);
-                        try {
-                          const res = await fetch("/api/workspace", {
-                            method: "DELETE",
-                            headers: { "Content-Type": "application/json" },
-                            body: JSON.stringify({ projectId: activeProject.id }),
-                          });
-                          const data = await res.json();
-                          if (!res.ok) {
-                            setDeleteError(data.error || "Failed to delete");
-                            return;
-                          }
-                          onOpenChange(false);
-                          await refreshWorkspaces?.();
-                        } catch {
-                          setDeleteError("Network error");
-                        } finally {
-                          setDeleting(false);
-                        }
-                      }}
-                    >
-                      {deleting ? "Deleting..." : "Delete workspace permanently"}
-                    </Button>
-                  </div>
-                </div>
-              )}
             </div>
           </TabsContent>
           {/* Theme Tab */}

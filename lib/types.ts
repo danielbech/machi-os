@@ -84,15 +84,6 @@ export interface Project {
   transition_hour: number;
 }
 
-export interface PendingInvite {
-  id: string;
-  project_id: string;
-  email: string;
-  role: "owner" | "admin" | "member";
-  invited_by?: string;
-  created_at: string;
-}
-
 export type TimelineEntryType = "project" | "event";
 
 export interface TimelineEntry {

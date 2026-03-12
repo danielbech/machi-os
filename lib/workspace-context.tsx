@@ -5,20 +5,17 @@ import type { Project, WeekMode, BoardColumn } from "@/lib/types";
 import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
 import { initializeUserData } from "@/lib/supabase/initialize";
-import { getUserWorkspaces, getMyPendingInvites, acceptInvite as acceptInviteApi, declineInvite as declineInviteApi } from "@/lib/supabase/workspace";
-import type { MyPendingInvite } from "@/lib/supabase/workspace";
+import { getUserWorkspaces } from "@/lib/supabase/workspace";
 import { transitionWeek, cleanupOldRollingTasks } from "@/lib/supabase/tasks-simple";
 import { loadBoardColumns, createBoardColumn, updateBoardColumn, deleteBoardColumn } from "@/lib/supabase/board-columns";
 import { getCurrentMonday, getDisplayMonday, getRollingDates, getTodayISO, getRollingCutoffDate } from "@/lib/date-utils";
 import { useAuth } from "./auth-context";
 
 export interface WorkspaceContextValue {
-  // Project selection
-  userProjects: Project[];
+  // Project
   activeProjectId: string | null;
-  setActiveProjectId: (id: string) => void;
   activeProject: Project | undefined;
-  refreshWorkspaces: () => Promise<void>;
+  refreshWorkspace: () => Promise<void>;
   // Week mode & schedule
   weekMode: WeekMode;
   setWeekMode: (mode: WeekMode) => Promise<void>;
@@ -43,10 +40,6 @@ export interface WorkspaceContextValue {
   setShowCheckmarks: (v: boolean) => void;
   taskRefreshKey: number;
   triggerTaskRefresh: () => void;
-  // Invites
-  pendingInvites: MyPendingInvite[];
-  acceptInvite: (invite: MyPendingInvite) => Promise<void>;
-  declineInvite: (invite: MyPendingInvite) => Promise<void>;
 }
 
 const WorkspaceContext = createContext<WorkspaceContextValue | null>(null);
@@ -63,9 +56,8 @@ const ALL_SEVEN_DAYS: string[] = ["monday", "tuesday", "wednesday", "thursday", 
 export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
 
-  const [userProjects, setUserProjects] = useState<Project[]>([]);
-  const [activeProjectId, setActiveProjectIdState] = useState<string | null>(null);
-  const [pendingInvites, setPendingInvites] = useState<MyPendingInvite[]>([]);
+  const [activeProject, setActiveProject] = useState<Project | undefined>();
+  const activeProjectId = activeProject?.id ?? null;
 
   // UI preferences
   const [showCheckmarks, setShowCheckmarksState] = useState(() => {
@@ -101,78 +93,51 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     return weekMode === "7-day" ? ALL_SEVEN_DAYS : ALL_FIVE_DAYS;
   }, [weekMode, rollingDaysBack, rollingTodayISO]);
 
-  const setActiveProjectId = useCallback((id: string) => {
-    setActiveProjectIdState(id);
-    localStorage.setItem("flowie-active-project", id);
+  const refreshWorkspace = useCallback(async () => {
+    const projects = await getUserWorkspaces();
+    if (projects.length > 0) {
+      setActiveProject(projects[0]);
+    }
   }, []);
 
-  const refreshWorkspaces = useCallback(async () => {
-    const projects = await getUserWorkspaces();
-    setUserProjects(projects);
-    const activeStillExists = projects.find((p) => p.id === activeProjectId);
-    if (!activeStillExists && projects.length > 0) {
-      const newId = projects[0].id;
-      setActiveProjectIdState(newId);
-      localStorage.setItem("flowie-active-project", newId);
-    }
-  }, [activeProjectId]);
-
-  // Initialize user data and load workspaces
+  // Initialize user data and load the single project
   useEffect(() => {
     if (!user) {
-      setUserProjects([]);
-      setActiveProjectIdState(null);
-      setPendingInvites([]);
+      setActiveProject(undefined);
       return;
     }
 
     let cancelled = false;
 
-    async function loadWorkspaces() {
+    async function loadProject() {
       try {
-        const [, projects, invites] = await Promise.all([
-          initializeUserData(user!.id),
-          getUserWorkspaces(),
-          getMyPendingInvites(),
-        ]);
-
-        let finalProjects = projects;
-        if (finalProjects.length === 0) {
-          finalProjects = await getUserWorkspaces();
-        }
+        await initializeUserData(user!.id);
+        const projects = await getUserWorkspaces();
 
         if (cancelled) return;
 
-        setUserProjects(finalProjects);
-        setPendingInvites(invites);
-
-        const stored = localStorage.getItem("flowie-active-project");
-        const validStored = finalProjects.find((p) => p.id === stored);
-        if (stored && !validStored && finalProjects.length > 0) {
-          toast("You were removed from a workspace");
+        if (projects.length > 0) {
+          setActiveProject(projects[0]);
         }
-        const projectId = validStored?.id || finalProjects[0]?.id || null;
-        setActiveProjectIdState(projectId);
       } catch (error) {
-        console.error("Error loading workspaces:", error);
+        console.error("Error loading project:", error);
       }
     }
 
-    loadWorkspaces();
+    loadProject();
     return () => { cancelled = true; };
   }, [user]);
 
   // Sync weekMode + transition schedule from active project
   useEffect(() => {
-    const project = userProjects.find((p) => p.id === activeProjectId);
-    if (project) {
-      const mode = project.week_mode || "5-day";
+    if (activeProject) {
+      const mode = activeProject.week_mode || "5-day";
       setWeekModeState(mode);
       localStorage.setItem("flowie-week-mode", mode);
-      setTransitionDayState(project.transition_day ?? 5);
-      setTransitionHourState(project.transition_hour ?? 17);
+      setTransitionDayState(activeProject.transition_day ?? 5);
+      setTransitionHourState(activeProject.transition_hour ?? 17);
     }
-  }, [activeProjectId, userProjects]);
+  }, [activeProject]);
 
   // setWeekMode: update Supabase + local state, auto-adjust transition day
   const setWeekMode = useCallback(async (mode: WeekMode) => {
@@ -194,8 +159,8 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     }
 
     await supabase.from("projects").update(updates).eq("id", activeProjectId);
-    setUserProjects((prev) =>
-      prev.map((p) => (p.id === activeProjectId ? { ...p, week_mode: mode, transition_day: newTransitionDay } : p))
+    setActiveProject((prev) =>
+      prev ? { ...prev, week_mode: mode, transition_day: newTransitionDay } : prev
     );
 
     // When switching to custom, seed default columns if none exist
@@ -249,8 +214,8 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     if (!activeProjectId) return;
     const supabase = createClient();
     await supabase.from("projects").update({ transition_day: day, transition_hour: hour }).eq("id", activeProjectId);
-    setUserProjects((prev) =>
-      prev.map((p) => (p.id === activeProjectId ? { ...p, transition_day: day, transition_hour: hour } : p))
+    setActiveProject((prev) =>
+      prev ? { ...prev, transition_day: day, transition_hour: hour } : prev
     );
   }, [activeProjectId]);
 
@@ -258,11 +223,9 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
 
   const transitionToNextWeek = useCallback(async () => {
     if (!activeProjectId) return { deleted: 0, carriedOver: 0 };
-    // Guard against multi-tab race: re-check marker before running
     const monday = getCurrentMonday();
     const marker = localStorage.getItem("flowie-last-transition");
     if (marker === monday.toISOString()) return { deleted: 0, carriedOver: 0 };
-    // Set marker immediately to prevent other tabs from also firing
     localStorage.setItem("flowie-last-transition", monday.toISOString());
     const result = await transitionWeek(activeProjectId, null);
     setTransitionCount((c) => c + 1);
@@ -296,10 +259,9 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     const cleanup = () => {
       cleanupOldRollingTasks(activeProjectId, getRollingCutoffDate(), null).catch(console.error);
     };
-    cleanup(); // run on load
+    cleanup();
 
     const interval = setInterval(() => {
-      // Check if the date rolled over
       const now = getTodayISO();
       if (now !== rollingTodayISO) {
         setRollingTodayISO(now);
@@ -309,40 +271,26 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     return () => clearInterval(interval);
   }, [activeProjectId, weekMode, rollingTodayISO]);
 
-  const handleAcceptInvite = useCallback(async (invite: MyPendingInvite) => {
-    await acceptInviteApi(invite.id, invite.project_id, invite.role);
-    setPendingInvites((prev) => prev.filter((i) => i.id !== invite.id));
-    await refreshWorkspaces();
-  }, [refreshWorkspaces]);
-
-  const handleDeclineInvite = useCallback(async (invite: MyPendingInvite) => {
-    await declineInviteApi(invite.id);
-    setPendingInvites((prev) => prev.filter((i) => i.id !== invite.id));
-  }, []);
-
-  const activeProject = userProjects.find((p) => p.id === activeProjectId);
   const displayMonday = getDisplayMonday(transitionDay);
 
   const value = useMemo(() => ({
-    userProjects, activeProjectId, setActiveProjectId, activeProject,
-    refreshWorkspaces,
+    activeProjectId, activeProject,
+    refreshWorkspace,
     weekMode, setWeekMode, weekDays, displayMonday,
     transitionDay, transitionHour, transitionCount, transitionToNextWeek, setTransitionSchedule,
     rollingDaysBack, setRollingDaysBack,
     boardColumns, addBoardColumn, renameBoardColumn, removeBoardColumn, refreshBoardColumns,
     showCheckmarks, setShowCheckmarks,
     taskRefreshKey, triggerTaskRefresh,
-    pendingInvites, acceptInvite: handleAcceptInvite, declineInvite: handleDeclineInvite,
   }), [
-    userProjects, activeProjectId, setActiveProjectId, activeProject,
-    refreshWorkspaces,
+    activeProjectId, activeProject,
+    refreshWorkspace,
     weekMode, setWeekMode, weekDays, displayMonday,
     transitionDay, transitionHour, transitionCount, transitionToNextWeek, setTransitionSchedule,
     rollingDaysBack, setRollingDaysBack,
     boardColumns, addBoardColumn, renameBoardColumn, removeBoardColumn, refreshBoardColumns,
     showCheckmarks, setShowCheckmarks,
     taskRefreshKey, triggerTaskRefresh,
-    pendingInvites, handleAcceptInvite, handleDeclineInvite,
   ]);
 
   return (
