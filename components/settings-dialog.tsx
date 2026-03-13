@@ -107,9 +107,8 @@ function ThemePreview({ theme, mode }: { theme: typeof THEMES[number]; mode: "li
 }
 
 function ThemeTabContent({ activeProject }: { activeProject?: Project }) {
-  const { globalThemeId, workspaceThemeId, setGlobalTheme, setWorkspaceTheme, mode, resolvedMode, setMode } = useTheme();
-  const hasOverride = workspaceThemeId !== null;
-  const activeId = workspaceThemeId || globalThemeId;
+  const { globalThemeId, setGlobalTheme, mode, resolvedMode, setMode } = useTheme();
+  const activeId = globalThemeId;
 
   return (
     <TabsContent value="theme" className="flex-1 min-h-0 overflow-y-auto">
@@ -124,35 +123,9 @@ function ThemeTabContent({ activeProject }: { activeProject?: Project }) {
           </div>
         </div>
 
-        {/* Scope toggle */}
+        {/* Theme heading */}
         <div className="space-y-3">
-          <div className="flex items-center justify-between">
-            <h3 className="text-sm font-medium">Colour theme</h3>
-            {activeProject && (
-              <button
-                type="button"
-                onClick={() => {
-                  if (hasOverride) {
-                    setWorkspaceTheme(null);
-                  } else {
-                    setWorkspaceTheme(globalThemeId);
-                  }
-                }}
-                className={`text-xs px-2 py-1 rounded-md transition-colors ${
-                  hasOverride
-                    ? "bg-accent text-accent-foreground/80"
-                    : "text-muted-foreground hover:text-foreground/60"
-                }`}
-              >
-                {hasOverride ? `This workspace only` : "All workspaces"}
-              </button>
-            )}
-          </div>
-          <p className="text-xs text-muted-foreground">
-            {hasOverride
-              ? `Theme applies to "${activeProject?.name || "this workspace"}" only. Other workspaces use the global theme.`
-              : "Theme applies to all your workspaces."}
-          </p>
+          <h3 className="text-sm font-medium">Colour theme</h3>
         </div>
 
         {/* Theme grid */}
@@ -163,13 +136,7 @@ function ThemeTabContent({ activeProject }: { activeProject?: Project }) {
               <button
                 key={theme.id}
                 type="button"
-                onClick={() => {
-                  if (hasOverride) {
-                    setWorkspaceTheme(theme.id);
-                  } else {
-                    setGlobalTheme(theme.id);
-                  }
-                }}
+                onClick={() => setGlobalTheme(theme.id)}
                 className={`group relative rounded-lg border p-1 transition-colors text-left ${
                   isActive
                     ? "border-ring/30 bg-muted"
@@ -345,7 +312,7 @@ export function SettingsDialog({
       setWsLogo(url);
       await refreshWorkspace?.();
     } catch (err) {
-      console.error('Workspace logo upload failed:', err);
+      console.error('Logo upload failed:', err);
       toast.error("Failed to upload logo");
     } finally {
       setWsLogoUploading(false);
@@ -363,7 +330,7 @@ export function SettingsDialog({
       setWsLogo(undefined);
       await refreshWorkspace?.();
     } catch (err) {
-      console.error('Workspace logo remove failed:', err);
+      console.error('Logo remove failed:', err);
       toast.error("Failed to remove logo");
     } finally {
       setWsLogoUploading(false);
@@ -405,7 +372,7 @@ export function SettingsDialog({
         </DialogHeader>
         <Tabs value={settingsTab} onValueChange={setSettingsTab} className="flex-1 min-h-0 flex flex-col">
           <TabsList variant="line" className="border-b border-border px-0">
-            <TabsTrigger value="workspace" className="text-muted-foreground data-[state=active]:text-foreground">Workspace</TabsTrigger>
+            <TabsTrigger value="workspace" className="text-muted-foreground data-[state=active]:text-foreground">Flowie</TabsTrigger>
             <TabsTrigger value="general" className="text-muted-foreground data-[state=active]:text-foreground">General</TabsTrigger>
             <TabsTrigger value="calendar" className="text-muted-foreground data-[state=active]:text-foreground">Integrations</TabsTrigger>
             <TabsTrigger value="theme" className="text-muted-foreground data-[state=active]:text-foreground">Theme</TabsTrigger>
@@ -699,13 +666,13 @@ export function SettingsDialog({
             </div>
           </TabsContent>
 
-          {/* Workspace Tab */}
+          {/* Flowie Tab */}
           <TabsContent value="workspace" className="flex-1 min-h-0 overflow-y-auto">
             <div className="space-y-3 py-4">
-              {/* Workspace settings */}
+              {/* Project settings */}
               {activeProject && (
                 <div className="space-y-3">
-                  <div className="text-xs text-muted-foreground px-1">Workspace settings</div>
+                  <div className="text-xs text-muted-foreground px-1">Project settings</div>
                   <div className="p-3 rounded-lg border border-border bg-muted/50 space-y-3">
                     {/* Logo */}
                     <div className="flex items-center gap-3">
@@ -714,14 +681,14 @@ export function SettingsDialog({
                         className="relative group shrink-0 cursor-pointer"
                         onClick={() => wsLogoInputRef.current?.click()}
                         disabled={wsLogoUploading}
-                        aria-label="Change workspace logo"
+                        aria-label="Change logo"
                       >
                         <div
                           className="w-12 h-12 rounded-lg flex items-center justify-center overflow-hidden"
                           style={{ backgroundColor: wsColor || activeProject?.color || '#FF3700' }}
                         >
                           {wsLogo ? (
-                            <img src={wsLogo} alt="Workspace logo" className="w-full h-full object-cover" />
+                            <img src={wsLogo} alt="Logo" className="w-full h-full object-cover" />
                           ) : (
                             <img src="/logo-mark.svg" alt="Flowie" className="size-7" />
                           )}
@@ -743,7 +710,7 @@ export function SettingsDialog({
                         onChange={handleWsLogoSelect}
                       />
                       <div className="flex-1 min-w-0">
-                        <div className="text-xs text-muted-foreground">Workspace logo</div>
+                        <div className="text-xs text-muted-foreground">Logo</div>
                         <button
                           type="button"
                           className="text-xs text-foreground/50 hover:text-foreground/80 transition-colors cursor-pointer flex items-center gap-1"
@@ -771,7 +738,7 @@ export function SettingsDialog({
                       <Input
                         value={wsName}
                         onChange={(e) => setWsName(e.target.value)}
-                        placeholder="Workspace name"
+                        placeholder="Name"
                         className="h-8"
                       />
                     </div>
@@ -817,8 +784,8 @@ export function SettingsDialog({
                           await updateWorkspace(activeProjectId, { name: wsName.trim() });
                           await refreshWorkspace?.();
                         } catch (err) {
-                          console.error("Failed to update workspace:", err);
-                          toast.error("Failed to update workspace");
+                          console.error("Failed to save:", err);
+                          toast.error("Failed to save");
                         } finally {
                           setWsSaving(false);
                         }
