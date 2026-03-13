@@ -70,8 +70,11 @@ function clearInlineTheme() {
     "--border", "--input", "--ring",
     "--sidebar", "--sidebar-foreground", "--sidebar-primary", "--sidebar-primary-foreground",
     "--sidebar-accent", "--sidebar-accent-foreground", "--sidebar-border", "--sidebar-ring",
+    "--chart-1", "--chart-2", "--chart-3", "--chart-4", "--chart-5",
+    "--shadow-2xs", "--shadow-xs", "--shadow-sm", "--shadow", "--shadow-md",
+    "--shadow-lg", "--shadow-xl", "--shadow-2xl",
     // Shared (mode-independent) variables
-    "--font-sans", "--font-mono", "--font-serif", "--radius",
+    "--font-sans", "--font-mono", "--font-serif", "--radius", "--tracking-normal",
   ];
   for (const prop of props) {
     root.style.removeProperty(prop);
@@ -81,9 +84,9 @@ function clearInlineTheme() {
 
 function applyAll(themeId: string, theme: Theme, effective: EffectiveMode) {
   applyDarkClass(effective);
-  if (themeId === "default") {
-    clearInlineTheme();
-  } else {
+  // Always clear first to remove stale vars from previous theme
+  clearInlineTheme();
+  if (themeId !== "default") {
     applyTheme(theme, effective);
   }
 }
@@ -154,7 +157,12 @@ export function ThemeProvider({
   const setGlobalTheme = useCallback((themeId: string) => {
     setGlobalThemeIdState(themeId);
     localStorage.setItem(GLOBAL_KEY, themeId);
-  }, []);
+
+    // Apply immediately (don't rely solely on the effect)
+    const resolved = workspaceThemeId || themeId;
+    const theme = getThemeById(resolved) || THEMES[0];
+    applyAll(resolved, theme, resolvedMode);
+  }, [workspaceThemeId, resolvedMode]);
 
   const setWorkspaceTheme = useCallback((themeId: string | null) => {
     setWorkspaceThemeIdState(themeId);
