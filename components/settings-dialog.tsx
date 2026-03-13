@@ -95,8 +95,8 @@ function ThemePreview({ theme, mode }: { theme: typeof THEMES[number]; mode: "li
 }
 
 function ThemeTabContent({ activeProject }: { activeProject?: Project }) {
-  const { globalThemeId, setGlobalTheme, mode, resolvedMode, setMode } = useTheme();
-  const activeId = globalThemeId;
+  const { themeId, setTheme, mode, resolvedMode, setMode } = useTheme();
+  const activeId = themeId;
 
   return (
     <TabsContent value="theme" className="flex-1 min-h-0 overflow-y-auto">
@@ -124,7 +124,7 @@ function ThemeTabContent({ activeProject }: { activeProject?: Project }) {
               <button
                 key={theme.id}
                 type="button"
-                onClick={() => setGlobalTheme(theme.id)}
+                onClick={() => setTheme(theme.id)}
                 className={`group relative rounded-lg border p-1 transition-colors text-left ${
                   isActive
                     ? "border-ring/30 bg-muted"

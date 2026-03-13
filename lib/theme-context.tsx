@@ -11,10 +11,8 @@ interface ThemeContextValue {
   mode: ThemeMode;
   /** Resolved mode — always "light" or "dark" */
   resolvedMode: EffectiveMode;
-  globalThemeId: string;
-  workspaceThemeId: string | null;
-  setGlobalTheme: (themeId: string) => void;
-  setWorkspaceTheme: (themeId: string | null) => void;
+  themeId: string;
+  setTheme: (themeId: string) => void;
   setMode: (mode: ThemeMode) => void;
 }
 
@@ -26,9 +24,8 @@ export function useTheme() {
   return ctx;
 }
 
-const GLOBAL_KEY = "flowie-global-theme";
+const THEME_KEY = "flowie-global-theme";
 const MODE_KEY = "flowie-theme-mode";
-const wsKey = (id: string) => `flowie-workspace-theme-${id}`;
 const CACHE_KEY = "flowie-theme-cache";
 
 function getSystemMode(): EffectiveMode {
@@ -84,28 +81,16 @@ function clearInlineTheme() {
 
 function applyAll(themeId: string, theme: Theme, effective: EffectiveMode) {
   applyDarkClass(effective);
-  // Always clear first to remove stale vars from previous theme
   clearInlineTheme();
   if (themeId !== "default") {
     applyTheme(theme, effective);
   }
 }
 
-export function ThemeProvider({
-  activeProjectId,
-  children,
-}: {
-  activeProjectId: string | null;
-  children: React.ReactNode;
-}) {
-  const [globalThemeId, setGlobalThemeIdState] = useState(() => {
+export function ThemeProvider({ children }: { children: React.ReactNode }) {
+  const [themeId, setThemeIdState] = useState(() => {
     if (typeof window === "undefined") return "default";
-    return localStorage.getItem(GLOBAL_KEY) || "default";
-  });
-
-  const [workspaceThemeId, setWorkspaceThemeIdState] = useState<string | null>(() => {
-    if (typeof window === "undefined" || !activeProjectId) return null;
-    return localStorage.getItem(wsKey(activeProjectId)) || null;
+    return localStorage.getItem(THEME_KEY) || "default";
   });
 
   const [mode, setModeState] = useState<ThemeMode>(() => {
@@ -128,21 +113,10 @@ export function ThemeProvider({
     return () => mq.removeEventListener("change", update);
   }, [mode]);
 
-  // When workspace changes, load its theme override
-  useEffect(() => {
-    if (!activeProjectId) {
-      setWorkspaceThemeIdState(null);
-      return;
-    }
-    const stored = localStorage.getItem(wsKey(activeProjectId));
-    setWorkspaceThemeIdState(stored || null);
-  }, [activeProjectId]);
-
-  const resolvedId = workspaceThemeId || globalThemeId;
-  const activeTheme = getThemeById(resolvedId) || THEMES[0];
+  const activeTheme = getThemeById(themeId) || THEMES[0];
 
   // On initial mount, the blocking script already applied cached theme + mode.
-  // Skip first effect to avoid flash while activeProjectId is still loading.
+  // Skip first effect to avoid flash.
   const initialMount = useRef(true);
 
   useEffect(() => {
@@ -151,31 +125,17 @@ export function ThemeProvider({
       const cached = localStorage.getItem(CACHE_KEY);
       if (cached) return;
     }
-    applyAll(resolvedId, activeTheme, resolvedMode);
-  }, [resolvedId, activeTheme, resolvedMode]);
+    applyAll(themeId, activeTheme, resolvedMode);
+  }, [themeId, activeTheme, resolvedMode]);
 
-  const setGlobalTheme = useCallback((themeId: string) => {
-    console.log("[theme] setGlobalTheme called:", themeId);
-    setGlobalThemeIdState(themeId);
-    localStorage.setItem(GLOBAL_KEY, themeId);
+  const setTheme = useCallback((newThemeId: string) => {
+    setThemeIdState(newThemeId);
+    localStorage.setItem(THEME_KEY, newThemeId);
 
-    // Apply immediately (don't rely solely on the effect)
-    const resolved = workspaceThemeId || themeId;
-    const theme = getThemeById(resolved) || THEMES[0];
-    console.log("[theme] applying:", resolved, "mode:", resolvedMode, "vars:", Object.keys(theme.darkVariables).length);
-    applyAll(resolved, theme, resolvedMode);
-    console.log("[theme] applied. background is now:", document.documentElement.style.getPropertyValue("--background"));
-  }, [workspaceThemeId, resolvedMode]);
-
-  const setWorkspaceTheme = useCallback((themeId: string | null) => {
-    setWorkspaceThemeIdState(themeId);
-    if (!activeProjectId) return;
-    if (themeId) {
-      localStorage.setItem(wsKey(activeProjectId), themeId);
-    } else {
-      localStorage.removeItem(wsKey(activeProjectId));
-    }
-  }, [activeProjectId]);
+    // Apply immediately
+    const theme = getThemeById(newThemeId) || THEMES[0];
+    applyAll(newThemeId, theme, resolvedMode);
+  }, [resolvedMode]);
 
   const setMode = useCallback((newMode: ThemeMode) => {
     setModeState(newMode);
@@ -184,13 +144,12 @@ export function ThemeProvider({
     setResolvedMode(effective);
 
     // Re-apply immediately
-    const id = workspaceThemeId || globalThemeId;
-    const theme = getThemeById(id) || THEMES[0];
-    applyAll(id, theme, effective);
-  }, [workspaceThemeId, globalThemeId]);
+    const theme = getThemeById(themeId) || THEMES[0];
+    applyAll(themeId, theme, effective);
+  }, [themeId]);
 
   return (
-    <ThemeContext.Provider value={{ activeTheme, mode, resolvedMode, globalThemeId, workspaceThemeId, setGlobalTheme, setWorkspaceTheme, setMode }}>
+    <ThemeContext.Provider value={{ activeTheme, mode, resolvedMode, themeId, setTheme, setMode }}>
       {children}
     </ThemeContext.Provider>
   );

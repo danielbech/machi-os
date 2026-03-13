@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { AuthProvider, useAuth } from "@/lib/auth-context";
-import { WorkspaceProvider, useWorkspace } from "@/lib/workspace-context";
+import { WorkspaceProvider } from "@/lib/workspace-context";
 import { ProjectDataProvider } from "@/lib/project-data-context";
 import { BoardDataProvider } from "@/lib/board-data-context";
 import { BacklogProvider, useBacklog } from "@/lib/backlog-context";
@@ -17,11 +17,6 @@ import { BacklogShell } from "@/components/backlog-shell";
 import { ErrorBoundary } from "@/components/error-boundary";
 import { CursorOverlay } from "@/components/cursor-overlay";
 import { WelcomeDialog } from "@/components/welcome-dialog";
-
-function ThemeBridge({ children }: { children: React.ReactNode }) {
-  const { activeProjectId } = useWorkspace();
-  return <ThemeProvider activeProjectId={activeProjectId}>{children}</ThemeProvider>;
-}
 
 function DashboardGate({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
@@ -99,13 +94,13 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         <WorkspaceProvider>
           <ProjectDataProvider>
             <BoardDataProvider>
-              <ThemeBridge>
+              <ThemeProvider>
                 <CalendarProvider>
                   <BacklogProvider>
                     <DashboardGate>{children}</DashboardGate>
                   </BacklogProvider>
                 </CalendarProvider>
-              </ThemeBridge>
+              </ThemeProvider>
             </BoardDataProvider>
           </ProjectDataProvider>
         </WorkspaceProvider>
