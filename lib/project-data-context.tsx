@@ -30,7 +30,7 @@ export function useProjectData() {
 }
 
 export function ProjectDataProvider({ children }: { children: React.ReactNode }) {
-  const { activeProjectId, weekMode, refreshBoardColumns } = useWorkspace();
+  const { activeProjectId } = useWorkspace();
 
   const [clients, setClients] = useState<Client[]>([]);
   const [clientGroups, setClientGroups] = useState<ClientGroup[]>([]);
@@ -98,9 +98,8 @@ export function ProjectDataProvider({ children }: { children: React.ReactNode })
       refreshClientStatuses(),
       refreshTeamMembers(),
       getAreaIdForProject(activeProjectId).then(setAreaId),
-      ...(weekMode === "custom" ? [refreshBoardColumns()] : []),
     ]);
-  }, [activeProjectId, weekMode, refreshClients, refreshClientGroups, refreshClientStatuses, refreshTeamMembers, refreshBoardColumns]);
+  }, [activeProjectId, refreshClients, refreshClientGroups, refreshClientStatuses, refreshTeamMembers]);
 
   const value = useMemo(() => ({
     clients, refreshClients,

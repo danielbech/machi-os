@@ -46,9 +46,6 @@ export interface ChecklistItem {
   checked: boolean;
 }
 
-export type DayName = "monday" | "tuesday" | "wednesday" | "thursday" | "friday" | "saturday" | "sunday";
-export type WeekMode = "5-day" | "7-day" | "custom" | "rolling";
-
 export interface Task {
   id: string;
   title: string;
@@ -57,7 +54,7 @@ export interface Task {
   completed?: boolean;
   assignees: string[];
   client?: string;
-  day?: string;  // weekday name (e.g. "monday") or ISO date (e.g. "2026-03-06") depending on mode
+  day?: string;  // ISO date (e.g. "2026-03-06")
   type?: "task" | "note" | "divider";
   folder_id?: string;
   checklist: ChecklistItem[];
@@ -79,9 +76,6 @@ export interface Project {
   color: string;
   logo_url?: string;
   role: 'owner' | 'admin' | 'member';
-  week_mode: WeekMode;
-  transition_day: number;
-  transition_hour: number;
 }
 
 export type TimelineEntryType = "project" | "event";
@@ -108,13 +102,6 @@ export interface TimelineMarker {
   date: string;
   entry_id?: string;
   created_at: string;
-}
-
-export interface BoardColumn {
-  id: string;
-  project_id: string;
-  title: string;
-  sort_order: number;
 }
 
 // ─── Hours ──────────────────────────────────────────────────────────────────

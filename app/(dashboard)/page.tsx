@@ -27,24 +27,19 @@ import {
   KanbanColumn,
   KanbanOverlay,
 } from "@/components/ui/kanban";
-import { Check, CheckCircle, ChevronLeft, Plus, StickyNote, User, X } from "lucide-react";
+import { Check, CheckCircle, ChevronLeft, Plus, StickyNote, User } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 export default function BoardPage() {
   const { user } = useAuth();
-  const { activeProjectId, weekMode, weekDays, displayMonday, boardColumns, addBoardColumn, renameBoardColumn, removeBoardColumn, showCheckmarks, rollingDaysBack, setRollingDaysBack } = useWorkspace();
+  const { activeProjectId, weekDays, showCheckmarks, rollingDaysBack, setRollingDaysBack } = useWorkspace();
   const { clients, clientGroups, teamMembers, areaId } = useProjectData();
   const { columns, setColumns, initialLoading, refreshTasks } = useBoardData();
   const { calendarEvents } = useCalendar();
   const { backlogOpen, addToBacklog, backlogFolders, backlogDragActive, setKanbanDragOverBacklog, onTaskSentToDayRef } = useBacklog();
 
-  const isCustom = weekMode === "custom";
-  const isRolling = weekMode === "rolling";
-  const columnTitles = getColumnTitles(weekMode, boardColumns, rollingDaysBack);
-  const boardColumnIds = useMemo(() => boardColumns.map((c) => c.id), [boardColumns]);
-  const columnKeys = isCustom ? boardColumnIds : weekDays;
-  const [renamingColumn, setRenamingColumn] = useState<string | null>(null);
-  const [renameValue, setRenameValue] = useState("");
+  const columnTitles = getColumnTitles(rollingDaysBack);
+  const columnKeys = weekDays;
   const [addingToColumn, setAddingToColumn] = useState<string | null>(null);
   const [addingAtIndex, setAddingAtIndex] = useState<number | null>(null);
   const [newCardTitle, setNewCardTitle] = useState("");
@@ -132,16 +127,15 @@ export default function BoardPage() {
     return result;
   }, [columns, filterMine, hideCompleted, user]);
 
-  // For rolling mode: exclude weekend columns from the Kanban dnd-kit value
+  // Exclude weekend columns from the Kanban dnd-kit value
   // so they don't participate in drag-and-drop, while still rendering as separators
   const kanbanColumns = useMemo(() => {
-    if (!isRolling) return filteredColumns;
     const result: Record<string, Task[]> = {};
     for (const [day, tasks] of Object.entries(filteredColumns)) {
       if (!isWeekendISO(day)) result[day] = tasks;
     }
     return result;
-  }, [filteredColumns, isRolling]);
+  }, [filteredColumns]);
 
   // Reset filters when project changes
   useEffect(() => {
@@ -225,40 +219,17 @@ export default function BoardPage() {
     };
   }, [areaId, refreshTasks]);
 
-  // Week dates — uses displayMonday from context (accounts for post-transition offset)
-  const getWeekDates = () => {
-    if (isRolling) {
-      // Rolling mode: column keys are ISO dates, formatted via formatRollingHeader
-      const weekDates: Record<string, string> = {};
-      weekDays.forEach((day) => {
-        const { label } = formatRollingHeader(day);
-        weekDates[day] = label;
-      });
-      return weekDates;
-    }
-    const monday = new Date(displayMonday);
-    const dayOffsets: Record<string, number> = {
-      monday: 0, tuesday: 1, wednesday: 2, thursday: 3,
-      friday: 4, saturday: 5, sunday: 6,
-    };
-    const weekDates: Record<string, string> = {};
+  // Column keys are ISO dates, formatted via formatRollingHeader
+  const weekDates = useMemo(() => {
+    const result: Record<string, string> = {};
     weekDays.forEach((day) => {
-      const date = new Date(monday);
-      date.setDate(monday.getDate() + dayOffsets[day]);
-      weekDates[day] = date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+      const { label } = formatRollingHeader(day);
+      result[day] = label;
     });
-    return weekDates;
-  };
+    return result;
+  }, [weekDays]);
 
-  const weekDates = getWeekDates();
-
-  const getTodayKey = () => {
-    if (isRolling) return getTodayISO();
-    const days = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"];
-    return days[new Date().getDay()];
-  };
-
-  const todayName = getTodayKey();
+  const todayName = getTodayISO();
 
   // Task actions
   const handleAddCard = async (columnId: string, index?: number) => {
@@ -675,7 +646,7 @@ export default function BoardPage() {
         <div className="flex gap-1 overflow-x-auto pt-1 px-4 pb-3 md:px-8 flex-1 min-h-0 items-stretch">
           {columnKeys.map((key, ki) => {
             // Weekend separator skeleton
-            if (isRolling && isWeekendISO(key)) {
+            if (isWeekendISO(key)) {
               return (
                 <div key={key} className="w-10 shrink-0 relative">
                   <div className="absolute inset-x-0 top-0 bottom-0 flex justify-center">
@@ -691,8 +662,7 @@ export default function BoardPage() {
             <div key={key} className="w-[85vw] sm:w-[280px] shrink-0 p-2.5 space-y-2.5">
               <div className="flex items-baseline gap-2 px-1 mb-1.5">
                 <div className="h-4 w-16 bg-foreground/[0.06] rounded-md" />
-                {!isCustom && !isRolling && <div className="h-3.5 w-8 bg-foreground/[0.04] rounded-md" />}
-              </div>
+                              </div>
               {[...Array(skeletonCounts[ki] ?? 2)].map((_, i) => (
                 <div
                   key={i}
@@ -726,16 +696,14 @@ export default function BoardPage() {
             if (isFiltering) {
               merged = {};
               for (const day of Object.keys(columns)) {
-                if (isRolling && isWeekendISO(day)) { merged[day] = columns[day] || []; continue; }
+                if (isWeekendISO(day)) { merged[day] = columns[day] || []; continue; }
                 const visibleIds = new Set((newCols[day] || []).map(t => t.id));
                 const hiddenTasks = (columns[day] || []).filter(t => !visibleIds.has(t.id));
                 merged[day] = [...(newCols[day] || []), ...hiddenTasks];
               }
             } else {
               // Preserve weekend keys that aren't in the dnd-kit value
-              merged = isRolling
-                ? { ...Object.fromEntries(Object.entries(columns).filter(([d]) => isWeekendISO(d))), ...newCols }
-                : newCols;
+              merged = { ...Object.fromEntries(Object.entries(columns).filter(([d]) => isWeekendISO(d))), ...newCols };
             }
             setColumns(merged);
             if (activeProjectId) {
@@ -782,10 +750,10 @@ export default function BoardPage() {
               const segments: Segment[] = [];
               for (let i = 0; i < entries.length; i++) {
                 const [columnId, items] = entries[i];
-                if (isRolling && isWeekendISO(columnId)) {
+                if (isWeekendISO(columnId)) {
                   // Collect adjacent weekend days
                   const weekendDays: { columnId: string; label: string }[] = [];
-                  while (i < entries.length && isRolling && isWeekendISO(entries[i][0])) {
+                  while (i < entries.length && isWeekendISO(entries[i][0])) {
                     const parts = entries[i][0].split("-").map(Number);
                     const date = new Date(parts[0], parts[1] - 1, parts[2]);
                     const dayName = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"][date.getDay()];
@@ -839,77 +807,26 @@ export default function BoardPage() {
               >
                 <div className="mb-1.5 px-1">
                   <div className="flex items-baseline gap-2">
-                    {isCustom && renamingColumn === columnId ? (
-                      <input
-                        value={renameValue}
-                        onChange={(e) => setRenameValue(e.target.value)}
-                        className="font-semibold bg-transparent outline-none border-b border-foreground/20 w-full"
-                        autoFocus
-                        onBlur={async () => {
-                          const trimmed = renameValue.trim();
-                          if (trimmed && trimmed !== columnTitles[columnId]) {
-                            await renameBoardColumn(columnId, trimmed);
-                          }
-                          setRenamingColumn(null);
-                        }}
-                        onKeyDown={async (e) => {
-                          if (e.key === "Enter") {
-                            const trimmed = renameValue.trim();
-                            if (trimmed && trimmed !== columnTitles[columnId]) {
-                              await renameBoardColumn(columnId, trimmed);
-                            }
-                            setRenamingColumn(null);
-                          }
-                          if (e.key === "Escape") setRenamingColumn(null);
-                        }}
-                      />
-                    ) : isRolling ? (
-                      (() => {
-                        const { dayName, monthDay, isToday, isPast } = formatRollingHeader(columnId);
-                        return (
-                          <h2 className={`flex items-center gap-2 font-semibold ${isToday ? "text-foreground" : isPast ? "text-foreground/40" : ""}`}>
-                            {dayName}
-                            {isToday ? (
-                              <span className="text-xs text-primary-foreground bg-primary rounded px-1.5 py-0.5 font-medium">{monthDay}</span>
-                            ) : (
-                              <span className={`text-[11px] font-medium rounded px-1.5 py-0.5 border ${isPast ? "border-foreground/10 text-foreground/30" : "border-foreground/15 text-foreground/50"}`}>{monthDay}</span>
-                            )}
-                          </h2>
-                        );
-                      })()
-                    ) : (
-                      <h2
-                        className={`font-semibold ${isCustom ? "cursor-text hover:text-foreground/80" : ""} ${!isCustom && columnId === todayName ? "text-foreground" : ""}`}
-                        onClick={isCustom ? () => { setRenamingColumn(columnId); setRenameValue(columnTitles[columnId] || ""); } : undefined}
-                      >
-                        {columnTitles[columnId] || columnId}
-                      </h2>
-                    )}
-                    {!isCustom && !isRolling && (
-                      <span className={`text-xs ${columnId === todayName ? "text-primary-foreground bg-primary rounded px-1.5 py-0.5 font-medium" : "text-foreground/40"}`}>{weekDates[columnId]}</span>
-                    )}
-                    {isCustom && (
-                      <button
-                        onClick={async () => {
-                          if (confirm(`Delete "${columnTitles[columnId]}" and all its tasks?`)) {
-                            await removeBoardColumn(columnId);
-                          }
-                        }}
-                        className="text-foreground/20 hover:text-red-400 transition-colors ml-auto"
-                        aria-label={`Delete column ${columnTitles[columnId]}`}
-                      >
-                        <X className="size-3.5" />
-                      </button>
-                    )}
+                    {(() => {
+                      const { dayName, monthDay, isToday, isPast } = formatRollingHeader(columnId);
+                      return (
+                        <h2 className={`flex items-center gap-2 font-semibold ${isToday ? "text-foreground" : isPast ? "text-foreground/40" : ""}`}>
+                          {dayName}
+                          {isToday ? (
+                            <span className="text-xs text-primary-foreground bg-primary rounded px-1.5 py-0.5 font-medium">{monthDay}</span>
+                          ) : (
+                            <span className={`text-[11px] font-medium rounded px-1.5 py-0.5 border ${isPast ? "border-foreground/10 text-foreground/30" : "border-foreground/15 text-foreground/50"}`}>{monthDay}</span>
+                          )}
+                        </h2>
+                      );
+                    })()}
                   </div>
                 </div>
 
                 <div className="flex flex-col overflow-y-auto px-0.5">
-                  {/* Calendar Events — week modes and rolling (not custom) */}
-                  {!isCustom && calendarEvents[columnId]?.map((event) => {
-                    const isPast = isRolling
-                      ? columnId < getTodayISO()
-                      : weekDays.indexOf(columnId) < weekDays.indexOf(todayName);
+                  {/* Calendar Events */}
+                  {calendarEvents[columnId]?.map((event) => {
+                    const isPast = columnId < getTodayISO();
                     return (
                       <BoardCalendarEvent key={event.id} event={event} isPast={isPast} />
                     );
@@ -1003,22 +920,6 @@ export default function BoardPage() {
                 );
               });
             })()}
-            {isCustom && (
-              <div className="w-[85vw] sm:w-[280px] shrink-0 p-2.5">
-                <button
-                  onClick={async () => {
-                    const title = prompt("Column name:");
-                    if (title?.trim()) {
-                      await addBoardColumn(title.trim());
-                    }
-                  }}
-                  className="flex items-center justify-center gap-2 w-full rounded-lg p-3 text-xs text-foreground/30 border border-dashed border-foreground/10 hover:border-foreground/20 hover:text-foreground/50 transition-colors"
-                >
-                  <Plus className="size-3.5" />
-                  Add column
-                </button>
-              </div>
-            )}
           </KanbanBoard>
 
           <KanbanOverlay>
@@ -1138,8 +1039,7 @@ export default function BoardPage() {
       </TooltipProvider>
 
       {/* Rolling mode: icon toggle to reveal older days */}
-      {isRolling && (
-        <TooltipProvider>
+      <TooltipProvider>
           <div className="fixed bottom-5 right-[9.5rem] z-50 flex items-center gap-px rounded-full border border-border bg-popover/90 shadow-lg overflow-hidden">
             <Tooltip>
               <TooltipTrigger asChild>
@@ -1160,8 +1060,7 @@ export default function BoardPage() {
               </TooltipContent>
             </Tooltip>
           </div>
-        </TooltipProvider>
-      )}
+      </TooltipProvider>
     </main>
   );
 }

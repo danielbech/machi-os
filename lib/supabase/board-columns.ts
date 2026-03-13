@@ -1,5 +1,11 @@
 import { createClient } from './client'
-import type { BoardColumn } from '../types'
+
+interface BoardColumn {
+  id: string;
+  project_id: string;
+  title: string;
+  sort_order: number;
+}
 
 export async function loadBoardColumns(projectId: string): Promise<BoardColumn[]> {
   const supabase = createClient()

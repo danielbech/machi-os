@@ -28,13 +28,10 @@ export function AppSidebar() {
   const { user } = useAuth();
   const {
     activeProjectId, activeProject,
-    transitionToNextWeek,
-    weekMode, setWeekMode, transitionDay, transitionHour, setTransitionSchedule,
     showCheckmarks, setShowCheckmarks,
-    boardColumns, triggerTaskRefresh,
     refreshWorkspace,
   } = useWorkspace();
-  const { refreshTeamMembers, areaId } = useProjectData();
+  const { refreshTeamMembers } = useProjectData();
   const { backlogOpen, toggleBacklog } = useBacklog();
   const {
     googleCalendarConnected, connectGoogleCalendar, disconnectGoogleAccount,
@@ -177,15 +174,6 @@ export function AppSidebar() {
           onSyncCalendarEvents={syncCalendarEvents}
           calendarConnections={calendarConnections}
           onUpdateSelectedCalendars={updateSelectedCalendars}
-          onTransitionWeek={transitionToNextWeek}
-          transitionDay={transitionDay}
-          transitionHour={transitionHour}
-          onSetTransitionSchedule={setTransitionSchedule}
-          weekMode={weekMode}
-          onWeekModeChange={setWeekMode}
-          boardColumns={boardColumns}
-          areaId={areaId}
-          onTasksMigrated={triggerTaskRefresh}
           showCheckmarks={showCheckmarks}
           onShowCheckmarksChange={setShowCheckmarks}
           onProfileUpdate={refreshTeamMembers}

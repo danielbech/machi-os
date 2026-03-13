@@ -10,8 +10,7 @@ import { uploadWorkspaceLogo, deleteWorkspaceLogo } from "@/lib/supabase/storage
 import { WORKSPACE_COLORS } from "@/lib/colors";
 import { THEMES } from "@/lib/themes";
 import { useTheme } from "@/lib/theme-context";
-import { countOrphanedTasks, migrateBoardTasks } from "@/lib/supabase/tasks-simple";
-import type { WeekMode, Project, BoardColumn } from "@/lib/types";
+import type { Project } from "@/lib/types";
 import type { ConnectionWithCalendars } from "@/lib/calendar-context";
 import {
   Dialog,
@@ -36,17 +35,6 @@ interface SettingsDialogProps {
   // Multi-account calendar
   calendarConnections: ConnectionWithCalendars[];
   onUpdateSelectedCalendars: (connectionId: string, calendarIds: string[]) => Promise<void>;
-  // Weekly transition
-  onTransitionWeek: () => Promise<{ deleted: number; carriedOver: number }>;
-  transitionDay: number;
-  transitionHour: number;
-  onSetTransitionSchedule: (day: number, hour: number) => Promise<void>;
-  // Week mode
-  weekMode: WeekMode;
-  onWeekModeChange: (mode: WeekMode) => Promise<void>;
-  boardColumns: BoardColumn[];
-  areaId: string | null;
-  onTasksMigrated?: () => void;
   // UI preferences
   showCheckmarks: boolean;
   onShowCheckmarksChange: (v: boolean) => void;
@@ -168,15 +156,6 @@ export function SettingsDialog({
   onSyncCalendarEvents,
   calendarConnections,
   onUpdateSelectedCalendars,
-  onTransitionWeek,
-  transitionDay,
-  transitionHour,
-  onSetTransitionSchedule,
-  weekMode,
-  onWeekModeChange,
-  boardColumns,
-  areaId,
-  onTasksMigrated,
   showCheckmarks,
   onShowCheckmarksChange,
   onProfileUpdate,
@@ -187,8 +166,6 @@ export function SettingsDialog({
 }: SettingsDialogProps) {
   const [settingsTab, setSettingsTab] = useState(defaultTab);
   const [syncing, setSyncing] = useState(false);
-  const [transitioning, setTransitioning] = useState(false);
-  const [transitionResult, setTransitionResult] = useState<string | null>(null);
   const [expandedConnections, setExpandedConnections] = useState<Set<string>>(new Set());
 
   // Profile state
@@ -211,12 +188,6 @@ export function SettingsDialog({
   const [deleteAccountConfirm, setDeleteAccountConfirm] = useState("");
   const [deletingAccount, setDeletingAccount] = useState(false);
   const [deleteAccountError, setDeleteAccountError] = useState<string | null>(null);
-
-  // Mode switch confirmation state
-  const [modeSwitchPending, setModeSwitchPending] = useState<WeekMode | null>(null);
-  const [modeSwitchTaskCount, setModeSwitchTaskCount] = useState(0);
-  const [modeSwitchLoading, setModeSwitchLoading] = useState(false);
-  const [modeSwitchDescription, setModeSwitchDescription] = useState("");
 
   // About tab state
   const [commitCount, setCommitCount] = useState<number | null>(null);
@@ -797,176 +768,11 @@ export function SettingsDialog({
                 </div>
               )}
 
-              {/* Board View */}
+              {/* Board preferences */}
               <div className="space-y-3">
-                <div className="text-xs text-muted-foreground px-1">Board view</div>
+                <div className="text-xs text-muted-foreground px-1">Board</div>
                 <div className="p-3 rounded-lg border border-border bg-muted/50 space-y-3">
-                  <div className="flex gap-1 p-1 rounded-lg bg-muted">
-                    {(["5-day", "7-day", "rolling", "custom"] as WeekMode[]).map((mode) => (
-                      <button
-                        key={mode}
-                        type="button"
-                        disabled={modeSwitchLoading}
-                        onClick={async () => {
-                          if (mode === weekMode) return;
-                          const weekdays = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
-                          const weekdaySet = new Set(weekdays);
-                          const weekendSet = new Set(['saturday', 'sunday']);
-                          const isISODate = (day: string) => /^\d{4}-\d{2}-\d{2}$/.test(day);
-
-                          // Determine which tasks would be orphaned
-                          let orphanFilter: ((day: string) => boolean) | null = null;
-                          let description = "";
-
-                          if (weekMode === "custom" && mode !== "custom") {
-                            // Custom → weekly/rolling: tasks with UUID day values get orphaned
-                            orphanFilter = (day) => !weekdaySet.has(day) && !isISODate(day);
-                            description = mode === "rolling" ? "Move tasks to today" : "Move tasks to Monday";
-                          } else if (weekMode !== "custom" && mode === "custom") {
-                            // Weekly/rolling → custom: tasks with weekday/ISO day values get orphaned
-                            orphanFilter = (day) => weekdaySet.has(day) || isISODate(day);
-                            description = "Move tasks to first column";
-                          } else if (weekMode === "rolling" && (mode === "5-day" || mode === "7-day")) {
-                            // Rolling → weekly: ISO date tasks get orphaned
-                            orphanFilter = (day) => isISODate(day);
-                            description = "Move tasks to Monday";
-                          } else if ((weekMode === "5-day" || weekMode === "7-day") && mode === "rolling") {
-                            // Weekly → rolling: weekday-named tasks get orphaned
-                            orphanFilter = (day) => weekdaySet.has(day);
-                            description = "Move tasks to today";
-                          } else if (weekMode === "7-day" && mode === "5-day") {
-                            // 7-day → 5-day: only weekend tasks get orphaned
-                            orphanFilter = (day) => weekendSet.has(day);
-                            description = "Move weekend tasks to Friday";
-                          }
-
-                          // 5-day → 7-day is always safe (only adds days)
-                          if (!orphanFilter) {
-                            onWeekModeChange(mode);
-                            return;
-                          }
-
-                          const count = await countOrphanedTasks(activeProjectId!, orphanFilter, areaId);
-                          if (count === 0) {
-                            onWeekModeChange(mode);
-                            return;
-                          }
-                          setModeSwitchTaskCount(count);
-                          setModeSwitchDescription(description);
-                          setModeSwitchPending(mode);
-                        }}
-                        className={`flex-1 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
-                          weekMode === mode
-                            ? "bg-accent text-accent-foreground"
-                            : "text-muted-foreground hover:text-foreground/60"
-                        }`}
-                      >
-                        {mode === "5-day" ? "5-day" : mode === "7-day" ? "7-day" : mode === "rolling" ? "Rolling" : "Custom"}
-                      </button>
-                    ))}
-                  </div>
-
-                  {/* Mode switch confirmation */}
-                  {modeSwitchPending && (
-                    <div className="rounded-lg border border-amber-500/20 bg-amber-500/5 p-3 space-y-3">
-                      <div className="text-sm text-amber-200/90">
-                        You have <span className="font-semibold text-amber-100">{modeSwitchTaskCount} task{modeSwitchTaskCount !== 1 ? "s" : ""}</span> that won&apos;t be visible. What would you like to do?
-                      </div>
-                      <div className="flex gap-2">
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          className="flex-1 border border-border"
-                          disabled={modeSwitchLoading}
-                          onClick={async () => {
-                            setModeSwitchLoading(true);
-                            try {
-                              await onWeekModeChange(modeSwitchPending);
-                            } finally {
-                              setModeSwitchPending(null);
-                              setModeSwitchLoading(false);
-                            }
-                          }}
-                        >
-                          Clean slate
-                        </Button>
-                        <Button
-                          size="sm"
-                          className="flex-1 bg-primary text-primary-foreground hover:bg-primary/90"
-                          disabled={modeSwitchLoading}
-                          onClick={async () => {
-                            setModeSwitchLoading(true);
-                            try {
-                              const weekdays = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
-                              const weekdaySet = new Set(weekdays);
-                              const weekendSet = new Set(['saturday', 'sunday']);
-                              const isISODate = (day: string) => /^\d{4}-\d{2}-\d{2}$/.test(day);
-                              const { getTodayISO } = await import("@/lib/date-utils");
-
-                              if (weekMode !== "custom" && modeSwitchPending === "custom") {
-                                // Weekly/rolling → custom
-                                await onWeekModeChange(modeSwitchPending);
-                                const { loadBoardColumns } = await import("@/lib/supabase/board-columns");
-                                const cols = await loadBoardColumns(activeProjectId!);
-                                if (cols.length > 0) {
-                                  const migrated = await migrateBoardTasks(
-                                    activeProjectId!, (day) => weekdaySet.has(day) || isISODate(day), cols[0].id, areaId
-                                  );
-                                  toast.success(`Moved ${migrated} task${migrated !== 1 ? "s" : ""} to ${cols[0].title}`);
-                                }
-                              } else if (weekMode === "custom" && modeSwitchPending !== "custom") {
-                                // Custom → weekly/rolling
-                                const targetDay = modeSwitchPending === "rolling" ? getTodayISO() : "monday";
-                                await onWeekModeChange(modeSwitchPending);
-                                const migrated = await migrateBoardTasks(
-                                  activeProjectId!, (day) => !weekdaySet.has(day) && !isISODate(day), targetDay, areaId
-                                );
-                                toast.success(`Moved ${migrated} task${migrated !== 1 ? "s" : ""} to ${modeSwitchPending === "rolling" ? "today" : "Monday"}`);
-                              } else if (weekMode === "rolling" && (modeSwitchPending === "5-day" || modeSwitchPending === "7-day")) {
-                                // Rolling → weekly: move ISO date tasks to Monday
-                                await onWeekModeChange(modeSwitchPending);
-                                const migrated = await migrateBoardTasks(
-                                  activeProjectId!, (day) => isISODate(day), "monday", areaId
-                                );
-                                toast.success(`Moved ${migrated} task${migrated !== 1 ? "s" : ""} to Monday`);
-                              } else if ((weekMode === "5-day" || weekMode === "7-day") && modeSwitchPending === "rolling") {
-                                // Weekly → rolling: move weekday-named tasks to today
-                                await onWeekModeChange(modeSwitchPending);
-                                const migrated = await migrateBoardTasks(
-                                  activeProjectId!, (day) => weekdaySet.has(day), getTodayISO(), areaId
-                                );
-                                toast.success(`Moved ${migrated} task${migrated !== 1 ? "s" : ""} to today`);
-                              } else if (weekMode === "7-day" && modeSwitchPending === "5-day") {
-                                // 7-day → 5-day: move weekend tasks to Friday
-                                await onWeekModeChange(modeSwitchPending);
-                                const migrated = await migrateBoardTasks(
-                                  activeProjectId!, (day) => weekendSet.has(day), "friday", areaId
-                                );
-                                toast.success(`Moved ${migrated} task${migrated !== 1 ? "s" : ""} to Friday`);
-                              }
-                              onTasksMigrated?.();
-                            } catch (err) {
-                              toast.error("Failed to migrate tasks");
-                            } finally {
-                              setModeSwitchPending(null);
-                              setModeSwitchLoading(false);
-                            }
-                          }}
-                        >
-                          {modeSwitchLoading ? "Moving..." : modeSwitchDescription}
-                        </Button>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => setModeSwitchPending(null)}
-                        className="text-xs text-foreground/30 hover:text-foreground/50 transition-colors"
-                        disabled={modeSwitchLoading}
-                      >
-                        Cancel
-                      </button>
-                    </div>
-                  )}
-                  <div className="border-t border-border pt-3 flex items-center justify-between">
+                  <div className="flex items-center justify-between">
                     <div>
                       <div className="text-sm">Show checkmarks</div>
                       <div className="text-xs text-muted-foreground">Display completion checkmarks on task cards</div>
@@ -984,62 +790,6 @@ export function SettingsDialog({
                       }`} style={{ marginTop: '2px' }} />
                     </button>
                   </div>
-                  {weekMode !== "custom" && weekMode !== "rolling" && (
-                    <>
-                      <div className="border-t border-border pt-3">
-                        <div className="text-xs text-muted-foreground mb-2">Week transition</div>
-                        <div className="flex items-center gap-2">
-                          <span className="text-xs text-foreground/50">Auto-transition:</span>
-                          <select
-                            value={transitionDay}
-                            onChange={(e) => onSetTransitionSchedule(Number(e.target.value), transitionHour)}
-                            className="px-2 py-1 rounded-md border border-border bg-input text-sm outline-none focus:border-ring focus:ring-1 focus:ring-ring/30"
-                          >
-                            <option value={1}>Monday</option>
-                            <option value={2}>Tuesday</option>
-                            <option value={3}>Wednesday</option>
-                            <option value={4}>Thursday</option>
-                            <option value={5}>Friday</option>
-                            <option value={6}>Saturday</option>
-                            <option value={0}>Sunday</option>
-                          </select>
-                          <span className="text-xs text-foreground/50">at</span>
-                          <select
-                            value={transitionHour}
-                            onChange={(e) => onSetTransitionSchedule(transitionDay, Number(e.target.value))}
-                            className="px-2 py-1 rounded-md border border-border bg-input text-sm outline-none focus:border-ring focus:ring-1 focus:ring-ring/30"
-                          >
-                            {Array.from({ length: 24 }, (_, i) => (
-                              <option key={i} value={i}>{String(i).padStart(2, '0')}:00</option>
-                            ))}
-                          </select>
-                        </div>
-                      </div>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        className="w-full justify-center border border-border"
-                        disabled={transitioning}
-                        onClick={async () => {
-                          setTransitioning(true);
-                          setTransitionResult(null);
-                          try {
-                            const result = await onTransitionWeek();
-                            setTransitionResult(`Archived ${result.deleted} tasks, carried over ${result.carriedOver}`);
-                          } catch {
-                            setTransitionResult("Failed to transition");
-                          } finally {
-                            setTransitioning(false);
-                          }
-                        }}
-                      >
-                        {transitioning ? "Transitioning..." : "Transition to next week"}
-                      </Button>
-                      {transitionResult && (
-                        <div className="text-xs text-foreground/60">{transitionResult}</div>
-                      )}
-                    </>
-                  )}
                 </div>
               </div>
 

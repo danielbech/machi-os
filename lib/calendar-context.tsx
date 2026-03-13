@@ -2,7 +2,6 @@
 
 import { createContext, useContext, useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { toast } from "sonner";
-import type { WeekMode } from "@/lib/types";
 import {
   initiateGoogleAuth,
   exchangeAuthCode,
@@ -25,7 +24,7 @@ import {
 } from "@/lib/supabase/calendar";
 import { useWorkspace } from "./workspace-context";
 import { useAuth } from "./auth-context";
-import { getWeekRange, getRollingDates, toLocalISO } from "@/lib/date-utils";
+import { getRollingDates, toLocalISO } from "@/lib/date-utils";
 
 export interface ConnectionWithCalendars extends CalendarConnection {
   availableCalendars: GoogleCalendarInfo[];
@@ -88,11 +87,10 @@ async function getValidToken(conn: CalendarConnection): Promise<{ token: string;
 
 export function CalendarProvider({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
-  const { activeProjectId, weekMode, transitionDay, transitionCount, rollingDaysBack } = useWorkspace();
+  const { activeProjectId, rollingDaysBack } = useWorkspace();
 
   const [calendarConnections, setCalendarConnections] = useState<ConnectionWithCalendars[]>([]);
   const [calendarEvents, setCalendarEvents] = useState<Record<string, CalendarEvent[]>>({});
-  const [currentWeekStart, setCurrentWeekStart] = useState<string>("");
   const [lastSyncedAt, setLastSyncedAt] = useState<Date | null>(null);
 
   const googleCalendarConnected = calendarConnections.length > 0;
@@ -100,22 +98,13 @@ export function CalendarProvider({ children }: { children: React.ReactNode }) {
   const connectionsRef = useRef(calendarConnections);
   connectionsRef.current = calendarConnections;
 
-  // Load shared events from Supabase and group by day
-  const loadSharedEvents = useCallback(async (projectId: string, mode: WeekMode = "5-day") => {
-    let rangeStart: Date;
-    let rangeEnd: Date;
-
-    if (mode === "rolling") {
-      const dates = getRollingDates(rollingDaysBack);
-      const first = dates[0].split("-").map(Number);
-      const last = dates[dates.length - 1].split("-").map(Number);
-      rangeStart = new Date(first[0], first[1] - 1, first[2], 0, 0, 0);
-      rangeEnd = new Date(last[0], last[1] - 1, last[2], 23, 59, 59);
-    } else {
-      const { monday, friday } = getWeekRange(mode, transitionDay);
-      rangeStart = monday;
-      rangeEnd = friday;
-    }
+  // Load shared events from Supabase and group by ISO date
+  const loadSharedEvents = useCallback(async (projectId: string) => {
+    const dates = getRollingDates(rollingDaysBack);
+    const first = dates[0].split("-").map(Number);
+    const last = dates[dates.length - 1].split("-").map(Number);
+    const rangeStart = new Date(first[0], first[1] - 1, first[2], 0, 0, 0);
+    const rangeEnd = new Date(last[0], last[1] - 1, last[2], 23, 59, 59);
 
     const dbEvents = await loadSharedCalendarEvents(projectId, rangeStart, rangeEnd);
 
@@ -127,48 +116,24 @@ export function CalendarProvider({ children }: { children: React.ReactNode }) {
     });
 
     const grouped: Record<string, CalendarEvent[]> = {};
-
-    if (mode === "rolling") {
-      // Group by ISO date string to match rolling column keys
-      uniqueEvents.forEach(e => {
-        const eventDate = new Date(e.start_time);
-        const isoDate = toLocalISO(eventDate);
-        if (!grouped[isoDate]) grouped[isoDate] = [];
-        grouped[isoDate].push({
-          id: e.google_event_id,
-          summary: e.summary,
-          description: e.description || undefined,
-          start: e.start_time,
-          end: e.end_time,
-          location: e.location || undefined,
-          attendees: e.attendees || [],
-          calendarId: e.calendar_id,
-        });
+    uniqueEvents.forEach(e => {
+      const eventDate = new Date(e.start_time);
+      const isoDate = toLocalISO(eventDate);
+      if (!grouped[isoDate]) grouped[isoDate] = [];
+      grouped[isoDate].push({
+        id: e.google_event_id,
+        summary: e.summary,
+        description: e.description || undefined,
+        start: e.start_time,
+        end: e.end_time,
+        location: e.location || undefined,
+        attendees: e.attendees || [],
+        calendarId: e.calendar_id,
       });
-    } else {
-      const allDays = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
-      uniqueEvents.forEach(e => {
-        const eventDate = new Date(e.start_time);
-        const dayOfWeek = eventDate.getDay();
-        if (mode === "7-day" ? (dayOfWeek >= 0 && dayOfWeek <= 6) : (dayOfWeek >= 1 && dayOfWeek <= 5)) {
-          const dayName = allDays[dayOfWeek];
-          if (!grouped[dayName]) grouped[dayName] = [];
-          grouped[dayName].push({
-            id: e.google_event_id,
-            summary: e.summary,
-            description: e.description || undefined,
-            start: e.start_time,
-            end: e.end_time,
-            location: e.location || undefined,
-            attendees: e.attendees || [],
-            calendarId: e.calendar_id,
-          });
-        }
-      });
-    }
+    });
 
     setCalendarEvents(grouped);
-  }, [transitionDay, rollingDaysBack]);
+  }, [rollingDaysBack]);
 
   // Sync all of the current user's Google Calendar connections to DB
   const syncCalendarEvents = useCallback(async () => {
@@ -178,7 +143,11 @@ export function CalendarProvider({ children }: { children: React.ReactNode }) {
       const connections = await getCalendarConnections(activeProjectId);
       if (connections.length === 0) return;
 
-      const { monday, friday } = getWeekRange(weekMode, transitionDay);
+      const dates = getRollingDates(rollingDaysBack);
+      const fp = dates[0].split("-").map(Number);
+      const lp = dates[dates.length - 1].split("-").map(Number);
+      const monday = new Date(fp[0], fp[1] - 1, fp[2], 0, 0, 0);
+      const friday = new Date(lp[0], lp[1] - 1, lp[2], 23, 59, 59);
       const updatedConnections: ConnectionWithCalendars[] = [];
 
       for (const conn of connections) {
@@ -229,13 +198,13 @@ export function CalendarProvider({ children }: { children: React.ReactNode }) {
       }
 
       setCalendarConnections(updatedConnections);
-      await loadSharedEvents(activeProjectId, weekMode);
+      await loadSharedEvents(activeProjectId);
       setLastSyncedAt(new Date());
     } catch (error) {
       console.error("Failed to sync calendar events:", error);
       toast.error("Failed to sync calendar");
     }
-  }, [activeProjectId, user, weekMode, transitionDay, loadSharedEvents]);
+  }, [activeProjectId, user, rollingDaysBack, loadSharedEvents]);
 
   // Check calendar connections + load shared events on project change
   useEffect(() => {
@@ -249,7 +218,7 @@ export function CalendarProvider({ children }: { children: React.ReactNode }) {
 
     async function checkConnections() {
       try {
-        await loadSharedEvents(activeProjectId!, weekMode);
+        await loadSharedEvents(activeProjectId!);
 
         const connections = await getCalendarConnections(activeProjectId!);
         if (cancelled) return;
@@ -280,7 +249,7 @@ export function CalendarProvider({ children }: { children: React.ReactNode }) {
 
     checkConnections();
     return () => { cancelled = true; };
-  }, [activeProjectId, user, weekMode, loadSharedEvents, transitionCount]);
+  }, [activeProjectId, user, loadSharedEvents]);
 
   // Listen for OAuth callback messages (authorization code flow)
   useEffect(() => {
@@ -305,9 +274,13 @@ export function CalendarProvider({ children }: { children: React.ReactNode }) {
           );
 
           if (user) {
-            const { monday, friday } = getWeekRange(weekMode, transitionDay);
+            const dates = getRollingDates(rollingDaysBack);
+            const fp = dates[0].split("-").map(Number);
+            const lp = dates[dates.length - 1].split("-").map(Number);
+            const rangeStart = new Date(fp[0], fp[1] - 1, fp[2], 0, 0, 0);
+            const rangeEnd = new Date(lp[0], lp[1] - 1, lp[2], 23, 59, 59);
             const { flat: allEvents } = await getEventsGroupedByDay(
-              access_token, monday, friday, allCalendarIds
+              access_token, rangeStart, rangeEnd, allCalendarIds
             );
             await syncCalendarEventsToDb(
               activeProjectId, user.id, connectionId,
@@ -322,7 +295,7 @@ export function CalendarProvider({ children }: { children: React.ReactNode }) {
                 attendees: e.attendees,
               }))
             );
-            await loadSharedEvents(activeProjectId, weekMode);
+            await loadSharedEvents(activeProjectId);
           }
 
           setCalendarConnections(prev => {
@@ -357,7 +330,7 @@ export function CalendarProvider({ children }: { children: React.ReactNode }) {
     };
     window.addEventListener("message", handleMessage);
     return () => window.removeEventListener("message", handleMessage);
-  }, [activeProjectId, user, weekMode, transitionDay, loadSharedEvents]);
+  }, [activeProjectId, user, rollingDaysBack, loadSharedEvents]);
 
   // Stable ref to latest sync function — prevents interval effects from resetting
   const syncRef = useRef(syncCalendarEvents);
@@ -369,24 +342,6 @@ export function CalendarProvider({ children }: { children: React.ReactNode }) {
     const interval = setInterval(() => syncRef.current(), 30 * 60 * 1000);
     return () => clearInterval(interval);
   }, [googleCalendarConnected]);
-
-  // Week change detection
-  useEffect(() => {
-    if (!googleCalendarConnected) return;
-    const { monday } = getWeekRange(weekMode, transitionDay);
-    const weekStart = monday.toISOString();
-    if (currentWeekStart && currentWeekStart !== weekStart) syncRef.current();
-    setCurrentWeekStart(weekStart);
-    const interval = setInterval(() => {
-      const { monday: nowMonday } = getWeekRange(weekMode, transitionDay);
-      const newWeekStart = nowMonday.toISOString();
-      if (newWeekStart !== weekStart) {
-        setCurrentWeekStart(newWeekStart);
-        syncRef.current();
-      }
-    }, 60 * 60 * 1000);
-    return () => clearInterval(interval);
-  }, [googleCalendarConnected, currentWeekStart, weekMode, transitionDay]);
 
   const connectGoogleCalendar = useCallback(() => {
     initiateGoogleAuth();
@@ -401,9 +356,9 @@ export function CalendarProvider({ children }: { children: React.ReactNode }) {
     }
     setCalendarConnections(prev => prev.filter(c => c.id !== connectionId));
     if (activeProjectId) {
-      await loadSharedEvents(activeProjectId, weekMode);
+      await loadSharedEvents(activeProjectId);
     }
-  }, [activeProjectId, weekMode, loadSharedEvents]);
+  }, [activeProjectId, loadSharedEvents]);
 
   const handleUpdateSelectedCalendars = useCallback(async (connectionId: string, calendarIds: string[]) => {
     setCalendarConnections(prev =>
