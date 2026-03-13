@@ -7,13 +7,7 @@ export async function DELETE(request: NextRequest) {
     const { user } = await authenticateRoute(request);
     const admin = createAdminClient();
 
-    // 1. Delete pending invites sent by this user
-    await admin
-      .from("pending_invites")
-      .delete()
-      .eq("invited_by", user.id);
-
-    // 2. Find workspaces where user is the sole member → delete them
+    // 1. Find workspaces where user is the sole member → delete them
     const { data: memberships } = await admin
       .from("workspace_memberships")
       .select("project_id")
@@ -32,7 +26,7 @@ export async function DELETE(request: NextRequest) {
       }
     }
 
-    // 3. Delete the auth user (cascades to profiles, memberships, calendar, etc.)
+    // 2. Delete the auth user (cascades to profiles, memberships, calendar, etc.)
     const { error } = await admin.auth.admin.deleteUser(user.id);
     if (error) {
       console.error("Failed to delete user:", error);
