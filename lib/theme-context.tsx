@@ -155,13 +155,16 @@ export function ThemeProvider({
   }, [resolvedId, activeTheme, resolvedMode]);
 
   const setGlobalTheme = useCallback((themeId: string) => {
+    console.log("[theme] setGlobalTheme called:", themeId);
     setGlobalThemeIdState(themeId);
     localStorage.setItem(GLOBAL_KEY, themeId);
 
     // Apply immediately (don't rely solely on the effect)
     const resolved = workspaceThemeId || themeId;
     const theme = getThemeById(resolved) || THEMES[0];
+    console.log("[theme] applying:", resolved, "mode:", resolvedMode, "vars:", Object.keys(theme.darkVariables).length);
     applyAll(resolved, theme, resolvedMode);
+    console.log("[theme] applied. background is now:", document.documentElement.style.getPropertyValue("--background"));
   }, [workspaceThemeId, resolvedMode]);
 
   const setWorkspaceTheme = useCallback((themeId: string | null) => {
