@@ -2,12 +2,11 @@ import { createClient } from './client'
 import { resolveAreaId } from './helpers'
 import type { Task } from '../types'
 
-// Load all tasks for a project, grouped by day (or by custom column ID)
-// rollingDateRange: { from, to } ISO date strings for rolling mode filtering
+// Load all tasks for a project, grouped by day (ISO date)
+// rollingDateRange: { from, to } ISO date strings for date filtering
 export async function loadTasksByDay(
   projectId: string,
   cachedAreaId?: string | null,
-  customColumnIds?: string[],
   rollingDateRange?: { from: string; to: string }
 ): Promise<Record<string, Task[]>> {
   const supabase = createClient()
@@ -31,17 +30,7 @@ export async function loadTasksByDay(
 
   const grouped: Record<string, Task[]> = {}
 
-  if (customColumnIds) {
-    // Custom mode: group by column UUID
-    for (const colId of customColumnIds) {
-      grouped[colId] = []
-    }
-  } else if (!rollingDateRange) {
-    // Standard mode: group by weekday
-    for (const day of ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']) {
-      grouped[day] = []
-    }
-  }
+  // Rolling date range doesn't need pre-populated keys
 
   tasks.forEach(task => {
     if (!task.day) return

@@ -38,7 +38,7 @@ export function BoardDataProvider({ children }: { children: React.ReactNode }) {
   const refreshTasks = useCallback(async () => {
     if (!activeProjectId || !areaId) return;
     try {
-      const tasks = await loadTasksByDay(activeProjectId, areaId, undefined, rollingDateRange);
+      const tasks = await loadTasksByDay(activeProjectId, areaId, rollingDateRange);
       const filtered: Record<string, Task[]> = {};
       const seenIds = new Set<string>();
       for (const key of weekDays) {

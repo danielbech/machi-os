@@ -40,13 +40,13 @@ components/
   app-sidebar.tsx         # Collapsible sidebar (icon-only, expands on hover) — nav
   auth-form.tsx           # Login/signup form (Supabase Auth)
   task-edit-dialog.tsx    # Task edit dialog — uses workspace context for clients
-  settings-dialog.tsx     # Settings — workspace, board, calendar, theme, about
+  settings-dialog.tsx     # Settings — project, calendar, theme, about
   ui/                     # shadcn/ui components (kanban, sidebar, dialog, badge, dropdown-menu, etc.)
 lib/
   types.ts                # Shared TypeScript types (Task, Member, Client, Project, etc.)
-  constants.ts            # Team members, column config
+  constants.ts            # Column titles, empty column helpers
   colors.ts               # Central color system — all palettes, mappings, and helpers (see Color System section)
-  workspace-context.tsx   # React context: single project, week mode, board columns (consumed by dashboard pages)
+  workspace-context.tsx   # React context: single project, rolling board config (consumed by dashboard pages)
   google-calendar.ts      # Google Calendar OAuth + API helpers (fetchCalendarList, fetchGoogleEmail, etc.)
   supabase/
     client.ts             # Browser Supabase client
@@ -82,9 +82,9 @@ Task metadata (assignees, client, priority) is stored in dedicated columns on th
 
 - **Single project:** Both users (Daniel & Casper) share a single project. No workspace switcher, no invites, no multi-project logic.
 - **Optimistic updates:** Tasks are added to local state with a temp ID (`task-{timestamp}`), saved to Supabase, then the temp ID is swapped for the real UUID.
-- **Day-based kanban:** Tasks are grouped by weekday (monday–friday). The `day` column in the DB maps to kanban columns.
+- **Rolling kanban:** Tasks are grouped by ISO date (e.g. "2026-03-13"). The `day` column in the DB stores ISO date strings and maps to kanban columns.
 - **RLS via workspace_memberships:** All data access goes through Supabase RLS policies. Two `SECURITY DEFINER` helper functions (`get_user_project_ids`, `get_user_admin_project_ids`) prevent infinite recursion in self-referencing policies.
-- **Workspace context:** `WorkspaceProvider` in the dashboard layout loads the single project and manages week mode, board columns, and transition schedule. Pages consume via `useWorkspace()`.
+- **Workspace context:** `WorkspaceProvider` in the dashboard layout loads the single project and manages rolling board config. Pages consume via `useWorkspace()`.
 - **Sidebar navigation:** Collapsible sidebar (icon-only by default, expands on hover).
 - **Google Calendar:** OAuth tokens stored in Supabase `calendar_connections` table (per user, per Google account). Supports multiple Google accounts per user. Events are cached in `calendar_events` and synced every 30 minutes. Both users see each other's events on the board.
 - **API routes:** Server routes (`app/api/`) use both authenticated user context (via Supabase SSR client) and admin context (service role) when accessing `auth.users` or bypassing RLS.

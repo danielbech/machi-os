@@ -494,7 +494,6 @@ export function SettingsDialog({
                         localStorage.removeItem("flowie-welcome-seen");
                         localStorage.removeItem("flowie-filter-mine");
                         localStorage.removeItem("flowie-hide-completed");
-                        localStorage.removeItem("flowie-last-transition");
                         const supabase = createClient();
                         await supabase.auth.signOut();
                         onOpenChange(false);
