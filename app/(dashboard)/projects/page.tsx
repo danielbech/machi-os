@@ -17,10 +17,10 @@ import { useProjectData } from "@/lib/project-data-context";
 import { updateClientRecord, deleteClientRecord } from "@/lib/supabase/clients";
 import { deleteClientGroup } from "@/lib/supabase/client-groups";
 import { ClientGroupDialog } from "@/components/client-group-dialog";
-import { CLIENT_DOT_COLORS, BADGE_COLOR_STYLES, getBadgeColorStyle, COLOR_NAMES } from "@/lib/colors";
+import { CLIENT_DOT_COLORS, BADGE_COLOR_STYLES, getBadgeColorStyle } from "@/lib/colors";
 import { ClientIcon } from "@/components/client-icon";
 import type { Client, ClientGroup, ClientStatusDef } from "@/lib/types";
-import { createClientStatus, updateClientStatus, deleteClientStatus } from "@/lib/supabase/client-statuses";
+
 import { ProjectDialog } from "@/components/project-dialog";
 import {
   Table,
@@ -411,300 +411,6 @@ function ClientsTab() {
   );
 }
 
-// ─── Statuses Tab ───────────────────────────────────────────────────────────
-
-function StatusesTab() {
-  const { activeProjectId } = useWorkspace();
-  const { clientStatuses, refreshClientStatuses, clients } = useProjectData();
-  const [editingStatus, setEditingStatus] = useState<ClientStatusDef | null>(null);
-  const [dialogOpen, setDialogOpen] = useState(false);
-  const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
-
-  const openAdd = () => {
-    setEditingStatus(null);
-    setDialogOpen(true);
-  };
-
-  const openEdit = (status: ClientStatusDef) => {
-    setEditingStatus(status);
-    setDialogOpen(true);
-  };
-
-  const handleDelete = async (statusId: string) => {
-    try {
-      await deleteClientStatus(statusId);
-      await refreshClientStatuses();
-      setDeleteConfirm(null);
-    } catch (error) {
-      console.error("Error deleting status:", error);
-      toast.error("Failed to delete status");
-    }
-  };
-
-  const projectCountByStatus = useMemo(() => {
-    const counts: Record<string, number> = {};
-    for (const c of clients) {
-      if (c.status_id) {
-        counts[c.status_id] = (counts[c.status_id] || 0) + 1;
-      }
-    }
-    return counts;
-  }, [clients]);
-
-  return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <div className="text-xs text-foreground/30">
-          {clientStatuses.length} status{clientStatuses.length !== 1 ? "es" : ""}
-        </div>
-        <Button size="sm" onClick={openAdd}>
-          <Plus className="size-4" />
-          Add Status
-        </Button>
-      </div>
-
-      <div className="rounded-lg border border-foreground/[0.06] overflow-hidden">
-        <Table>
-          <TableHeader>
-            <TableRow className="border-foreground/[0.06] bg-foreground/[0.02] hover:bg-foreground/[0.02]">
-              <TableHead>Status</TableHead>
-              <TableHead>Projects</TableHead>
-              <TableHead className="w-[50px]" />
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {clientStatuses.map((status) => (
-              <TableRow key={status.id}>
-                <TableCell>
-                  <Badge className={getBadgeColorStyle(status.color)}>
-                    {status.name}
-                  </Badge>
-                </TableCell>
-                <TableCell>
-                  <span className="text-xs text-foreground/30">
-                    {projectCountByStatus[status.id] || 0}
-                  </span>
-                </TableCell>
-                <TableCell>
-                  <div className="flex justify-end">
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button
-                          variant="ghost"
-                          size="icon-xs"
-                          className="text-foreground/30 hover:text-foreground/60"
-                          aria-label={`Actions for ${status.name}`}
-                        >
-                          <MoreHorizontal className="size-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => openEdit(status)}>
-                          <Pencil className="size-4" />
-                          Edit
-                        </DropdownMenuItem>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem
-                          className="text-destructive"
-                          onClick={() => setDeleteConfirm(status.id)}
-                        >
-                          <Trash2 className="size-4" />
-                          Delete
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </div>
-                </TableCell>
-              </TableRow>
-            ))}
-            {clientStatuses.length === 0 && (
-              <TableRow className="hover:bg-transparent">
-                <TableCell colSpan={3} className="h-24 text-center text-foreground/30">
-                  No statuses yet.
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
-      </div>
-
-      <StatusDialog
-        open={dialogOpen}
-        onOpenChange={setDialogOpen}
-        editingStatus={editingStatus}
-      />
-
-      <Dialog
-        open={deleteConfirm !== null}
-        onOpenChange={() => setDeleteConfirm(null)}
-      >
-        <DialogContent className="sm:max-w-[360px]">
-          <DialogHeader>
-            <DialogTitle>Delete Status</DialogTitle>
-          </DialogHeader>
-          <div className="py-4 space-y-4">
-            <p className="text-sm text-foreground/60">
-              Are you sure you want to delete this status? Projects with this
-              status will become unset.
-            </p>
-            <div className="flex justify-end gap-2">
-              <Button
-                variant="ghost"
-                onClick={() => setDeleteConfirm(null)}
-              >
-                Cancel
-              </Button>
-              <Button
-                variant="destructive"
-                onClick={() => deleteConfirm && handleDelete(deleteConfirm)}
-              >
-                Delete
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
-    </div>
-  );
-}
-
-function StatusDialog({
-  open,
-  onOpenChange,
-  editingStatus,
-}: {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  editingStatus?: ClientStatusDef | null;
-}) {
-  const { activeProjectId } = useWorkspace();
-  const { clientStatuses, refreshClientStatuses } = useProjectData();
-  const [name, setName] = useState("");
-  const [color, setColor] = useState("green");
-  const [showDottedBorder, setShowDottedBorder] = useState(false);
-  const [saving, setSaving] = useState(false);
-  const inputRef = useRef<HTMLInputElement>(null);
-
-  useEffect(() => {
-    if (!open) return;
-    if (editingStatus) {
-      setName(editingStatus.name);
-      setColor(editingStatus.color);
-      setShowDottedBorder(editingStatus.show_dotted_border);
-    } else {
-      setName("");
-      setColor("green");
-      setShowDottedBorder(false);
-    }
-    setTimeout(() => inputRef.current?.focus(), 50);
-  }, [open, editingStatus]);
-
-  const handleSave = async () => {
-    if (!name.trim() || !activeProjectId) return;
-    setSaving(true);
-    try {
-      if (editingStatus) {
-        await updateClientStatus(editingStatus.id, {
-          name: name.trim(),
-          color,
-          show_dotted_border: showDottedBorder,
-        });
-      } else {
-        await createClientStatus(
-          activeProjectId,
-          name.trim(),
-          color,
-          clientStatuses.length,
-          true,
-          showDottedBorder,
-        );
-      }
-      await refreshClientStatuses();
-      onOpenChange(false);
-    } catch (error) {
-      console.error("Error saving status:", error);
-      toast.error("Failed to save status");
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent
-        className="sm:max-w-[360px]"
-        onOpenAutoFocus={(e) => {
-          e.preventDefault();
-          inputRef.current?.focus();
-        }}
-      >
-        <form onSubmit={(e) => { e.preventDefault(); handleSave(); }} className="space-y-4">
-          <div className="flex items-center gap-3">
-            <Badge className={`${getBadgeColorStyle(color)} shrink-0`}>
-              {name || "Preview"}
-            </Badge>
-            <input
-              ref={inputRef}
-              type="text"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              className="flex-1 text-lg font-semibold bg-transparent outline-none placeholder:text-foreground/20"
-              placeholder="Status name..."
-            />
-          </div>
-
-          <div className="flex items-center gap-2">
-            <label className="text-xs text-foreground/40">Color</label>
-            <div className="flex gap-1">
-              {COLOR_NAMES.map((c) => (
-                <button
-                  key={c}
-                  type="button"
-                  onClick={() => setColor(c)}
-                  className={`size-5 rounded-full ${CLIENT_DOT_COLORS[c]} transition-all ${
-                    color === c
-                      ? "ring-2 ring-foreground/80 ring-offset-1 ring-offset-background"
-                      : "opacity-40 hover:opacity-80"
-                  }`}
-                  title={c}
-                  aria-label={`Select ${c} color`}
-                />
-              ))}
-            </div>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <label className="text-xs text-foreground/40">Timeline style</label>
-            <button
-              type="button"
-              onClick={() => setShowDottedBorder(!showDottedBorder)}
-              className={`px-2.5 py-1 rounded text-xs font-medium transition-all ${
-                showDottedBorder
-                  ? "bg-blue-500/10 text-blue-400"
-                  : "bg-foreground/5 text-foreground/30"
-              }`}
-            >
-              {showDottedBorder ? "Dotted border" : "Solid border"}
-            </button>
-          </div>
-
-          <div className="flex justify-end gap-2 pt-2 border-t border-foreground/[0.06]">
-            <Button variant="ghost" type="button" onClick={() => onOpenChange(false)}>
-              Cancel
-            </Button>
-            <Button
-              type="submit"
-              disabled={saving || !name.trim()}
-              className="bg-white text-black hover:bg-foreground/90"
-            >
-              {saving ? "Saving..." : editingStatus ? "Save" : "Add Status"}
-            </Button>
-          </div>
-        </form>
-      </DialogContent>
-    </Dialog>
-  );
-}
 
 // ─── Projects Tab ────────────────────────────────────────────────────────────
 
@@ -1118,7 +824,7 @@ function ProjectsTab() {
 export default function ProjectsPage() {
   const { activeProjectId } = useWorkspace();
   const [initialLoading, setInitialLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<"projects" | "clients" | "statuses">("projects");
+  const [activeTab, setActiveTab] = useState<"projects" | "clients">("projects");
 
   useEffect(() => {
     if (activeProjectId) setInitialLoading(false);
@@ -1153,13 +859,10 @@ export default function ProjectsPage() {
           <TabButton active={activeTab === "clients"} onClick={() => setActiveTab("clients")}>
             Clients
           </TabButton>
-          <TabButton active={activeTab === "statuses"} onClick={() => setActiveTab("statuses")}>
-            Statuses
-          </TabButton>
         </div>
       </div>
 
-      {activeTab === "projects" ? <ProjectsTab /> : activeTab === "clients" ? <ClientsTab /> : <StatusesTab />}
+      {activeTab === "projects" ? <ProjectsTab /> : <ClientsTab />}
     </main>
   );
 }
