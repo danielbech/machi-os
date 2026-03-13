@@ -228,7 +228,7 @@ const STATUS_BAR_COLORS: Record<string, string> = {
   blue: "bg-blue-500",
   purple: "bg-purple-500",
   orange: "bg-orange-500",
-  pink: "bg-pink-500",
+  pink: "bg-[#FF58C3]",
   red: "bg-red-500",
   cyan: "bg-cyan-500",
   amber: "bg-amber-500",
@@ -380,39 +380,24 @@ function GoalTracker({ months, pipelineItems, clients, clientStatuses }: {
             of {formatDKK(YEARLY_GOAL)}
           </span>
         </div>
-        <div className="relative h-5 rounded-full bg-muted overflow-hidden">
-          {/* Render layers from widest (least certain) to narrowest (most certain) */}
-          {[...layers].reverse().map((layer) => (
-            <div
-              key={layer.label}
-              className={`absolute inset-y-0 left-0 rounded-full transition-all duration-500 ${
-                layer.showDottedBorder
-                  ? `border-2 border-dashed ${layer.borderColor} bg-transparent`
-                  : `${layer.color}`
-              }`}
-              style={{
-                width: `${Math.min((layer.cumulative / YEARLY_GOAL) * 100, 100)}%`,
-                ...(layer.showDottedBorder ? {} : { opacity: 0.5 }),
-              }}
-            />
-          ))}
-          {/* Invoiced revenue — solid foreground */}
+        <div className="flex h-6 w-full rounded-[5px] overflow-clip gap-1 bg-[#232323] [outline:4px_solid_#181818] shrink-0">
+          {/* Invoiced revenue */}
           <div
-            className="absolute inset-y-0 left-0 rounded-full bg-foreground transition-all duration-500"
+            className="h-full rounded-sm bg-foreground transition-all duration-500"
             style={{ width: `${progressPct}%` }}
           />
-          {/* Projected total marker (invoiced + pipeline) */}
-          {pipelineTotal > 0 && projectedPct > progressPct && (
+          {/* Pipeline segments */}
+          {layers.map((layer) => (
             <div
-              className="absolute top-0 bottom-0 w-0.5 border-l-2 border-dashed border-foreground/30"
-              style={{ left: `${projectedPct}%` }}
+              key={layer.label}
+              className={`h-full rounded-sm shrink-0 transition-all duration-500 ${layer.color}`}
+              style={{ width: `${Math.min((layer.amount / YEARLY_GOAL) * 100, 100)}%` }}
             />
+          ))}
+          {/* Projected marker */}
+          {pipelineTotal > 0 && (
+            <div className="w-[3px] h-[29px] rounded-full bg-foreground/30 shrink-0 self-center" />
           )}
-          {/* Expected pace marker */}
-          <div
-            className="absolute top-0 bottom-0 w-0.5 bg-foreground/50"
-            style={{ left: `${expectedPct}%` }}
-          />
         </div>
         {/* Legend */}
         <div className="flex flex-wrap gap-x-3 gap-y-0.5 text-[11px] text-muted-foreground">
