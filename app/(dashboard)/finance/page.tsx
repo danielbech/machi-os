@@ -355,10 +355,10 @@ function GoalTracker({ months, pipelineItems, clients, clientStatuses }: {
   const requiredMonthly = remainingMonths > 0 ? remainingToGoal / remainingMonths : 0;
 
   return (
-    <div className="rounded-xl border border-border bg-card p-5 space-y-4">
+    <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
-          Yearly Goal
+          Pipeline
         </h3>
         <span
           className={`text-xs font-medium px-2 py-0.5 rounded-full ${
@@ -416,13 +416,9 @@ function GoalTracker({ months, pipelineItems, clients, clientStatuses }: {
         </div>
         {/* Legend */}
         <div className="flex flex-wrap gap-x-3 gap-y-0.5 text-[11px] text-muted-foreground">
-          <span className="font-semibold text-foreground/80">
-            <span className="inline-block size-2 rounded-full bg-foreground mr-1 align-middle" />
-            Invoiced {formatDKK(ytdRevenue)}
-          </span>
           {layers.map((layer) => (
             <span key={layer.label}>
-              <span className={`inline-block size-2 rounded-full ${layer.color} mr-1 align-middle opacity-70`} />
+              <span className={`inline-block size-2 rounded-full ${layer.color} mr-1 align-middle`} />
               <span className={layer.textColor}>{layer.label}</span>{" "}
               {formatDKK(layer.amount)}
             </span>
@@ -430,16 +426,13 @@ function GoalTracker({ months, pipelineItems, clients, clientStatuses }: {
           {pipelineTotal > 0 && (
             <span>
               <span className="inline-block w-2 h-0 border-t-2 border-dashed border-foreground/30 mr-1 align-middle" />
-              Projected {formatDKK(projectedRevenue)}
+              Total projection: {formatDKK(projectedRevenue)}
             </span>
-          )}
-          {projectedPct > 0 && projectedPct < 100 && (
-            <span className="ml-auto">{expectedPct.toFixed(1)}% expected pace</span>
           )}
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-3 pt-1">
+      <div className="grid grid-cols-4 gap-3 pt-1">
         <Stat
           label="Variance"
           value={`${variance >= 0 ? "+" : ""}${formatDKK(variance)}`}
@@ -719,7 +712,7 @@ function SortablePipelineRow({ item, children }: { item: PipelineItem; children:
   );
 }
 
-function Pipeline({ items, onAdd, onUpdate, onRemove, onReorder, total, clients, clientGroups, clientStatuses }: {
+function Pipeline({ items, onAdd, onUpdate, onRemove, onReorder, total, clients, clientGroups, clientStatuses, months }: {
   items: PipelineItem[];
   onAdd: (item: { client_id: string; amount: number; expected_month: string }) => void;
   onUpdate: (id: string, changes: Partial<Pick<PipelineItem, "client_id" | "amount" | "expected_month">>) => void;
@@ -729,6 +722,7 @@ function Pipeline({ items, onAdd, onUpdate, onRemove, onReorder, total, clients,
   clients: Client[];
   clientGroups: ClientGroup[];
   clientStatuses: ClientStatusDef[];
+  months: MonthData[];
 }) {
   const [addingClient, setAddingClient] = useState<Client | null>(null);
   const [addingAmount, setAddingAmount] = useState("");
@@ -775,14 +769,7 @@ function Pipeline({ items, onAdd, onUpdate, onRemove, onReorder, total, clients,
   return (
     <div className="rounded-xl border border-border bg-card overflow-hidden">
       <div className="px-5 pt-5 pb-3">
-        <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
-          Pipeline
-        </h3>
-        {total > 0 && (
-          <div className="text-2xl font-bold text-foreground mt-1">
-            {formatDKK(total)}
-          </div>
-        )}
+        <GoalTracker months={months} pipelineItems={items} clients={clients} clientStatuses={clientStatuses} />
       </div>
 
       <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd} modifiers={[restrictToVerticalAxis]}>
@@ -958,8 +945,7 @@ export default function FinancePage() {
         <span className="text-xs text-muted-foreground">{data.orgName}</span>
       </div>
 
-      <GoalTracker months={data.months} pipelineItems={pipeline.items} clients={clients} clientStatuses={clientStatuses} />
-      <Pipeline items={pipeline.items} onAdd={pipeline.add} onUpdate={pipeline.update} onRemove={pipeline.remove} onReorder={pipeline.reorder} total={pipeline.total} clients={clients} clientGroups={clientGroups} clientStatuses={clientStatuses} />
+      <Pipeline items={pipeline.items} onAdd={pipeline.add} onUpdate={pipeline.update} onRemove={pipeline.remove} onReorder={pipeline.reorder} total={pipeline.total} clients={clients} clientGroups={clientGroups} clientStatuses={clientStatuses} months={data.months} />
       <MonthlyChart months={data.months} />
     </main>
   );

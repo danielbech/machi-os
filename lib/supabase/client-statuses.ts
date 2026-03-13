@@ -101,7 +101,7 @@ export async function deleteClientStatus(statusId: string): Promise<void> {
 const DEFAULT_STATUSES = [
   { name: 'Active', color: 'green', sort_order: 0, treat_as_active: true, show_dotted_border: false },
   { name: 'Planned', color: 'blue', sort_order: 1, treat_as_active: true, show_dotted_border: true },
-  { name: 'Prospect', color: 'amber', sort_order: 2, treat_as_active: true, show_dotted_border: true },
+  { name: 'Prospect', color: 'pink', sort_order: 2, treat_as_active: true, show_dotted_border: true },
   { name: 'Idle', color: 'gray', sort_order: 3, treat_as_active: false, show_dotted_border: false },
 ]
 
