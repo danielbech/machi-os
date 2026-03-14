@@ -955,11 +955,12 @@ function Pipeline({ items, onAdd, onUpdate, onRemove, onReorder, total, clients,
   const currentMonth = new Date().getMonth();
   const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
-  const handleAdd = () => {
+  const handleAdd = (clientId?: string) => {
+    const cid = clientId || addingClient?.id;
     const parsed = Number(addingAmount.replace(/[^0-9]/g, ""));
-    if (!addingClient || !parsed || !addingMonth) return;
+    if (!cid || !parsed || !addingMonth) return;
     onAdd({
-      client_id: addingClient.id,
+      client_id: cid,
       amount: parsed,
       expected_month: addingMonth,
     });
@@ -968,12 +969,36 @@ function Pipeline({ items, onAdd, onUpdate, onRemove, onReorder, total, clients,
     setAddingMonth("");
   };
 
+  const handleQuickAdd = (clientId: string) => {
+    onAdd({
+      client_id: clientId,
+      amount: 0,
+      expected_month: defaultMonth(),
+    });
+  };
+
   const defaultMonth = () => {
     const m = currentMonth + 1;
     const y = currentYear + Math.floor(m / 12);
     const mo = (m % 12) + 1;
     return `${y}-${String(mo).padStart(2, "0")}`;
   };
+
+  // Group items by client for display
+  const groupedItems = useMemo(() => {
+    const groups: { clientId: string; items: PipelineItem[] }[] = [];
+    const seen = new Map<string, number>();
+    for (const item of items) {
+      const idx = seen.get(item.client_id);
+      if (idx !== undefined) {
+        groups[idx].items.push(item);
+      } else {
+        seen.set(item.client_id, groups.length);
+        groups.push({ clientId: item.client_id, items: [item] });
+      }
+    }
+    return groups;
+  }, [items]);
 
   return (
     <div className="rounded-xl border border-border bg-card overflow-hidden">
@@ -995,59 +1020,83 @@ function Pipeline({ items, onAdd, onUpdate, onRemove, onReorder, total, clients,
           </TableHeader>
           <TableBody>
             <SortableContext items={items.map((i) => i.id)} strategy={verticalListSortingStrategy}>
-              {items.map((item) => {
-                const client = clients.find((c) => c.id === item.client_id);
+              {groupedItems.map((group) => {
+                const client = clients.find((c) => c.id === group.clientId);
                 const status = client?.status_id ? clientStatuses.find((s) => s.id === client.status_id) : undefined;
-                const isHidden = hiddenIds.has(item.id);
-                return (
-                  <SortablePipelineRow key={item.id} item={item}>
-                    <TableCell className={isHidden ? "opacity-30" : ""}>
-                      <ClientPicker
-                        clients={clients}
-                        clientGroups={clientGroups}
-                        selectedId={item.client_id}
-                        onSelect={(c) => onUpdate(item.id, { client_id: c.id })}
-                      />
-                    </TableCell>
-                    <TableCell className={isHidden ? "opacity-30" : ""}>
-                      {status ? (
-                        <Badge className={`${getBadgeColorStyle(status.color)} text-[10px] px-1.5 py-0 ${status.show_dotted_border ? "border-dashed" : ""}`}>
-                          {status.name}
-                        </Badge>
-                      ) : (
-                        <span className="text-xs text-foreground/20">—</span>
-                      )}
-                    </TableCell>
-                    <TableCell className={isHidden ? "opacity-30" : ""}>
-                      <InlineAmount value={item.amount} onSave={(amount) => onUpdate(item.id, { amount })} />
-                    </TableCell>
-                    <TableCell className={isHidden ? "opacity-30" : ""}>
-                      <InlineMonthPicker value={item.expected_month} onSave={(expected_month) => onUpdate(item.id, { expected_month })} />
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-0.5">
-                        <Button
-                          variant="ghost"
-                          size="icon-xs"
-                          className={`transition-opacity ${isHidden ? "opacity-40 text-foreground/50" : "opacity-0 group-hover/row:opacity-20 hover:!opacity-100 text-foreground/50"}`}
-                          onClick={() => onToggleHidden(item.id)}
-                          aria-label={isHidden ? "Show in projections" : "Hide from projections"}
-                        >
-                          {isHidden ? <EyeOff className="size-3.5" /> : <Eye className="size-3.5" />}
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon-xs"
-                          className="text-destructive opacity-0 group-hover/row:opacity-20 hover:!opacity-100 transition-opacity"
-                          onClick={() => onRemove(item.id)}
-                          aria-label="Delete pipeline item"
-                        >
-                          <Trash2 className="size-3.5" />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </SortablePipelineRow>
-                );
+                const isSingle = group.items.length === 1;
+                const groupTotal = group.items.reduce((sum, i) => sum + i.amount, 0);
+                const allHidden = group.items.every((i) => hiddenIds.has(i.id));
+
+                return group.items.map((item, itemIdx) => {
+                  const isFirst = itemIdx === 0;
+                  const isHidden = hiddenIds.has(item.id);
+                  return (
+                    <SortablePipelineRow key={item.id} item={item}>
+                      <TableCell className={isHidden ? "opacity-30" : ""}>
+                        {isFirst ? (
+                          <ClientPicker
+                            clients={clients}
+                            clientGroups={clientGroups}
+                            selectedId={item.client_id}
+                            onSelect={(c) => {
+                              for (const gi of group.items) onUpdate(gi.id, { client_id: c.id });
+                            }}
+                          />
+                        ) : (
+                          <span className="text-xs text-foreground/20 pl-8">↳</span>
+                        )}
+                      </TableCell>
+                      <TableCell className={isHidden ? "opacity-30" : ""}>
+                        {isFirst && status ? (
+                          <Badge className={`${getBadgeColorStyle(status.color)} text-[10px] px-1.5 py-0 ${status.show_dotted_border ? "border-dashed" : ""}`}>
+                            {status.name}
+                          </Badge>
+                        ) : isFirst ? (
+                          <span className="text-xs text-foreground/20">—</span>
+                        ) : null}
+                      </TableCell>
+                      <TableCell className={isHidden ? "opacity-30" : ""}>
+                        <InlineAmount value={item.amount} onSave={(amount) => onUpdate(item.id, { amount })} />
+                      </TableCell>
+                      <TableCell className={isHidden ? "opacity-30" : ""}>
+                        <InlineMonthPicker value={item.expected_month} onSave={(expected_month) => onUpdate(item.id, { expected_month })} />
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-0.5">
+                          {isFirst && (
+                            <Button
+                              variant="ghost"
+                              size="icon-xs"
+                              className="opacity-0 group-hover/row:opacity-20 hover:!opacity-100 transition-opacity text-foreground/50"
+                              onClick={() => handleQuickAdd(group.clientId)}
+                              aria-label="Add partial invoice"
+                            >
+                              <Plus className="size-3.5" />
+                            </Button>
+                          )}
+                          <Button
+                            variant="ghost"
+                            size="icon-xs"
+                            className={`transition-opacity ${isHidden ? "opacity-40 text-foreground/50" : "opacity-0 group-hover/row:opacity-20 hover:!opacity-100 text-foreground/50"}`}
+                            onClick={() => onToggleHidden(item.id)}
+                            aria-label={isHidden ? "Show in projections" : "Hide from projections"}
+                          >
+                            {isHidden ? <EyeOff className="size-3.5" /> : <Eye className="size-3.5" />}
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon-xs"
+                            className="text-destructive opacity-0 group-hover/row:opacity-20 hover:!opacity-100 transition-opacity"
+                            onClick={() => onRemove(item.id)}
+                            aria-label="Delete pipeline item"
+                          >
+                            <Trash2 className="size-3.5" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </SortablePipelineRow>
+                  );
+                });
               })}
             </SortableContext>
             {items.length === 0 && (
