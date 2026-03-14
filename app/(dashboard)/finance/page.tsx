@@ -78,8 +78,7 @@ interface FinanceData {
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
-const YEARLY_GOAL = 1_500_000;
-const MONTHLY_TARGET = 125_000;
+const DEFAULT_yearlyGoal = 1_500_000;
 
 async function billyGet(path: string, params?: Record<string, string>) {
   const qs = new URLSearchParams({ endpoint: path, ...params });
@@ -374,11 +373,13 @@ interface PipelineSegment {
   showDottedBorder: boolean;
 }
 
-function GoalTracker({ months, pipelineItems, clients, clientStatuses }: {
+function GoalTracker({ months, pipelineItems, clients, clientStatuses, yearlyGoal, onYearlyGoalChange }: {
   months: MonthData[];
   pipelineItems: PipelineItem[];
   clients: Client[];
   clientStatuses: ClientStatusDef[];
+  yearlyGoal: number;
+  onYearlyGoalChange: (v: number) => void;
 }) {
   const now = new Date();
   const currentMonth = now.getMonth();
@@ -386,7 +387,8 @@ function GoalTracker({ months, pipelineItems, clients, clientStatuses }: {
   const daysInMonth = new Date(now.getFullYear(), currentMonth + 1, 0).getDate();
 
   const ytdRevenue = months.reduce((sum, m) => sum + m.revenue, 0);
-  const progressPct = Math.min((ytdRevenue / YEARLY_GOAL) * 100, 100);
+  const monthlyTarget = yearlyGoal / 12;
+  const progressPct = Math.min((ytdRevenue / yearlyGoal) * 100, 100);
 
   // Group pipeline items by their client's status, sorted by status sort_order
   const segments = useMemo(() => {
@@ -438,10 +440,10 @@ function GoalTracker({ months, pipelineItems, clients, clientStatuses }: {
 
   const pipelineTotal = pipelineItems.reduce((sum, i) => sum + i.amount, 0);
   const projectedRevenue = ytdRevenue + pipelineTotal;
-  const projectedPct = Math.min((projectedRevenue / YEARLY_GOAL) * 100, 100);
+  const projectedPct = Math.min((projectedRevenue / yearlyGoal) * 100, 100);
 
   const expectedFraction = (currentMonth + dayOfMonth / daysInMonth) / 12;
-  const expectedRevenue = YEARLY_GOAL * expectedFraction;
+  const expectedRevenue = yearlyGoal * expectedFraction;
   const expectedPct = Math.min(expectedFraction * 100, 100);
 
   const variance = ytdRevenue - expectedRevenue;
@@ -451,7 +453,7 @@ function GoalTracker({ months, pipelineItems, clients, clientStatuses }: {
   const avgMonthly = monthsWithRevenue > 0 ? ytdRevenue / monthsWithRevenue : 0;
 
   const remainingMonths = 12 - (currentMonth + 1);
-  const remainingToGoal = YEARLY_GOAL - ytdRevenue;
+  const remainingToGoal = yearlyGoal - ytdRevenue;
   const requiredMonthly = remainingMonths > 0 ? remainingToGoal / remainingMonths : 0;
 
   return (
@@ -476,8 +478,8 @@ function GoalTracker({ months, pipelineItems, clients, clientStatuses }: {
           <span className="text-2xl font-bold text-foreground">
             {formatDKK(ytdRevenue)}
           </span>
-          <span className="text-sm text-muted-foreground">
-            of {formatDKK(YEARLY_GOAL)}
+          <span className="text-sm text-muted-foreground flex items-baseline gap-1">
+            of <InlineAmount value={yearlyGoal} onSave={onYearlyGoalChange} />
           </span>
         </div>
         <div className="flex h-6 w-full rounded-[5px] overflow-clip gap-1 bg-[#232323] [outline:4px_solid_#181818] shrink-0">
@@ -491,7 +493,7 @@ function GoalTracker({ months, pipelineItems, clients, clientStatuses }: {
             <div
               key={layer.label}
               className={`h-full rounded-sm shrink-0 transition-all duration-500 ${layer.color}`}
-              style={{ width: `${Math.min((layer.amount / YEARLY_GOAL) * 100, 100)}%` }}
+              style={{ width: `${Math.min((layer.amount / yearlyGoal) * 100, 100)}%` }}
             />
           ))}
           {/* Projected marker */}
@@ -527,9 +529,9 @@ function GoalTracker({ months, pipelineItems, clients, clientStatuses }: {
         <Stat
           label={`Required/mo (${remainingMonths} left)`}
           value={remainingMonths > 0 ? formatDKK(requiredMonthly) : "—"}
-          color={requiredMonthly > MONTHLY_TARGET * 1.2 ? "text-amber-400" : undefined}
+          color={requiredMonthly > monthlyTarget * 1.2 ? "text-amber-400" : undefined}
         />
-        <Stat label="Monthly Target" value={formatDKK(MONTHLY_TARGET)} />
+        <Stat label="Monthly Target" value={formatDKK(monthlyTarget)} />
       </div>
     </div>
   );
@@ -918,7 +920,7 @@ function SortablePipelineRow({ item, children }: { item: PipelineItem; children:
   );
 }
 
-function Pipeline({ items, onAdd, onUpdate, onRemove, onReorder, total, clients, clientGroups, clientStatuses, months, hiddenIds, onToggleHidden }: {
+function Pipeline({ items, onAdd, onUpdate, onRemove, onReorder, total, clients, clientGroups, clientStatuses, months, hiddenIds, onToggleHidden, yearlyGoal, onYearlyGoalChange }: {
   items: PipelineItem[];
   onAdd: (item: { client_id: string; amount: number; expected_month: string }) => void;
   onUpdate: (id: string, changes: Partial<Pick<PipelineItem, "client_id" | "amount" | "expected_month">>) => void;
@@ -931,6 +933,8 @@ function Pipeline({ items, onAdd, onUpdate, onRemove, onReorder, total, clients,
   months: MonthData[];
   hiddenIds: Set<string>;
   onToggleHidden: (id: string) => void;
+  yearlyGoal: number;
+  onYearlyGoalChange: (v: number) => void;
 }) {
   const visibleItems = useMemo(() => items.filter((i) => !hiddenIds.has(i.id)), [items, hiddenIds]);
   const [addingClient, setAddingClient] = useState<Client | null>(null);
@@ -1003,7 +1007,7 @@ function Pipeline({ items, onAdd, onUpdate, onRemove, onReorder, total, clients,
   return (
     <div className="rounded-xl border border-border bg-card overflow-hidden">
       <div className="px-5 pt-5 pb-3">
-        <GoalTracker months={months} pipelineItems={visibleItems} clients={clients} clientStatuses={clientStatuses} />
+        <GoalTracker months={months} pipelineItems={visibleItems} clients={clients} clientStatuses={clientStatuses} yearlyGoal={yearlyGoal} onYearlyGoalChange={onYearlyGoalChange} />
       </div>
 
       <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd} modifiers={[restrictToVerticalAxis]}>
@@ -1077,16 +1081,16 @@ function Pipeline({ items, onAdd, onUpdate, onRemove, onReorder, total, clients,
                           <Button
                             variant="ghost"
                             size="icon-xs"
-                            className={`transition-opacity ${isHidden ? "opacity-40 text-foreground/50" : "opacity-0 group-hover/row:opacity-20 hover:!opacity-100 text-foreground/50"}`}
+                            className={`transition-opacity ${isHidden ? "opacity-50 text-amber-400/70 hover:!opacity-100" : "opacity-0 group-hover/row:opacity-30 hover:!opacity-100 text-foreground/50"}`}
                             onClick={() => onToggleHidden(item.id)}
-                            aria-label={isHidden ? "Show in projections" : "Hide from projections"}
+                            aria-label={isHidden ? "Include in projections" : "Exclude from projections"}
                           >
                             {isHidden ? <EyeOff className="size-3.5" /> : <Eye className="size-3.5" />}
                           </Button>
                           <Button
                             variant="ghost"
                             size="icon-xs"
-                            className="text-destructive opacity-0 group-hover/row:opacity-20 hover:!opacity-100 transition-opacity"
+                            className="text-foreground/30 opacity-0 group-hover/row:opacity-100 hover:!text-destructive transition-all"
                             onClick={() => onRemove(item.id)}
                             aria-label="Delete pipeline item"
                           >
@@ -1185,6 +1189,19 @@ export default function FinancePage() {
   const { activeProjectId } = useWorkspace();
   const pipeline = usePipeline(activeProjectId);
   const { clients, clientGroups, clientStatuses } = useProjectData();
+
+  const [yearlyGoal, setYearlyGoal] = useState(() => {
+    try {
+      const saved = localStorage.getItem("finance-yearly-goal");
+      return saved ? Number(saved) : DEFAULT_YEARLY_GOAL;
+    } catch { return DEFAULT_YEARLY_GOAL; }
+  });
+
+  const handleYearlyGoalChange = useCallback((v: number) => {
+    setYearlyGoal(v);
+    localStorage.setItem("finance-yearly-goal", String(v));
+  }, []);
+
   const [hiddenIds, setHiddenIds] = useState<Set<string>>(() => {
     try {
       const saved = localStorage.getItem("finance-hidden-pipeline");
@@ -1236,7 +1253,7 @@ export default function FinancePage() {
         <span className="text-xs text-muted-foreground">{data.orgName}</span>
       </div>
 
-      <Pipeline items={pipeline.items} onAdd={pipeline.add} onUpdate={pipeline.update} onRemove={pipeline.remove} onReorder={pipeline.reorder} total={pipeline.total} clients={clients} clientGroups={clientGroups} clientStatuses={clientStatuses} months={data.months} hiddenIds={hiddenIds} onToggleHidden={toggleHidden} />
+      <Pipeline items={pipeline.items} onAdd={pipeline.add} onUpdate={pipeline.update} onRemove={pipeline.remove} onReorder={pipeline.reorder} total={pipeline.total} clients={clients} clientGroups={clientGroups} clientStatuses={clientStatuses} months={data.months} hiddenIds={hiddenIds} onToggleHidden={toggleHidden} yearlyGoal={yearlyGoal} onYearlyGoalChange={handleYearlyGoalChange} />
       <MonthlyChart months={data.months} pipelineItems={visibleItems} clients={clients} clientStatuses={clientStatuses} clientGroups={clientGroups} />
     </main>
   );
