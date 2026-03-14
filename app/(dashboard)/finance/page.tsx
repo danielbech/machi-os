@@ -1104,88 +1104,45 @@ function Pipeline({ items, onAdd, onUpdate, onRemove, onReorder, total, clients,
               const groupTotal = group.items.reduce((sum, i) => sum + i.amount, 0);
               const getGroupLogo = (c: Client) => c.client_group_id ? clientGroups.find((g) => g.id === c.client_group_id)?.logo_url : undefined;
 
-              const isSingle = group.items.length === 1;
-              const singleItem = isSingle ? group.items[0] : null;
-              const singleHidden = singleItem ? hiddenIds.has(singleItem.id) : false;
-
               return (
                 <SortablePipelineGroup key={group.items[0].id} firstItem={group.items[0]}>
-                  <div className={`flex flex-col gap-2 flex-1 min-w-0 ${singleHidden ? "opacity-30" : ""}`}>
-                    <div className="flex items-center gap-2">
-                      <ClientPicker
-                        clients={clients}
-                        clientGroups={clientGroups}
-                        selectedId={group.clientId}
-                        onSelect={(c) => {
-                          for (const gi of group.items) onUpdate(gi.id, { client_id: c.id });
-                        }}
-                      />
-                      <div className="flex-1" />
-                      {status && (
-                        <Badge className={`${getBadgeColorStyle(status.color)} text-[10px] px-1.5 py-0 shrink-0 ${status.show_dotted_border ? "border-dashed" : ""}`}>
-                          {status.name}
-                        </Badge>
-                      )}
-                      {/* Single invoice: show amount + month inline */}
-                      {singleItem ? (
-                        <>
-                          <InlineAmount value={singleItem.amount} onSave={(amount) => onUpdate(singleItem.id, { amount })} />
-                          <span className="text-xs text-foreground/30 shrink-0">
-                            <InlineMonthPicker value={singleItem.expected_month} onSave={(expected_month) => onUpdate(singleItem.id, { expected_month })} />
-                          </span>
-                        </>
-                      ) : (
-                        <span className="text-sm font-semibold text-foreground tabular-nums whitespace-nowrap shrink-0">
-                          {formatDKK(groupTotal)}
-                        </span>
-                      )}
-                      <div className="flex items-center gap-0.5 shrink-0">
-                        <Button
-                          variant="ghost"
-                          size="icon-xs"
-                          className="opacity-0 group-hover/row:opacity-30 hover:!opacity-100 text-foreground/30 transition-all"
-                          onClick={() => handleQuickAdd(group.clientId)}
-                          aria-label="Add partial invoice"
-                        >
-                          <Plus className="size-3.5" />
-                        </Button>
-                        {singleItem && (
-                          <Button
-                            variant="ghost"
-                            size="icon-xs"
-                            className={`transition-opacity ${singleHidden ? "opacity-70 text-amber-400/70" : "opacity-0 group-hover/row:opacity-30 hover:!opacity-100 text-foreground/30"}`}
-                            onClick={() => onToggleHidden(singleItem.id)}
-                            aria-label={singleHidden ? "Include in projections" : "Exclude from projections"}
-                          >
-                            {singleHidden ? <EyeOff className="size-3.5" /> : <Eye className="size-3.5" />}
-                          </Button>
-                        )}
-                        <Button
-                          variant="ghost"
-                          size="icon-xs"
-                          className="opacity-0 group-hover/row:opacity-30 hover:!opacity-100 text-foreground/30 hover:!text-destructive transition-all"
-                          onClick={() => { for (const gi of group.items) onRemove(gi.id); }}
-                          aria-label="Delete project from pipeline"
-                        >
-                          <Trash2 className="size-3.5" />
-                        </Button>
-                      </div>
+                  <div className="flex items-center gap-2 flex-1 min-w-0">
+                    <ClientPicker
+                      clients={clients}
+                      clientGroups={clientGroups}
+                      selectedId={group.clientId}
+                      onSelect={(c) => {
+                        for (const gi of group.items) onUpdate(gi.id, { client_id: c.id });
+                      }}
+                    />
+                    {/* Invoice chips inline */}
+                    <div className="flex gap-1.5 flex-wrap flex-1 justify-end">
+                      {group.items.map((item) => (
+                        <InvoiceChip
+                          key={item.id}
+                          item={item}
+                          onUpdate={onUpdate}
+                          onRemove={onRemove}
+                          isHidden={hiddenIds.has(item.id)}
+                          onToggleHidden={onToggleHidden}
+                        />
+                      ))}
+                      <button
+                        onClick={() => handleQuickAdd(group.clientId)}
+                        className="flex items-center justify-center size-6 rounded-md border border-dashed border-foreground/10 text-foreground/20 hover:text-foreground/50 hover:border-foreground/20 transition-colors shrink-0 self-center"
+                        aria-label="Add partial invoice"
+                      >
+                        <Plus className="size-3" />
+                      </button>
                     </div>
-                    {/* Multi-invoice: show chips */}
-                    {!isSingle && (
-                      <div className="flex gap-1.5 flex-wrap pl-8">
-                        {group.items.map((item) => (
-                          <InvoiceChip
-                            key={item.id}
-                            item={item}
-                            onUpdate={onUpdate}
-                            onRemove={onRemove}
-                            isHidden={hiddenIds.has(item.id)}
-                            onToggleHidden={onToggleHidden}
-                          />
-                        ))}
-                      </div>
+                    {status && (
+                      <Badge className={`${getBadgeColorStyle(status.color)} text-[10px] px-1.5 py-0 shrink-0 ${status.show_dotted_border ? "border-dashed" : ""}`}>
+                        {status.name}
+                      </Badge>
                     )}
+                    <span className="text-sm font-semibold text-foreground tabular-nums whitespace-nowrap shrink-0">
+                      {formatDKK(groupTotal)}
+                    </span>
                   </div>
                 </SortablePipelineGroup>
               );
