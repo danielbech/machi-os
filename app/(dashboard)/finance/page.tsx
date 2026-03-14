@@ -1103,7 +1103,7 @@ function Pipeline({ items, onAdd, onUpdate, onRemove, onReorder, total, clients,
         <div className="flex items-center py-2 px-5 bg-foreground/[0.02] border-t border-b border-foreground/[0.06] text-[12px] font-medium text-[#737373]">
           <div className="w-8 shrink-0" />
           <div className="w-[160px] shrink-0">Project</div>
-          <div className="flex-1">Invoices</div>
+          <div className="w-[262px] shrink-0">Invoices</div>
           <div className="w-[100px] shrink-0">Status</div>
           <div className="w-[100px] shrink-0 text-right">Amount</div>
           <div className="w-14 shrink-0" />
@@ -1141,7 +1141,7 @@ function Pipeline({ items, onAdd, onUpdate, onRemove, onReorder, total, clients,
                       />
                     </div>
                     {/* Invoice chips */}
-                    <div className="flex gap-1 flex-wrap flex-1 min-w-0">
+                    <div className="flex gap-1 flex-wrap w-[262px] shrink-0">
                       {group.items.map((item) => (
                         <InvoiceChip
                           key={item.id}
