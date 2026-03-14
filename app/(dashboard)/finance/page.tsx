@@ -1074,7 +1074,16 @@ function Pipeline({ items, onAdd, onUpdate, onRemove, onReorder, total, clients,
         <GoalTracker months={months} pipelineItems={visibleItems} clients={clients} clientStatuses={clientStatuses} yearlyGoal={yearlyGoal} onYearlyGoalChange={onYearlyGoalChange} />
       </div>
 
-      <div className="border-t border-foreground/[0.06]">
+      <div>
+        {/* Header */}
+        <div className="flex items-center py-2 px-5 bg-foreground/[0.02] border-t border-b border-foreground/[0.06] text-[12px] font-medium text-[#737373]">
+          <div className="w-8 shrink-0" />
+          <div className="w-[160px] shrink-0">Project</div>
+          <div className="flex-1">Invoices</div>
+          <div className="w-[100px] shrink-0">Status</div>
+          <div className="w-[100px] shrink-0 text-right">Amount</div>
+          <div className="w-14 shrink-0" />
+        </div>
         <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd} modifiers={[restrictToVerticalAxis]}>
           <SortableContext items={groupedItems.map((g) => g.items[0].id)} strategy={verticalListSortingStrategy}>
             {groupedItems.map((group) => {
