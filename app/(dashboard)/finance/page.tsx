@@ -159,7 +159,10 @@ async function fetchFinanceData(): Promise<FinanceData> {
 
   const year = String(new Date().getFullYear());
 
-  const [invoicesData, billsData] = await Promise.all([
+  // Fetch accounts, account natures, invoices, and daybook transactions in parallel
+  const [accountsData, naturesData, invoicesData, txData] = await Promise.all([
+    billyGet("/accounts", { organizationId: orgId }),
+    billyGet("/accountNatures", {}),
     billyGet("/invoices", {
       organizationId: orgId,
       minEntryDate: `${year}-01-01`,
@@ -167,7 +170,7 @@ async function fetchFinanceData(): Promise<FinanceData> {
       state: "approved",
       pageSize: "1000",
     }),
-    billyGet("/bills", {
+    billyGet("/daybookTransactions", {
       organizationId: orgId,
       minEntryDate: `${year}-01-01`,
       maxEntryDate: `${year}-12-31`,
@@ -175,6 +178,36 @@ async function fetchFinanceData(): Promise<FinanceData> {
       pageSize: "1000",
     }),
   ]);
+
+  // Identify expense account natures (profit & loss expense side)
+  const expenseNatureIds = new Set<string>();
+  for (const nature of (naturesData.accountNatures || [])) {
+    // In Danish accounting, expense natures have reportType "profitAndLoss" and are on the debit side
+    if (nature.reportType === "profitAndLoss" && nature.normalSide === "debit") {
+      expenseNatureIds.add(nature.id);
+    }
+  }
+
+  // Build set of expense account IDs
+  const expenseAccountIds = new Set<string>();
+  for (const account of (accountsData.accounts || [])) {
+    if (account.natureId && expenseNatureIds.has(account.natureId)) {
+      expenseAccountIds.add(account.id);
+    }
+  }
+
+  // Sum expenses from daybook transaction lines that debit expense accounts
+  const monthlyExpenses = new Array(12).fill(0);
+  for (const tx of (txData.daybookTransactions || [])) {
+    if (!tx.entryDate) continue;
+    const monthIdx = parseInt(tx.entryDate.substring(5, 7), 10) - 1;
+    if (monthIdx < 0 || monthIdx > 11) continue;
+    for (const line of (tx.lines || [])) {
+      if (line.side === "debit" && expenseAccountIds.has(line.accountId)) {
+        monthlyExpenses[monthIdx] += line.amount || 0;
+      }
+    }
+  }
 
   const months: MonthData[] = [];
   const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
@@ -188,12 +221,7 @@ async function fetchFinanceData(): Promise<FinanceData> {
       .reduce((sum: number, inv: { amount: number; exchangeRate: number }) =>
         sum + (inv.amount || 0) * (inv.exchangeRate || 1), 0);
 
-    const expenses = (billsData.bills || [])
-      .filter((bill: { entryDate: string }) => bill.entryDate?.startsWith(prefix))
-      .reduce((sum: number, bill: { amount: number; exchangeRate: number }) =>
-        sum + (bill.amount || 0) * (bill.exchangeRate || 1), 0);
-
-    months.push({ month: monthNames[m], revenue, expenses });
+    months.push({ month: monthNames[m], revenue, expenses: monthlyExpenses[m] });
   }
 
   return { orgName, months };

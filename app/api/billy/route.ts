@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 const BILLY_BASE = "https://api.billysbilling.com/v2";
 const TOKEN = process.env.BILLY_ACCESS_TOKEN;
 
-const ALLOWED_ENDPOINTS = ["/organization", "/invoices", "/bills"];
+const ALLOWED_ENDPOINTS = ["/organization", "/invoices", "/bills", "/accounts", "/accountNatures", "/daybookTransactions"];
 
 export async function GET(request: NextRequest) {
   if (!TOKEN) {
