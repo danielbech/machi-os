@@ -201,40 +201,79 @@ async function fetchFinanceData(): Promise<FinanceData> {
 
 // ─── Custom Tooltip ─────────────────────────────────────────────────────────
 
-function ChartTooltip({ active, payload, label }: { active?: boolean; payload?: Array<{ dataKey: string; value: number }>; label?: string }) {
+function ChartTooltip({ active, payload, label }: { active?: boolean; payload?: Array<{ dataKey: string; value: number; payload?: Record<string, unknown> }>; label?: string }) {
   if (!active || !payload?.length) return null;
 
   const revenue = payload.find((e) => e.dataKey === "revenue")?.value || 0;
   const projected = payload.find((e) => e.dataKey === "projected")?.value || 0;
   const expenses = Math.abs(payload.find((e) => e.dataKey === "expenses")?.value || 0);
   const projectedExpenses = Math.abs(payload.find((e) => e.dataKey === "projectedExpenses")?.value || 0);
+  const cashflow = payload.find((e) => e.dataKey === "cashflow")?.value || 0;
+  const clientBreakdowns = (payload[0]?.payload?.clients || []) as ClientBreakdown[];
 
   const totalRev = revenue + projected;
   const totalExp = expenses + projectedExpenses;
 
-  const cashflow = payload.find((e) => e.dataKey === "cashflow")?.value || 0;
-
-  const rows: { label: string; value: number; color: string; isProjected?: boolean }[] = [];
-  if (revenue > 0) rows.push({ label: "Revenue", value: revenue, color: "text-chart-2" });
-  if (projected > 0) rows.push({ label: "Projected", value: projected, color: "text-chart-2", isProjected: true });
-  if (expenses > 0) rows.push({ label: "Expenses", value: expenses, color: "text-chart-5" });
-  if (projectedExpenses > 0) rows.push({ label: "Est. expenses", value: projectedExpenses, color: "text-chart-5", isProjected: true });
-  if (totalRev > 0 || totalExp > 0) rows.push({ label: "Net", value: totalRev - totalExp, color: totalRev - totalExp >= 0 ? "text-foreground" : "text-red-400" });
-  rows.push({ label: "Cashflow", value: cashflow, color: cashflow >= 0 ? "text-foreground" : "text-red-400" });
-
   return (
-    <div className="rounded-lg border border-border bg-popover px-3 py-2 shadow-lg">
-      <div className="text-xs text-muted-foreground mb-1">{label}</div>
-      {rows.map((row) => (
-        <div key={row.label} className="flex items-center gap-2 text-sm">
-          <span className={`${row.color} ${row.isProjected ? "opacity-50" : ""}`}>
-            {row.label}
-          </span>
-          <span className="ml-auto font-medium text-popover-foreground tabular-nums">
-            {formatDKK(row.value)}
-          </span>
+    <div className="rounded-lg border border-border bg-popover px-3 py-2 shadow-lg min-w-[200px]">
+      <div className="text-xs text-muted-foreground mb-1.5">{label}</div>
+
+      {revenue > 0 && (
+        <div className="flex items-center gap-2 text-sm">
+          <span className="text-chart-2">Revenue</span>
+          <span className="ml-auto font-medium text-popover-foreground tabular-nums">{formatDKK(revenue)}</span>
         </div>
-      ))}
+      )}
+
+      {/* Client breakdown for projected revenue */}
+      {clientBreakdowns.length > 0 && (
+        <div className="mt-1.5 pt-1.5 border-t border-foreground/[0.06] space-y-1">
+          {clientBreakdowns.map((cb, i) => (
+            <div key={i} className="flex items-center gap-2 text-xs">
+              <div className="flex items-center gap-1.5 min-w-0 flex-1">
+                {cb.logoUrl ? (
+                  <img src={cb.logoUrl} alt="" className="size-4 rounded object-cover shrink-0" />
+                ) : (
+                  <div className={`size-4 rounded ${CLIENT_DOT_COLORS[cb.clientColor] || "bg-blue-500"} flex items-center justify-content text-white shrink-0`}>
+                    <span className="text-[7px] font-bold mx-auto">{cb.clientName.charAt(0)}</span>
+                  </div>
+                )}
+                <span className="truncate text-foreground/70">{cb.clientName}</span>
+                <Badge className={`${getBadgeColorStyle(cb.statusColor)} text-[9px] px-1 py-0 leading-tight`}>
+                  {cb.statusName}
+                </Badge>
+              </div>
+              <span className="font-medium text-popover-foreground tabular-nums shrink-0">{formatDKK(cb.amount)}</span>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {expenses > 0 && (
+        <div className="flex items-center gap-2 text-sm mt-1">
+          <span className="text-chart-5">Expenses</span>
+          <span className="ml-auto font-medium text-popover-foreground tabular-nums">{formatDKK(expenses)}</span>
+        </div>
+      )}
+      {projectedExpenses > 0 && (
+        <div className="flex items-center gap-2 text-sm">
+          <span className="text-chart-5 opacity-50">Est. expenses</span>
+          <span className="ml-auto font-medium text-popover-foreground tabular-nums">{formatDKK(projectedExpenses)}</span>
+        </div>
+      )}
+
+      <div className="mt-1.5 pt-1.5 border-t border-foreground/[0.06] flex items-center gap-2 text-sm">
+        <span className="text-muted-foreground">Net</span>
+        <span className={`ml-auto font-medium tabular-nums ${totalRev - totalExp >= 0 ? "text-foreground" : "text-red-400"}`}>
+          {formatDKK(totalRev - totalExp)}
+        </span>
+      </div>
+      <div className="flex items-center gap-2 text-sm">
+        <span className="text-muted-foreground">Cashflow</span>
+        <span className={`ml-auto font-medium tabular-nums ${cashflow >= 0 ? "text-foreground" : "text-red-400"}`}>
+          {formatDKK(cashflow)}
+        </span>
+      </div>
     </div>
   );
 }
@@ -464,7 +503,23 @@ function Stat({ label, value, color }: { label: string; value: string; color?: s
   );
 }
 
-function MonthlyChart({ months, pipelineItems, clients }: { months: MonthData[]; pipelineItems: PipelineItem[]; clients: Client[] }) {
+interface ClientBreakdown {
+  clientName: string;
+  clientColor: string;
+  statusName: string;
+  statusColor: string;
+  amount: number;
+  logoUrl?: string;
+  icon?: string;
+}
+
+function MonthlyChart({ months, pipelineItems, clients, clientStatuses, clientGroups }: {
+  months: MonthData[];
+  pipelineItems: PipelineItem[];
+  clients: Client[];
+  clientStatuses: ClientStatusDef[];
+  clientGroups: ClientGroup[];
+}) {
   const colors = useChartColors();
   const currentMonth = new Date().getMonth();
   const currentYear = new Date().getFullYear();
@@ -490,18 +545,35 @@ function MonthlyChart({ months, pipelineItems, clients }: { months: MonthData[];
     }
   };
 
-  // Map pipeline items into monthly projected revenue
-  const pipelineByMonth = useMemo(() => {
-    const map = new Map<number, number>(); // month index → amount
+  // Map pipeline items into monthly projected revenue with client breakdowns
+  const { pipelineByMonth, clientsByMonth } = useMemo(() => {
+    const amounts = new Map<number, number>();
+    const breakdowns = new Map<number, ClientBreakdown[]>();
     for (const item of pipelineItems) {
       const [y, m] = item.expected_month.split("-").map(Number);
       if (y === currentYear) {
         const idx = m - 1;
-        map.set(idx, (map.get(idx) || 0) + item.amount);
+        amounts.set(idx, (amounts.get(idx) || 0) + item.amount);
+
+        const client = clients.find((c) => c.id === item.client_id);
+        const status = client?.status_id ? clientStatuses.find((s) => s.id === client.status_id) : undefined;
+        const group = client?.client_group_id ? clientGroups.find((g) => g.id === client.client_group_id) : undefined;
+
+        const existing = breakdowns.get(idx) || [];
+        existing.push({
+          clientName: client?.name || "Unknown",
+          clientColor: client?.color || "blue",
+          statusName: status?.name || "",
+          statusColor: status?.color || "gray",
+          amount: item.amount,
+          logoUrl: group?.logo_url || client?.logo_url,
+          icon: client?.icon,
+        });
+        breakdowns.set(idx, existing);
       }
     }
-    return map;
-  }, [pipelineItems, currentYear]);
+    return { pipelineByMonth: amounts, clientsByMonth: breakdowns };
+  }, [pipelineItems, currentYear, clients, clientStatuses, clientGroups]);
 
   const chartData = useMemo(() => {
     let cumulative = 0;
@@ -521,6 +593,7 @@ function MonthlyChart({ months, pipelineItems, clients }: { months: MonthData[];
         expenses: isPast ? -m.expenses : 0,
         projectedExpenses: isPast ? 0 : -projectedExpense,
         cashflow: cumulative,
+        clients: clientsByMonth.get(i) || [],
       };
     });
   }, [months, currentMonth, pipelineByMonth, defaultExpense]);
@@ -1050,7 +1123,7 @@ export default function FinancePage() {
       </div>
 
       <Pipeline items={pipeline.items} onAdd={pipeline.add} onUpdate={pipeline.update} onRemove={pipeline.remove} onReorder={pipeline.reorder} total={pipeline.total} clients={clients} clientGroups={clientGroups} clientStatuses={clientStatuses} months={data.months} />
-      <MonthlyChart months={data.months} pipelineItems={pipeline.items} clients={clients} />
+      <MonthlyChart months={data.months} pipelineItems={pipeline.items} clients={clients} clientStatuses={clientStatuses} clientGroups={clientGroups} />
     </main>
   );
 }
