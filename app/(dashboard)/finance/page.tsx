@@ -159,10 +159,9 @@ async function fetchFinanceData(): Promise<FinanceData> {
 
   const year = String(new Date().getFullYear());
 
-  // Fetch accounts, account natures, invoices, and daybook transactions in parallel
-  const [accountsData, naturesData, invoicesData, txData] = await Promise.all([
+  // Fetch accounts, invoices, and postings in parallel
+  const [accountsData, invoicesData, postingsData] = await Promise.all([
     billyGet("/accounts", { organizationId: orgId }),
-    billyGet("/accountNatures", {}),
     billyGet("/invoices", {
       organizationId: orgId,
       minEntryDate: `${year}-01-01`,
@@ -170,41 +169,30 @@ async function fetchFinanceData(): Promise<FinanceData> {
       state: "approved",
       pageSize: "1000",
     }),
-    billyGet("/daybookTransactions", {
+    billyGet("/postings", {
       organizationId: orgId,
       minEntryDate: `${year}-01-01`,
       maxEntryDate: `${year}-12-31`,
-      state: "approved",
       pageSize: "1000",
     }),
   ]);
 
-  // Identify expense account natures (profit & loss expense side)
-  const expenseNatureIds = new Set<string>();
-  for (const nature of (naturesData.accountNatures || [])) {
-    // In Danish accounting, expense natures have reportType "profitAndLoss" and are on the debit side
-    if (nature.reportType === "profitAndLoss" && nature.normalSide === "debit") {
-      expenseNatureIds.add(nature.id);
-    }
-  }
-
-  // Build set of expense account IDs
+  // Build set of expense account IDs (natureId === "expense")
   const expenseAccountIds = new Set<string>();
   for (const account of (accountsData.accounts || [])) {
-    if (account.natureId && expenseNatureIds.has(account.natureId)) {
+    if (account.natureId === "expense") {
       expenseAccountIds.add(account.id);
     }
   }
 
-  // Sum expenses from daybook transaction lines that debit expense accounts
+  // Sum expenses from postings that debit expense accounts
   const monthlyExpenses = new Array(12).fill(0);
-  for (const tx of (txData.daybookTransactions || [])) {
-    if (!tx.entryDate) continue;
-    const monthIdx = parseInt(tx.entryDate.substring(5, 7), 10) - 1;
-    if (monthIdx < 0 || monthIdx > 11) continue;
-    for (const line of (tx.lines || [])) {
-      if (line.side === "debit" && expenseAccountIds.has(line.accountId)) {
-        monthlyExpenses[monthIdx] += line.amount || 0;
+  for (const posting of (postingsData.postings || [])) {
+    if (posting.isVoided) continue;
+    if (posting.side === "debit" && expenseAccountIds.has(posting.accountId)) {
+      const monthIdx = parseInt(posting.entryDate.substring(5, 7), 10) - 1;
+      if (monthIdx >= 0 && monthIdx <= 11) {
+        monthlyExpenses[monthIdx] += posting.amount || 0;
       }
     }
   }
