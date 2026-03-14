@@ -1161,7 +1161,7 @@ function Pipeline({ items, onAdd, onUpdate, onRemove, onReorder, total, clients,
           size="icon-xs"
           variant="ghost"
           className="opacity-30 hover:opacity-100 text-foreground shrink-0"
-          onClick={handleAdd}
+          onClick={() => handleAdd()}
           aria-label="Add pipeline item"
         >
           <Plus className="size-3.5" />
