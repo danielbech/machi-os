@@ -78,7 +78,7 @@ interface FinanceData {
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
-const DEFAULT_yearlyGoal = 1_500_000;
+const DEFAULT_YEARLY_GOAL = 1_500_000;
 
 async function billyGet(path: string, params?: Record<string, string>) {
   const qs = new URLSearchParams({ endpoint: path, ...params });
