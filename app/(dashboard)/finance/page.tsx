@@ -763,14 +763,30 @@ function MonthlyChart({ months, pipelineItems, clients, clientStatuses, clientGr
             <Bar yAxisId="bars" dataKey="projected" fill={colors.revenue} radius={[4, 4, 0, 0]} maxBarSize={32} stackId="a" fillOpacity={0.35} />
             <Bar yAxisId="bars" dataKey="expenses" fill={colors.expenses} radius={[0, 0, 4, 4]} maxBarSize={32} stackId="a" />
             <Bar yAxisId="bars" dataKey="projectedExpenses" fill={colors.expenses} radius={[0, 0, 4, 4]} maxBarSize={32} stackId="a" fillOpacity={0.35} />
+            {(() => {
+              const lineData = chartData.filter((d) => d.cashflow !== null).map((d) => d.cashflow as number);
+              const max = lineData.length ? Math.max(...lineData) : 0;
+              const min = lineData.length ? Math.min(...lineData) : 0;
+              const zeroPct = min >= 0 ? 100 : max <= 0 ? 0 : (max / (max - min)) * 100;
+              return (
+                <defs>
+                  <linearGradient id="cashflowColor" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#fafafa" />
+                    <stop offset={`${zeroPct}%`} stopColor="#fafafa" />
+                    <stop offset={`${zeroPct}%`} stopColor="#f87171" />
+                    <stop offset="100%" stopColor="#f87171" />
+                  </linearGradient>
+                </defs>
+              );
+            })()}
             <Line
               yAxisId="line"
               type="monotone"
               dataKey="cashflow"
-              stroke="#fafafa"
               strokeWidth={2}
               dot={false}
               strokeOpacity={0.6}
+              stroke="url(#cashflowColor)"
             />
           </ComposedChart>
         </ResponsiveContainer>
