@@ -1164,13 +1164,19 @@ export default function FinancePage() {
   const { activeProjectId } = useWorkspace();
   const pipeline = usePipeline(activeProjectId);
   const { clients, clientGroups, clientStatuses } = useProjectData();
-  const [hiddenIds, setHiddenIds] = useState<Set<string>>(new Set());
+  const [hiddenIds, setHiddenIds] = useState<Set<string>>(() => {
+    try {
+      const saved = localStorage.getItem("finance-hidden-pipeline");
+      return saved ? new Set(JSON.parse(saved)) : new Set();
+    } catch { return new Set(); }
+  });
 
   const toggleHidden = useCallback((id: string) => {
     setHiddenIds((prev) => {
       const next = new Set(prev);
       if (next.has(id)) next.delete(id);
       else next.add(id);
+      localStorage.setItem("finance-hidden-pipeline", JSON.stringify([...next]));
       return next;
     });
   }, []);
