@@ -74,6 +74,7 @@ interface MonthData {
 interface FinanceData {
   orgName: string;
   months: MonthData[];
+  lastYearYtdRevenue: number; // same period last year
 }
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
@@ -184,15 +185,26 @@ async function fetchFinanceData(): Promise<FinanceData> {
   const orgId = orgData.organization.id;
   const orgName = orgData.organization.name;
 
-  const year = String(new Date().getFullYear());
+  const now = new Date();
+  const year = String(now.getFullYear());
+  const lastYear = String(now.getFullYear() - 1);
+  // Same date last year for YoY comparison
+  const lastYearEndDate = `${lastYear}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
 
-  // Fetch accounts, invoices, and postings in parallel
-  const [accountsData, invoicesData, postingsData] = await Promise.all([
+  // Fetch accounts, invoices (this year + last year YTD), and postings in parallel
+  const [accountsData, invoicesData, lastYearInvoicesData, postingsData] = await Promise.all([
     billyGet("/accounts", { organizationId: orgId }),
     billyGet("/invoices", {
       organizationId: orgId,
       minEntryDate: `${year}-01-01`,
       maxEntryDate: `${year}-12-31`,
+      state: "approved",
+      pageSize: "1000",
+    }),
+    billyGet("/invoices", {
+      organizationId: orgId,
+      minEntryDate: `${lastYear}-01-01`,
+      maxEntryDate: lastYearEndDate,
       state: "approved",
       pageSize: "1000",
     }),
@@ -239,7 +251,12 @@ async function fetchFinanceData(): Promise<FinanceData> {
     months.push({ month: monthNames[m], revenue, expenses: monthlyExpenses[m] });
   }
 
-  return { orgName, months };
+  // Last year's YTD revenue (same period)
+  const lastYearYtdRevenue = (lastYearInvoicesData.invoices || [])
+    .reduce((sum: number, inv: { amount: number; exchangeRate: number }) =>
+      sum + (inv.amount || 0) * (inv.exchangeRate || 1), 0);
+
+  return { orgName, months, lastYearYtdRevenue };
 }
 
 // ─── Custom Tooltip ─────────────────────────────────────────────────────────
@@ -376,13 +393,14 @@ interface PipelineSegment {
   showDottedBorder: boolean;
 }
 
-function GoalTracker({ months, pipelineItems, clients, clientStatuses, yearlyGoal, onYearlyGoalChange }: {
+function GoalTracker({ months, pipelineItems, clients, clientStatuses, yearlyGoal, onYearlyGoalChange, lastYearYtdRevenue }: {
   months: MonthData[];
   pipelineItems: PipelineItem[];
   clients: Client[];
   clientStatuses: ClientStatusDef[];
   yearlyGoal: number;
   onYearlyGoalChange: (v: number) => void;
+  lastYearYtdRevenue: number;
 }) {
   const now = new Date();
   const currentMonth = now.getMonth();
@@ -524,16 +542,21 @@ function GoalTracker({ months, pipelineItems, clients, clientStatuses, yearlyGoa
 
       <div className="grid grid-cols-4 gap-3 pt-1">
         <Stat
-          label="Variance"
+          label="Off target"
           value={`${variance >= 0 ? "+" : ""}${formatDKK(variance)}`}
           color={isOnTrack ? "text-green-400" : "text-red-400"}
         />
-        <Stat label="Avg Monthly" value={formatDKK(avgMonthly)} />
-        <Stat
-          label={`Required/mo (${remainingMonths} left)`}
-          value={remainingMonths > 0 ? formatDKK(requiredMonthly) : "—"}
-          color={requiredMonthly > monthlyTarget * 1.2 ? "text-amber-400" : undefined}
-        />
+        <Stat label="In pipeline" value={formatDKK(pipelineTotal)} />
+        {(() => {
+          const yoyDiff = ytdRevenue - lastYearYtdRevenue;
+          return (
+            <Stat
+              label="vs. last year"
+              value={`${yoyDiff >= 0 ? "+" : ""}${formatDKK(yoyDiff)}`}
+              color={yoyDiff >= 0 ? "text-green-400" : "text-red-400"}
+            />
+          );
+        })()}
         <Stat label="Monthly Target" value={formatDKK(monthlyTarget)} />
       </div>
     </div>
@@ -986,7 +1009,7 @@ function SortablePipelineGroup({ firstItem, children }: { firstItem: PipelineIte
   );
 }
 
-function Pipeline({ items, onAdd, onUpdate, onRemove, onReorder, total, clients, clientGroups, clientStatuses, months, hiddenIds, onToggleHidden, yearlyGoal, onYearlyGoalChange }: {
+function Pipeline({ items, onAdd, onUpdate, onRemove, onReorder, total, clients, clientGroups, clientStatuses, months, hiddenIds, onToggleHidden, yearlyGoal, onYearlyGoalChange, lastYearYtdRevenue }: {
   items: PipelineItem[];
   onAdd: (item: { client_id: string; amount: number; expected_date: string; label?: string }) => void;
   onUpdate: (id: string, changes: Partial<Pick<PipelineItem, "client_id" | "amount" | "expected_date" | "label">>) => void;
@@ -1001,6 +1024,7 @@ function Pipeline({ items, onAdd, onUpdate, onRemove, onReorder, total, clients,
   onToggleHidden: (id: string) => void;
   yearlyGoal: number;
   onYearlyGoalChange: (v: number) => void;
+  lastYearYtdRevenue: number;
 }) {
   const visibleItems = useMemo(() => items.filter((i) => !hiddenIds.has(i.id)), [items, hiddenIds]);
   const [addingClient, setAddingClient] = useState<Client | null>(null);
@@ -1071,7 +1095,7 @@ function Pipeline({ items, onAdd, onUpdate, onRemove, onReorder, total, clients,
   return (
     <div className="rounded-xl border border-border bg-card overflow-hidden">
       <div className="px-5 pt-5 pb-3">
-        <GoalTracker months={months} pipelineItems={visibleItems} clients={clients} clientStatuses={clientStatuses} yearlyGoal={yearlyGoal} onYearlyGoalChange={onYearlyGoalChange} />
+        <GoalTracker months={months} pipelineItems={visibleItems} clients={clients} clientStatuses={clientStatuses} yearlyGoal={yearlyGoal} onYearlyGoalChange={onYearlyGoalChange} lastYearYtdRevenue={lastYearYtdRevenue} />
       </div>
 
       <div>
@@ -1307,7 +1331,7 @@ export default function FinancePage() {
         <span className="text-xs text-muted-foreground">{data.orgName}</span>
       </div>
 
-      <Pipeline items={pipeline.items} onAdd={pipeline.add} onUpdate={pipeline.update} onRemove={pipeline.remove} onReorder={pipeline.reorder} total={pipeline.total} clients={clients} clientGroups={clientGroups} clientStatuses={clientStatuses} months={data.months} hiddenIds={hiddenIds} onToggleHidden={toggleHidden} yearlyGoal={yearlyGoal} onYearlyGoalChange={handleYearlyGoalChange} />
+      <Pipeline items={pipeline.items} onAdd={pipeline.add} onUpdate={pipeline.update} onRemove={pipeline.remove} onReorder={pipeline.reorder} total={pipeline.total} clients={clients} clientGroups={clientGroups} clientStatuses={clientStatuses} months={data.months} hiddenIds={hiddenIds} onToggleHidden={toggleHidden} yearlyGoal={yearlyGoal} onYearlyGoalChange={handleYearlyGoalChange} lastYearYtdRevenue={data.lastYearYtdRevenue} />
       <MonthlyChart months={data.months} pipelineItems={visibleItems} clients={clients} clientStatuses={clientStatuses} clientGroups={clientGroups} />
     </main>
   );
