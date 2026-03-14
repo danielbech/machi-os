@@ -12,6 +12,7 @@ import {
   ResponsiveContainer,
   Tooltip as RechartsTooltip,
 } from "recharts";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Plus, ChevronRight, Trash2, GripVertical, Eye, EyeOff } from "lucide-react";
 import {
@@ -133,10 +134,34 @@ function usePipeline(projectId: string | null) {
     await updatePipelineItem(id, changes);
   }, []);
 
-  const remove = useCallback(async (id: string) => {
+  const remove = useCallback((id: string) => {
+    let undone = false;
+    const removedItem = items.find((i) => i.id === id);
+    const removedIndex = items.findIndex((i) => i.id === id);
     setItems((prev) => prev.filter((i) => i.id !== id));
-    await deletePipelineItem(id);
-  }, []);
+
+    const timeout = setTimeout(() => {
+      if (!undone) deletePipelineItem(id);
+    }, 5000);
+
+    toast("Pipeline item removed", {
+      duration: 5000,
+      action: {
+        label: "Undo",
+        onClick: () => {
+          undone = true;
+          clearTimeout(timeout);
+          if (removedItem) {
+            setItems((prev) => {
+              const restored = [...prev];
+              restored.splice(Math.min(removedIndex, restored.length), 0, removedItem);
+              return restored;
+            });
+          }
+        },
+      },
+    });
+  }, [items]);
 
   const reorder = useCallback(async (oldIndex: number, newIndex: number) => {
     const reordered = arrayMove(items, oldIndex, newIndex);
