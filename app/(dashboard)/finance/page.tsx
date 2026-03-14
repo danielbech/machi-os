@@ -1134,20 +1134,21 @@ function Pipeline({ items, onAdd, onUpdate, onRemove, onReorder, total, clients,
                         <Plus className="size-2.5" />
                       </button>
                     </div>
-                    {/* Badge + total anchored right */}
-                    <div className="flex items-center justify-between gap-2 shrink-0">
-                      {status ? (
-                        <Badge className={`${getBadgeColorStyle(status.color)} text-[12px] font-medium px-2 py-0.5 rounded-md shrink-0`}>
+                    {/* Status column */}
+                    <div className="w-[100px] shrink-0">
+                      {status && (
+                        <Badge className={`${getBadgeColorStyle(status.color)} text-[12px] font-medium px-2 py-0.5 rounded-md`}>
                           {status.name}
                         </Badge>
-                      ) : <span />}
-                      <span className="text-[14px] font-semibold text-foreground tabular-nums whitespace-nowrap w-[100px] text-right">
-                        {formatDKK(groupTotal)}
-                      </span>
+                      )}
                     </div>
+                    {/* Amount column */}
+                    <span className="text-[14px] font-semibold text-foreground tabular-nums whitespace-nowrap w-[100px] shrink-0 text-right">
+                      {formatDKK(groupTotal)}
+                    </span>
                   </div>
                   {/* Project-level actions */}
-                  <div className="flex items-center gap-0.5 shrink-0">
+                  <div className="flex items-center justify-end gap-0.5 w-14 shrink-0">
                     <Button
                       variant="ghost"
                       size="icon-xs"
