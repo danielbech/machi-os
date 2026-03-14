@@ -1128,7 +1128,7 @@ function Pipeline({ items, onAdd, onUpdate, onRemove, onReorder, total, clients,
                       ))}
                       <button
                         onClick={() => handleQuickAdd(group.clientId)}
-                        className="flex items-center justify-center size-5 rounded border border-dashed border-foreground/10 text-foreground/20 hover:text-foreground/50 hover:border-foreground/20 transition-colors shrink-0 self-center"
+                        className="flex items-center justify-center h-auto py-[3px] px-2 rounded-md border border-dashed border-foreground/10 text-foreground/20 hover:text-foreground/50 hover:border-foreground/20 transition-colors shrink-0 self-stretch"
                         aria-label="Add partial invoice"
                       >
                         <Plus className="size-2.5" />
