@@ -653,25 +653,16 @@ function MonthlyChart({ months, pipelineItems, clients, clientStatuses, clientGr
               tickLine={false}
             />
             <YAxis
-              yAxisId="bars"
               tick={{ fill: colors.muted, fontSize: 11 }}
               axisLine={false}
               tickLine={false}
               tickFormatter={(v) => formatCompact(Math.abs(v))}
             />
-            <YAxis
-              yAxisId="line"
-              orientation="right"
-              tick={{ fill: colors.muted, fontSize: 11 }}
-              axisLine={false}
-              tickLine={false}
-              tickFormatter={(v) => formatCompact(v)}
-            />
             <RechartsTooltip
               content={<ChartTooltip />}
               cursor={{ fill: colors.grid, fillOpacity: 0.15 }}
             />
-            <ReferenceLine yAxisId="bars" y={0} stroke={colors.border} strokeOpacity={0.5} />
+            <ReferenceLine y={0} stroke={colors.border} strokeOpacity={0.5} />
             <ReferenceLine
               yAxisId="bars"
               x={monthNames[currentMonth]}
@@ -685,10 +676,10 @@ function MonthlyChart({ months, pipelineItems, clients, clientStatuses, clientGr
                 fontSize: 10,
               }}
             />
-            <Bar yAxisId="bars" dataKey="revenue" fill={colors.revenue} radius={[4, 4, 0, 0]} maxBarSize={32} stackId="a" />
-            <Bar yAxisId="bars" dataKey="projected" fill={colors.revenue} radius={[4, 4, 0, 0]} maxBarSize={32} stackId="a" fillOpacity={0.35} />
-            <Bar yAxisId="bars" dataKey="expenses" fill={colors.expenses} radius={[0, 0, 4, 4]} maxBarSize={32} stackId="a" />
-            <Bar yAxisId="bars" dataKey="projectedExpenses" fill={colors.expenses} radius={[0, 0, 4, 4]} maxBarSize={32} stackId="a" fillOpacity={0.35} />
+            <Bar dataKey="revenue" fill={colors.revenue} radius={[4, 4, 0, 0]} maxBarSize={32} stackId="a" />
+            <Bar dataKey="projected" fill={colors.revenue} radius={[4, 4, 0, 0]} maxBarSize={32} stackId="a" fillOpacity={0.35} />
+            <Bar dataKey="expenses" fill={colors.expenses} radius={[0, 0, 4, 4]} maxBarSize={32} stackId="a" />
+            <Bar dataKey="projectedExpenses" fill={colors.expenses} radius={[0, 0, 4, 4]} maxBarSize={32} stackId="a" fillOpacity={0.35} />
             {(() => {
               const lineData = chartData.filter((d) => d.cashflow !== null).map((d) => d.cashflow as number);
               const max = lineData.length ? Math.max(...lineData) : 0;
@@ -706,7 +697,6 @@ function MonthlyChart({ months, pipelineItems, clients, clientStatuses, clientGr
               );
             })()}
             <Line
-              yAxisId="line"
               type="monotone"
               dataKey="cashflow"
               strokeWidth={2}
