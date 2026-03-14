@@ -202,16 +202,32 @@ async function fetchFinanceData(): Promise<FinanceData> {
 
 function ChartTooltip({ active, payload, label }: { active?: boolean; payload?: Array<{ dataKey: string; value: number }>; label?: string }) {
   if (!active || !payload?.length) return null;
+
+  const revenue = payload.find((e) => e.dataKey === "revenue")?.value || 0;
+  const projected = payload.find((e) => e.dataKey === "projected")?.value || 0;
+  const expenses = Math.abs(payload.find((e) => e.dataKey === "expenses")?.value || 0);
+  const projectedExpenses = Math.abs(payload.find((e) => e.dataKey === "projectedExpenses")?.value || 0);
+
+  const totalRev = revenue + projected;
+  const totalExp = expenses + projectedExpenses;
+
+  const rows: { label: string; value: number; color: string; isProjected?: boolean }[] = [];
+  if (revenue > 0) rows.push({ label: "Revenue", value: revenue, color: "text-chart-2" });
+  if (projected > 0) rows.push({ label: "Projected", value: projected, color: "text-chart-2", isProjected: true });
+  if (expenses > 0) rows.push({ label: "Expenses", value: expenses, color: "text-chart-5" });
+  if (projectedExpenses > 0) rows.push({ label: "Est. expenses", value: projectedExpenses, color: "text-chart-5", isProjected: true });
+  if (totalRev > 0 || totalExp > 0) rows.push({ label: "Net", value: totalRev - totalExp, color: totalRev - totalExp >= 0 ? "text-foreground" : "text-red-400" });
+
   return (
     <div className="rounded-lg border border-border bg-popover px-3 py-2 shadow-lg">
       <div className="text-xs text-muted-foreground mb-1">{label}</div>
-      {payload.map((entry) => (
-        <div key={entry.dataKey} className="flex items-center gap-2 text-sm">
-          <span className={entry.dataKey === "revenue" ? "text-chart-2" : "text-chart-5"}>
-            {entry.dataKey === "revenue" ? "Revenue" : "Expenses"}
+      {rows.map((row) => (
+        <div key={row.label} className="flex items-center gap-2 text-sm">
+          <span className={`${row.color} ${row.isProjected ? "opacity-50" : ""}`}>
+            {row.label}
           </span>
-          <span className="ml-auto font-medium text-popover-foreground">
-            {formatDKK(Math.abs(entry.value))}
+          <span className="ml-auto font-medium text-popover-foreground tabular-nums">
+            {formatDKK(row.value)}
           </span>
         </div>
       ))}
@@ -444,25 +460,70 @@ function Stat({ label, value, color }: { label: string; value: string; color?: s
   );
 }
 
-function MonthlyChart({ months }: { months: MonthData[] }) {
-  const totalRevenue = months.reduce((s, m) => s + m.revenue, 0);
-  const totalExpenses = months.reduce((s, m) => s + m.expenses, 0);
-  const result = totalRevenue - totalExpenses;
+function MonthlyChart({ months, pipelineItems, clients }: { months: MonthData[]; pipelineItems: PipelineItem[]; clients: Client[] }) {
   const colors = useChartColors();
+  const currentMonth = new Date().getMonth();
+  const currentYear = new Date().getFullYear();
+  const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
-  const chartData = months.map((m) => ({
-    month: m.month,
-    revenue: m.revenue,
-    expenses: -m.expenses,
-  }));
+  // Default monthly expense — persisted in localStorage
+  const [defaultExpense, setDefaultExpense] = useState(0);
+  const [editingExpense, setEditingExpense] = useState(false);
+  const [expenseDraft, setExpenseDraft] = useState("");
+  const expenseInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    const saved = localStorage.getItem("finance-default-expense");
+    if (saved) setDefaultExpense(Number(saved));
+  }, []);
+
+  const commitExpense = () => {
+    setEditingExpense(false);
+    const parsed = Number(expenseDraft.replace(/[^0-9]/g, ""));
+    if (!isNaN(parsed)) {
+      setDefaultExpense(parsed);
+      localStorage.setItem("finance-default-expense", String(parsed));
+    }
+  };
+
+  // Map pipeline items into monthly projected revenue
+  const pipelineByMonth = useMemo(() => {
+    const map = new Map<number, number>(); // month index → amount
+    for (const item of pipelineItems) {
+      const [y, m] = item.expected_month.split("-").map(Number);
+      if (y === currentYear) {
+        const idx = m - 1;
+        map.set(idx, (map.get(idx) || 0) + item.amount);
+      }
+    }
+    return map;
+  }, [pipelineItems, currentYear]);
+
+  const chartData = months.map((m, i) => {
+    const isPast = i <= currentMonth;
+    const pipelineRevenue = pipelineByMonth.get(i) || 0;
+    const projectedExpense = !isPast && defaultExpense > 0 ? defaultExpense : 0;
+
+    return {
+      month: m.month,
+      revenue: m.revenue,
+      projected: isPast ? 0 : pipelineRevenue,
+      expenses: isPast ? -m.expenses : 0,
+      projectedExpenses: isPast ? 0 : -projectedExpense,
+    };
+  });
+
+  const totalRevenue = chartData.reduce((s, m) => s + m.revenue + m.projected, 0);
+  const totalExpenses = chartData.reduce((s, m) => s + Math.abs(m.expenses) + Math.abs(m.projectedExpenses), 0);
+  const result = totalRevenue - totalExpenses;
 
   return (
     <div className="rounded-xl border border-border bg-card p-5 space-y-4">
       <div className="flex items-center justify-between flex-wrap gap-2">
         <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
-          Monthly Overview
+          Cashflow
         </h3>
-        <div className="flex gap-4 text-xs">
+        <div className="flex gap-4 items-center text-xs">
           <span className="text-muted-foreground">
             Revenue{" "}
             <span className="text-chart-2 font-medium">{formatDKK(totalRevenue)}</span>
@@ -476,6 +537,31 @@ function MonthlyChart({ months }: { months: MonthData[] }) {
             <span className={`font-medium ${result >= 0 ? "text-foreground" : "text-red-400"}`}>
               {formatDKK(result)}
             </span>
+          </span>
+          <span className="text-foreground/20">|</span>
+          <span className="text-muted-foreground">
+            Est. expense/mo{" "}
+            {editingExpense ? (
+              <input
+                ref={expenseInputRef}
+                value={expenseDraft}
+                onChange={(e) => setExpenseDraft(e.target.value)}
+                onBlur={commitExpense}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") commitExpense();
+                  if (e.key === "Escape") setEditingExpense(false);
+                }}
+                className="w-20 bg-transparent outline-none ring-1 ring-foreground/15 rounded px-1 py-0.5 text-xs font-medium tabular-nums"
+                placeholder="0"
+              />
+            ) : (
+              <button
+                onClick={() => { setExpenseDraft(String(defaultExpense)); setEditingExpense(true); setTimeout(() => expenseInputRef.current?.focus(), 50); }}
+                className="font-medium text-foreground hover:text-foreground/80 transition-colors"
+              >
+                {defaultExpense > 0 ? formatDKK(defaultExpense) : "Set..."}
+              </button>
+            )}
           </span>
         </div>
       </div>
@@ -518,8 +604,10 @@ function MonthlyChart({ months }: { months: MonthData[] }) {
               }}
             />
             <ReferenceLine y={0} stroke={colors.border} strokeOpacity={0.5} />
-            <Bar dataKey="revenue" fill={colors.revenue} radius={[4, 4, 0, 0]} maxBarSize={32} />
-            <Bar dataKey="expenses" fill={colors.expenses} radius={[0, 0, 4, 4]} maxBarSize={32} />
+            <Bar dataKey="revenue" fill={colors.revenue} radius={[4, 4, 0, 0]} maxBarSize={32} stackId="revenue" />
+            <Bar dataKey="projected" fill={colors.revenue} radius={[4, 4, 0, 0]} maxBarSize={32} stackId="revenue" fillOpacity={0.35} />
+            <Bar dataKey="expenses" fill={colors.expenses} radius={[0, 0, 4, 4]} maxBarSize={32} stackId="expenses" />
+            <Bar dataKey="projectedExpenses" fill={colors.expenses} radius={[0, 0, 4, 4]} maxBarSize={32} stackId="expenses" fillOpacity={0.35} />
           </BarChart>
         </ResponsiveContainer>
       </div>
@@ -931,7 +1019,7 @@ export default function FinancePage() {
       </div>
 
       <Pipeline items={pipeline.items} onAdd={pipeline.add} onUpdate={pipeline.update} onRemove={pipeline.remove} onReorder={pipeline.reorder} total={pipeline.total} clients={clients} clientGroups={clientGroups} clientStatuses={clientStatuses} months={data.months} />
-      <MonthlyChart months={data.months} />
+      <MonthlyChart months={data.months} pipelineItems={pipeline.items} clients={clients} />
     </main>
   );
 }
