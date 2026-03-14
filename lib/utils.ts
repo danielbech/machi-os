@@ -24,14 +24,13 @@ export function getRelativeTime(dateStr: string): string {
 
 /**
  * Format a DKK amount with Danish locale formatting.
- * formatDKK(150000) → "150.000 kr."
+ * formatDKK(150000) → "150,000 DKK"
  */
 export function formatDKK(amount: number): string {
-  return new Intl.NumberFormat("da-DK", {
-    style: "currency",
-    currency: "DKK",
+  const formatted = new Intl.NumberFormat("en-US", {
     maximumFractionDigits: 0,
-  }).format(amount);
+  }).format(Math.abs(amount));
+  return `${amount < 0 ? "-" : ""}${formatted} DKK`;
 }
 
 /**
