@@ -134,33 +134,36 @@ function usePipeline(projectId: string | null) {
   }, []);
 
   const remove = useCallback((id: string) => {
-    let undone = false;
     const removedItem = items.find((i) => i.id === id);
     const removedIndex = items.findIndex((i) => i.id === id);
     setItems((prev) => prev.filter((i) => i.id !== id));
 
-    const timeout = setTimeout(() => {
-      if (!undone) deletePipelineItem(id);
-    }, 5000);
+    // Delete immediately from DB
+    deletePipelineItem(id);
 
     toast("Pipeline item removed", {
       duration: 5000,
       action: {
         label: "Undo",
-        onClick: () => {
-          undone = true;
-          clearTimeout(timeout);
-          if (removedItem) {
+        onClick: async () => {
+          if (removedItem && projectId) {
+            // Re-create in DB
+            const restored = await createPipelineItem(projectId, {
+              client_id: removedItem.client_id,
+              amount: removedItem.amount,
+              expected_month: removedItem.expected_month,
+              sort_order: removedItem.sort_order,
+            });
             setItems((prev) => {
-              const restored = [...prev];
-              restored.splice(Math.min(removedIndex, restored.length), 0, removedItem);
-              return restored;
+              const next = [...prev];
+              next.splice(Math.min(removedIndex, next.length), 0, restored);
+              return next;
             });
           }
         },
       },
     });
-  }, [items]);
+  }, [items, projectId]);
 
   const reorder = useCallback(async (oldIndex: number, newIndex: number) => {
     const reordered = arrayMove(items, oldIndex, newIndex);
