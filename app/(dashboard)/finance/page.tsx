@@ -726,20 +726,20 @@ function MonthlyChart({ months, pipelineItems, clients, clientStatuses, clientGr
               content={<ChartTooltip />}
               cursor={{ fill: colors.grid, fillOpacity: 0.15 }}
             />
+            <ReferenceLine yAxisId="bars" y={0} stroke={colors.border} strokeOpacity={0.5} />
             <ReferenceLine
               yAxisId="bars"
-              y={MONTHLY_TARGET}
+              x={monthNames[currentMonth]}
               stroke={colors.muted}
-              strokeOpacity={0.3}
-              strokeDasharray="6 4"
+              strokeOpacity={0.5}
+              strokeDasharray="4 4"
               label={{
-                value: "125K target",
-                position: "insideTopLeft",
+                value: "Now",
+                position: "insideTopRight",
                 fill: colors.muted,
                 fontSize: 10,
               }}
             />
-            <ReferenceLine yAxisId="bars" y={0} stroke={colors.border} strokeOpacity={0.5} />
             <Bar yAxisId="bars" dataKey="revenue" fill={colors.revenue} radius={[4, 4, 0, 0]} maxBarSize={32} stackId="revenue" />
             <Bar yAxisId="bars" dataKey="projected" fill={colors.revenue} radius={[4, 4, 0, 0]} maxBarSize={32} stackId="revenue" fillOpacity={0.35} />
             <Bar yAxisId="bars" dataKey="expenses" fill={colors.expenses} radius={[0, 0, 4, 4]} maxBarSize={32} stackId="expenses" />
