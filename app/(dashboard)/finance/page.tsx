@@ -121,14 +121,14 @@ function usePipeline(projectId: string | null) {
     loadPipelineItems(projectId).then(setItems);
   }, [projectId]);
 
-  const add = useCallback(async (item: { client_id: string; amount: number; expected_month: string; label?: string }) => {
+  const add = useCallback(async (item: { client_id: string; amount: number; expected_date: string; label?: string }) => {
     if (!projectId) return;
     const maxSort = items.reduce((max, i) => Math.max(max, i.sort_order), -1);
     const created = await createPipelineItem(projectId, { ...item, sort_order: maxSort + 1 });
     setItems((prev) => [...prev, created]);
   }, [projectId, items]);
 
-  const update = useCallback(async (id: string, changes: Partial<Pick<PipelineItem, "client_id" | "amount" | "expected_month" | "label">>) => {
+  const update = useCallback(async (id: string, changes: Partial<Pick<PipelineItem, "client_id" | "amount" | "expected_date" | "label">>) => {
     setItems((prev) => prev.map((i) => (i.id === id ? { ...i, ...changes } : i)));
     await updatePipelineItem(id, changes);
   }, []);
@@ -151,7 +151,7 @@ function usePipeline(projectId: string | null) {
             const restored = await createPipelineItem(projectId, {
               client_id: removedItem.client_id,
               amount: removedItem.amount,
-              expected_month: removedItem.expected_month,
+              expected_date: removedItem.expected_date,
               sort_order: removedItem.sort_order,
             });
             setItems((prev) => {
@@ -587,7 +587,7 @@ function MonthlyChart({ months, pipelineItems, clients, clientStatuses, clientGr
     const amounts = new Map<number, number>();
     const breakdowns = new Map<number, ClientBreakdown[]>();
     for (const item of pipelineItems) {
-      const [y, m] = item.expected_month.split("-").map(Number);
+      const [y, m] = item.expected_date.split("-").map(Number);
       if (y === currentYear) {
         const idx = m - 1;
         amounts.set(idx, (amounts.get(idx) || 0) + item.amount);
@@ -819,25 +819,25 @@ function InlineAmount({ value, onSave }: { value: number; onSave: (v: number) =>
   );
 }
 
-function InlineMonthPicker({ value, onSave }: { value: string; onSave: (v: string) => void }) {
+function InlineDatePicker({ value, onSave }: { value: string; onSave: (v: string) => void }) {
   const [open, setOpen] = useState(false);
   const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
   const dateObj = useMemo(() => {
-    const [y, m] = value.split("-").map(Number);
-    return new Date(y, m - 1, 15);
+    const [y, m, d] = value.split("-").map(Number);
+    return new Date(y, m - 1, d || 1);
   }, [value]);
 
-  const formatMonth = (ym: string) => {
-    const [y, m] = ym.split("-");
-    return `${monthNames[parseInt(m) - 1]} ${y}`;
+  const formatDate = (iso: string) => {
+    const [, m, d] = iso.split("-").map(Number);
+    return `${String(d || 1).padStart(2, "0")} ${monthNames[m - 1]}`;
   };
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
-        <button className="text-left hover:bg-foreground/[0.04] rounded px-1.5 py-0.5 -mx-1.5 -my-0.5 transition-colors tabular-nums text-sm">
-          {formatMonth(value)}
+        <button className="text-left hover:bg-foreground/[0.04] rounded px-1.5 py-0.5 -mx-1.5 -my-0.5 transition-colors tabular-nums text-sm whitespace-nowrap">
+          {formatDate(value)}
         </button>
       </PopoverTrigger>
       <PopoverContent className="w-auto p-0" align="start">
@@ -848,7 +848,8 @@ function InlineMonthPicker({ value, onSave }: { value: string; onSave: (v: strin
             if (date) {
               const y = date.getFullYear();
               const m = String(date.getMonth() + 1).padStart(2, "0");
-              onSave(`${y}-${m}`);
+              const d = String(date.getDate()).padStart(2, "0");
+              onSave(`${y}-${m}-${d}`);
             }
             setOpen(false);
           }}
@@ -940,7 +941,7 @@ function InlineLabel({ value, onSave }: { value: string; onSave: (v: string) => 
 
 function InvoiceChip({ item, onUpdate, onRemove, isHidden, onToggleHidden }: {
   item: PipelineItem;
-  onUpdate: (id: string, changes: Partial<Pick<PipelineItem, "amount" | "expected_month" | "label">>) => void;
+  onUpdate: (id: string, changes: Partial<Pick<PipelineItem, "amount" | "expected_date" | "label">>) => void;
   onRemove: (id: string) => void;
   isHidden: boolean;
   onToggleHidden: (id: string) => void;
@@ -952,7 +953,7 @@ function InvoiceChip({ item, onUpdate, onRemove, isHidden, onToggleHidden }: {
         <InlineAmount value={item.amount} onSave={(amount) => onUpdate(item.id, { amount })} />
       </span>
       <span className="text-foreground/30">
-        <InlineMonthPicker value={item.expected_month} onSave={(expected_month) => onUpdate(item.id, { expected_month })} />
+        <InlineDatePicker value={item.expected_date} onSave={(expected_date) => onUpdate(item.id, { expected_date })} />
       </span>
       <button
         onClick={() => onToggleHidden(item.id)}
@@ -996,8 +997,8 @@ function SortablePipelineGroup({ firstItem, children }: { firstItem: PipelineIte
 
 function Pipeline({ items, onAdd, onUpdate, onRemove, onReorder, total, clients, clientGroups, clientStatuses, months, hiddenIds, onToggleHidden, yearlyGoal, onYearlyGoalChange }: {
   items: PipelineItem[];
-  onAdd: (item: { client_id: string; amount: number; expected_month: string; label?: string }) => void;
-  onUpdate: (id: string, changes: Partial<Pick<PipelineItem, "client_id" | "amount" | "expected_month" | "label">>) => void;
+  onAdd: (item: { client_id: string; amount: number; expected_date: string; label?: string }) => void;
+  onUpdate: (id: string, changes: Partial<Pick<PipelineItem, "client_id" | "amount" | "expected_date" | "label">>) => void;
   onRemove: (id: string) => void;
   onReorder: (oldIndex: number, newIndex: number) => void;
   total: number;
@@ -1039,7 +1040,7 @@ function Pipeline({ items, onAdd, onUpdate, onRemove, onReorder, total, clients,
     onAdd({
       client_id: addingClient.id,
       amount: parsed,
-      expected_month: addingMonth,
+      expected_date: addingMonth,
     });
     setAddingClient(null);
     setAddingAmount("");
@@ -1050,15 +1051,14 @@ function Pipeline({ items, onAdd, onUpdate, onRemove, onReorder, total, clients,
     onAdd({
       client_id: clientId,
       amount: 0,
-      expected_month: defaultMonth(),
+      expected_date: defaultDate(),
     });
   };
 
-  const defaultMonth = () => {
-    const m = currentMonth + 1;
-    const y = currentYear + Math.floor(m / 12);
-    const mo = (m % 12) + 1;
-    return `${y}-${String(mo).padStart(2, "0")}`;
+  const defaultDate = () => {
+    const d = new Date();
+    d.setMonth(d.getMonth() + 1);
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
   };
 
   // Group items by client for display
@@ -1156,7 +1156,7 @@ function Pipeline({ items, onAdd, onUpdate, onRemove, onReorder, total, clients,
             selectedId={addingClient?.id}
             onSelect={(c) => {
               setAddingClient(c);
-              if (!addingMonth) setAddingMonth(defaultMonth());
+              if (!addingMonth) setAddingMonth(defaultDate());
               setTimeout(() => amountRef.current?.focus(), 50);
             }}
           />
@@ -1169,24 +1169,11 @@ function Pipeline({ items, onAdd, onUpdate, onRemove, onReorder, total, clients,
           placeholder="Amount"
           className="w-24 bg-transparent outline-none text-sm tabular-nums placeholder:text-foreground/20 px-1.5 py-0.5"
         />
-        <select
-          value={addingMonth}
-          onChange={(e) => setAddingMonth(e.target.value)}
-          className="bg-transparent text-sm text-foreground/50 outline-none"
-        >
-          <option value="">Month</option>
-          {Array.from({ length: 24 }, (_, i) => {
-            const m = currentMonth + i;
-            const y = currentYear + Math.floor(m / 12);
-            const mo = (m % 12) + 1;
-            const val = `${y}-${String(mo).padStart(2, "0")}`;
-            return (
-              <option key={val} value={val}>
-                {monthNames[mo - 1]} {y}
-              </option>
-            );
-          })}
-        </select>
+        {addingMonth ? (
+          <InlineDatePicker value={addingMonth} onSave={setAddingMonth} />
+        ) : (
+          <span className="text-sm text-foreground/20 px-1.5 py-0.5">Date</span>
+        )}
         <Button
           size="icon-xs"
           variant="ghost"

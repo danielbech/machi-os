@@ -140,7 +140,7 @@ export interface PipelineItem {
   project_id: string;
   client_id: string;
   amount: number;
-  expected_month: string; // "YYYY-MM"
+  expected_date: string; // "YYYY-MM-DD"
   label: string;
   sort_order: number;
   created_at: string;
