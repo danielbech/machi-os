@@ -2,8 +2,9 @@
 
 import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import {
-  BarChart,
+  ComposedChart,
   Bar,
+  Line,
   XAxis,
   YAxis,
   CartesianGrid,
@@ -211,12 +212,15 @@ function ChartTooltip({ active, payload, label }: { active?: boolean; payload?: 
   const totalRev = revenue + projected;
   const totalExp = expenses + projectedExpenses;
 
+  const cashflow = payload.find((e) => e.dataKey === "cashflow")?.value || 0;
+
   const rows: { label: string; value: number; color: string; isProjected?: boolean }[] = [];
   if (revenue > 0) rows.push({ label: "Revenue", value: revenue, color: "text-chart-2" });
   if (projected > 0) rows.push({ label: "Projected", value: projected, color: "text-chart-2", isProjected: true });
   if (expenses > 0) rows.push({ label: "Expenses", value: expenses, color: "text-chart-5" });
   if (projectedExpenses > 0) rows.push({ label: "Est. expenses", value: projectedExpenses, color: "text-chart-5", isProjected: true });
   if (totalRev > 0 || totalExp > 0) rows.push({ label: "Net", value: totalRev - totalExp, color: totalRev - totalExp >= 0 ? "text-foreground" : "text-red-400" });
+  rows.push({ label: "Cashflow", value: cashflow, color: cashflow >= 0 ? "text-foreground" : "text-red-400" });
 
   return (
     <div className="rounded-lg border border-border bg-popover px-3 py-2 shadow-lg">
@@ -499,19 +503,27 @@ function MonthlyChart({ months, pipelineItems, clients }: { months: MonthData[];
     return map;
   }, [pipelineItems, currentYear]);
 
-  const chartData = months.map((m, i) => {
-    const isPast = i <= currentMonth;
-    const pipelineRevenue = pipelineByMonth.get(i) || 0;
-    const projectedExpense = !isPast && defaultExpense > 0 ? defaultExpense : 0;
+  const chartData = useMemo(() => {
+    let cumulative = 0;
+    return months.map((m, i) => {
+      const isPast = i <= currentMonth;
+      const pipelineRevenue = pipelineByMonth.get(i) || 0;
+      const projectedExpense = !isPast && defaultExpense > 0 ? defaultExpense : 0;
 
-    return {
-      month: m.month,
-      revenue: m.revenue,
-      projected: isPast ? 0 : pipelineRevenue,
-      expenses: isPast ? -m.expenses : 0,
-      projectedExpenses: isPast ? 0 : -projectedExpense,
-    };
-  });
+      const monthRevenue = m.revenue + (isPast ? 0 : pipelineRevenue);
+      const monthExpenses = isPast ? m.expenses : projectedExpense;
+      cumulative += monthRevenue - monthExpenses;
+
+      return {
+        month: m.month,
+        revenue: m.revenue,
+        projected: isPast ? 0 : pipelineRevenue,
+        expenses: isPast ? -m.expenses : 0,
+        projectedExpenses: isPast ? 0 : -projectedExpense,
+        cashflow: cumulative,
+      };
+    });
+  }, [months, currentMonth, pipelineByMonth, defaultExpense]);
 
   const totalRevenue = chartData.reduce((s, m) => s + m.revenue + m.projected, 0);
   const totalExpenses = chartData.reduce((s, m) => s + Math.abs(m.expenses) + Math.abs(m.projectedExpenses), 0);
@@ -568,7 +580,7 @@ function MonthlyChart({ months, pipelineItems, clients }: { months: MonthData[];
 
       <div className="h-64">
         <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={chartData} margin={{ top: 10, right: 0, left: 0, bottom: 0 }}>
+          <ComposedChart data={chartData} margin={{ top: 10, right: 0, left: 0, bottom: 0 }}>
             <CartesianGrid
               strokeDasharray="3 3"
               stroke={colors.grid}
@@ -582,33 +594,52 @@ function MonthlyChart({ months, pipelineItems, clients }: { months: MonthData[];
               tickLine={false}
             />
             <YAxis
+              yAxisId="bars"
               tick={{ fill: colors.muted, fontSize: 11 }}
               axisLine={false}
               tickLine={false}
               tickFormatter={(v) => formatCompact(Math.abs(v))}
+            />
+            <YAxis
+              yAxisId="line"
+              orientation="right"
+              tick={{ fill: colors.muted, fontSize: 11 }}
+              axisLine={false}
+              tickLine={false}
+              tickFormatter={(v) => formatCompact(v)}
             />
             <RechartsTooltip
               content={<ChartTooltip />}
               cursor={{ fill: colors.grid, fillOpacity: 0.15 }}
             />
             <ReferenceLine
+              yAxisId="bars"
               y={MONTHLY_TARGET}
               stroke={colors.muted}
               strokeOpacity={0.3}
               strokeDasharray="6 4"
               label={{
                 value: "125K target",
-                position: "right",
+                position: "insideTopLeft",
                 fill: colors.muted,
                 fontSize: 10,
               }}
             />
-            <ReferenceLine y={0} stroke={colors.border} strokeOpacity={0.5} />
-            <Bar dataKey="revenue" fill={colors.revenue} radius={[4, 4, 0, 0]} maxBarSize={32} stackId="revenue" />
-            <Bar dataKey="projected" fill={colors.revenue} radius={[4, 4, 0, 0]} maxBarSize={32} stackId="revenue" fillOpacity={0.35} />
-            <Bar dataKey="expenses" fill={colors.expenses} radius={[0, 0, 4, 4]} maxBarSize={32} stackId="expenses" />
-            <Bar dataKey="projectedExpenses" fill={colors.expenses} radius={[0, 0, 4, 4]} maxBarSize={32} stackId="expenses" fillOpacity={0.35} />
-          </BarChart>
+            <ReferenceLine yAxisId="bars" y={0} stroke={colors.border} strokeOpacity={0.5} />
+            <Bar yAxisId="bars" dataKey="revenue" fill={colors.revenue} radius={[4, 4, 0, 0]} maxBarSize={32} stackId="revenue" />
+            <Bar yAxisId="bars" dataKey="projected" fill={colors.revenue} radius={[4, 4, 0, 0]} maxBarSize={32} stackId="revenue" fillOpacity={0.35} />
+            <Bar yAxisId="bars" dataKey="expenses" fill={colors.expenses} radius={[0, 0, 4, 4]} maxBarSize={32} stackId="expenses" />
+            <Bar yAxisId="bars" dataKey="projectedExpenses" fill={colors.expenses} radius={[0, 0, 4, 4]} maxBarSize={32} stackId="expenses" fillOpacity={0.35} />
+            <Line
+              yAxisId="line"
+              type="monotone"
+              dataKey="cashflow"
+              stroke="#fafafa"
+              strokeWidth={2}
+              dot={false}
+              strokeOpacity={0.6}
+            />
+          </ComposedChart>
         </ResponsiveContainer>
       </div>
     </div>
