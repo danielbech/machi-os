@@ -970,10 +970,10 @@ function InvoiceChip({ item, onUpdate, onRemove }: {
   return (
     <div className="group/chip flex items-center gap-1.5 bg-foreground/[0.04] border border-foreground/[0.08] rounded-md py-[3px] px-2 text-[11px] leading-3.5">
       <InlineLabel value={item.label} onSave={(label) => onUpdate(item.id, { label })} />
-      <span className="text-foreground">
+      <span className="text-foreground [&_button]:!text-[11px] [&_input]:!text-[11px]">
         <InlineAmount value={item.amount} onSave={(amount) => onUpdate(item.id, { amount })} />
       </span>
-      <span className="text-[#525252]">
+      <span className="text-[#525252] [&_button]:!text-[11px] [&_input]:!text-[11px]">
         <InlineDatePicker value={item.expected_date} onSave={(expected_date) => onUpdate(item.id, { expected_date })} />
       </span>
       <button
