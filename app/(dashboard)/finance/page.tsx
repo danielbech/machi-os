@@ -13,7 +13,7 @@ import {
   Tooltip as RechartsTooltip,
 } from "recharts";
 import { Button } from "@/components/ui/button";
-import { Plus, ChevronRight, Trash2, GripVertical } from "lucide-react";
+import { Plus, ChevronRight, Trash2, GripVertical, Eye, EyeOff } from "lucide-react";
 import {
   DndContext,
   closestCenter,
@@ -946,7 +946,7 @@ function SortablePipelineRow({ item, children }: { item: PipelineItem; children:
   );
 }
 
-function Pipeline({ items, onAdd, onUpdate, onRemove, onReorder, total, clients, clientGroups, clientStatuses, months }: {
+function Pipeline({ items, onAdd, onUpdate, onRemove, onReorder, total, clients, clientGroups, clientStatuses, months, hiddenIds, onToggleHidden }: {
   items: PipelineItem[];
   onAdd: (item: { client_id: string; amount: number; expected_month: string }) => void;
   onUpdate: (id: string, changes: Partial<Pick<PipelineItem, "client_id" | "amount" | "expected_month">>) => void;
@@ -957,7 +957,10 @@ function Pipeline({ items, onAdd, onUpdate, onRemove, onReorder, total, clients,
   clientGroups: ClientGroup[];
   clientStatuses: ClientStatusDef[];
   months: MonthData[];
+  hiddenIds: Set<string>;
+  onToggleHidden: (id: string) => void;
 }) {
+  const visibleItems = useMemo(() => items.filter((i) => !hiddenIds.has(i.id)), [items, hiddenIds]);
   const [addingClient, setAddingClient] = useState<Client | null>(null);
   const [addingAmount, setAddingAmount] = useState("");
   const [addingMonth, setAddingMonth] = useState("");
@@ -1003,7 +1006,7 @@ function Pipeline({ items, onAdd, onUpdate, onRemove, onReorder, total, clients,
   return (
     <div className="rounded-xl border border-border bg-card overflow-hidden">
       <div className="px-5 pt-5 pb-3">
-        <GoalTracker months={months} pipelineItems={items} clients={clients} clientStatuses={clientStatuses} />
+        <GoalTracker months={months} pipelineItems={visibleItems} clients={clients} clientStatuses={clientStatuses} />
       </div>
 
       <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd} modifiers={[restrictToVerticalAxis]}>
@@ -1015,7 +1018,7 @@ function Pipeline({ items, onAdd, onUpdate, onRemove, onReorder, total, clients,
               <TableHead className="w-24">Status</TableHead>
               <TableHead className="w-32">Amount</TableHead>
               <TableHead className="w-28">Invoiced</TableHead>
-              <TableHead className="w-10" />
+              <TableHead className="w-16" />
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -1023,9 +1026,10 @@ function Pipeline({ items, onAdd, onUpdate, onRemove, onReorder, total, clients,
               {items.map((item) => {
                 const client = clients.find((c) => c.id === item.client_id);
                 const status = client?.status_id ? clientStatuses.find((s) => s.id === client.status_id) : undefined;
+                const isHidden = hiddenIds.has(item.id);
                 return (
                   <SortablePipelineRow key={item.id} item={item}>
-                    <TableCell>
+                    <TableCell className={isHidden ? "opacity-30" : ""}>
                       <ClientPicker
                         clients={clients}
                         clientGroups={clientGroups}
@@ -1033,7 +1037,7 @@ function Pipeline({ items, onAdd, onUpdate, onRemove, onReorder, total, clients,
                         onSelect={(c) => onUpdate(item.id, { client_id: c.id })}
                       />
                     </TableCell>
-                    <TableCell>
+                    <TableCell className={isHidden ? "opacity-30" : ""}>
                       {status ? (
                         <Badge className={`${getBadgeColorStyle(status.color)} text-[10px] px-1.5 py-0 ${status.show_dotted_border ? "border-dashed" : ""}`}>
                           {status.name}
@@ -1042,22 +1046,33 @@ function Pipeline({ items, onAdd, onUpdate, onRemove, onReorder, total, clients,
                         <span className="text-xs text-foreground/20">—</span>
                       )}
                     </TableCell>
-                    <TableCell>
+                    <TableCell className={isHidden ? "opacity-30" : ""}>
                       <InlineAmount value={item.amount} onSave={(amount) => onUpdate(item.id, { amount })} />
                     </TableCell>
-                    <TableCell>
+                    <TableCell className={isHidden ? "opacity-30" : ""}>
                       <InlineMonthPicker value={item.expected_month} onSave={(expected_month) => onUpdate(item.id, { expected_month })} />
                     </TableCell>
                     <TableCell>
-                      <Button
-                        variant="ghost"
-                        size="icon-xs"
-                        className="text-destructive opacity-0 group-hover/row:opacity-20 hover:!opacity-100 transition-opacity"
-                        onClick={() => onRemove(item.id)}
-                        aria-label="Delete pipeline item"
-                      >
-                        <Trash2 className="size-3.5" />
-                      </Button>
+                      <div className="flex items-center gap-0.5">
+                        <Button
+                          variant="ghost"
+                          size="icon-xs"
+                          className={`transition-opacity ${isHidden ? "opacity-40 text-foreground/50" : "opacity-0 group-hover/row:opacity-20 hover:!opacity-100 text-foreground/50"}`}
+                          onClick={() => onToggleHidden(item.id)}
+                          aria-label={isHidden ? "Show in projections" : "Hide from projections"}
+                        >
+                          {isHidden ? <EyeOff className="size-3.5" /> : <Eye className="size-3.5" />}
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon-xs"
+                          className="text-destructive opacity-0 group-hover/row:opacity-20 hover:!opacity-100 transition-opacity"
+                          onClick={() => onRemove(item.id)}
+                          aria-label="Delete pipeline item"
+                        >
+                          <Trash2 className="size-3.5" />
+                        </Button>
+                      </div>
                     </TableCell>
                   </SortablePipelineRow>
                 );
@@ -1149,6 +1164,21 @@ export default function FinancePage() {
   const { activeProjectId } = useWorkspace();
   const pipeline = usePipeline(activeProjectId);
   const { clients, clientGroups, clientStatuses } = useProjectData();
+  const [hiddenIds, setHiddenIds] = useState<Set<string>>(new Set());
+
+  const toggleHidden = useCallback((id: string) => {
+    setHiddenIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }, []);
+
+  const visibleItems = useMemo(
+    () => pipeline.items.filter((i) => !hiddenIds.has(i.id)),
+    [pipeline.items, hiddenIds],
+  );
 
   useEffect(() => {
     fetchFinanceData()
@@ -1179,8 +1209,8 @@ export default function FinancePage() {
         <span className="text-xs text-muted-foreground">{data.orgName}</span>
       </div>
 
-      <Pipeline items={pipeline.items} onAdd={pipeline.add} onUpdate={pipeline.update} onRemove={pipeline.remove} onReorder={pipeline.reorder} total={pipeline.total} clients={clients} clientGroups={clientGroups} clientStatuses={clientStatuses} months={data.months} />
-      <MonthlyChart months={data.months} pipelineItems={pipeline.items} clients={clients} clientStatuses={clientStatuses} clientGroups={clientGroups} />
+      <Pipeline items={pipeline.items} onAdd={pipeline.add} onUpdate={pipeline.update} onRemove={pipeline.remove} onReorder={pipeline.reorder} total={pipeline.total} clients={clients} clientGroups={clientGroups} clientStatuses={clientStatuses} months={data.months} hiddenIds={hiddenIds} onToggleHidden={toggleHidden} />
+      <MonthlyChart months={data.months} pipelineItems={visibleItems} clients={clients} clientStatuses={clientStatuses} clientGroups={clientGroups} />
     </main>
   );
 }
