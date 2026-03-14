@@ -20,6 +20,7 @@ export async function loadPipelineItems(projectId: string): Promise<PipelineItem
     client_id: row.client_id,
     amount: row.amount,
     expected_month: row.expected_month,
+    label: row.label || '',
     sort_order: row.sort_order,
     created_at: row.created_at,
     updated_at: row.updated_at,
@@ -28,7 +29,7 @@ export async function loadPipelineItems(projectId: string): Promise<PipelineItem
 
 export async function createPipelineItem(
   projectId: string,
-  item: { client_id: string; amount: number; expected_month: string; sort_order: number }
+  item: { client_id: string; amount: number; expected_month: string; label?: string; sort_order: number }
 ): Promise<PipelineItem> {
   const supabase = createClient()
   const { data, error } = await supabase
@@ -47,7 +48,7 @@ export async function createPipelineItem(
 
 export async function updatePipelineItem(
   id: string,
-  updates: Partial<Pick<PipelineItem, 'client_id' | 'amount' | 'expected_month' | 'sort_order'>>
+  updates: Partial<Pick<PipelineItem, 'client_id' | 'amount' | 'expected_month' | 'label' | 'sort_order'>>
 ): Promise<void> {
   const supabase = createClient()
   const { error } = await supabase

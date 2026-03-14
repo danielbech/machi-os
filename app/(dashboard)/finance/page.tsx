@@ -14,7 +14,7 @@ import {
 } from "recharts";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { Plus, ChevronRight, Trash2, GripVertical, Eye, EyeOff } from "lucide-react";
+import { Plus, ChevronRight, Trash2, GripVertical, Eye, EyeOff, X } from "lucide-react";
 import {
   DndContext,
   closestCenter,
@@ -121,14 +121,14 @@ function usePipeline(projectId: string | null) {
     loadPipelineItems(projectId).then(setItems);
   }, [projectId]);
 
-  const add = useCallback(async (item: { client_id: string; amount: number; expected_month: string }) => {
+  const add = useCallback(async (item: { client_id: string; amount: number; expected_month: string; label?: string }) => {
     if (!projectId) return;
     const maxSort = items.reduce((max, i) => Math.max(max, i.sort_order), -1);
     const created = await createPipelineItem(projectId, { ...item, sort_order: maxSort + 1 });
     setItems((prev) => [...prev, created]);
   }, [projectId, items]);
 
-  const update = useCallback(async (id: string, changes: Partial<Pick<PipelineItem, "client_id" | "amount" | "expected_month">>) => {
+  const update = useCallback(async (id: string, changes: Partial<Pick<PipelineItem, "client_id" | "amount" | "expected_month" | "label">>) => {
     setItems((prev) => prev.map((i) => (i.id === id ? { ...i, ...changes } : i)));
     await updatePipelineItem(id, changes);
   }, []);
@@ -899,34 +899,104 @@ function ClientPicker({ clients, clientGroups, selectedId, onSelect }: { clients
   );
 }
 
-function SortablePipelineRow({ item, children }: { item: PipelineItem; children: React.ReactNode }) {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: item.id });
+function InlineLabel({ value, onSave }: { value: string; onSave: (v: string) => void }) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(value);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => { setDraft(value); }, [value]);
+  useEffect(() => { if (editing) inputRef.current?.focus(); }, [editing]);
+
+  const commit = () => {
+    setEditing(false);
+    if (draft !== value) onSave(draft);
+  };
+
+  if (!editing) {
+    return (
+      <button
+        onClick={() => setEditing(true)}
+        className="text-xs text-muted-foreground hover:text-foreground/60 transition-colors truncate max-w-[80px]"
+      >
+        {value || "Label..."}
+      </button>
+    );
+  }
+
+  return (
+    <input
+      ref={inputRef}
+      value={draft}
+      onChange={(e) => setDraft(e.target.value)}
+      onBlur={commit}
+      onKeyDown={(e) => {
+        if (e.key === "Enter") commit();
+        if (e.key === "Escape") { setDraft(value); setEditing(false); }
+      }}
+      className="w-16 bg-transparent outline-none text-xs text-muted-foreground placeholder:text-foreground/15"
+      placeholder="Label..."
+    />
+  );
+}
+
+function InvoiceChip({ item, onUpdate, onRemove, isHidden, onToggleHidden }: {
+  item: PipelineItem;
+  onUpdate: (id: string, changes: Partial<Pick<PipelineItem, "amount" | "expected_month" | "label">>) => void;
+  onRemove: (id: string) => void;
+  isHidden: boolean;
+  onToggleHidden: (id: string) => void;
+}) {
+  return (
+    <div className={`group/chip flex items-center gap-1.5 bg-foreground/[0.04] border border-foreground/[0.08] rounded-md px-2.5 py-1 transition-opacity ${isHidden ? "opacity-30" : ""}`}>
+      <InlineLabel value={item.label} onSave={(label) => onUpdate(item.id, { label })} />
+      <InlineAmount value={item.amount} onSave={(amount) => onUpdate(item.id, { amount })} />
+      <InlineMonthPicker value={item.expected_month} onSave={(expected_month) => onUpdate(item.id, { expected_month })} />
+      <button
+        onClick={() => onToggleHidden(item.id)}
+        className={`transition-opacity ${isHidden ? "opacity-70 text-amber-400/70" : "opacity-0 group-hover/chip:opacity-40 hover:!opacity-100 text-foreground/40"}`}
+        aria-label={isHidden ? "Include in projections" : "Exclude from projections"}
+      >
+        {isHidden ? <EyeOff className="size-3" /> : <Eye className="size-3" />}
+      </button>
+      <button
+        onClick={() => onRemove(item.id)}
+        className="opacity-0 group-hover/chip:opacity-40 hover:!opacity-100 text-foreground/30 hover:text-destructive transition-all"
+        aria-label="Remove invoice"
+      >
+        <X className="size-3" />
+      </button>
+    </div>
+  );
+}
+
+function SortablePipelineGroup({ firstItem, children }: { firstItem: PipelineItem; children: React.ReactNode }) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: firstItem.id });
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
     opacity: isDragging ? 0.5 : undefined,
   };
   return (
-    <TableRow ref={setNodeRef} style={style} className="group/row">
-      <TableCell className="w-8 px-2">
+    <div ref={setNodeRef} style={style} className="group/row flex flex-col gap-2 px-5 py-3 border-b border-foreground/[0.06]">
+      <div className="flex items-center gap-2">
         <button
-          className="cursor-grab active:cursor-grabbing text-foreground opacity-15 hover:opacity-30 transition-opacity touch-none"
+          className="cursor-grab active:cursor-grabbing text-foreground opacity-15 hover:opacity-30 transition-opacity touch-none shrink-0"
           aria-label="Drag to reorder"
           {...listeners}
           {...attributes}
         >
           <GripVertical className="size-3.5" />
         </button>
-      </TableCell>
-      {children}
-    </TableRow>
+        {children}
+      </div>
+    </div>
   );
 }
 
 function Pipeline({ items, onAdd, onUpdate, onRemove, onReorder, total, clients, clientGroups, clientStatuses, months, hiddenIds, onToggleHidden, yearlyGoal, onYearlyGoalChange }: {
   items: PipelineItem[];
-  onAdd: (item: { client_id: string; amount: number; expected_month: string }) => void;
-  onUpdate: (id: string, changes: Partial<Pick<PipelineItem, "client_id" | "amount" | "expected_month">>) => void;
+  onAdd: (item: { client_id: string; amount: number; expected_month: string; label?: string }) => void;
+  onUpdate: (id: string, changes: Partial<Pick<PipelineItem, "client_id" | "amount" | "expected_month" | "label">>) => void;
   onRemove: (id: string) => void;
   onReorder: (oldIndex: number, newIndex: number) => void;
   total: number;
@@ -962,12 +1032,11 @@ function Pipeline({ items, onAdd, onUpdate, onRemove, onReorder, total, clients,
   const currentMonth = new Date().getMonth();
   const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
-  const handleAdd = (clientId?: string) => {
-    const cid = clientId || addingClient?.id;
+  const handleAdd = () => {
     const parsed = Number(addingAmount.replace(/[^0-9]/g, ""));
-    if (!cid || !parsed || !addingMonth) return;
+    if (!addingClient || !parsed || !addingMonth) return;
     onAdd({
-      client_id: cid,
+      client_id: addingClient.id,
       amount: parsed,
       expected_month: addingMonth,
     });
@@ -1013,109 +1082,80 @@ function Pipeline({ items, onAdd, onUpdate, onRemove, onReorder, total, clients,
         <GoalTracker months={months} pipelineItems={visibleItems} clients={clients} clientStatuses={clientStatuses} yearlyGoal={yearlyGoal} onYearlyGoalChange={onYearlyGoalChange} />
       </div>
 
-      <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd} modifiers={[restrictToVerticalAxis]}>
-        <Table>
-          <TableHeader>
-            <TableRow className="border-foreground/[0.06] bg-foreground/[0.02] hover:bg-foreground/[0.02]">
-              <TableHead className="w-8 px-2" />
-              <TableHead>Project</TableHead>
-              <TableHead className="w-24">Status</TableHead>
-              <TableHead className="w-32">Amount</TableHead>
-              <TableHead className="w-28">Invoiced</TableHead>
-              <TableHead className="w-16" />
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            <SortableContext items={items.map((i) => i.id)} strategy={verticalListSortingStrategy}>
-              {groupedItems.map((group) => {
-                const client = clients.find((c) => c.id === group.clientId);
-                const status = client?.status_id ? clientStatuses.find((s) => s.id === client.status_id) : undefined;
-                const isSingle = group.items.length === 1;
-                const groupTotal = group.items.reduce((sum, i) => sum + i.amount, 0);
-                const allHidden = group.items.every((i) => hiddenIds.has(i.id));
+      <div className="border-t border-foreground/[0.06]">
+        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd} modifiers={[restrictToVerticalAxis]}>
+          <SortableContext items={groupedItems.map((g) => g.items[0].id)} strategy={verticalListSortingStrategy}>
+            {groupedItems.map((group) => {
+              const client = clients.find((c) => c.id === group.clientId);
+              const status = client?.status_id ? clientStatuses.find((s) => s.id === client.status_id) : undefined;
+              const groupTotal = group.items.reduce((sum, i) => sum + i.amount, 0);
+              const getGroupLogo = (c: Client) => c.client_group_id ? clientGroups.find((g) => g.id === c.client_group_id)?.logo_url : undefined;
 
-                return group.items.map((item, itemIdx) => {
-                  const isFirst = itemIdx === 0;
-                  const isHidden = hiddenIds.has(item.id);
-                  return (
-                    <SortablePipelineRow key={item.id} item={item}>
-                      <TableCell className={isHidden ? "opacity-30" : ""}>
-                        {isFirst ? (
-                          <ClientPicker
-                            clients={clients}
-                            clientGroups={clientGroups}
-                            selectedId={item.client_id}
-                            onSelect={(c) => {
-                              for (const gi of group.items) onUpdate(gi.id, { client_id: c.id });
-                            }}
-                          />
-                        ) : (
-                          <span className="text-xs text-foreground/20 pl-8">↳</span>
-                        )}
-                      </TableCell>
-                      <TableCell className={isHidden ? "opacity-30" : ""}>
-                        {isFirst && status ? (
-                          <Badge className={`${getBadgeColorStyle(status.color)} text-[10px] px-1.5 py-0 ${status.show_dotted_border ? "border-dashed" : ""}`}>
-                            {status.name}
-                          </Badge>
-                        ) : isFirst ? (
-                          <span className="text-xs text-foreground/20">—</span>
-                        ) : null}
-                      </TableCell>
-                      <TableCell className={isHidden ? "opacity-30" : ""}>
-                        <InlineAmount value={item.amount} onSave={(amount) => onUpdate(item.id, { amount })} />
-                      </TableCell>
-                      <TableCell className={isHidden ? "opacity-30" : ""}>
-                        <InlineMonthPicker value={item.expected_month} onSave={(expected_month) => onUpdate(item.id, { expected_month })} />
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-0.5">
-                          {isFirst && (
-                            <Button
-                              variant="ghost"
-                              size="icon-xs"
-                              className="opacity-0 group-hover/row:opacity-20 hover:!opacity-100 transition-opacity text-foreground/50"
-                              onClick={() => handleQuickAdd(group.clientId)}
-                              aria-label="Add partial invoice"
-                            >
-                              <Plus className="size-3.5" />
-                            </Button>
-                          )}
-                          <Button
-                            variant="ghost"
-                            size="icon-xs"
-                            className={`transition-opacity ${isHidden ? "opacity-50 text-amber-400/70 hover:!opacity-100" : "opacity-0 group-hover/row:opacity-30 hover:!opacity-100 text-foreground/50"}`}
-                            onClick={() => onToggleHidden(item.id)}
-                            aria-label={isHidden ? "Include in projections" : "Exclude from projections"}
-                          >
-                            {isHidden ? <EyeOff className="size-3.5" /> : <Eye className="size-3.5" />}
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon-xs"
-                            className="text-foreground/30 opacity-0 group-hover/row:opacity-100 hover:!text-destructive transition-all"
-                            onClick={() => onRemove(item.id)}
-                            aria-label="Delete pipeline item"
-                          >
-                            <Trash2 className="size-3.5" />
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </SortablePipelineRow>
-                  );
-                });
-              })}
-            </SortableContext>
-            {items.length === 0 && (
-              <TableRow className="hover:bg-transparent">
-                <TableCell colSpan={6} className="text-center text-foreground/20 py-6 text-sm">
-                  No projects in pipeline
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
-      </DndContext>
+              return (
+                <SortablePipelineGroup key={group.items[0].id} firstItem={group.items[0]}>
+                  <div className="flex flex-col gap-2 flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <ClientPicker
+                        clients={clients}
+                        clientGroups={clientGroups}
+                        selectedId={group.clientId}
+                        onSelect={(c) => {
+                          for (const gi of group.items) onUpdate(gi.id, { client_id: c.id });
+                        }}
+                      />
+                      <div className="flex-1" />
+                      {status && (
+                        <Badge className={`${getBadgeColorStyle(status.color)} text-[10px] px-1.5 py-0 ${status.show_dotted_border ? "border-dashed" : ""}`}>
+                          {status.name}
+                        </Badge>
+                      )}
+                      <span className="text-sm font-semibold text-foreground tabular-nums">
+                        {formatDKK(groupTotal)}
+                      </span>
+                      <Button
+                        variant="ghost"
+                        size="icon-xs"
+                        className="opacity-0 group-hover/row:opacity-30 hover:!opacity-100 text-foreground/30 hover:!text-destructive transition-all shrink-0"
+                        onClick={() => {
+                          for (const gi of group.items) onRemove(gi.id);
+                        }}
+                        aria-label="Delete project from pipeline"
+                      >
+                        <Trash2 className="size-3.5" />
+                      </Button>
+                    </div>
+                    <div className="flex gap-1.5 flex-wrap pl-8">
+                      {group.items.map((item) => (
+                        <InvoiceChip
+                          key={item.id}
+                          item={item}
+                          onUpdate={onUpdate}
+                          onRemove={onRemove}
+                          isHidden={hiddenIds.has(item.id)}
+                          onToggleHidden={onToggleHidden}
+                        />
+                      ))}
+                      <button
+                        onClick={() => handleQuickAdd(group.clientId)}
+                        className="flex items-center justify-center size-7 rounded-md border border-dashed border-foreground/10 text-foreground/20 hover:text-foreground/50 hover:border-foreground/20 transition-colors"
+                        aria-label="Add partial invoice"
+                      >
+                        <Plus className="size-3" />
+                      </button>
+                    </div>
+                  </div>
+                </SortablePipelineGroup>
+              );
+            })}
+          </SortableContext>
+        </DndContext>
+
+        {items.length === 0 && (
+          <div className="px-5 py-6 text-center text-foreground/20 text-sm">
+            No projects in pipeline
+          </div>
+        )}
+      </div>
 
       {/* Add row */}
       <div className="border-t border-foreground/[0.04] px-4 py-2 flex items-center gap-3">
@@ -1161,7 +1201,7 @@ function Pipeline({ items, onAdd, onUpdate, onRemove, onReorder, total, clients,
           size="icon-xs"
           variant="ghost"
           className="opacity-30 hover:opacity-100 text-foreground shrink-0"
-          onClick={() => handleAdd()}
+          onClick={handleAdd}
           aria-label="Add pipeline item"
         >
           <Plus className="size-3.5" />
