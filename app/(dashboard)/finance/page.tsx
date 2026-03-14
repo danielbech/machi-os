@@ -541,17 +541,9 @@ function MonthlyChart({ months, pipelineItems, clients, clientStatuses, clientGr
   const currentYear = new Date().getFullYear();
   const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
-  // Starting balance — persisted in localStorage
+  // Starting balance & default expense — persisted in localStorage
   const [startingBalance, setStartingBalance] = useState(0);
-  const [editingBalance, setEditingBalance] = useState(false);
-  const [balanceDraft, setBalanceDraft] = useState("");
-  const balanceInputRef = useRef<HTMLInputElement>(null);
-
-  // Default monthly expense — persisted in localStorage
   const [defaultExpense, setDefaultExpense] = useState(0);
-  const [editingExpense, setEditingExpense] = useState(false);
-  const [expenseDraft, setExpenseDraft] = useState("");
-  const expenseInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     const savedBalance = localStorage.getItem("finance-starting-balance");
@@ -559,24 +551,6 @@ function MonthlyChart({ months, pipelineItems, clients, clientStatuses, clientGr
     const savedExpense = localStorage.getItem("finance-default-expense");
     if (savedExpense) setDefaultExpense(Number(savedExpense));
   }, []);
-
-  const commitBalance = () => {
-    setEditingBalance(false);
-    const parsed = Number(balanceDraft.replace(/[^0-9-]/g, ""));
-    if (!isNaN(parsed)) {
-      setStartingBalance(parsed);
-      localStorage.setItem("finance-starting-balance", String(parsed));
-    }
-  };
-
-  const commitExpense = () => {
-    setEditingExpense(false);
-    const parsed = Number(expenseDraft.replace(/[^0-9]/g, ""));
-    if (!isNaN(parsed)) {
-      setDefaultExpense(parsed);
-      localStorage.setItem("finance-default-expense", String(parsed));
-    }
-  };
 
   // Map pipeline items into monthly projected revenue with client breakdowns
   const { pipelineByMonth, clientsByMonth } = useMemo(() => {
@@ -639,7 +613,8 @@ function MonthlyChart({ months, pipelineItems, clients, clientStatuses, clientGr
   const result = totalRevenue - totalExpenses;
 
   return (
-    <div className="rounded-xl border border-border bg-card p-5 space-y-4">
+    <div className="rounded-xl border border-border bg-card overflow-hidden">
+      <div className="px-5 pt-5 pb-0 space-y-4">
       <div className="flex items-center justify-between flex-wrap gap-2">
         <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
           Cashflow
@@ -659,59 +634,10 @@ function MonthlyChart({ months, pipelineItems, clients, clientStatuses, clientGr
               {formatDKK(result)}
             </span>
           </span>
-          <span className="text-foreground/20">|</span>
-          <span className="text-muted-foreground">
-            Balance{" "}
-            {editingBalance ? (
-              <input
-                ref={balanceInputRef}
-                value={balanceDraft}
-                onChange={(e) => setBalanceDraft(e.target.value)}
-                onBlur={commitBalance}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") commitBalance();
-                  if (e.key === "Escape") setEditingBalance(false);
-                }}
-                className="w-20 bg-transparent outline-none ring-1 ring-foreground/15 rounded px-1 py-0.5 text-xs font-medium tabular-nums"
-                placeholder="0"
-              />
-            ) : (
-              <button
-                onClick={() => { setBalanceDraft(String(startingBalance)); setEditingBalance(true); setTimeout(() => balanceInputRef.current?.focus(), 50); }}
-                className="font-medium text-foreground hover:text-foreground/80 transition-colors"
-              >
-                {startingBalance !== 0 ? formatDKK(startingBalance) : "Set..."}
-              </button>
-            )}
-          </span>
-          <span className="text-muted-foreground">
-            Est. expense/mo{" "}
-            {editingExpense ? (
-              <input
-                ref={expenseInputRef}
-                value={expenseDraft}
-                onChange={(e) => setExpenseDraft(e.target.value)}
-                onBlur={commitExpense}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") commitExpense();
-                  if (e.key === "Escape") setEditingExpense(false);
-                }}
-                className="w-20 bg-transparent outline-none ring-1 ring-foreground/15 rounded px-1 py-0.5 text-xs font-medium tabular-nums"
-                placeholder="0"
-              />
-            ) : (
-              <button
-                onClick={() => { setExpenseDraft(String(defaultExpense)); setEditingExpense(true); setTimeout(() => expenseInputRef.current?.focus(), 50); }}
-                className="font-medium text-foreground hover:text-foreground/80 transition-colors"
-              >
-                {defaultExpense > 0 ? formatDKK(defaultExpense) : "Set..."}
-              </button>
-            )}
-          </span>
         </div>
       </div>
 
-      <div className="h-64">
+      <div className="h-64 px-5">
         <ResponsiveContainer width="100%" height="100%">
           <ComposedChart data={chartData} margin={{ top: 10, right: 0, left: 0, bottom: 0 }}>
             <CartesianGrid
@@ -790,6 +716,18 @@ function MonthlyChart({ months, pipelineItems, clients, clientStatuses, clientGr
             />
           </ComposedChart>
         </ResponsiveContainer>
+      </div>
+      </div>
+
+      <div className="border-t border-foreground/[0.04] px-5 py-3 flex items-center gap-6">
+        <div className="flex items-center gap-2">
+          <span className="text-xs text-muted-foreground whitespace-nowrap">Current balance</span>
+          <InlineAmount value={startingBalance} onSave={(v) => { setStartingBalance(v); localStorage.setItem("finance-starting-balance", String(v)); }} />
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="text-xs text-muted-foreground whitespace-nowrap">Est. expense/mo</span>
+          <InlineAmount value={defaultExpense} onSave={(v) => { setDefaultExpense(v); localStorage.setItem("finance-default-expense", String(v)); }} />
+        </div>
       </div>
     </div>
   );
