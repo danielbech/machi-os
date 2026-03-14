@@ -916,7 +916,7 @@ function InlineLabel({ value, onSave }: { value: string; onSave: (v: string) => 
     return (
       <button
         onClick={() => setEditing(true)}
-        className={`text-[11px] transition-colors truncate max-w-[60px] ${value ? "text-foreground/40 hover:text-foreground/60" : "text-transparent hover:text-foreground/20 group-hover/chip:text-foreground/15 w-0 group-hover/chip:w-auto"}`}
+        className={`text-[11px] leading-3.5 transition-colors truncate max-w-[60px] ${value ? "text-foreground/35 hover:text-foreground/60" : "text-transparent hover:text-foreground/20 group-hover/chip:text-foreground/15 w-0 group-hover/chip:w-auto"}`}
       >
         {value || "+"}
       </button>
@@ -945,12 +945,12 @@ function InvoiceChip({ item, onUpdate, onRemove }: {
   onRemove: (id: string) => void;
 }) {
   return (
-    <div className="group/chip flex items-center gap-1.5 bg-foreground/[0.04] border border-foreground/[0.08] rounded-md px-2 py-0.5 text-xs">
+    <div className="group/chip flex items-center gap-1.5 bg-foreground/[0.04] border border-foreground/[0.08] rounded-md py-[3px] px-2 text-[11px] leading-3.5">
       <InlineLabel value={item.label} onSave={(label) => onUpdate(item.id, { label })} />
-      <span className="font-semibold text-foreground text-[12px]">
+      <span className="text-foreground">
         <InlineAmount value={item.amount} onSave={(amount) => onUpdate(item.id, { amount })} />
       </span>
-      <span className="text-foreground/30">
+      <span className="text-[#525252]">
         <InlineDatePicker value={item.expected_date} onSave={(expected_date) => onUpdate(item.id, { expected_date })} />
       </span>
       <button
@@ -1126,14 +1126,21 @@ function Pipeline({ items, onAdd, onUpdate, onRemove, onReorder, total, clients,
                       </button>
                     </div>
                     {/* Badge + total anchored right */}
-                    {status && (
-                      <Badge className={`${getBadgeColorStyle(status.color)} text-[10px] px-1.5 py-0 shrink-0 ${status.show_dotted_border ? "border-dashed" : ""}`}>
-                        {status.name}
-                      </Badge>
-                    )}
-                    <span className="text-sm font-semibold text-foreground tabular-nums whitespace-nowrap shrink-0">
-                      {formatDKK(groupTotal)}
-                    </span>
+                    <div className="flex items-center justify-between gap-2 shrink-0">
+                      {status ? (
+                        <span className={`text-[12px] font-medium px-2 py-0.5 rounded-md shrink-0 ${
+                          status.color === "green" ? "bg-green-500/10 text-green-400" :
+                          status.color === "blue" ? "bg-blue-500/10 text-blue-400" :
+                          status.color === "pink" ? "bg-[#FF58C3]/10 text-[#FF58C3]" :
+                          "bg-foreground/5 text-foreground/30"
+                        }`}>
+                          {status.name}
+                        </span>
+                      ) : <span />}
+                      <span className="text-[14px] font-semibold text-foreground tabular-nums whitespace-nowrap w-[100px] text-right">
+                        {formatDKK(groupTotal)}
+                      </span>
+                    </div>
                   </div>
                   {/* Project-level actions */}
                   <div className="flex items-center gap-0.5 shrink-0">
