@@ -625,7 +625,7 @@ function MonthlyChart({ months, pipelineItems, clients, clientStatuses, clientGr
         projected: isPast ? 0 : pipelineRevenue,
         expenses: isPast ? -m.expenses : 0,
         projectedExpenses: isPast ? 0 : -projectedExpense,
-        cashflow: cumulative,
+        cashflow: isPast ? cumulative : null,
         clients: clientsByMonth.get(i) || [],
       };
     });
