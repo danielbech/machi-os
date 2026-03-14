@@ -758,7 +758,7 @@ function InlineAmount({ value, onSave }: { value: number; onSave: (v: number) =>
   const commit = () => {
     setEditing(false);
     const parsed = Number(draft.replace(/[^0-9]/g, ""));
-    if (parsed && parsed !== value) onSave(parsed);
+    if (!isNaN(parsed) && parsed !== value) onSave(parsed);
     else setDraft(String(value));
   };
 
