@@ -525,6 +525,12 @@ function MonthlyChart({ months, pipelineItems, clients, clientStatuses, clientGr
   const currentYear = new Date().getFullYear();
   const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
+  // Starting balance — persisted in localStorage
+  const [startingBalance, setStartingBalance] = useState(0);
+  const [editingBalance, setEditingBalance] = useState(false);
+  const [balanceDraft, setBalanceDraft] = useState("");
+  const balanceInputRef = useRef<HTMLInputElement>(null);
+
   // Default monthly expense — persisted in localStorage
   const [defaultExpense, setDefaultExpense] = useState(0);
   const [editingExpense, setEditingExpense] = useState(false);
@@ -532,9 +538,20 @@ function MonthlyChart({ months, pipelineItems, clients, clientStatuses, clientGr
   const expenseInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    const saved = localStorage.getItem("finance-default-expense");
-    if (saved) setDefaultExpense(Number(saved));
+    const savedBalance = localStorage.getItem("finance-starting-balance");
+    if (savedBalance) setStartingBalance(Number(savedBalance));
+    const savedExpense = localStorage.getItem("finance-default-expense");
+    if (savedExpense) setDefaultExpense(Number(savedExpense));
   }, []);
+
+  const commitBalance = () => {
+    setEditingBalance(false);
+    const parsed = Number(balanceDraft.replace(/[^0-9-]/g, ""));
+    if (!isNaN(parsed)) {
+      setStartingBalance(parsed);
+      localStorage.setItem("finance-starting-balance", String(parsed));
+    }
+  };
 
   const commitExpense = () => {
     setEditingExpense(false);
@@ -576,7 +593,7 @@ function MonthlyChart({ months, pipelineItems, clients, clientStatuses, clientGr
   }, [pipelineItems, currentYear, clients, clientStatuses, clientGroups]);
 
   const chartData = useMemo(() => {
-    let cumulative = 0;
+    let cumulative = startingBalance;
     return months.map((m, i) => {
       const isPast = i <= currentMonth;
       const pipelineRevenue = pipelineByMonth.get(i) || 0;
@@ -596,7 +613,7 @@ function MonthlyChart({ months, pipelineItems, clients, clientStatuses, clientGr
         clients: clientsByMonth.get(i) || [],
       };
     });
-  }, [months, currentMonth, pipelineByMonth, defaultExpense]);
+  }, [months, currentMonth, pipelineByMonth, defaultExpense, startingBalance]);
 
   const totalRevenue = chartData.reduce((s, m) => s + m.revenue + m.projected, 0);
   const totalExpenses = chartData.reduce((s, m) => s + Math.abs(m.expenses) + Math.abs(m.projectedExpenses), 0);
@@ -624,6 +641,30 @@ function MonthlyChart({ months, pipelineItems, clients, clientStatuses, clientGr
             </span>
           </span>
           <span className="text-foreground/20">|</span>
+          <span className="text-muted-foreground">
+            Balance{" "}
+            {editingBalance ? (
+              <input
+                ref={balanceInputRef}
+                value={balanceDraft}
+                onChange={(e) => setBalanceDraft(e.target.value)}
+                onBlur={commitBalance}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") commitBalance();
+                  if (e.key === "Escape") setEditingBalance(false);
+                }}
+                className="w-20 bg-transparent outline-none ring-1 ring-foreground/15 rounded px-1 py-0.5 text-xs font-medium tabular-nums"
+                placeholder="0"
+              />
+            ) : (
+              <button
+                onClick={() => { setBalanceDraft(String(startingBalance)); setEditingBalance(true); setTimeout(() => balanceInputRef.current?.focus(), 50); }}
+                className="font-medium text-foreground hover:text-foreground/80 transition-colors"
+              >
+                {startingBalance !== 0 ? formatDKK(startingBalance) : "Set..."}
+              </button>
+            )}
+          </span>
           <span className="text-muted-foreground">
             Est. expense/mo{" "}
             {editingExpense ? (
@@ -957,7 +998,7 @@ function Pipeline({ items, onAdd, onUpdate, onRemove, onReorder, total, clients,
               <TableHead>Project</TableHead>
               <TableHead className="w-24">Status</TableHead>
               <TableHead className="w-32">Amount</TableHead>
-              <TableHead className="w-28">Expected</TableHead>
+              <TableHead className="w-28">Invoiced</TableHead>
               <TableHead className="w-10" />
             </TableRow>
           </TableHeader>
