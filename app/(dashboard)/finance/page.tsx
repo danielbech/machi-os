@@ -1128,14 +1128,9 @@ function Pipeline({ items, onAdd, onUpdate, onRemove, onReorder, total, clients,
                     {/* Badge + total anchored right */}
                     <div className="flex items-center justify-between gap-2 shrink-0">
                       {status ? (
-                        <span className={`text-[12px] font-medium px-2 py-0.5 rounded-md shrink-0 ${
-                          status.color === "green" ? "bg-green-500/10 text-green-400" :
-                          status.color === "blue" ? "bg-blue-500/10 text-blue-400" :
-                          status.color === "pink" ? "bg-[#FF58C3]/10 text-[#FF58C3]" :
-                          "bg-foreground/5 text-foreground/30"
-                        }`}>
+                        <Badge className={`${getBadgeColorStyle(status.color)} text-[12px] font-medium px-2 py-0.5 rounded-md shrink-0`}>
                           {status.name}
-                        </span>
+                        </Badge>
                       ) : <span />}
                       <span className="text-[14px] font-semibold text-foreground tabular-nums whitespace-nowrap w-[100px] text-right">
                         {formatDKK(groupTotal)}
