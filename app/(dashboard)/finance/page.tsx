@@ -867,17 +867,16 @@ function ClientPicker({ clients, clientGroups, selectedId, onSelect }: { clients
       <DropdownMenuTrigger asChild>
         <button
           type="button"
-          className="flex items-center gap-2 w-full rounded px-1.5 py-0.5 -mx-1.5 -my-0.5 text-sm outline-none hover:bg-foreground/[0.04] transition-colors text-left"
+          className="flex items-center gap-2 rounded px-1.5 py-0.5 -mx-1.5 -my-0.5 text-sm outline-none hover:bg-foreground/[0.04] transition-colors text-left w-full"
         >
           {selected ? (
             <>
               <ProjectLogo client={selected} groupLogoUrl={getGroupLogo(selected)} />
-              <span className="flex-1 truncate">{selected.name}</span>
+              <span className="truncate">{selected.name}</span>
             </>
           ) : (
-            <span className="flex-1 text-foreground/30">Select project...</span>
+            <span className="text-foreground/30">Select project...</span>
           )}
-          <ChevronRight className="size-3 text-foreground/25 rotate-90 shrink-0" />
         </button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="start" className="min-w-[220px]">
@@ -913,13 +912,12 @@ function InlineLabel({ value, onSave }: { value: string; onSave: (v: string) => 
   };
 
   if (!editing) {
-    if (!value) return null;
     return (
       <button
         onClick={() => setEditing(true)}
-        className="text-[11px] text-muted-foreground hover:text-foreground/60 transition-colors truncate max-w-[60px]"
+        className={`text-[11px] transition-colors truncate max-w-[60px] ${value ? "text-foreground/40 hover:text-foreground/60" : "text-transparent hover:text-foreground/20 group-hover/chip:text-foreground/15 w-0 group-hover/chip:w-auto"}`}
       >
-        {value}
+        {value || "+"}
       </button>
     );
   }
@@ -947,23 +945,15 @@ function InvoiceChip({ item, onUpdate, onRemove, isHidden, onToggleHidden }: {
   isHidden: boolean;
   onToggleHidden: (id: string) => void;
 }) {
-  const [showLabel, setShowLabel] = useState(!!item.label);
-
   return (
-    <div className={`group/chip flex items-center gap-1.5 border border-foreground/[0.06] rounded-md px-2 py-0.5 transition-opacity ${isHidden ? "opacity-30" : ""}`}>
-      {showLabel ? (
-        <InlineLabel value={item.label} onSave={(label) => onUpdate(item.id, { label })} />
-      ) : (
-        <button
-          onClick={() => setShowLabel(true)}
-          className="text-[11px] text-foreground/15 hover:text-foreground/40 transition-colors hidden group-hover/chip:block"
-          title="Add label"
-        >
-          +
-        </button>
-      )}
-      <InlineAmount value={item.amount} onSave={(amount) => onUpdate(item.id, { amount })} />
-      <InlineMonthPicker value={item.expected_month} onSave={(expected_month) => onUpdate(item.id, { expected_month })} />
+    <div className={`group/chip flex items-center gap-2 bg-foreground/[0.04] border border-foreground/[0.08] rounded-lg px-3 py-1 transition-opacity ${isHidden ? "opacity-30" : ""}`}>
+      <InlineLabel value={item.label} onSave={(label) => onUpdate(item.id, { label })} />
+      <span className="font-semibold text-foreground">
+        <InlineAmount value={item.amount} onSave={(amount) => onUpdate(item.id, { amount })} />
+      </span>
+      <span className="text-foreground/30">
+        <InlineMonthPicker value={item.expected_month} onSave={(expected_month) => onUpdate(item.id, { expected_month })} />
+      </span>
       <button
         onClick={() => onToggleHidden(item.id)}
         className={`transition-opacity ${isHidden ? "opacity-70 text-amber-400/70" : "opacity-0 group-hover/chip:opacity-40 hover:!opacity-100 text-foreground/40"}`}
@@ -990,18 +980,16 @@ function SortablePipelineGroup({ firstItem, children }: { firstItem: PipelineIte
     opacity: isDragging ? 0.5 : undefined,
   };
   return (
-    <div ref={setNodeRef} style={style} className="group/row flex flex-col gap-2 px-5 py-3 border-b border-foreground/[0.06]">
-      <div className="flex items-center gap-2">
-        <button
-          className="cursor-grab active:cursor-grabbing text-foreground opacity-15 hover:opacity-30 transition-opacity touch-none shrink-0"
-          aria-label="Drag to reorder"
-          {...listeners}
-          {...attributes}
-        >
-          <GripVertical className="size-3.5" />
-        </button>
-        {children}
-      </div>
+    <div ref={setNodeRef} style={style} className="group/row flex items-center gap-2 px-5 py-2.5 border-b border-foreground/[0.06]">
+      <button
+        className="cursor-grab active:cursor-grabbing text-foreground opacity-15 hover:opacity-30 transition-opacity touch-none shrink-0"
+        aria-label="Drag to reorder"
+        {...listeners}
+        {...attributes}
+      >
+        <GripVertical className="size-3.5" />
+      </button>
+      {children}
     </div>
   );
 }
@@ -1106,7 +1094,8 @@ function Pipeline({ items, onAdd, onUpdate, onRemove, onReorder, total, clients,
 
               return (
                 <SortablePipelineGroup key={group.items[0].id} firstItem={group.items[0]}>
-                  <div className="flex items-center gap-2 flex-1 min-w-0">
+                  {/* Client name — fixed width */}
+                  <div className="w-[160px] shrink-0">
                     <ClientPicker
                       clients={clients}
                       clientGroups={clientGroups}
@@ -1115,35 +1104,36 @@ function Pipeline({ items, onAdd, onUpdate, onRemove, onReorder, total, clients,
                         for (const gi of group.items) onUpdate(gi.id, { client_id: c.id });
                       }}
                     />
-                    {/* Invoice chips inline */}
-                    <div className="flex gap-1.5 flex-wrap flex-1 justify-end">
-                      {group.items.map((item) => (
-                        <InvoiceChip
-                          key={item.id}
-                          item={item}
-                          onUpdate={onUpdate}
-                          onRemove={onRemove}
-                          isHidden={hiddenIds.has(item.id)}
-                          onToggleHidden={onToggleHidden}
-                        />
-                      ))}
-                      <button
-                        onClick={() => handleQuickAdd(group.clientId)}
-                        className="flex items-center justify-center size-6 rounded-md border border-dashed border-foreground/10 text-foreground/20 hover:text-foreground/50 hover:border-foreground/20 transition-colors shrink-0 self-center"
-                        aria-label="Add partial invoice"
-                      >
-                        <Plus className="size-3" />
-                      </button>
-                    </div>
-                    {status && (
-                      <Badge className={`${getBadgeColorStyle(status.color)} text-[10px] px-1.5 py-0 shrink-0 ${status.show_dotted_border ? "border-dashed" : ""}`}>
-                        {status.name}
-                      </Badge>
-                    )}
-                    <span className="text-sm font-semibold text-foreground tabular-nums whitespace-nowrap shrink-0">
-                      {formatDKK(groupTotal)}
-                    </span>
                   </div>
+                  {/* Invoice chips */}
+                  <div className="flex gap-1.5 flex-wrap flex-1 min-w-0">
+                    {group.items.map((item) => (
+                      <InvoiceChip
+                        key={item.id}
+                        item={item}
+                        onUpdate={onUpdate}
+                        onRemove={onRemove}
+                        isHidden={hiddenIds.has(item.id)}
+                        onToggleHidden={onToggleHidden}
+                      />
+                    ))}
+                    <button
+                      onClick={() => handleQuickAdd(group.clientId)}
+                      className="flex items-center justify-center size-6 rounded-md border border-dashed border-foreground/10 text-foreground/20 hover:text-foreground/50 hover:border-foreground/20 transition-colors shrink-0 self-center"
+                      aria-label="Add partial invoice"
+                    >
+                      <Plus className="size-3" />
+                    </button>
+                  </div>
+                  {/* Badge + total anchored right */}
+                  {status && (
+                    <Badge className={`${getBadgeColorStyle(status.color)} text-[10px] px-1.5 py-0 shrink-0 ${status.show_dotted_border ? "border-dashed" : ""}`}>
+                      {status.name}
+                    </Badge>
+                  )}
+                  <span className="text-sm font-semibold text-foreground tabular-nums whitespace-nowrap shrink-0">
+                    {formatDKK(groupTotal)}
+                  </span>
                 </SortablePipelineGroup>
               );
             })}
