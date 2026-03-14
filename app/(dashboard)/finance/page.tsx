@@ -609,23 +609,26 @@ function MonthlyChart({ months, pipelineItems, clients, clientStatuses, clientGr
   }, [pipelineItems, currentYear, clients, clientStatuses, clientGroups]);
 
   const chartData = useMemo(() => {
+    // Starting balance represents current account balance — project forward from current month
     let cumulative = startingBalance;
     return months.map((m, i) => {
-      const isPast = i <= currentMonth;
+      const isPast = i < currentMonth;
+      const isCurrent = i === currentMonth;
       const pipelineRevenue = pipelineByMonth.get(i) || 0;
-      const projectedExpense = !isPast && defaultExpense > 0 ? defaultExpense : 0;
+      const projectedExpense = !isPast && !isCurrent && defaultExpense > 0 ? defaultExpense : 0;
 
-      const monthRevenue = m.revenue + (isPast ? 0 : pipelineRevenue);
-      const monthExpenses = isPast ? m.expenses : projectedExpense;
-      cumulative += monthRevenue - monthExpenses;
+      // Only accumulate future months onto the starting balance
+      if (i > currentMonth) {
+        cumulative += (pipelineRevenue - projectedExpense);
+      }
 
       return {
         month: m.month,
         revenue: m.revenue,
-        projected: isPast ? 0 : pipelineRevenue,
-        expenses: isPast ? -m.expenses : 0,
-        projectedExpenses: isPast ? 0 : -projectedExpense,
-        cashflow: !isPast || i === currentMonth ? cumulative : null,
+        projected: isPast || isCurrent ? 0 : pipelineRevenue,
+        expenses: isPast || isCurrent ? -m.expenses : 0,
+        projectedExpenses: isPast || isCurrent ? 0 : -projectedExpense,
+        cashflow: i >= currentMonth ? cumulative : null,
         clients: clientsByMonth.get(i) || [],
       };
     });
