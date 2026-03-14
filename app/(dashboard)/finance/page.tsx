@@ -939,35 +939,26 @@ function InlineLabel({ value, onSave }: { value: string; onSave: (v: string) => 
   );
 }
 
-function InvoiceChip({ item, onUpdate, onRemove, isHidden, onToggleHidden }: {
+function InvoiceChip({ item, onUpdate, onRemove }: {
   item: PipelineItem;
   onUpdate: (id: string, changes: Partial<Pick<PipelineItem, "amount" | "expected_date" | "label">>) => void;
   onRemove: (id: string) => void;
-  isHidden: boolean;
-  onToggleHidden: (id: string) => void;
 }) {
   return (
-    <div className={`group/chip flex items-center gap-2 bg-foreground/[0.04] border border-foreground/[0.08] rounded-lg px-3 py-1 transition-opacity ${isHidden ? "opacity-30" : ""}`}>
+    <div className="group/chip flex items-center gap-1.5 bg-foreground/[0.04] border border-foreground/[0.08] rounded-md px-2 py-0.5 text-xs">
       <InlineLabel value={item.label} onSave={(label) => onUpdate(item.id, { label })} />
-      <span className="font-semibold text-foreground">
+      <span className="font-semibold text-foreground text-[12px]">
         <InlineAmount value={item.amount} onSave={(amount) => onUpdate(item.id, { amount })} />
       </span>
       <span className="text-foreground/30">
         <InlineDatePicker value={item.expected_date} onSave={(expected_date) => onUpdate(item.id, { expected_date })} />
       </span>
       <button
-        onClick={() => onToggleHidden(item.id)}
-        className={`transition-opacity ${isHidden ? "opacity-70 text-amber-400/70" : "opacity-0 group-hover/chip:opacity-40 hover:!opacity-100 text-foreground/40"}`}
-        aria-label={isHidden ? "Include in projections" : "Exclude from projections"}
-      >
-        {isHidden ? <EyeOff className="size-3" /> : <Eye className="size-3" />}
-      </button>
-      <button
         onClick={() => onRemove(item.id)}
-        className="opacity-0 group-hover/chip:opacity-40 hover:!opacity-100 text-foreground/30 hover:text-destructive transition-all"
+        className="opacity-0 group-hover/chip:opacity-50 hover:!opacity-100 text-foreground/30 hover:text-destructive transition-all"
         aria-label="Remove invoice"
       >
-        <X className="size-3" />
+        <X className="size-2.5" />
       </button>
     </div>
   );
@@ -1092,48 +1083,79 @@ function Pipeline({ items, onAdd, onUpdate, onRemove, onReorder, total, clients,
               const groupTotal = group.items.reduce((sum, i) => sum + i.amount, 0);
               const getGroupLogo = (c: Client) => c.client_group_id ? clientGroups.find((g) => g.id === c.client_group_id)?.logo_url : undefined;
 
+              const isGroupHidden = group.items.every((i) => hiddenIds.has(i.id));
+              const toggleGroup = () => {
+                // If all hidden, show all. Otherwise hide all.
+                const shouldHide = !isGroupHidden;
+                for (const gi of group.items) {
+                  const isCurrentlyHidden = hiddenIds.has(gi.id);
+                  if (shouldHide !== isCurrentlyHidden) onToggleHidden(gi.id);
+                }
+              };
+
               return (
                 <SortablePipelineGroup key={group.items[0].id} firstItem={group.items[0]}>
-                  {/* Client name — fixed width */}
-                  <div className="w-[160px] shrink-0">
-                    <ClientPicker
-                      clients={clients}
-                      clientGroups={clientGroups}
-                      selectedId={group.clientId}
-                      onSelect={(c) => {
-                        for (const gi of group.items) onUpdate(gi.id, { client_id: c.id });
-                      }}
-                    />
-                  </div>
-                  {/* Invoice chips */}
-                  <div className="flex gap-1.5 flex-wrap flex-1 min-w-0">
-                    {group.items.map((item) => (
-                      <InvoiceChip
-                        key={item.id}
-                        item={item}
-                        onUpdate={onUpdate}
-                        onRemove={onRemove}
-                        isHidden={hiddenIds.has(item.id)}
-                        onToggleHidden={onToggleHidden}
+                  <div className={`flex items-center gap-2 flex-1 min-w-0 transition-opacity ${isGroupHidden ? "opacity-30" : ""}`}>
+                    {/* Client name — fixed width */}
+                    <div className="w-[160px] shrink-0">
+                      <ClientPicker
+                        clients={clients}
+                        clientGroups={clientGroups}
+                        selectedId={group.clientId}
+                        onSelect={(c) => {
+                          for (const gi of group.items) onUpdate(gi.id, { client_id: c.id });
+                        }}
                       />
-                    ))}
-                    <button
-                      onClick={() => handleQuickAdd(group.clientId)}
-                      className="flex items-center justify-center size-6 rounded-md border border-dashed border-foreground/10 text-foreground/20 hover:text-foreground/50 hover:border-foreground/20 transition-colors shrink-0 self-center"
-                      aria-label="Add partial invoice"
-                    >
-                      <Plus className="size-3" />
-                    </button>
+                    </div>
+                    {/* Invoice chips */}
+                    <div className="flex gap-1 flex-wrap flex-1 min-w-0">
+                      {group.items.map((item) => (
+                        <InvoiceChip
+                          key={item.id}
+                          item={item}
+                          onUpdate={onUpdate}
+                          onRemove={onRemove}
+                        />
+                      ))}
+                      <button
+                        onClick={() => handleQuickAdd(group.clientId)}
+                        className="flex items-center justify-center size-5 rounded border border-dashed border-foreground/10 text-foreground/20 hover:text-foreground/50 hover:border-foreground/20 transition-colors shrink-0 self-center"
+                        aria-label="Add partial invoice"
+                      >
+                        <Plus className="size-2.5" />
+                      </button>
+                    </div>
+                    {/* Badge + total anchored right */}
+                    {status && (
+                      <Badge className={`${getBadgeColorStyle(status.color)} text-[10px] px-1.5 py-0 shrink-0 ${status.show_dotted_border ? "border-dashed" : ""}`}>
+                        {status.name}
+                      </Badge>
+                    )}
+                    <span className="text-sm font-semibold text-foreground tabular-nums whitespace-nowrap shrink-0">
+                      {formatDKK(groupTotal)}
+                    </span>
                   </div>
-                  {/* Badge + total anchored right */}
-                  {status && (
-                    <Badge className={`${getBadgeColorStyle(status.color)} text-[10px] px-1.5 py-0 shrink-0 ${status.show_dotted_border ? "border-dashed" : ""}`}>
-                      {status.name}
-                    </Badge>
-                  )}
-                  <span className="text-sm font-semibold text-foreground tabular-nums whitespace-nowrap shrink-0">
-                    {formatDKK(groupTotal)}
-                  </span>
+                  {/* Project-level actions */}
+                  <div className="flex items-center gap-0.5 shrink-0">
+                    <Button
+                      variant="ghost"
+                      size="icon-xs"
+                      className={`transition-opacity ${isGroupHidden ? "opacity-50 text-amber-400/70 hover:!opacity-100" : "opacity-0 group-hover/row:opacity-30 hover:!opacity-100 text-foreground/30"}`}
+                      onClick={toggleGroup}
+                      aria-label={isGroupHidden ? "Include in projections" : "Exclude from projections"}
+                    >
+                      {isGroupHidden ? <EyeOff className="size-3.5" /> : <Eye className="size-3.5" />}
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon-xs"
+                      className="opacity-0 group-hover/row:opacity-30 hover:!opacity-100 text-foreground/30 hover:!text-destructive transition-all"
+                      onClick={() => { for (const gi of group.items) onRemove(gi.id); }}
+                      aria-label="Delete project from pipeline"
+                    >
+                      <Trash2 className="size-3.5" />
+                    </Button>
+                  </div>
                 </SortablePipelineGroup>
               );
             })}
